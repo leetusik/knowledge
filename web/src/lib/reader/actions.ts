@@ -5,7 +5,10 @@ import { z } from "zod";
 import { ApiError } from "@/lib/knowledge/client";
 import {
   deleteAnnotation,
+  deleteBookmark,
   patchAnnotation,
+  patchBookmark,
+  postBookmark,
   postAnnotation,
   postQuizAttempt,
   putReaderPosition,
@@ -258,5 +261,90 @@ export async function removeAnnotation(input: {
     // Already gone: the delete has done its job.
     if (error instanceof ApiError && error.status === 404) return { ok: true };
     return refused(error);
+  }
+}
+
+/**
+ * P30.S21 — bookmarks (`05-annotations`), as server actions over S8's routes, with the
+ * same rules as the annotation writes above: the client's id makes a create idempotent, a
+ * label write sends the whole value, and a DELETE of a row already gone has done its job.
+ */
+export interface BookmarkResult {
+  ok: boolean;
+  /** The refusal's status; 0 = not reached. */
+  status?: number;
+}
+
+const LABEL_MAX = 120;
+const SNIPPET_MAX = 300;
+
+const bookmarkSchema = z
+  .object({
+    org: z.string().min(1).max(200),
+    project: segment,
+    doc: segment,
+    id: z.string().uuid(),
+    version: z.number().int().min(1).optional(),
+    anchor: z.union([
+      z.object({ block_id: idPart }).strict(),
+      z.object({ fraction: z.number().min(0).max(1) }).strict(),
+    ]),
+    label: z.string().max(LABEL_MAX).nullable().optional(),
+    snippet: z.string().max(SNIPPET_MAX).optional(),
+  })
+  .strict();
+
+export type BookmarkWrite = z.input<typeof bookmarkSchema>;
+
+/** Save a section bookmark (native) or a position bookmark (plain Markdown). */
+export async function saveBookmark(
+  input: BookmarkWrite,
+): Promise<BookmarkResult> {
+  const parsed = bookmarkSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, status: 422 };
+  const token = await getSession();
+  if (!token) return { ok: false, status: 401 };
+  try {
+    await postBookmark(token, parsed.data);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, status: error instanceof ApiError ? error.status : 0 };
+  }
+}
+
+/** Set or clear a bookmark's label. */
+export async function editBookmark(input: {
+  id: string;
+  label: string | null;
+}): Promise<BookmarkResult> {
+  const parsed = z
+    .object({ id: z.string().uuid(), label: z.string().max(LABEL_MAX).nullable() })
+    .strict()
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, status: 422 };
+  const token = await getSession();
+  if (!token) return { ok: false, status: 401 };
+  try {
+    await patchBookmark(token, parsed.data.id, { label: parsed.data.label });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, status: error instanceof ApiError ? error.status : 0 };
+  }
+}
+
+/** Remove a bookmark. */
+export async function removeBookmark(input: {
+  id: string;
+}): Promise<BookmarkResult> {
+  const parsed = z.object({ id: z.string().uuid() }).strict().safeParse(input);
+  if (!parsed.success) return { ok: false, status: 422 };
+  const token = await getSession();
+  if (!token) return { ok: false, status: 401 };
+  try {
+    await deleteBookmark(token, parsed.data.id);
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return { ok: true };
+    return { ok: false, status: error instanceof ApiError ? error.status : 0 };
   }
 }

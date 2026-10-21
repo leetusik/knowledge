@@ -187,6 +187,40 @@ export interface KbAnnotation {
   anchor?: KbAnchor;
   /** "Review this" is on (an active card). */
   review?: boolean;
+  /** The caller's own review card on it: `active`, `suspended` or `""` (P30.S21). */
+  card?: "" | "active" | "suspended";
+  /** The per-book list only: the chapter it sits in. */
+  chapter_key?: string;
+  /** Another language variant's annotation, shown on this one (never painted). */
+  other_language?: boolean;
+  /** Its section mapped onto the variant read (`null` = no mappable section). */
+  section?: { block_id: string | null; exact: boolean; section_index: number | null };
+}
+
+/** One bookmark, as the reads return it (P30.S8 + S9 `place`). */
+export interface KbBookmark {
+  id: string;
+  doc: string;
+  lang: string;
+  version: number;
+  /** Native: `{block_id}`; a position: `{fraction, anchor?}`. */
+  anchor: { block_id?: string; fraction?: number; anchor?: string };
+  label: string | null;
+  snippet: string;
+  created_at: string;
+  updated_at: string;
+  /** A position (plain Markdown or a legacy chapter). */
+  pos?: boolean;
+  /** A position placed from an HTML version. */
+  approx?: boolean;
+  place?: {
+    block_id: string | null;
+    exact: boolean;
+    fraction: number | null;
+    section_index: number | null;
+  };
+  /** The per-book list only. */
+  chapter_key?: string;
 }
 
 /** The slice of a variant read the reader's progress needs. */
@@ -204,6 +238,10 @@ export interface KbVariantState {
   annotations?: KbAnnotation[];
   /** The orphans (their section is gone): kept, never dropped. */
   unanchored?: KbAnnotation[];
+  /** P30.S21: this variant's bookmarks, each with where it lands now. */
+  bookmarks?: KbBookmark[];
+  /** P30.S21: the chapter's other variants' marks, mapped onto this variant by id. */
+  other_languages?: { annotations?: KbAnnotation[]; bookmarks?: KbBookmark[] };
 }
 
 /**
@@ -363,6 +401,84 @@ export async function deleteAnnotation(
     `/app/reader/annotations/${encodeURIComponent(id)}`,
     "DELETE",
     undefined,
+    { token, signal },
+  );
+}
+
+// P30.S21 — bookmarks (`05-annotations`; S8's routes) and the per-book list.
+
+/** The `POST /app/reader/bookmarks` body: a section (native) or a position (plain Markdown). */
+export interface KbBookmarkWrite {
+  org: string;
+  project: string;
+  /** The document stem `<date>-<slug>`. */
+  doc: string;
+  /** A client-generated UUID: a repeat of the same id is a no-op (200) on the server. */
+  id: string;
+  version?: number;
+  anchor: { block_id: string } | { fraction: number };
+  label?: string | null;
+  snippet?: string;
+}
+
+/** `POST /app/reader/bookmarks` (bearer) → 201 (200 on a repeated `id`) `{bookmark}`. */
+export async function postBookmark(
+  token: string,
+  body: KbBookmarkWrite,
+  signal?: AbortSignal,
+): Promise<{ bookmark: KbBookmark }> {
+  return sendJson<{ bookmark: KbBookmark }>(
+    "/app/reader/bookmarks",
+    "POST",
+    body,
+    { token, signal },
+  );
+}
+
+/** `PATCH /app/reader/bookmarks/{id}` (bearer): `label` (null clears it) → `{bookmark}`. */
+export async function patchBookmark(
+  token: string,
+  id: string,
+  body: { label: string | null },
+  signal?: AbortSignal,
+): Promise<{ bookmark: KbBookmark }> {
+  return sendJson<{ bookmark: KbBookmark }>(
+    `/app/reader/bookmarks/${encodeURIComponent(id)}`,
+    "PATCH",
+    body,
+    { token, signal },
+  );
+}
+
+/** `DELETE /app/reader/bookmarks/{id}` (bearer) → 204. */
+export async function deleteBookmark(
+  token: string,
+  id: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  await sendJson<unknown>(
+    `/app/reader/bookmarks/${encodeURIComponent(id)}`,
+    "DELETE",
+    undefined,
+    { token, signal },
+  );
+}
+
+/** `GET /app/reader/annotations?org=&project=&book=`: every mark in a book, orphans apart. */
+export interface KbBookNotes {
+  annotations: KbAnnotation[];
+  unanchored: KbAnnotation[];
+  bookmarks: KbBookmark[];
+}
+
+export async function getReaderBookNotes(
+  token: string,
+  target: { org: string; project: string; book: string },
+  signal?: AbortSignal,
+): Promise<KbBookNotes> {
+  const e = encodeURIComponent;
+  return getJson<KbBookNotes>(
+    `/app/reader/annotations?org=${e(target.org)}&project=${e(target.project)}&book=${e(target.book)}`,
     { token, signal },
   );
 }

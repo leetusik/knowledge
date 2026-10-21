@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P30`
-- Current slice: `P30.S21`
-- Next slice: `P30.S22`
+- Current slice: `P30.S22`
+- Next slice: `P30.S23`
 - Waiting on operator: `none`
 - Open deferred jobs: `36`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P30` | planned | `P30.S21` | 23/32 | - | working tree |
+| `default` | `P30` | planned | `P30.S22` | 24/32 | - | working tree |
 
 ## Active Phases
 
@@ -30,7 +30,7 @@
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
-| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S21` | `works/phases/active/P30` |
+| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S22` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
 
@@ -174,7 +174,7 @@
 | [x] `P30.S18` | `done` | Diagrams II: sequence, stack, timeline and chart (03-diagrams) | `implementation` | `works/phases/active/P30/slices/P30.S18` |
 | [x] `P30.S19` | `done` | Quiz block: choice, recall, cloze, saving, return (04-quiz) | `implementation` | `works/phases/active/P30/slices/P30.S19` |
 | [x] `P30.S20` | `done` | Annotations I: selection, highlights, notes, Review this (05-annotations) | `implementation` | `works/phases/active/P30/slices/P30.S20` |
-| [ ] `P30.S21` | `todo` | Annotations II: bookmarks, place bar, Notes sheet, per-book list (05-annotations) | `implementation` | `works/phases/active/P30/slices/P30.S21` |
+| [x] `P30.S21` | `done` | Annotations II: bookmarks, place bar, Notes sheet, per-book list (05-annotations) | `implementation` | `works/phases/active/P30/slices/P30.S21` |
 | [ ] `P30.S22` | `todo` | Library, app-shell entries and the public org library (06-library) | `implementation` | `works/phases/active/P30/slices/P30.S22` |
 | [ ] `P30.S23` | `todo` | Book page (07-book-page) | `implementation` | `works/phases/active/P30/slices/P30.S23` |
 | [ ] `P30.S24` | `todo` | Review surface (08-review) | `implementation` | `works/phases/active/P30/slices/P30.S24` |

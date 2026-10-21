@@ -1,3 +1,4 @@
+import { layerOn } from "@/lib/reader/layer";
 import type { LoadedReader } from "@/lib/reader/load";
 
 import { ReaderArticle } from "./reader-article";
@@ -14,6 +15,7 @@ export function ReaderPage({ reader }: { reader: LoadedReader }) {
     <ReaderFrame
       key={`${reader.docId}:${reader.view.version}`}
       view={reader.view}
+      notes={layerOn(reader)}
     >
       <ReaderArticle reader={reader} />
     </ReaderFrame>

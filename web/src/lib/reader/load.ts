@@ -57,6 +57,7 @@ import { plainText } from "@/lib/native/parse";
 import { parseReaderCookie, type ReaderSettings } from "@/lib/reader-cookie";
 import { bookHref, readerHref, type ReaderTarget } from "@/lib/reader-href";
 
+import { languageName } from "./language";
 import { loadNotes } from "./notes-load";
 import { loadQuizSaved, type QuizSaved } from "./quiz-saved";
 import type {
@@ -115,19 +116,7 @@ async function orMiss<T>(run: () => Promise<T>): Promise<T | undefined> {
   }
 }
 
-/** "English", "한국어": a language named in itself. */
-export function languageName(lang: string): string {
-  if (lang === "en") return "English";
-  if (lang === "ko") return "한국어";
-  try {
-    const name = new Intl.DisplayNames([lang], { type: "language" }).of(lang);
-    if (name && name !== lang)
-      return name.charAt(0).toUpperCase() + name.slice(1);
-  } catch {
-    // an unknown tag: show the code
-  }
-  return lang;
-}
+export { languageName };
 
 /**
  * A loose document carries no language (only a chapter's variants do), and the page
@@ -655,7 +644,7 @@ export async function loadChapterReader(args: {
           : undefined,
       resolveRef,
       quiz,
-      notes: loadNotes(checked, variantState),
+      notes: loadNotes(checked, variantState, variant.lang),
     },
   };
 }
@@ -754,7 +743,7 @@ export async function loadLooseReader(args: {
         : undefined,
     resolveRef,
     quiz,
-    notes: loadNotes(checked, variantState),
+    notes: loadNotes(checked, variantState, lang),
   };
 }
 

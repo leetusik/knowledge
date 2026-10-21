@@ -157,3 +157,21 @@ Moved word for word from `phase.md` → `## Operator Questions` by P30.S5 to kee
 - **OQ108 (P30.S20):** A reader on an older version of the chapter. — **decided (safest):** the reads ask for the version on screen (`?v=`/`&v=`), so annotations are resolved and painted against the text the reader sees, and a new highlight is stored with that version.
 - **OQ109 (P30.S20):** A write refused because the session lapsed, when the Sign in link leaves the page. — **decided (no annotation lost):** the held writes are kept as data in `sessionStorage` (`kb-reader-unsaved`, this tab only) and sent in order by the next reader page that mounts signed in, then the notes are read again; the create's client id keeps a write the server already took from doubling. Live-checked: highlight → 401 → Sign in → back on the chapter → saved and painted.
 - **OQ110 (P30.S20):** A rendered container whose text differs from the server's projection (a renderer drift). — **decided (safest):** the renderer stamps a container only when its text equals the projection's next container, and capture checks each stamp against the projection text again; an unchecked container takes no highlight (the bar refuses), so nothing is ever stored at a wrong offset.
+
+## P30.S21
+
+- **OQ111** The per-book list's address? Decided: `/@{org}/{project}/notes/{book}`, beside `books/` so a chapter keyed `notes` keeps its address; a session is required (signed out goes to sign in and back: `requireIdentity`); every miss is the constant not-found.
+- **OQ112** The back link? Decided (round 02 §2): `?from=book` (the book page's "Notes in this book →") reads "‹ Back to the book"; `?ch=&lang=&v=&at=` (the Notes sheet's foot) reads "‹ Back to the chapter" and returns at that section; an unknown chapter falls back to the book.
+- **OQ113** Other-language bookmarks? Decided: listed in "In {endonym}" beside that language's highlights, with Remove; a row opens the chapter in that language.
+- **OQ114** A bookmark with nowhere to land? Decided: Unanchored, its snippet struck through; a bookmark whose block is gone but which the server still places (nearest section, `exact: false`) stays a normal bookmark at that section (approximate is only for a position placed from an HTML version). The book list shows the stored snippet, the chapter sheet the section.
+- **OQ115** Toggling a section's bookmark? Decided: removes every bookmark on that section, with one undo line that restores them.
+- **OQ116** "Bookmarked here" for a position? Decided: within 2% of the page counts as the same place (`POSITION_WINDOW`).
+- **OQ117** Text changed in the margin and popover? Decided: one margin item per section ("N highlights you made no longer match the text"); its popover groups by made-on version, each with "Read this section in vN".
+- **OQ118** Code quotes in a list row? Decided: plain, not mono (undrawn; the nearest drawn pattern).
+- **OQ119** Landing on a mark from a list? Decided: `?note=<id>` opens the chapter at the mark and marks it current (no popover), is stripped from the address, and suppresses the resume restore; a folded callout opens.
+- **OQ120** Focus after a delete or a label save in the sheet? Decided: a delete never moves focus; the label field returns focus to its button.
+- **OQ121** The legacy html bar? Decided: unchanged (S25 adds the bookmark control and the "Highlights are not available" line).
+- **OQ122** Card status on reads (closes OQ102)? Decided: `card` on every annotation read for the caller's own cards; "paused" and the card clause survive a reload.
+- **OQ123** The empty Notes text of a plain Markdown chapter? Decided: the position-only wording ("use Bookmark this position"), not the highlight one.
+- **OQ124** A native bookmark in the per-book list has no section map? Decided: its status comes from the server's `place` alone (`known: false`), so it is never wrongly Unanchored.
+

@@ -171,6 +171,8 @@ export function useReading({
     // A link with a place in it (a contents entry, a language switch) owns the landing,
     // unless its section does not exist here: then the mapped resume is the nearest one.
     if (hash && document.getElementById(hash)) return;
+    // A mark chosen in a list (`?note=`) owns the landing (P30.S21).
+    if (new URLSearchParams(window.location.search).has("note")) return;
     // The pill is for a reader coming back to a chapter they have started.
     const showPill = !hash && progress.state === "started";
     if (!hash && progress.state !== "started") return;

@@ -1,6 +1,7 @@
 import { ChapterView } from "@/lib/native";
 import { documentAssets } from "@/lib/native";
 import type { QuizViewContext } from "@/lib/native/render";
+import { layerOn } from "@/lib/reader/layer";
 import type { LoadedReader } from "@/lib/reader/load";
 
 import { AnnotationLayer } from "./annotations";
@@ -62,9 +63,10 @@ export function ReaderArticle({ reader }: { reader: LoadedReader }) {
         bookBackHref={view.book?.backHref}
         total={view.book?.total}
       />
-      {/* P30.S20: highlights and notes, on a native chapter that renders. A member with
-          nowhere to save (OQ75) gets none; a signed-out reader gets Sign in to save. */}
-      {reader.notes && !checked.refused && (!view.member || view.write) ? (
+      {/* P30.S20/S21: highlights, notes and bookmarks, on a native chapter that renders and
+          bookmarks on a plain Markdown one. A member with nowhere to save (OQ75) gets none;
+          a signed-out reader gets Sign in to save. */}
+      {reader.notes && layerOn(reader) ? (
         <AnnotationLayer
           notes={reader.notes}
           write={view.write}
@@ -72,6 +74,7 @@ export function ReaderArticle({ reader }: { reader: LoadedReader }) {
           lang={view.lang}
           chapterTitle={view.title}
           place={loose ? "document" : "chapter"}
+          target={view.target}
         />
       ) : null}
     </div>

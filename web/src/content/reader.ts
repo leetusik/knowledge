@@ -97,6 +97,8 @@ export const READER = {
     olderVersion: (v: number): string => `Older version · v${v}`,
     languageLabel: "Language",
     display: "Display",
+    /** P30.S21: a loose document has no Contents sheet, so its top bar opens the Notes. */
+    notes: "Notes",
     signIn: "Sign in",
   },
   bottom: {
@@ -187,7 +189,9 @@ export const READER = {
   /**
    * P30.S20 — highlights and notes, from `05-annotations` round 01's *Every string this
    * job wrote* (the selection bar, the popover, the undo line) and round 02's three hidden
-   * descriptions. The bookmark, margin, Notes sheet and per-book list strings are S21's.
+   * descriptions. P30.S21 adds the bookmark, place bar, margin, Notes sheet, list-row and
+   * per-book list strings (round 01 *Every string this job wrote*, round 02's "Back to the
+   * book"), word for word.
    */
   notes: {
     bar: {
@@ -251,5 +255,149 @@ export const READER = {
     /** A write that did not reach the server (undrawn; `04-quiz`'s "Not saved" line, OQ99). */
     notSaved: "Not saved · check your connection",
     tryAgain: "Try again",
+    /** P30.S21 — bookmarks, the place bar and the plain document's bar. */
+    bm: {
+      bookmark: "Bookmark",
+      bookmarked: "Bookmarked",
+      position: "Bookmark this position",
+      positionOn: "Bookmarked here",
+      removed: "Bookmark removed.",
+      plain: "Highlights are not available in this document.",
+      /** "{Section | Diagram | Quiz | Figure | Sources} · {title}" is the bar's message. */
+      kind: "Bookmark",
+      noLabel:
+        "No label. A label says why you kept this place, in the Notes list and the book's list.",
+      label: "Label",
+      placeholder: "Why this place?",
+      saveLabel: "Save label",
+      addLabel: "Add label",
+      editLabel: "Edit label",
+      remove: "Remove bookmark",
+      removeShort: "Remove",
+    },
+    place: {
+      group: "The section you are reading",
+      groupPos: "This position",
+    },
+    margin: {
+      rail: "Notes in the margin",
+      note: "Note",
+      noteSection: "Note on this section",
+      noteDiagram: "Note on this diagram",
+      bookmarked: "Bookmarked",
+      changed: "Text changed",
+    },
+    /** Popover bodies for Text changed and the other language. */
+    changed: {
+      kind: "Text changed",
+      leadOne: (language: string, v: number): string =>
+        `You made this on ${language} v${v}. This version no longer says it, so it is not painted here.`,
+      leadMany: (language: string, v: number): string =>
+        `You made these on ${language} v${v}. This version no longer says them, so they are not painted here.`,
+      read: (v: number): string => `Read this section in v${v} →`,
+      delete: "Delete",
+      /** The row and margin item: "{n} highlight(s) you made no longer match(es) the text". */
+      item: (words: string, n: number): string =>
+        `${words} you made no longer ${n === 1 ? "matches" : "match"} the text`,
+    },
+    other: {
+      leadOne: (language: string): string =>
+        `Highlights belong to their language, so this one is not painted on the ${language} text.`,
+      leadMany: (language: string): string =>
+        `Highlights belong to their language, so these are not painted on the ${language} text.`,
+      /** …followed by the endonym in its own `lang`, then " →" */
+      readPre: "Read this section in ",
+      /** Margin item and row: "{n} highlight(s) in {endonym}" (the endonym follows in its own lang). */
+      item: (words: string): string => `${words} in `,
+    },
+    /** A hidden dialog name for a list's Delete (`aria-label="Delete highlight: …"`). */
+    aria: {
+      deleteHighlight: "Delete highlight: ",
+      deleteNote: "Delete note: ",
+      removeBookmark: "Remove bookmark: ",
+    },
+    /** The Notes view of the Contents sheet. */
+    sheet: {
+      notes: "Notes",
+      contents: "Contents",
+      close: "Close",
+      chapterGroup: "In this chapter",
+      documentGroup: "In this document",
+      lead: "In reading order. Choose one to go to its place.",
+      inLang: "In ",
+      /** …followed by the endonym in its own `lang`, then "." */
+      otherLeadPre:
+        "Highlights belong to their language, so these are not painted here. Choose one to read it in ",
+      unanchored: "Unanchored",
+      unanchoredLead:
+        "The text these were made on is no longer in this chapter. They stay until you delete them.",
+      allNotes: "All notes in this book →",
+      emptyChapter:
+        "Nothing marked in this chapter yet: select a passage to highlight it, or bookmark a section from the bar at the bottom.",
+      emptyDocument:
+        "Nothing marked in this document yet: use Bookmark this position to keep a place.",
+      /** A plain Markdown chapter: no highlights, only positions. */
+      emptyPlainChapter:
+        "Nothing marked in this chapter yet: use Bookmark this position to keep a place.",
+    },
+    /** A row in a list (`NoteItem`). */
+    row: {
+      kHighlight: "Highlight",
+      kHighlightNote: "Highlight · note",
+      kNoteSection: "Note on this section",
+      kNoteDiagram: "Note on this diagram",
+      kBookmark: "Bookmark",
+      kApprox: "Bookmark · approximate",
+      kPosition: "Bookmark · position",
+      kChanged: "Text changed",
+      kUnanchored: "Unanchored",
+      reviewOn: "Review this · on",
+      metaChanged: (language: string, v: number): string =>
+        `Made on ${language} v${v} · this version no longer says it`,
+      metaGone: (block: string, chapter: string | null): string =>
+        `Was in “${block}”${chapter ? ` · ${chapter}` : ""}`,
+      metaGoneBlock: "a removed section",
+      metaApprox: (pct: number): string =>
+        `About ${pct}% through · placed from the HTML version`,
+      metaPosition: (pct: number): string => `About ${pct}% through`,
+      del: "Delete",
+      remove: "Remove",
+    },
+    /** The per-book list (`BookNotes`). */
+    book: {
+      backChapter: "Back to the chapter",
+      backBook: "Back to the book",
+      title: "Notes in this book",
+      show: "Show",
+      all: "All",
+      bookmarks: "Bookmarks",
+      highlights: "Highlights and notes",
+      chapterN: (n: number): string => `Chapter ${n}`,
+      emptyAll:
+        "Nothing marked in this book yet: highlights, notes and bookmarks you make in its chapters gather here.",
+      emptyBookmarks:
+        "No bookmarks in this book yet: use Bookmark in the bar below a chapter’s text.",
+      emptyHighlights:
+        "No highlights or notes in this book yet: select a passage in a chapter to highlight it.",
+      /** "26 items in 5 chapters · 2 approximate · 2 unanchored" */
+      count: (
+        n: number,
+        noun: "items" | "bookmarks" | "highlights",
+        chapters: number,
+        approx: number,
+        gone: number,
+      ): string => {
+        const nouns = {
+          items: n === 1 ? "item" : "items",
+          bookmarks: n === 1 ? "bookmark" : "bookmarks",
+          highlights: n === 1 ? "highlight or note" : "highlights and notes",
+        } as const;
+        return (
+          `${n} ${nouns[noun]} in ${chapters} ${chapters === 1 ? "chapter" : "chapters"}` +
+          (approx ? ` · ${approx} approximate` : "") +
+          (gone ? ` · ${gone} unanchored` : "")
+        );
+      },
+    },
   },
 } as const;

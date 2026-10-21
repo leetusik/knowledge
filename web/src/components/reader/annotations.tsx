@@ -12,20 +12,34 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 
 import { READER } from "@/content";
+import { readerHref, type ReaderTarget } from "@/lib/reader-href";
 import {
   editAnnotation,
+  editBookmark,
   removeAnnotation,
+  removeBookmark,
   saveAnnotation,
+  saveBookmark,
   type AnnotationPatch,
   type AnnotationResult,
   type AnnotationWrite,
+  type BookmarkWrite,
 } from "@/lib/reader/actions";
 import { capture, cps, type ANode, type Captured } from "@/lib/reader/anchor";
-import { TAP_IGNORE } from "@/lib/reader/chrome";
+import { progressPercent, TAP_IGNORE } from "@/lib/reader/chrome";
+import {
+  buildGroups,
+  marksWord,
+  positionNear,
+  snippetOf,
+  type ListItem,
+  type SectionIndex,
+} from "@/lib/reader/note-list";
 import {
   cleanNote,
   clip,
@@ -46,12 +60,24 @@ import {
   type PaintRange,
 } from "@/lib/reader/paint";
 import type {
+  CardStatus,
   NoteSection,
+  ReaderBookmark,
   ReaderNote,
   ReaderNotes,
+  ReaderOtherNote,
   ReaderWrite,
 } from "@/lib/reader/types";
 
+import {
+  BookmarkButton,
+  MarginItem,
+  MarkerRow,
+  PlaceBar,
+  type MarkerLook,
+} from "./annotation-parts";
+import { NotesPanel } from "./notes-panel";
+import { useNotesBridge } from "./reader-notes";
 import { useReaderProgress } from "./reader-progress";
 import { SignInToSave } from "./sign-in-to-save";
 
@@ -72,8 +98,19 @@ import { SignInToSave } from "./sign-in-to-save";
  *  - deleting waits out the undo line (10 seconds) before it is sent, so Undo puts back the
  *    highlight with its note and its review card's history (a delayed delete, P30.S20).
  *
- * S21 adds the bookmarks, the margin and the rows, the place bar, the Notes sheet and the
- * per-book list on top of this.
+ * P30.S21 adds, on the same layer (it owns every mark, so each surface shows one truth):
+ *
+ *  - bookmarks: a section's (the place bar, the selection bar on a heading or a typed
+ *    block) and a plain document's position, each with an optional label; removing one
+ *    waits out the same undo line;
+ *  - the margin (from 64rem) and the rows under a heading or typed block (below it) for a
+ *    section's note, Text changed, the other languages and a bookmark, and the "Bookmarked"
+ *    tag in the heading's top margin;
+ *  - the place bar in the bottom slot, riding with the chrome;
+ *  - the Notes view of the Contents sheet, mounted by the frame's bridge, with the
+ *    Unanchored group and the other languages' group (nothing is ever dropped);
+ *  - the popovers for Text changed, the other language and a bookmark;
+ *  - landing on a mark from a list (`?note=` from the book's list, a row in the sheet).
  */
 
 const T = READER.notes;
@@ -84,15 +121,27 @@ type Item = ReaderNote & {
   /** Deleted, waiting out the undo line. */
   gone?: boolean;
 };
+type OtherItem = ReaderOtherNote & { gone?: boolean };
+type Bk = ReaderBookmark & { gone?: boolean };
 
-type Sel = Captured & { id: number; pointer: boolean };
+/** A selection in a plain Markdown document: nothing can be highlighted there. */
+type NoneSel = { mode: "none" };
+type Sel = (Captured | NoneSel) & { id: number; pointer: boolean };
 
 type Pop =
   | { t: "hl"; id: string; edit: boolean }
   | { t: "new" }
   | { t: "bnote"; id: string; edit: boolean }
   | { t: "bnew"; sec: string }
-  | { t: "choose"; ids: string[] };
+  | { t: "choose"; ids: string[] }
+  /** Text changed on a section. */
+  | { t: "changed"; sec: string }
+  /** Highlights made in another language, on a section. */
+  | { t: "other"; sec: string; lang: string }
+  | { t: "bm"; id: string; edit: boolean };
+
+/** What a Sign in to save is asked for (`what`). */
+type SaveWhat = "notes" | "bookmarks";
 
 interface Toast {
   id: number;
@@ -105,14 +154,27 @@ interface Toast {
 type Wire =
   | { op: "save"; input: AnnotationWrite }
   | { op: "edit"; input: AnnotationPatch }
-  | { op: "remove"; input: { id: string } };
+  | { op: "remove"; input: { id: string } }
+  | { op: "bm-save"; input: BookmarkWrite }
+  | { op: "bm-edit"; input: { id: string; label: string | null } }
+  | { op: "bm-remove"; input: { id: string } };
 
-const runWire = (w: Wire): Promise<AnnotationResult> =>
-  w.op === "save"
-    ? saveAnnotation(w.input)
-    : w.op === "edit"
-      ? editAnnotation(w.input)
-      : removeAnnotation(w.input);
+const runWire = (w: Wire): Promise<AnnotationResult> => {
+  switch (w.op) {
+    case "save":
+      return saveAnnotation(w.input);
+    case "edit":
+      return editAnnotation(w.input);
+    case "remove":
+      return removeAnnotation(w.input);
+    case "bm-save":
+      return saveBookmark(w.input);
+    case "bm-edit":
+      return editBookmark(w.input);
+    case "bm-remove":
+      return removeBookmark(w.input);
+  }
+};
 
 /**
  * Writes the server refused with a 401 wait here (sessionStorage, this tab) until the
@@ -172,9 +234,11 @@ export interface AnnotationLayerProps {
   lang: string;
   chapterTitle: string;
   place: "chapter" | "document";
+  /** The chapter or document on screen, for the links to other languages and versions. */
+  target: ReaderTarget;
 }
 
-const toItem = (n: ReaderNote): Item => ({ ...n, everOn: n.review });
+const toItem = (n: ReaderNote): Item => ({ ...n, everOn: n.card !== "" });
 
 export function AnnotationLayer({
   notes,
@@ -183,10 +247,13 @@ export function AnnotationLayer({
   lang,
   chapterTitle,
   place,
+  target,
 }: AnnotationLayerProps) {
   const progress = useReaderProgress();
+  const bridge = useNotesBridge();
   const member = !!progress?.member;
   const signInHref = progress?.signInHref ?? "/login";
+  const plain = notes.plain;
 
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const desc = useMemo(
@@ -203,13 +270,30 @@ export function AnnotationLayer({
   );
 
   const [items, setItems] = useState<Item[]>(() => notes.items.map(toItem));
+  const [orph, setOrph] = useState<Item[]>(() => notes.unanchored.map(toItem));
+  const [others, setOthers] = useState<OtherItem[]>(() => notes.other);
+  const [bms, setBms] = useState<Bk[]>(() => notes.bookmarks);
+  const [obms, setObms] = useState<Bk[]>(() => notes.otherBookmarks);
   const [sel, setSel] = useState<Sel | null>(null);
   const [pop, setPop] = useState<Pop | null>(null);
   const [save, setSave] = useState(false);
-  const [slotSave, setSlotSave] = useState(false);
+  const [saveWhat, setSaveWhat] = useState<SaveWhat>("notes");
+  const [slotSave, setSlotSave] = useState<false | SaveWhat>(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [draft, setDraft] = useState("");
   const [placed, setPlaced] = useState<Placed | null>(null);
+  /** A highlight reached from a list: shown open (the accent underline) with no popover. */
+  const [landed, setLanded] = useState<string | null>(null);
+  /** The Notes list's inline label editor. */
+  const [editLabel, setEditLabel] = useState<string | null>(null);
+  /** The section being read (the place bar), and how far through the text the reader is. */
+  const [blk, setBlk] = useState<string | null>(null);
+  const [pct, setPct] = useState(0);
+  const [endSeen, setEndSeen] = useState(false);
+  const [codeIds, setCodeIds] = useState<ReadonlySet<string>>(new Set());
+  /** The margin items' tops, by key (from 64rem), and the nodes the rows mount in. */
+  const [railTops, setRailTops] = useState<Record<string, number>>({});
+  const [rowHosts, setRowHosts] = useState<Record<string, HTMLElement>>({});
   const [host, setHost] = useState<{
     art: HTMLElement;
     root: HTMLElement;
@@ -232,12 +316,13 @@ export function AnnotationLayer({
   const queue = useRef<Job[]>([]);
   const paused = useRef<Job[]>([]);
   const running = useRef(false);
-  const pendingDel = useRef<{ id: string; commit: () => void } | null>(null);
+  const pendingDel = useRef<{ key: string; commit: () => void } | null>(null);
   const mouseDown = useRef(false);
+  const railRaf = useRef(0);
   // The current state, for the document listeners (registered once).
-  const now = useRef({ sel, pop, save, items, member });
+  const now = useRef({ sel, pop, save, items, orph, others, bms, obms, member });
   useEffect(() => {
-    now.current = { sel, pop, save, items, member };
+    now.current = { sel, pop, save, items, orph, others, bms, obms, member };
   });
 
   // ---- where the layer lives ------------------------------------------------------------
@@ -248,6 +333,395 @@ export function AnnotationLayer({
     // The layer reads the server-rendered page around it once it is hydrated.
     if (art && root && shell) setHost({ art, root, shell });
   }, []);
+
+  // ---- what the layer holds, as the lists and the margin show it ---------------------------------
+  const names = notes.langNames;
+  const langName = useCallback(
+    (l: string) => names[l] ?? l,
+    [names],
+  );
+  const look = useMemo<SectionIndex>(
+    () =>
+      new Map(
+        notes.sections.map((x, i) => [
+          x.id,
+          {
+            n: i,
+            label: x.word === "Section" ? x.title : `${x.word} · ${x.title}`,
+          },
+        ]),
+      ),
+    [notes.sections],
+  );
+  const groups = useMemo(
+    () =>
+      buildGroups(
+        {
+          items,
+          unanchored: orph,
+          bookmarks: bms,
+          other: others,
+          otherBookmarks: obms,
+        },
+        { sections: look, chapterTitle, code: codeIds },
+        new Set(
+          [...items, ...orph, ...others, ...bms, ...obms]
+            .filter((x) => x.gone)
+            .map((x) => x.id),
+        ),
+      ),
+    [items, orph, others, bms, obms, look, chapterTitle, codeIds],
+  );
+  const groupsRef = useRef(groups);
+  useEffect(() => {
+    groupsRef.current = groups;
+  });
+  const setCount = bridge?.setCount;
+  useEffect(() => {
+    setCount?.(member ? groups.count : 0);
+  }, [setCount, groups.count, member]);
+
+  /** A section's bookmark is on (the place bar and the bar read "Bookmarked"). */
+  const bookmarked = (sec: string | null): boolean =>
+    !!sec && bms.some((b) => !b.gone && !b.pos && !b.approx && b.at === sec);
+  const positionOn =
+    positionNear(
+      bms.filter((b) => !b.gone && b.pos && !b.approx),
+      pct / 100,
+    ).length > 0;
+
+  // ---- the margin (from 64rem) and the rows under a block (below it) --------------------------
+  interface Marker {
+    key: string;
+    kind: "note" | "bnote" | "changed" | "other" | "bm";
+    at: "mark" | "block";
+    id?: string;
+    sec: string;
+    lang?: string;
+    order: number;
+    look: MarkerLook;
+  }
+  const markers = useMemo<Marker[]>(() => {
+    const out: Marker[] = [];
+    const n = (sec: string) => look.get(sec)?.n ?? 0;
+    const alive = items.filter((x) => !x.gone);
+    for (const x of alive) {
+      const sec = x.sec ?? x.block;
+      if (!look.has(sec)) continue;
+      if (x.kind === "hl" && x.status === "anchored" && x.note) {
+        out.push({
+          key: x.id,
+          kind: "note",
+          at: "mark",
+          id: x.id,
+          sec,
+          order: n(sec) * 1e6 + (x.start ?? 0),
+          look: {
+            label: T.margin.note,
+            text: x.note,
+            lang: langOf(x.note, x.lang),
+          },
+        });
+      } else if (x.kind === "bnote" && x.status === "anchored") {
+        const diagram = look.get(sec)?.label.startsWith("Diagram");
+        out.push({
+          key: x.id,
+          kind: "bnote",
+          at: "block",
+          id: x.id,
+          sec,
+          order: n(sec) * 1e6 - 2,
+          look: {
+            label: diagram ? T.margin.noteDiagram : T.margin.noteSection,
+            text: x.note,
+            lang: langOf(x.note, x.lang),
+          },
+        });
+      }
+    }
+    const changed = new Map<string, Item[]>();
+    for (const x of alive)
+      if (x.status === "block") {
+        const sec = x.sec ?? x.block;
+        if (look.has(sec)) changed.set(sec, [...(changed.get(sec) ?? []), x]);
+      }
+    for (const [sec, list] of changed)
+      out.push({
+        key: `chg-${sec}`,
+        kind: "changed",
+        at: "block",
+        sec,
+        order: n(sec) * 1e6 - 1,
+        look: {
+          label: T.margin.changed,
+          text: T.changed.item(marksWord(list), list.length),
+          lang,
+        },
+      });
+    const byOther = new Map<string, OtherItem[]>();
+    for (const x of others)
+      if (!x.gone && x.at && look.has(x.at))
+        byOther.set(`${x.at}|${x.lang}`, [
+          ...(byOther.get(`${x.at}|${x.lang}`) ?? []),
+          x,
+        ]);
+    for (const [k, list] of byOther) {
+      const sec = list[0].at!;
+      out.push({
+        key: `oth-${k}`,
+        kind: "other",
+        at: "block",
+        sec,
+        lang: list[0].lang,
+        order: n(sec) * 1e6 - 0.5,
+        look: {
+          label: "",
+          text: T.other.item(marksWord(list)),
+          lang,
+          endonym: { name: langName(list[0].lang), lang: list[0].lang },
+        },
+      });
+    }
+    for (const b of bms)
+      if (!b.gone && !b.pos && !b.approx && b.at && look.has(b.at))
+        out.push({
+          key: b.id,
+          kind: "bm",
+          at: "block",
+          id: b.id,
+          sec: b.at,
+          order: n(b.at) * 1e6 - 3,
+          look: {
+            label: T.margin.bookmarked,
+            labelOn: true,
+            text: b.label,
+            lang: langOf(b.label, "en"),
+          },
+        });
+    return out.sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
+  }, [items, others, bms, look, lang, langName]);
+
+  const openMarker = useCallback(
+    (m: Marker, el: HTMLElement) => {
+      setSel(null);
+      setSave(false);
+      setLanded(null);
+      opener.current = { el, mark: null };
+      if (m.kind === "note" && m.id) {
+        // A highlight inside a closed fold: open the fold first, then its popover.
+        host?.root
+          .querySelector<HTMLDetailsElement>(
+            `details:not([open]):has(mark.an-m[data-an~="${CSS.escape(m.id)}"])`,
+          )
+          ?.setAttribute("open", "");
+        setPop({ t: "hl", id: m.id, edit: false });
+      } else if (m.kind === "bnote" && m.id)
+        setPop({ t: "bnote", id: m.id, edit: false });
+      else if (m.kind === "changed") setPop({ t: "changed", sec: m.sec });
+      else if (m.kind === "other" && m.lang)
+        setPop({ t: "other", sec: m.sec, lang: m.lang });
+      else if (m.kind === "bm" && m.id)
+        setPop({ t: "bm", id: m.id, edit: false });
+      focusWant.current = "box";
+    },
+    [host],
+  );
+  const markerOpen = (m: Marker): boolean => {
+    if (!pop) return false;
+    if (m.kind === "note") return pop.t === "hl" && pop.id === m.id;
+    if (m.kind === "bnote") return pop.t === "bnote" && pop.id === m.id;
+    if (m.kind === "bm") return pop.t === "bm" && pop.id === m.id;
+    if (m.kind === "changed") return pop.t === "changed" && pop.sec === m.sec;
+    return pop.t === "other" && pop.sec === m.sec && pop.lang === m.lang;
+  };
+
+  // The margin items' tops: each beside its anchor (a mark, or a block), 8 px clear of the one above.
+  const layoutRail = useCallback((): boolean => {
+    if (!host) return false;
+    const rail = host.art.querySelector<HTMLElement>(".an-rail");
+    if (!rail || !rail.offsetParent) return false; // below 64rem the rail is not shown
+    const ar = host.art.getBoundingClientRect();
+    const els = rail.querySelectorAll<HTMLElement>(".an-ri");
+    const tops: Record<string, number> = {};
+    let prev = -1e9;
+    let missing = false;
+    markers.forEach((m, i) => {
+      const el = els[i];
+      if (!el) return;
+      let a: Element | null =
+        m.at === "mark" && m.id
+          ? host.root.querySelector(
+              `mark.an-m[data-an~="${CSS.escape(m.id)}"]`,
+            )
+          : null;
+      // A mark inside a closed fold has no box: its item anchors to the fold's summary.
+      if (a && !a.getClientRects().length)
+        a = a.closest("details")?.querySelector("summary") ?? null;
+      if (!a)
+        a = host.root.querySelector(`[data-block="${CSS.escape(m.sec)}"]`);
+      let y: number | null = a
+        ? a.getBoundingClientRect().top - ar.top
+        : null;
+      if (y === null) {
+        missing = true;
+        y = prev + 8;
+      }
+      const t = Math.round(Math.max(y - 4, prev + 8));
+      tops[m.key] = t;
+      prev = t + el.offsetHeight;
+    });
+    setRailTops((o) => {
+      const ks = Object.keys(tops);
+      const same =
+        ks.length === Object.keys(o).length &&
+        ks.every((k) => Math.abs((o[k] ?? -1e9) - tops[k]) <= 1);
+      return same ? o : tops;
+    });
+    return missing;
+  }, [host, markers]);
+  const scheduleRail = useCallback(() => {
+    cancelAnimationFrame(railRaf.current);
+    railRaf.current = requestAnimationFrame(() => {
+      // An anchor that is not in the page yet (a late block): once more shortly after.
+      if (layoutRail())
+        window.setTimeout(() => {
+          railRaf.current = requestAnimationFrame(() => layoutRail());
+        }, 150);
+    });
+  }, [layoutRail]);
+  // After each render, and when the text reflows (a resize, a font, a fold, an image).
+  useLayoutEffect(() => {
+    scheduleRail();
+  });
+  useEffect(() => {
+    if (!host) return;
+    const again = () => scheduleRail();
+    const ro = new ResizeObserver(again);
+    ro.observe(host.root);
+    ro.observe(host.art);
+    window.addEventListener("resize", again);
+    host.art.addEventListener("toggle", again, true);
+    host.art.addEventListener("load", again, true);
+    document.fonts?.ready.then(again).catch(() => {});
+    return () => {
+      cancelAnimationFrame(railRaf.current);
+      ro.disconnect();
+      window.removeEventListener("resize", again);
+      host.art.removeEventListener("toggle", again, true);
+      host.art.removeEventListener("load", again, true);
+    };
+  }, [host, scheduleRail]);
+
+  // The "Bookmarked" tag (in the block's top margin) and the rows' mount nodes are DOM the
+  // chapter does not render itself, kept in step with the marks and removed with the layer.
+  const hostNodes = useRef(new Map<string, HTMLElement>());
+  // The cleanup is a layout effect declared first: on a host change every cleanup runs before
+  // the sync below creates its nodes, where a passive cleanup would remove what it just made.
+  useLayoutEffect(
+    () => () => {
+      hostNodes.current.forEach((n) => n.remove());
+      hostNodes.current.clear();
+      host?.root.querySelectorAll("[data-an-tag]").forEach((t) => t.remove());
+    },
+    [host],
+  );
+  useLayoutEffect(() => {
+    if (!host) return;
+    const tagSecs = new Set(
+      markers.filter((m) => m.kind === "bm").map((m) => m.sec),
+    );
+    host.root.querySelectorAll<HTMLElement>("[data-an-tag]").forEach((t) => {
+      const sec = t.getAttribute("data-an-tag") ?? "";
+      if (tagSecs.has(sec)) tagSecs.delete(sec);
+      else t.remove();
+    });
+    tagSecs.forEach((sec) => {
+      const el = host.root.querySelector(`[data-block="${CSS.escape(sec)}"]`);
+      if (!el) return;
+      const tag = document.createElement("span");
+      tag.className = "an-tag";
+      tag.setAttribute("aria-hidden", "true");
+      tag.setAttribute("data-an-skip", "");
+      tag.textContent = T.margin.bookmarked;
+      if (/^(OL|UL|DL|TABLE)$/.test(el.tagName)) {
+        // A list or a table takes no <span> child: the tag hangs from a zero-height box before it.
+        const wrap = document.createElement("div");
+        wrap.className = "an-tag-w";
+        wrap.setAttribute("data-an-tag", sec);
+        wrap.setAttribute("aria-hidden", "true");
+        wrap.appendChild(tag);
+        el.before(wrap);
+      } else {
+        tag.setAttribute("data-an-tag", sec);
+        el.appendChild(tag);
+      }
+    });
+    const rowSecs = new Set(
+      markers
+        .filter((m) => m.kind === "bnote" || m.kind === "changed" || m.kind === "other")
+        .map((m) => m.sec),
+    );
+    const nodes = hostNodes.current;
+    for (const [sec, node] of [...nodes])
+      if (!rowSecs.has(sec) || !node.isConnected) {
+        node.remove();
+        nodes.delete(sec);
+      }
+    for (const sec of rowSecs) {
+      if (nodes.has(sec)) continue;
+      const block = host.root.querySelector(`[data-block="${CSS.escape(sec)}"]`);
+      if (!block) continue;
+      const node = document.createElement("div");
+      node.className = "an-rows";
+      block.after(node);
+      nodes.set(sec, node);
+    }
+    setRowHosts((o) => {
+      const same =
+        Object.keys(o).length === nodes.size &&
+        [...nodes].every(([k, v]) => o[k] === v);
+      return same ? o : Object.fromEntries(nodes);
+    });
+  }, [host, markers]);
+
+  // ---- the section being read, for the place bar -----------------------------------------------
+  useEffect(() => {
+    if (!host) return;
+    let raf = 0;
+    const measure = () => {
+      raf = 0;
+      const doc = document.documentElement;
+      const p = progressPercent(window.scrollY, doc.scrollHeight - window.innerHeight);
+      setPct((o) => (o === p ? o : p));
+      const bar =
+        document.querySelector(".rd-top")?.getBoundingClientRect().bottom ?? 59;
+      const line = bar + 24;
+      let found: string | null = null;
+      host.root.querySelectorAll<HTMLElement>("[data-block]").forEach((h) => {
+        const id = h.getAttribute("data-block");
+        if (id && look.has(id) && h.getBoundingClientRect().top <= line)
+          found = id;
+      });
+      setBlk((o) => (o === found ? o : found));
+      const end = host.art.querySelector(".rd-end");
+      const seen = end
+        ? end.getBoundingClientRect().top < window.innerHeight - 40 || p >= 95
+        : p >= 95;
+      setEndSeen((o) => (o === seen ? o : seen));
+    };
+    const on = () => {
+      if (!raf) raf = requestAnimationFrame(measure);
+    };
+    measure();
+    window.addEventListener("scroll", on, { passive: true });
+    window.addEventListener("resize", on);
+    document.fonts?.ready.then(on).catch(() => {});
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", on);
+      window.removeEventListener("resize", on);
+    };
+  }, [host, look]);
 
   // ---- the toast ---------------------------------------------------------------------------
   const showToast = useCallback((t: Omit<Toast, "id">, timed: boolean) => {
@@ -286,7 +760,7 @@ export function AnnotationLayer({
           queue.current = [];
           // Kept across the sign-in: the link leaves this page.
           stashUnsaved(paused.current.map((j) => j.wire));
-          setSlotSave(true);
+          setSlotSave(job.wire.op.startsWith("bm") ? "bookmarks" : "notes");
           break;
         }
         if (st === 0 || st === 429 || st >= 500) {
@@ -363,6 +837,10 @@ export function AnnotationLayer({
     if (!resync.current) return;
     resync.current = false;
     setItems(notes.items.map(toItem));
+    setOrph(notes.unanchored.map(toItem));
+    setOthers(notes.other);
+    setBms(notes.bookmarks);
+    setObms(notes.otherBookmarks);
   }, [notes]);
 
   const enqueue = useCallback(
@@ -374,12 +852,45 @@ export function AnnotationLayer({
   );
 
   const patchItem = useCallback(
-    (id: string, change: Partial<Item>) =>
-      setItems((list) =>
+    (id: string, change: Partial<Item>) => {
+      const apply = (list: Item[]) =>
+        list.map((x) => (x.id === id ? { ...x, ...change } : x));
+      setItems(apply);
+      setOrph(apply);
+      setOthers((list) =>
+        list.map((x) => (x.id === id ? { ...x, ...change } : x)),
+      );
+    },
+    [],
+  );
+  const patchBookmark = useCallback(
+    (id: string, change: Partial<Bk>) =>
+      setBms((list) =>
         list.map((x) => (x.id === id ? { ...x, ...change } : x)),
       ),
     [],
   );
+  /** Mark deleted marks (they wait out the undo line, hidden everywhere), or bring them back. */
+  const setGone = useCallback((ids: readonly string[], gone: boolean) => {
+    const on = new Set(ids);
+    const apply = <T extends { id: string; gone?: boolean }>(list: T[]) =>
+      list.map((x) => (on.has(x.id) ? { ...x, gone } : x));
+    setItems(apply);
+    setOrph(apply);
+    setOthers(apply);
+    setBms(apply);
+    setObms(apply);
+  }, []);
+  const dropMarks = useCallback((ids: readonly string[]) => {
+    const on = new Set(ids);
+    const keep = <T extends { id: string }>(list: T[]) =>
+      list.filter((x) => !on.has(x.id));
+    setItems(keep);
+    setOrph(keep);
+    setOthers(keep);
+    setBms(keep);
+    setObms(keep);
+  }, []);
 
   // A delete waits out its undo line; this sends it now (the next delete, leaving).
   const flushDelete = useCallback(() => {
@@ -437,7 +948,7 @@ export function AnnotationLayer({
     sel && sel.mode === "passage" && (sel.pointer || pop?.t === "new")
       ? { sec: sel.sec, s: sel.s, e: sel.e }
       : null;
-  const active = pop?.t === "hl" ? pop.id : null;
+  const active = pop?.t === "hl" ? pop.id : pop ? null : landed;
   const paintKey = JSON.stringify([ranges, pending, active]);
 
   useLayoutEffect(() => {
@@ -449,6 +960,25 @@ export function AnnotationLayer({
       active,
       desc,
     });
+    // Which highlights sit in code (a list shows their quote in mono, unpainted).
+    const code = new Set<string>();
+    host.root
+      .querySelectorAll<HTMLElement>("mark.an-m[data-an]")
+      .forEach((m) => {
+        if (m.closest('[data-tx="code"]'))
+          (m.getAttribute("data-an") ?? "")
+            .split(" ")
+            .filter(Boolean)
+            .forEach((id) => code.add(id));
+      });
+    // Reported after the paint (the lists, not the page, read it).
+    requestAnimationFrame(() =>
+      setCodeIds((prev) =>
+        prev.size === code.size && [...code].every((id) => prev.has(id))
+          ? prev
+          : code,
+      ),
+    );
     // ranges/pending/active are folded into paintKey.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [host, paintKey, sections, desc]);
@@ -470,6 +1000,7 @@ export function AnnotationLayer({
     setPop(null);
     setSel(null);
     setSave(false);
+    setLanded(null);
     if (back) focusWant.current = "back";
   }, []);
 
@@ -523,6 +1054,8 @@ export function AnnotationLayer({
         },
         note,
         review: false,
+        card: "",
+        snapshot: null,
         everOn: false,
         lang,
         version,
@@ -553,6 +1086,7 @@ export function AnnotationLayer({
     const s = now.current.sel;
     if (!s || s.mode !== "passage") return;
     if (!now.current.member) {
+      setSaveWhat("notes");
       setSave(true);
       return;
     }
@@ -571,6 +1105,7 @@ export function AnnotationLayer({
     const s = now.current.sel;
     if (!s || s.mode !== "passage") return;
     if (!now.current.member) {
+      setSaveWhat("notes");
       setSave(true);
       return;
     }
@@ -581,9 +1116,13 @@ export function AnnotationLayer({
     focusWant.current = "field";
   }, []);
 
-  const blockNote = useCallback((sec: string) => {
+  const blockNote = useCallback((sec: string, from?: "place") => {
     if (!now.current.member) {
-      setSave(true);
+      if (from === "place") setSlotSave("notes");
+      else {
+        setSaveWhat("notes");
+        setSave(true);
+      }
       return;
     }
     const have = now.current.items.find(
@@ -620,44 +1159,195 @@ export function AnnotationLayer({
     focusWant.current = "back";
   }, []);
 
-  const remove = useCallback(
-    (id: string) => {
-      const it = now.current.items.find((x) => x.id === id);
-      if (!it) return;
+  /** A delete waits out its undo line, hidden everywhere meanwhile; Undo puts it all back. */
+  const scheduleDelete = useCallback(
+    (ids: string[], text: string, wireOf: (id: string) => Wire) => {
       flushDelete();
-      patchItem(id, { gone: true });
+      setGone(ids, true);
+      const key = ids.join(",");
       let timer = 0;
       const commit = () => {
         window.clearTimeout(timer);
-        if (pendingDel.current?.id === id) pendingDel.current = null;
-        enqueue({
-          wire: { op: "remove", input: { id } },
-          done: () => setItems((list) => list.filter((x) => x.id !== id)),
-          undo: () => patchItem(id, { gone: false }),
-        });
+        if (pendingDel.current?.key === key) pendingDel.current = null;
+        for (const id of ids)
+          enqueue({
+            wire: wireOf(id),
+            done: () => dropMarks([id]),
+            undo: () => setGone([id], false),
+          });
       };
       timer = window.setTimeout(commit, UNDO_MS);
-      pendingDel.current = { id, commit };
+      pendingDel.current = { key, commit };
       showToast(
         {
-          text:
-            it.kind === "bnote"
-              ? T.undo.noteOnly
-              : undoText({ note: it.note, card: it.review || it.everOn }),
+          text,
           undo: () => {
             window.clearTimeout(timer);
-            if (pendingDel.current?.id === id) pendingDel.current = null;
-            patchItem(id, { gone: false });
+            if (pendingDel.current?.key === key) pendingDel.current = null;
+            setGone(ids, false);
             setToast(null);
           },
         },
         true,
       );
+    },
+    [dropMarks, enqueue, flushDelete, setGone, showToast],
+  );
+
+  const remove = useCallback(
+    (id: string) => {
+      const cur = now.current;
+      const it: (ReaderNote & { everOn?: boolean }) | undefined =
+        cur.items.find((x) => x.id === id) ??
+        cur.orph.find((x) => x.id === id) ??
+        cur.others.find((x) => x.id === id);
+      if (!it) return;
+      scheduleDelete(
+        [id],
+        it.kind === "bnote"
+          ? T.undo.noteOnly
+          : undoText({ note: it.note, card: it.card !== "" || !!it.everOn }),
+        () => ({ op: "remove", input: { id } }),
+      );
+      setPop(null);
+      setSel(null);
+      setLanded(null);
+      focusWant.current = "back";
+    },
+    [scheduleDelete],
+  );
+
+  // ---- bookmarks ------------------------------------------------------------------------------
+  const removeBookmarks = useCallback(
+    (ids: string[]) => {
+      if (!ids.length) return;
+      scheduleDelete(ids, T.bm.removed, (id) => ({
+        op: "bm-remove",
+        input: { id },
+      }));
       setPop(null);
       setSel(null);
       focusWant.current = "back";
     },
-    [enqueue, flushDelete, patchItem, showToast],
+    [scheduleDelete],
+  );
+
+  const makeBookmark = useCallback(
+    (
+      anchor: { block_id: string } | { fraction: number },
+      snippet: string,
+    ): string | null => {
+      if (!write) return null;
+      const id = newId();
+      const sec = "block_id" in anchor ? anchor.block_id : null;
+      const bk: Bk = {
+        id,
+        block: sec,
+        at: sec,
+        exact: true,
+        fraction: "fraction" in anchor ? anchor.fraction : null,
+        label: "",
+        snippet,
+        pos: sec === null,
+        approx: false,
+        lang,
+        version,
+        created: new Date().toISOString(),
+      };
+      setBms((list) => [...list, bk]);
+      enqueue({
+        wire: {
+          op: "bm-save",
+          input: { ...write, id, version, anchor, snippet },
+        },
+        undo: () => setBms((list) => list.filter((x) => x.id !== id)),
+      });
+      return id;
+    },
+    [write, lang, version, enqueue],
+  );
+
+  /** A section's bookmark, toggled: the control reads "Bookmarked" and is pressed. */
+  const toggleSection = useCallback(
+    (sec: string, from: "bar" | "place") => {
+      if (!now.current.member) {
+        if (from === "place") setSlotSave("bookmarks");
+        else {
+          setSaveWhat("bookmarks");
+          setSave(true);
+        }
+        return;
+      }
+      const have = now.current.bms.filter(
+        (b) => !b.gone && !b.pos && !b.approx && b.at === sec,
+      );
+      if (have.length) {
+        removeBookmarks(have.map((b) => b.id));
+        return;
+      }
+      makeBookmark({ block_id: sec }, clip(sectionLabel(sec), 140));
+    },
+    [makeBookmark, removeBookmarks, sectionLabel],
+  );
+
+  /** What the reader is looking at: the fraction read, and the first text under the top bar. */
+  const placeNow = useCallback((): { frac: number; snippet: string } => {
+    const doc = document.documentElement;
+    const p = progressPercent(window.scrollY, doc.scrollHeight - window.innerHeight);
+    let snippet = "";
+    const line =
+      (document.querySelector(".rd-top")?.getBoundingClientRect().bottom ??
+        59) + 8;
+    const all = host?.root.querySelectorAll<HTMLElement>(
+      "p, li, h2, h3, h4, pre, blockquote",
+    );
+    if (all)
+      for (const el of Array.from(all)) {
+        if (el.getBoundingClientRect().top >= line - 4 && el.textContent?.trim()) {
+          snippet = el.textContent;
+          break;
+        }
+      }
+    return { frac: p / 100, snippet: snippetOf(snippet) };
+  }, [host]);
+
+  /** A plain document's position bookmark; one within 2% of the reader's place is removed instead. */
+  const togglePosition = useCallback(
+    (from: "bar" | "place") => {
+      if (!now.current.member) {
+        if (from === "place") setSlotSave("bookmarks");
+        else {
+          setSaveWhat("bookmarks");
+          setSave(true);
+        }
+        return;
+      }
+      const { frac, snippet } = placeNow();
+      const near = positionNear(
+        now.current.bms.filter((b) => !b.gone && b.pos && !b.approx),
+        frac,
+      );
+      if (near.length) {
+        removeBookmarks(near);
+        return;
+      }
+      makeBookmark({ fraction: frac }, snippet);
+    },
+    [makeBookmark, placeNow, removeBookmarks],
+  );
+
+  const setLabel = useCallback(
+    (id: string, label: string) => {
+      const before = now.current.bms.find((b) => b.id === id)?.label ?? "";
+      const clean = label.trim().slice(0, 120);
+      if (clean === before) return;
+      patchBookmark(id, { label: clean });
+      enqueue({
+        wire: { op: "bm-edit", input: { id, label: clean || null } },
+        undo: () => patchBookmark(id, { label: before }),
+      });
+    },
+    [enqueue, patchBookmark],
   );
 
   const setNote = useCallback(
@@ -709,6 +1399,8 @@ export function AnnotationLayer({
         quote: null,
         note: text,
         review: false,
+        card: "",
+        snapshot: null,
         everOn: false,
         lang,
         version,
@@ -798,15 +1490,23 @@ export function AnnotationLayer({
     const it = now.current.items.find((x) => x.id === p.id);
     if (!it) return;
     const on = !it.review;
-    patchItem(p.id, { review: on, everOn: it.everOn || on });
+    const card: CardStatus = on ? "active" : "suspended";
+    patchItem(p.id, { review: on, card, everOn: it.everOn || on });
     enqueue({
       wire: { op: "edit", input: { id: p.id, review: on } },
       done: (r) =>
         patchItem(p.id, {
           review: !!r.review,
-          ...(r.card ? { everOn: true } : {}),
+          ...(r.card === "active" || r.card === "suspended"
+            ? { card: r.card, everOn: true }
+            : {}),
         }),
-      undo: () => patchItem(p.id, { review: it.review, everOn: it.everOn }),
+      undo: () =>
+        patchItem(p.id, {
+          review: it.review,
+          card: it.card,
+          everOn: it.everOn,
+        }),
     });
   }, [enqueue, patchItem]);
 
@@ -838,6 +1538,144 @@ export function AnnotationLayer({
     }
   }, []);
 
+  // ---- landing on a mark, from a list ---------------------------------------------------------
+  /** Scroll so the element sits 32 px under the top bar (not a gesture: the chrome stays as it is). */
+  const scrollUnderBar = useCallback((el: Element) => {
+    window.dispatchEvent(new Event("reader:quiet"));
+    const bar =
+      document.querySelector(".rd-top")?.getBoundingClientRect().bottom ?? 59;
+    const y = el.getBoundingClientRect().top + window.scrollY - (bar + 32);
+    window.scrollTo({ top: Math.max(0, y), behavior: "instant" });
+  }, []);
+
+  const land = useCallback(
+    (it: ListItem) => {
+      if (!host) return;
+      const sec = it.sec;
+      const block = sec
+        ? host.root.querySelector<HTMLElement>(
+            `[data-block="${CSS.escape(sec)}"]`,
+          )
+        : null;
+      if (it.kind === "hl" && it.status === "anchored") {
+        const mark = host.root.querySelector<HTMLElement>(
+          `mark.an-m[data-an~="${CSS.escape(it.id)}"]`,
+        );
+        if (mark) {
+          // A highlight inside a closed fold: open the fold, then land on the mark.
+          const fold = mark.closest("details");
+          if (fold && !fold.open) fold.open = true;
+          scrollUnderBar(mark);
+          setPop(null);
+          setSel(null);
+          setLanded(it.id);
+          return;
+        }
+      }
+      if (it.status === "block" && sec) {
+        if (block) scrollUnderBar(block);
+        setSel(null);
+        setLanded(null);
+        opener.current = { el: null, mark: null };
+        setPop({ t: "changed", sec });
+        focusWant.current = "box";
+        return;
+      }
+      if (block) {
+        scrollUnderBar(block);
+        return;
+      }
+      // A position (or a bookmark with no section to land on): at its fraction.
+      if (it.frac > 0) {
+        window.dispatchEvent(new Event("reader:quiet"));
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        window.scrollTo({ top: Math.max(0, it.frac * max), behavior: "instant" });
+      }
+    },
+    [host, scrollUnderBar],
+  );
+
+  const goTo = useCallback(
+    (it: ListItem) => {
+      bridge?.close();
+      setEditLabel(null);
+      if (it.status === "other") {
+        // Another language's mark: that chapter variant, at the mark's own section.
+        const o = now.current.others.find((x) => x.id === it.id);
+        const b = now.current.obms.find((x) => x.id === it.id);
+        const section = o ? (o.sec ?? o.block) : (b?.block ?? b?.at ?? null);
+        router.push(
+          readerHref(target, { lang: it.lang, section, note: it.id }),
+        );
+        return;
+      }
+      land(it);
+    },
+    [bridge, land, router, target],
+  );
+
+  /** Delete from a list: waits out the undo line like the popover's delete, and never moves focus. */
+  const deleteFromList = useCallback(
+    (it: ListItem) => {
+      if (it.kind === "bm") {
+        scheduleDelete([it.id], T.bm.removed, (id) => ({
+          op: "bm-remove",
+          input: { id },
+        }));
+        return;
+      }
+      const cur = now.current;
+      const n: (ReaderNote & { everOn?: boolean }) | undefined =
+        cur.items.find((x) => x.id === it.id) ??
+        cur.orph.find((x) => x.id === it.id) ??
+        cur.others.find((x) => x.id === it.id);
+      scheduleDelete(
+        [it.id],
+        it.kind === "bnote"
+          ? T.undo.noteOnly
+          : undoText({
+              note: it.note,
+              card: (n ? n.card !== "" || !!n.everOn : false) || it.card !== "",
+            }),
+        (id) => ({ op: "remove", input: { id } }),
+      );
+    },
+    [scheduleDelete],
+  );
+
+  // `?note=<id>` (a row in the book's list, or in another language): land on the mark once
+  // the page is painted, again when the fonts settle if the reader has not moved.
+  const arrived = useRef(false);
+  useEffect(() => {
+    if (!host || arrived.current) return;
+    arrived.current = true;
+    const url = new URL(window.location.href);
+    const id = url.searchParams.get("note");
+    if (!id) return;
+    const it = [...groupsRef.current.items, ...groupsRef.current.orphans].find(
+      (x) => x.id === id,
+    );
+    if (it) {
+      land(it);
+      const at = window.scrollY;
+      document.fonts?.ready
+        .then(() => {
+          if (Math.abs(window.scrollY - at) <= 2) land(it);
+        })
+        .catch(() => {});
+    }
+    // The mark is reached; the address no longer needs to ask for it.
+    window.setTimeout(() => {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("note");
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${u.pathname}${u.search}${u.hash}`,
+      );
+    }, 1200);
+  }, [host, land]);
+
   // ---- reading a selection -------------------------------------------------------------------
   const read = useCallback(
     (pointer: boolean) => {
@@ -849,9 +1687,12 @@ export function AnnotationLayer({
       const sc = first.startContainer;
       const el = sc.nodeType === 1 ? (sc as Element) : sc.parentElement;
       if (!el || !host.art.contains(el)) return;
-      if (el.closest(".an-layer, .rd-end")) return;
-      let c: Captured | null;
-      if (!host.root.contains(sc)) {
+      if (el.closest(".an-layer, .an-rows, .an-rail, .rd-end")) return;
+      let c: Captured | NoneSel | null;
+      if (plain) {
+        // A plain Markdown document: nothing can be highlighted, anywhere in it.
+        c = { mode: "none" };
+      } else if (!host.root.contains(sc)) {
         if (!el.closest(".rd-head")) return;
         c = { mode: "refuse" };
       } else {
@@ -871,8 +1712,9 @@ export function AnnotationLayer({
       const same =
         o &&
         o.mode === c.mode &&
-        (o.mode !== "refuse" && c.mode !== "refuse"
-          ? o.sec === c.sec &&
+        (o.mode === "passage" || o.mode === "block"
+          ? (c.mode === "passage" || c.mode === "block") &&
+            o.sec === c.sec &&
             (o.mode !== "passage" ||
               (c.mode === "passage" && o.s === c.s && o.e === c.e))
           : true);
@@ -889,7 +1731,7 @@ export function AnnotationLayer({
       // keep the native selection (its handles) until an action is pressed.
       if (pointer && c.mode === "passage") s.removeAllRanges();
     },
-    [host, sections],
+    [host, sections, plain],
   );
 
   // ---- the page's events ---------------------------------------------------------------------
@@ -898,7 +1740,7 @@ export function AnnotationLayer({
     const { art } = host;
     let selT = 0;
     const inFloat = (t: EventTarget | null) =>
-      t instanceof Element && !!t.closest(".an-layer");
+      t instanceof Element && !!t.closest(".an-layer, .an-rows, .an-rail");
     let pointerUpAt = 0;
     const onSelChange = () => {
       // A mouse selection is read once, on mouseup; the selectionchange events that the
@@ -913,6 +1755,8 @@ export function AnnotationLayer({
       if (e.pointerType === "mouse" && e.button === 0) mouseDown.current = true;
       const t = e.target as Element | null;
       if (!t || !t.closest || inFloat(t)) return;
+      // A highlight reached from a list stays shown open until the reader touches the page.
+      setLanded(null);
       const mark = t.closest("mark.an-m");
       if (mark && art.contains(mark)) {
         const ids = (mark.getAttribute("data-an") ?? "")
@@ -1099,7 +1943,11 @@ export function AnnotationLayer({
       } else if (pop.t === "choose") take(marks(pop.ids));
       else if (pop.t === "new") pend();
       else if (pop.t === "bnew") block(pop.sec);
-      else {
+      else if (pop.t === "changed" || pop.t === "other") block(pop.sec);
+      else if (pop.t === "bm") {
+        const b = bms.find((x) => x.id === pop.id);
+        if (b?.at) block(b.at);
+      } else {
         const it = items.find((x) => x.id === pop.id);
         if (it) block(it.sec ?? it.block);
       }
@@ -1179,7 +2027,7 @@ export function AnnotationLayer({
         window.scrollBy(0, dy);
       }
     }
-  }, [host, kind, sig, pop, sel, items]);
+  }, [host, kind, sig, pop, sel, items, bms]);
 
   useLayoutEffect(() => {
     layout();
@@ -1210,8 +2058,8 @@ export function AnnotationLayer({
       return;
     }
     if (!isPlaced) return;
-    if (want === "field" && fieldRef.current) {
-      const f = fieldRef.current;
+    const f = fieldRef.current ?? labelRef.current;
+    if (want === "field" && f) {
       f.focus({ preventScroll: true });
       f.setSelectionRange(f.value.length, f.value.length);
       focusWant.current = null;
@@ -1224,6 +2072,7 @@ export function AnnotationLayer({
   // ---- what the floating box says ------------------------------------------------------------
   const field = useId();
   const hintId = useId();
+  const labelRef = useRef<HTMLInputElement>(null);
   const byId = (id: string) => items.find((x) => x.id === id && !x.gone);
   const blockWord = (sec: string | null): "section" | "diagram" =>
     sec && meta.get(sec)?.word === "Diagram" ? "diagram" : "section";
@@ -1238,7 +2087,7 @@ export function AnnotationLayer({
     body = (
       <SignInToSave
         raised
-        what={READER.save.whats.notes}
+        what={READER.save.whats[saveWhat]}
         place={place}
         signInHref={signInHref}
         onDismiss={() => {
@@ -1303,6 +2152,28 @@ export function AnnotationLayer({
           >
             {T.bar.addNote}
           </button>
+          <span className="an-place__sep" aria-hidden="true" />
+          <BookmarkButton
+            on={bookmarked(s.sec)}
+            onClick={() => toggleSection(s.sec, "bar")}
+          />
+        </div>
+      );
+    }
+    if (s.mode === "none") {
+      return (
+        <div
+          className="an-box an-box--bar"
+          role="toolbar"
+          aria-label={T.bar.selected}
+          onMouseDown={hold}
+        >
+          <p className="an-box__msg">{T.bm.plain}</p>
+          <BookmarkButton
+            on={positionOn}
+            position
+            onClick={() => togglePosition("bar")}
+          />
         </div>
       );
     }
@@ -1326,6 +2197,51 @@ export function AnnotationLayer({
         <span aria-hidden="true">{labels[1]}</span>
         <span aria-hidden="true">{labels[2]}</span>
       </span>
+    );
+  }
+
+  /** Four labels share the cell when a button changes in place (Add / Edit / Save label). */
+  function swap4(labels: [string, string, string]): ReactNode {
+    return swap(labels);
+  }
+
+  /** The quotes and notes of Text changed and the other language: unpainted, each with Delete. */
+  function markList(list: readonly (ReaderNote & { gone?: boolean })[]): ReactNode {
+    return (
+      <ul className="an-box__list">
+        {list.map((x) => (
+          <li key={x.id} className="an-box__item">
+            {x.quote ? (
+              <p className="an-box__quote" lang={x.lang}>
+                {x.quote.exact}
+              </p>
+            ) : null}
+            {x.note ? (
+              <p
+                className="an-box__note an-box__note--item"
+                lang={langOf(x.note, x.lang)}
+              >
+                {x.note}
+              </p>
+            ) : null}
+            <div className="an-box__actions">
+              <button
+                type="button"
+                className="rd-btn rd-btn--quiet an-del"
+                aria-label={
+                  (x.kind === "bnote"
+                    ? T.aria.deleteNote
+                    : T.aria.deleteHighlight) +
+                  clip(x.quote?.exact ?? x.note, 60)
+                }
+                onClick={() => remove(x.id)}
+              >
+                {T.changed.delete}
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
     );
   }
 
@@ -1399,6 +2315,7 @@ export function AnnotationLayer({
 
   function popover(p: Pop): ReactNode {
     let k = "";
+    let kLang: { name: string; lang: string } | null = null;
     let dialog = "";
     let where = "";
     let content: ReactNode = null;
@@ -1444,6 +2361,179 @@ export function AnnotationLayer({
       dialog = k;
       where = sectionLabel(p.sec);
       content = editor(k, false);
+    } else if (p.t === "changed") {
+      const list = items.filter(
+        (x) => !x.gone && x.status === "block" && (x.sec ?? x.block) === p.sec,
+      );
+      if (!list.length) return null;
+      k = T.changed.kind;
+      dialog = T.changed.kind;
+      where = sectionLabel(p.sec);
+      // One block per version the marks were made on (usually one).
+      const versions = [...new Set(list.map((x) => x.version))].sort(
+        (a, b) => a - b,
+      );
+      content = (
+        <>
+          {versions.map((v) => {
+            const group = list.filter((x) => x.version === v);
+            return (
+              <div key={v} className="an-box__grp">
+                <p className="an-box__fine">
+                  {(group.length === 1 ? T.changed.leadOne : T.changed.leadMany)(
+                    names[group[0].lang] ?? group[0].lang,
+                    v,
+                  )}
+                </p>
+                {markList(group)}
+                <div className="an-box__actions">
+                  <Link
+                    className="an-link"
+                    href={readerHref(target, {
+                      lang: group[0].lang,
+                      version: v,
+                      section: p.sec,
+                    })}
+                    prefetch={false}
+                  >
+                    {T.changed.read(v)}
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </>
+      );
+    } else if (p.t === "other") {
+      const list = others.filter(
+        (x) => !x.gone && x.at === p.sec && x.lang === p.lang,
+      );
+      if (!list.length) return null;
+      const name = names[p.lang] ?? p.lang;
+      k = `${marksWord(list)} in `;
+      kLang = { name, lang: p.lang };
+      dialog = `${marksWord(list)} in ${name}`;
+      where = sectionLabel(p.sec);
+      content = (
+        <>
+          <p className="an-box__fine">
+            {(list.length === 1 ? T.other.leadOne : T.other.leadMany)(
+              names[lang] ?? lang,
+            )}
+          </p>
+          {markList(list)}
+          <div className="an-box__actions">
+            <Link
+              className="an-link"
+              href={readerHref(target, {
+                lang: p.lang,
+                section: list[0].sec ?? list[0].block,
+              })}
+              prefetch={false}
+            >
+              {T.other.readPre}
+              <span lang={p.lang}>{name}</span> →
+            </Link>
+          </div>
+        </>
+      );
+    } else if (p.t === "bm") {
+      const b = bms.find((x) => x.id === p.id && !x.gone);
+      if (!b) return null;
+      k = T.bm.kind;
+      dialog = T.bm.kind;
+      where = b.at ? sectionLabel(b.at) : "";
+      content = p.edit ? (
+        <>
+          <div className="an-ed">
+            <label className="an-ed__label" htmlFor={field}>
+              {T.bm.label}
+            </label>
+            <input
+              id={field}
+              ref={labelRef}
+              type="text"
+              className="an-ed__field an-ed__field--line"
+              maxLength={120}
+              placeholder={T.bm.placeholder}
+              defaultValue={b.label}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  setLabel(b.id, labelRef.current?.value ?? "");
+                  setPop({ t: "bm", id: b.id, edit: false });
+                  focusWant.current = "box";
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.nativeEvent.stopImmediatePropagation();
+                  setPop({ t: "bm", id: b.id, edit: false });
+                  focusWant.current = "box";
+                }
+              }}
+            />
+          </div>
+          <div className="an-box__actions">
+            <button
+              type="button"
+              className="rd-btn rd-btn--primary"
+              onClick={() => {
+                setLabel(b.id, labelRef.current?.value ?? "");
+                setPop({ t: "bm", id: b.id, edit: false });
+                focusWant.current = "box";
+              }}
+            >
+              {swap4([T.bm.saveLabel, T.bm.editLabel, T.bm.addLabel])}
+            </button>
+            <button
+              type="button"
+              className="rd-btn rd-btn--quiet"
+              onClick={() => {
+                setPop({ t: "bm", id: b.id, edit: false });
+                focusWant.current = "box";
+              }}
+            >
+              {T.pop.cancel}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          {b.label ? (
+            <p
+              className="an-box__note an-box__label"
+              lang={langOf(b.label, "en")}
+            >
+              {b.label}
+            </p>
+          ) : (
+            <p className="an-box__fine">{T.bm.noLabel}</p>
+          )}
+          <div className="an-box__actions">
+            <button
+              type="button"
+              className="rd-btn rd-btn--secondary"
+              onClick={() => {
+                setPop({ t: "bm", id: b.id, edit: true });
+                focusWant.current = "field";
+              }}
+            >
+              {swap4(
+                b.label
+                  ? [T.bm.editLabel, T.bm.saveLabel, T.bm.addLabel]
+                  : [T.bm.addLabel, T.bm.editLabel, T.bm.saveLabel],
+              )}
+            </button>
+            <button
+              type="button"
+              className="rd-btn rd-btn--quiet an-del an-push"
+              onClick={() => removeBookmarks([b.id])}
+            >
+              {T.bm.remove}
+            </button>
+          </div>
+        </>
+      );
     } else {
       const it = byId(p.id);
       if (!it) return null;
@@ -1550,7 +2640,10 @@ export function AnnotationLayer({
         }}
       >
         <div className="an-box__head">
-          <p className="an-box__k">{k}</p>
+          <p className="an-box__k">
+            {k}
+            {kLang ? <span lang={kLang.lang}>{kLang.name}</span> : null}
+          </p>
           <button
             type="button"
             className="rd-btn rd-btn--quiet an-box__x"
@@ -1569,6 +2662,27 @@ export function AnnotationLayer({
     );
   }
 
+  // ---- the place bar ---------------------------------------------------------------------------
+  const placeUp =
+    !!host &&
+    !bridge?.sheetOpen &&
+    !bridge?.pillUp &&
+    !sel &&
+    !pop &&
+    !toast &&
+    !save &&
+    !slotSave &&
+    !endSeen &&
+    (plain ? true : !!blk);
+  const placeSec = !plain && blk && look.has(blk) ? blk : null;
+
+  const rowsOf = (sec: string) =>
+    markers.filter(
+      (m) =>
+        m.sec === sec &&
+        (m.kind === "bnote" || m.kind === "changed" || m.kind === "other"),
+    );
+
   return (
     <div ref={layerRef} className="an-layer">
       <span id={desc.one} className="an-sr-desc">
@@ -1580,6 +2694,40 @@ export function AnnotationLayer({
       <span id={desc.many} className="an-sr-desc">
         {T.desc.many}
       </span>
+      {markers.length ? (
+        <div className="an-rail" role="complementary" aria-label={T.margin.rail}>
+          {markers.map((m) => (
+            <div
+              key={m.key}
+              className="an-ri"
+              style={
+                railTops[m.key] === undefined
+                  ? { top: 0, visibility: "hidden" }
+                  : { top: railTops[m.key] }
+              }
+            >
+              <MarginItem
+                m={m.look}
+                current={markerOpen(m)}
+                onOpen={(el) => openMarker(m, el)}
+              />
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {Object.entries(rowHosts).map(([sec, node]) =>
+        createPortal(
+          rowsOf(sec).map((m) => (
+            <MarkerRow
+              key={m.key}
+              m={m.look}
+              onOpen={(el) => openMarker(m, el)}
+            />
+          )),
+          node,
+          sec,
+        ),
+      )}
       {kind && body ? (
         <div
           ref={floatRef}
@@ -1631,13 +2779,73 @@ export function AnnotationLayer({
             <div className="an-save">
               <SignInToSave
                 raised
-                what={READER.save.whats.notes}
+                what={READER.save.whats[slotSave]}
                 place={place}
                 signInHref={signInHref}
                 onDismiss={() => setSlotSave(false)}
               />
             </div>,
             host.shell,
+          )
+        : null}
+      {host && placeUp
+        ? createPortal(
+            <div className="an-slot an-slot--chrome">
+              {plain ? (
+                <PlaceBar
+                  kind="pos"
+                  title=""
+                  titleLang={lang}
+                  on={positionOn}
+                  onNote={() => {}}
+                  onBookmark={() => togglePosition("place")}
+                />
+              ) : placeSec ? (
+                <PlaceBar
+                  kind="block"
+                  title={sectionLabel(placeSec)}
+                  titleLang={lang}
+                  on={bookmarked(placeSec)}
+                  onNote={() => {
+                    // The page first shows what the note is about: the section's heading.
+                    const el = host.root.querySelector(
+                      `[data-block="${CSS.escape(placeSec)}"]`,
+                    );
+                    if (el) scrollUnderBar(el);
+                    opener.current = { el: null, mark: null };
+                    blockNote(placeSec, "place");
+                  }}
+                  onBookmark={() => toggleSection(placeSec, "place")}
+                />
+              ) : null}
+            </div>,
+            host.shell,
+          )
+        : null}
+      {bridge?.open && bridge.host
+        ? createPortal(
+            <NotesPanel
+              groups={groups}
+              member={member}
+              loose={place === "document"}
+              plain={plain}
+              editLabel={editLabel}
+              langName={langName}
+              bookHref={target.kind === "chapter" ? bridge.bookHref : null}
+              signInHref={signInHref}
+              onGo={goTo}
+              onDelete={deleteFromList}
+              onLabel={(it) =>
+                setEditLabel((cur) => (cur === it.id ? null : it.id))
+              }
+              onSaveLabel={(it, label) => {
+                setLabel(it.id, label);
+                setEditLabel(null);
+              }}
+              onCancelLabel={() => setEditLabel(null)}
+              onClose={() => bridge.close()}
+            />,
+            bridge.host,
           )
         : null}
     </div>

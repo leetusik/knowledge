@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Annotations II: bookmarks, place bar, Notes sheet, per-book list (05-annotations)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 210,
   "depends_on": [
     "P30.S20"
   ],
   "created_at": "2026-10-21T00:14:50+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T10:18:33+09:00",
+  "completed_at": "2026-10-21T10:57:37+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Annotations II: bookmarks and place bar, margin rail/rows/tag, Notes sheet with Unanchored and other-language groups, per-book list with back link, md/legacy/signed-out cases; annotation reads carry card status (OQ102); server 226, web 353",
   "validation": {
     "required": [],
     "last_run": null,

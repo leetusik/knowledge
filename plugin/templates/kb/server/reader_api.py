@@ -33,7 +33,8 @@ Writes: ``PUT positions``; ``POST/PATCH/DELETE bookmarks[/{id}]``;
 highlight's "Review this"); ``POST quiz-attempts`` → ``{attempt, card}`` (the first
 attempt seeds the item's review card); ``DELETE state?scope=book|all``; ``PATCH
 profile``. Every annotation a read or write returns carries ``review`` (its card is
-active).
+active) and ``card`` (``"active"``, ``"suspended"`` or ``""``: the CALLER's own card on
+it, P30.S21, so "paused" survives a visit).
 
 **Review (P30.S10, ``server/review.py``):**
 
@@ -635,9 +636,10 @@ async def _mark_review(user_id: UUID, *lists: list[dict[str, Any]]) -> None:
     """Set each annotation's ``review``: is "Review this" on (an active card)?"""
 
     items = [a for items in lists for a in items]
-    active = await review.active_highlights(user_id, (a["id"] for a in items))
+    cards = await review.highlight_card_status(user_id, (a["id"] for a in items))
     for a in items:
-        a["review"] = a["id"] in active
+        a["card"] = cards.get(a["id"], "")
+        a["review"] = a["card"] == "active"
 
 
 @router.get("/docs/{org}/{project}/{doc}")
@@ -1064,7 +1066,7 @@ async def create_annotation(
     if not created:
         response.status_code = 200
     out = _annotation_out(row, ref)
-    out["review"] = bool(await review.active_highlights(ctx.user.id, [row.id]))
+    await _mark_review(ctx.user.id, [out])
     return {"annotation": out}
 
 
@@ -1105,7 +1107,7 @@ async def patch_annotation(
     if "review" in fields:
         card = await review.set_highlight_review(ctx.user.id, ref, row, bool(body.review))
     out = _annotation_out(updated, ref)
-    out["review"] = bool(await review.active_highlights(ctx.user.id, [annotation_id]))
+    await _mark_review(ctx.user.id, [out])
     result: dict[str, Any] = {"annotation": out}
     if card is not None:
         result["card"] = review.card_brief(card, review.now())

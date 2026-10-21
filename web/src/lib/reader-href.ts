@@ -43,6 +43,12 @@ export interface ReaderPlace {
   version?: number | null;
   /** `#…`, a heading or block id. */
   section?: string | null;
+  /**
+   * `?note=`, a mark to land on (P30.S21): a highlight, a section note or a bookmark of the
+   * reader's own, from the Notes sheet or the book's list. The page lands on it 32 px under
+   * the top bar and shows a highlight open; an id it does not hold is ignored.
+   */
+  note?: string | null;
 }
 
 export type ReaderTarget =
@@ -100,6 +106,7 @@ export function readerHref(
   const query = new URLSearchParams();
   if (place.lang) query.set("lang", place.lang);
   if (place.version != null) query.set("v", String(place.version));
+  if (place.note) query.set("note", place.note);
   const qs = query.toString();
   const search = qs ? `?${qs}` : "";
   const hash = place.section ? `#${encodeURIComponent(place.section)}` : "";
@@ -126,3 +133,35 @@ export function signInToSaveHref(
  * reader's links with it; until then it is the dashboard.
  */
 export const LIBRARY_HREF = DEFAULT_NEXT_PATH;
+
+/** Where the per-book list was opened from (`05-annotations` round 02, `book-page` 7). */
+export type NotesFrom = "chapter" | "book";
+
+/**
+ * `/@{org}/{project}/notes/{book}` — the per-book list of marks (P30.S21). It sits beside
+ * `books/` rather than under `books/{book}/…` so a chapter keyed `notes` keeps its address
+ * (chapter keys are `[a-z0-9-]`, and a static segment would shadow one). `from` is a
+ * property of the list: `book` reads "‹ Back to the book"; `chapter` (the default) returns
+ * to the chapter named by `chapter`, at the reader's `lang`, `version` and `section`.
+ */
+export function bookNotesHref(
+  target: { org: string; project: string; book: string },
+  from: {
+    from?: NotesFrom;
+    chapter?: string | null;
+    lang?: string | null;
+    version?: number | null;
+    section?: string | null;
+  } = {},
+): string {
+  const path = `/@${seg(target.org)}/${seg(target.project)}/notes/${seg(target.book)}`;
+  const query = new URLSearchParams();
+  if (from.from === "book") query.set("from", "book");
+  if (from.from !== "book" && from.chapter) query.set("ch", from.chapter);
+  if (from.from !== "book" && from.lang) query.set("lang", from.lang);
+  if (from.from !== "book" && from.version != null)
+    query.set("v", String(from.version));
+  if (from.from !== "book" && from.section) query.set("at", from.section);
+  const qs = query.toString();
+  return qs ? `${path}?${qs}` : path;
+}

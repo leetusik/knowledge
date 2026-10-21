@@ -838,6 +838,24 @@ async def active_highlights(user_id: UUID, annotation_ids: Iterable[Any]) -> set
     return {str(r.annotation_id) for r in rows}
 
 
+async def highlight_card_status(user_id: UUID, annotation_ids: Iterable[Any]) -> dict[str, str]:
+    """The caller's highlight cards by annotation id: ``"active"`` or ``"suspended"``.
+
+    Only the caller's own cards are read (``user_id``), so another reader's card on
+    the same highlight id is never seen. An annotation with no card is absent.
+    """
+
+    ids = [UUID(str(i)) for i in set(annotation_ids) if i]
+    if not ids:
+        return {}
+    async with get_session_maker()() as session:
+        rows = (await session.execute(select(CARDS.c.annotation_id, CARDS.c.status).where(
+            CARDS.c.user_id == user_id, CARDS.c.annotation_id.in_(ids),
+            CARDS.c.status.in_(("active", "suspended")),
+        ))).all()
+    return {str(r.annotation_id): r.status for r in rows}
+
+
 async def set_status(user_id: UUID, card_id: UUID, status: str) -> Any | None:
     at = now()
     async with get_session_maker()() as session:
@@ -951,7 +969,7 @@ def queue_limit(value: int | None) -> int:
 
 
 __all__ = [
-    "Day", "ReviewConflict", "Resolver", "active_highlights", "build_queue", "card_brief",
+    "Day", "ReviewConflict", "Resolver", "active_highlights", "highlight_card_status", "build_queue", "card_brief",
     "card_payload", "get_card", "now", "previews", "queue_limit", "review", "review_day",
     "seed_quiz_card", "set_highlight_review", "set_status",
 ]

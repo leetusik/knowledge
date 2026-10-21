@@ -1621,3 +1621,162 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 @media (prefers-reduced-motion: reduce) {
   .an-rev__track, .an-rev__thumb { transition: none; }
 }
+
+/* ======================================================================================
+   P30.S21 — bookmarks, the place bar, the margin and the rows, the Notes sheet, a row in a list
+   and the per-book list, transcribed from the signed `05-annotations` canvas (round 01's
+   `annot.css`, with round 02's back link). Class names stay as drawn. Product adaptations:
+   the canvas's `[data-theme]` is the reader's `data-md-color-scheme` (handled by the tokens
+   already), the bottom slot is `position: fixed` (above), and the per-book list is a page of
+   its own in the window (the canvas draws it in a scrolling frame).
+   ====================================================================================== */
+
+/* A block that carries the "Bookmarked" tag is the tag's positioning box (a list or a table: a zero-height box before it). */
+.kb-ch [data-block]:has(> .an-tag) { position: relative; }
+.an-tag-w { position: relative; height: 0; }
+@container rd (min-width: 64rem) { .an-tag-w { display: none; } }
+
+/* ---------- Below 64rem: what sits under a block ---------- */
+/* "Bookmarked", set in the block's top margin: no text moves when a bookmark is added or removed. */
+.an-tag {
+  position: absolute; right: 0; bottom: 100%; margin-bottom: 0.3rem; line-height: 1;
+  font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase;
+  color: var(--kb-accent-strong); pointer-events: none; white-space: nowrap; user-select: none;
+}
+/* A block's markers: its note, "Text changed" and the other language. Hidden from 64rem, where the margin shows them. */
+.an-rows { display: flex; flex-direction: column; gap: var(--kb-space-xs); margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.an-rows:empty { display: none; }
+.an-row {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; width: 100%; min-height: var(--kb-tap);
+  padding: 0.45rem var(--kb-space-sm); border: 0; border-radius: var(--kb-radius-sm); background: var(--kb-surface-sunken);
+  font-family: var(--font-body); font-size: 0.9375rem; line-height: 1.4; color: var(--kb-ink); text-align: left; cursor: pointer;
+}
+.an-row:hover { background: color-mix(in srgb, var(--kb-surface-sunken) 70%, var(--kb-border-strong)); }
+.an-row__k { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.an-row__t { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.an-row__t:lang(ko), .an-row__t :lang(ko) { word-break: keep-all; }
+.an-row__go { color: var(--kb-accent-strong); font-weight: var(--kb-weight-semibold); }
+@container rd (min-width: 64rem) { .an-rows, .an-tag { display: none; } }
+
+/* ---------- From 64rem: the margin (the reader's notebook) ---------- */
+.an-rail { display: none; position: absolute; top: 0; bottom: 0; pointer-events: none;
+  left: calc(50% + var(--rd-measure) / 2 + var(--kb-space-lg));
+  width: min(16rem, calc(50% - var(--rd-measure) / 2 - var(--kb-space-lg) - var(--rd-gut))); }
+@container rd (min-width: 64rem) { .an-rail { display: block; } }
+.an-ri { position: absolute; left: 0; right: 0; pointer-events: auto; }
+.an-mi {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; width: 100%; min-height: var(--kb-tap);
+  margin: 0 0 0 calc(var(--kb-space-sm) * -1); padding: 0.3rem var(--kb-space-sm); border: 0; border-radius: var(--kb-radius-sm); background: transparent;
+  font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.4; color: var(--kb-ink); text-align: left; cursor: pointer;
+  transition: background var(--rd-ease);
+}
+.an-mi:hover { background: var(--kb-surface-sunken); }
+.an-mi[aria-current="true"] { background: var(--kb-accent-soft); }
+.an-mi__k { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.an-mi__k--on { color: var(--kb-accent-strong); }
+.an-mi__t { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; overflow-wrap: anywhere; white-space: pre-line; }
+.an-mi__t:lang(ko), .an-mi__t :lang(ko) { word-break: keep-all; }
+.an-mi__go { color: var(--kb-accent-strong); font-weight: var(--kb-weight-semibold); }
+@media (prefers-reduced-motion: reduce) { .an-mi { transition: none; } }
+
+/* ---------- The popovers for Text changed, the other language and a bookmark ---------- */
+.an-box__quote { margin: 0; font-family: var(--font-reading); font-size: 0.9375rem; line-height: 1.5; color: var(--kb-ink); overflow-wrap: anywhere; }
+.an-box__quote:lang(ko) { word-break: keep-all; }
+.an-box__item { display: flex; flex-direction: column; gap: var(--kb-space-xs); padding: var(--kb-space-sm) 0; }
+.an-box__grp { display: flex; flex-direction: column; gap: var(--kb-space-sm); }
+.an-box__note--item { max-height: none; }
+.an-box__label { font-weight: var(--kb-weight-semibold); }
+.an-ed__field--line { min-height: var(--kb-tap); resize: none; }
+.an-box__list .an-box__item:last-child { padding-bottom: var(--kb-space-xs); }
+.an-link { display: inline-flex; align-items: center; min-height: var(--kb-tap); padding: 0; border: 0; background: none; font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); color: var(--kb-accent-strong); cursor: pointer; text-decoration: none; }
+.an-link:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+
+/* ---------- The bottom slot: the place bar ---------- */
+.rd-chrome-hidden .an-slot--chrome { visibility: hidden; opacity: 0; transition: opacity var(--rd-ease), visibility 0s linear 0.15s; }
+.an-place {
+  display: flex; align-items: center; gap: 0 var(--kb-space-xs); max-width: 100%;
+  padding: 0.15rem 0.2rem 0.15rem 1rem; border: 1px solid var(--kb-border); border-radius: var(--kb-radius-pill);
+  background: var(--kb-surface); box-shadow: var(--kb-shadow-raise); font-family: var(--font-body); font-size: 0.8125rem; color: var(--kb-secondary);
+}
+.an-place__where { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.an-place__where b { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+.an-place__where:lang(ko), .an-place__where :lang(ko) { word-break: keep-all; }
+.an-place .rd-btn { min-height: 2.75rem; border-radius: var(--kb-radius-pill); flex: none; }
+.an-place .rd-btn[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
+.an-bar__btn[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
+@media (prefers-reduced-motion: reduce) { .rd-chrome-hidden .an-slot--chrome { transition: none; } }
+
+/* ---------- The sheet: the Contents sheet's switch to Notes ---------- */
+.an-shead { display: flex; align-items: center; gap: var(--kb-space-xs); min-width: 0; }
+.an-shead .rd-btn { font-size: 0.9375rem; }
+.an-shead__n { font-variant-numeric: tabular-nums; color: var(--kb-secondary); font-weight: var(--kb-weight-regular); }
+.an-host { display: contents; }
+.an-notes { display: flex; flex-direction: column; gap: 0; }
+
+/* ---------- Lists of marks: the chapter's Notes sheet and the book's list ---------- */
+.an-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--kb-border); }
+.an-li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 0 var(--kb-space-xs); padding: var(--kb-space-sm) 0; border-bottom: 1px solid var(--kb-border); }
+.an-li__go {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; min-width: 0; min-height: var(--kb-tap);
+  margin: 0; padding: 0.15rem var(--kb-space-sm) 0.15rem 0; border: 0; background: transparent; color: var(--kb-ink); font-family: var(--font-body); text-align: left; cursor: pointer; text-decoration: none;
+}
+.an-li__go:hover .an-li__main { text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+div.an-li__go { cursor: default; }
+div.an-li__go:hover .an-li__main { text-decoration: none; }
+.an-li__k { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem var(--kb-space-sm); font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.an-li__k--on { color: var(--kb-accent-strong); }
+.an-li__sep { color: var(--kb-secondary); margin-right: var(--kb-space-xs); }
+.an-li__main.an-li__main--code { font-family: var(--font-mono); font-size: 0.8125rem; }
+.an-li__main { font-size: 0.9375rem; line-height: 1.45; overflow-wrap: anywhere; }
+.an-li__main--q { font-family: var(--font-reading); }
+.an-li__main--q mark { background: var(--an-mark); color: var(--kb-ink); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.an-li__main--b { font-weight: var(--kb-weight-semibold); }
+.an-li__main--gone { font-family: var(--font-reading); color: var(--kb-secondary); text-decoration: line-through; text-decoration-thickness: 1px; }
+.an-li__main:lang(ko), .an-li__main :lang(ko), .an-li__note:lang(ko) { word-break: keep-all; }
+.an-li__main--plain { color: var(--kb-ink); }
+.an-li__note { font-size: 0.9375rem; line-height: 1.45; color: var(--kb-ink); white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.an-li__meta { display: flex; flex-wrap: wrap; gap: 0.1rem var(--kb-space-sm); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.an-li__meta b { font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.an-li__meta :lang(ko) { word-break: keep-all; }
+.an-li__acts { display: flex; flex-direction: column; align-items: flex-end; }
+.an-li__acts .rd-btn { padding-inline: 0.6rem; }
+/* in a list of many rows, Delete stays quiet until it is pointed at; the popover keeps the red */
+.an-li__acts .an-del { color: var(--kb-secondary); }
+.an-li__acts .an-del:hover { color: var(--kb-status-revoked-ink); background: var(--kb-status-revoked-soft); }
+.an-li__edit { grid-column: 1 / -1; display: flex; flex-direction: column; gap: var(--kb-space-xs); padding-top: var(--kb-space-xs); }
+.an-li__edit .an-box__actions { justify-content: flex-start; }
+.an-group { margin-top: var(--kb-space-lg); }
+.an-group:first-child { margin-top: 0; }
+.an-group__head { margin: 0 0 var(--kb-space-xs); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0.1rem var(--kb-space-md); }
+.an-group__title { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.an-group__lead { margin: 0 0 var(--kb-space-xs); font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); }
+.an-group__lead :lang(ko) { word-break: keep-all; }
+.an-empty { margin: 0; padding: var(--kb-space-md) 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border); }
+.an-foot { margin-top: var(--kb-space-lg); }
+
+/* ---------- The book's list (a page of its own) ---------- */
+.an-page { min-height: 100vh; background: var(--kb-surface); color: var(--kb-ink); font-family: var(--font-body); }
+.an-page__top { position: sticky; top: 0; z-index: 20; height: var(--rd-top-h); display: flex; align-items: center; gap: var(--kb-space-xs); padding-inline: calc(var(--rd-gut) - 0.6rem); background: var(--kb-surface); border-bottom: 1px solid var(--kb-border); font-size: 0.9375rem; }
+.an-page__main { max-width: calc(var(--rd-measure) + 2 * var(--rd-gut)); margin-inline: auto; padding: var(--kb-space-xl) var(--rd-gut) var(--kb-space-2xl); container: rd / inline-size; }
+.an-page__book { margin: 0 0 var(--kb-space-xs); font-size: 0.9375rem; color: var(--kb-secondary); }
+.an-page__book:lang(ko) { word-break: keep-all; }
+.an-page__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: calc(var(--rd-fs) * 1.75); line-height: 1.14; letter-spacing: var(--kb-tracking-display); text-wrap: balance; }
+.an-page__count { margin: var(--kb-space-sm) 0 0; font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.an-page__filters { margin: var(--kb-space-md) 0 var(--kb-space-lg); }
+.an-filter { display: inline-flex; flex-wrap: wrap; align-items: stretch; border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-sm); padding: 1px; gap: 1px; max-width: 100%; }
+.an-filter__opt { display: inline-flex; align-items: center; gap: 0.35rem; min-height: var(--kb-tap); padding: 0 0.8rem; border: 0; border-radius: calc(var(--kb-radius-sm) - 1px); background: transparent; color: var(--kb-secondary); font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); cursor: pointer; }
+.an-filter__opt:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+.an-filter__opt[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
+.an-filter__n { font-variant-numeric: tabular-nums; font-weight: var(--kb-weight-regular); }
+.an-chap { margin-top: var(--kb-space-xl); }
+.an-chap__head { margin: 0 0 var(--kb-space-sm); display: flex; flex-direction: column; gap: 0.15rem; }
+.an-chap__n { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.an-chap__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; line-height: 1.3; color: var(--kb-ink); text-wrap: pretty; }
+.an-chap__title:lang(ko) { word-break: keep-all; }
+.an-page__backt { white-space: nowrap; }
+@container rd (min-width: 40rem) { .an-page__title { font-size: calc(var(--rd-fs) * 2.1); } }
+/* The undo line on the list's own page sits kb-space-md from the bottom. */
+.an-slot--page { bottom: calc(var(--kb-space-md) + var(--rd-safe-bottom)); }
+@media print {
+  .an-rail, .an-rows, .an-tag { display: none !important; }
+}
