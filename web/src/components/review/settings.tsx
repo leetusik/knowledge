@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, type FormEvent } from "react";
 
 import { REVIEW } from "@/content/review";
-import { cx } from "@/lib/review/cx";
+import { cx } from "@/lib/cx";
 import {
   settingsErrors,
   zoneIds,

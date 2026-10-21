@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
 import { READER } from "@/content";
+import { cx } from "@/lib/cx";
 import type { RowView } from "@/lib/reader/note-list";
 
 const T = READER.notes;
@@ -64,7 +65,11 @@ export function NoteRow({
       </span>
       {v.hasQuote ? (
         <span
-          className={`an-li__main an-li__main--q${v.plainQuote ? "an-li__main--plain" : ""}${v.code ? "an-li__main--code" : ""}`}
+          className={cx(
+            "an-li__main an-li__main--q",
+            v.plainQuote && "an-li__main--plain",
+            v.code && "an-li__main--code",
+          )}
           lang={v.quoteLang}
         >
           {v.plainQuote ? v.quote : <mark>{v.quote}</mark>}
@@ -77,7 +82,7 @@ export function NoteRow({
       ) : null}
       {v.hasTitle ? (
         <span
-          className={`an-li__main${v.titleBold ? "an-li__main--b" : ""}`}
+          className={cx("an-li__main", v.titleBold && "an-li__main--b")}
           lang={v.titleLang}
         >
           {v.title}

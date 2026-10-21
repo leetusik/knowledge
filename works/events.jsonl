@@ -1187,3 +1187,8 @@
 {"ts": "2026-10-21T13:42:39+09:00", "type": "slice_status_changed", "slice": "P30.S27", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-21T14:35:17+09:00", "type": "executor_dispatched", "slice": "P30.S27", "phase": "P30", "kind": "qa", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-21T14:35:17+09:00", "type": "slice_status_changed", "slice": "P30.S27", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-21T14:35:44+09:00", "type": "slice_created", "phase": "P30", "slice": "P30.F3"}
+{"ts": "2026-10-21T14:35:44+09:00", "type": "slice_created", "phase": "P30", "slice": "P30.F4"}
+{"ts": "2026-10-21T14:35:44+09:00", "type": "slice_status_changed", "slice": "P30.F3", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-21T14:55:59+09:00", "type": "executor_dispatched", "slice": "P30.F3", "phase": "P30", "kind": "fix", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-21T14:55:59+09:00", "type": "slice_status_changed", "slice": "P30.F3", "old_status": "in_progress", "new_status": "done"}

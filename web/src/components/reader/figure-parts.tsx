@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { cx } from "@/lib/cx";
 import { useBox } from "./scroll-box";
 
 /**
@@ -119,7 +120,7 @@ export function ImageBox({
     );
   return (
     <span
-      className={`fg-media fg-media--loading${state === "loaded" ? "is-loaded" : ""}`}
+      className={cx("fg-media fg-media--loading", state === "loaded" && "is-loaded")}
       style={sizeVars(w, h)}
       data-an-skip=""
     >

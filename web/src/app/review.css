@@ -57,6 +57,8 @@
 .rv-card { margin-top: calc(var(--kb-space-md) * var(--rd-k)); border-top: 1px solid var(--kb-border-strong); border-bottom: 1px solid var(--kb-border-strong); scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + var(--kb-space-md)); }
 .rv-card:focus { outline: none; }
 .rv-card__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--kb-space-xs) var(--kb-space-md); padding-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+/* A large root font: the tag and the answer button wrap inside the card instead of widening the page */
+.rv-card__head .rd-tag, .rv-card .qz-card .rd-btn { max-width: 100%; white-space: normal; }
 .rv-card__kind {
   margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; line-height: 1.4;
   letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary);

@@ -3,7 +3,7 @@
 import { useId } from "react";
 
 import { REVIEW } from "@/content/review";
-import { cx } from "@/lib/review/cx";
+import { cx } from "@/lib/cx";
 import { hangulRuns } from "@/lib/reader/hangul";
 import { bookRow } from "@/lib/review/model";
 import type { Counts } from "@/lib/review/types";
