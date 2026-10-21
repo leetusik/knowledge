@@ -76,3 +76,4 @@ export { READER } from "./reader";
 // The library (P30.S22) — the `06-library` round's strings: the page head, Continue reading,
 // the shelves, the cards and rows, Your reading data and the five states.
 export { LIBRARY } from "./library";
+export { BOOK } from "./book";

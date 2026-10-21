@@ -1,0 +1,171 @@
+/* P30.S23 — the book page (`07-book-page` round 01), transcribed from the signed canvas's `book.css` (canvas-only
+   rules left out: the Components boards, the four widths, the flow shells). Every value is a `kb-*` token or one of the
+   reader's (`reader.css`). The deliberate differences from the canvas are the few lines marked "P30.S23". */
+
+/* ---------- The frame: the reader's room; the window scrolls ---------- */
+.bk-topwrap { position: sticky; top: 0; z-index: 20; padding-top: env(safe-area-inset-top, 0px); background: var(--kb-surface); }
+/* P30.S23: the `rd` size container the page's breakpoints measure; the top bar sits outside it so it stays sticky. */
+.bk-room { container: rd / inline-size; }
+/* A part brought into view (the clear flow when it opens or finishes, a row's versions) clears the pinned top bar */
+.bk-clear, .bk-row { scroll-margin-top: calc(var(--rd-top-h) + var(--kb-space-md)); scroll-margin-bottom: var(--kb-space-lg); }
+
+/* ---------- Top bar: logo, back to the library, the book once its head has scrolled away, Sign in ---------- */
+.bk-top {
+  height: var(--rd-top-h);
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: var(--kb-space-sm);
+  padding-inline: calc(var(--rd-gut) - 0.6rem);
+  background: var(--kb-surface); border-bottom: 1px solid var(--kb-border);
+  font-size: 0.9375rem;
+}
+.bk-top__start { display: flex; align-items: center; gap: var(--kb-space-xs); min-width: 0; }
+.bk-top__mid { display: flex; flex-direction: column; justify-content: center; gap: 0.1rem; min-width: 0; line-height: 1.2; }
+.bk-top__mid[data-on="false"] { visibility: hidden; }
+.bk-top__title { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 0.9375rem; color: var(--kb-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-top__prog { font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-top__end { display: flex; align-items: center; justify-content: flex-end; gap: var(--kb-space-xs); }
+/* On the book page Sign in stays in the bar at every width: there is no chapter end to carry it. */
+.bk-top .rd-tbtn--signin { display: inline-flex; }
+
+/* ---------- The page: one centred column, two from 64rem ---------- */
+.bk-main { padding: var(--kb-space-xl) var(--rd-gut) calc(var(--kb-space-2xl) + env(safe-area-inset-bottom, 0px)); }
+.bk-layout { display: flex; flex-direction: column; gap: var(--kb-space-xl); max-width: 40rem; margin-inline: auto; }
+.bk-side { display: flex; flex-direction: column; gap: var(--kb-space-lg); min-width: 0; }
+.bk-body { display: flex; flex-direction: column; gap: var(--kb-space-2xl); min-width: 0; }
+@container rd (min-width: 64rem) {
+  .bk-main { padding-top: var(--kb-space-2xl); }
+  .bk-layout {
+    max-width: none; display: grid; grid-template-columns: minmax(0, 24rem) minmax(0, 40rem);
+    justify-content: center; align-items: start; column-gap: var(--kb-space-xl);
+  }
+}
+@container rd (min-width: 90rem) { .bk-layout { column-gap: var(--kb-space-2xl); } }
+
+/* ---------- The book's head ---------- */
+.bk-head { display: flex; flex-direction: column; gap: var(--kb-space-lg); container: bkhead / inline-size; }
+.bk-head__id { display: flex; flex-direction: column; gap: var(--kb-space-sm); }
+.bk-head__kind { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--kb-space-sm); font-size: 0.9375rem; color: var(--kb-secondary); }
+.bk-head__title {
+  margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold);
+  font-size: clamp(1.875rem, 1.2rem + 4cqi, 2.6rem); line-height: 1.12; letter-spacing: var(--kb-tracking-display);
+  color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word;
+}
+.bk-head__desc { margin: 0; font-family: var(--font-reading); font-size: var(--rd-fs); line-height: 1.5; color: var(--kb-secondary); text-wrap: pretty; max-width: 36rem; }
+.bk-prog { display: flex; flex-direction: column; gap: var(--kb-space-xs); }
+.bk-prog__text { margin: 0; font-size: 0.9375rem; color: var(--kb-ink); font-variant-numeric: tabular-nums; }
+.bk-prog__text b { font-weight: var(--kb-weight-semibold); }
+.bk-prog__bar { display: block; height: var(--rd-line); background: var(--kb-border); border-radius: var(--rd-line); }
+.bk-prog__fill { display: block; height: 100%; background: var(--kb-accent); border-radius: var(--rd-line); }
+.bk-anon { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 34rem; text-wrap: pretty; }
+.bk-anon a { color: var(--kb-accent); font-weight: var(--kb-weight-semibold); text-decoration: underline; text-underline-offset: 0.2em; }
+.bk-anon a:hover { color: var(--kb-accent-strong); text-decoration-thickness: 2px; }
+
+/* ---------- Continue reading: the reader's "Next" block, the page's one primary action ---------- */
+.bk-side .rd-next, .bk-cont.rd-next { margin-top: 0; }
+.bk-cont__at { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 34rem; text-wrap: pretty; }
+.bk-cont__at b { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+.bk-cont__tags { display: flex; flex-wrap: wrap; gap: var(--kb-space-xs); }
+
+/* ---------- The per-book list's entry ---------- */
+.bk-notes {
+  display: flex; flex-direction: column; justify-content: center; gap: 0.15rem; align-self: flex-start;
+  min-height: var(--kb-tap); padding: var(--kb-space-xs) 0.5rem; margin-inline: -0.5rem; border-radius: var(--kb-radius-sm);
+  color: var(--kb-ink); text-decoration: none;
+}
+.bk-notes:hover { background: var(--kb-surface-sunken); }
+.bk-notes__title { display: inline-flex; align-items: baseline; gap: 0.3em; font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); }
+.bk-notes:hover .bk-notes__title { text-decoration: underline; text-underline-offset: 0.2em; }
+.bk-notes__meta { font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+
+/* ---------- Contents: the chapter list ---------- */
+.bk-list { display: flex; flex-direction: column; gap: var(--kb-space-sm); }
+.bk-list .rd-end__listhead { margin: 0; }
+.bk-list__note { margin: 0; font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); text-wrap: pretty; }
+
+/* One row: the reader's chapter row, then this page's languages and versions under its title */
+.bk-row { display: flex; flex-direction: column; }
+/* The meta line is always there, one tag high, so a row is the same height signed in and signed out */
+.bk-row .rd-ch__meta { min-height: 1.125rem; }
+/* A row with a languages-and-versions line: the title link gives the space under it to that line */
+.bk-row--vars > .rd-ch { padding-bottom: var(--kb-space-xs); }
+.bk-ch__src { font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600; color: var(--kb-secondary); }
+.bk-vars {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--kb-space-md);
+  padding: 0 0.5rem var(--kb-space-xs) calc(0.5rem + 2.4rem + var(--kb-space-sm));
+  font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums;
+}
+.bk-vars__langs { display: contents; }
+.bk-lang { display: inline-flex; align-items: center; gap: var(--kb-space-xs); min-height: var(--kb-tap); }
+.bk-lang__link { display: inline-flex; align-items: center; min-height: var(--kb-tap); color: var(--kb-accent); font-weight: var(--kb-weight-semibold); text-decoration: none; }
+.bk-lang__link:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.bk-vars__one { display: inline-flex; align-items: center; min-height: var(--kb-tap); }
+.bk-verbtn { font-size: 0.8125rem; min-height: var(--kb-tap); padding-inline: 0.6rem; margin-inline-start: -0.6rem; }
+/* "Versions" sits at the start of the cell its wider "Hide versions" sets, so it lines up with the links when it wraps */
+.bk-verbtn .bk-stack > span { text-align: start; }
+.bk-verbtn[aria-expanded="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
+.bk-verpanel { display: flex; flex-direction: column; gap: var(--kb-space-md); padding: 0 0.5rem var(--kb-space-md) calc(0.5rem + 2.4rem + var(--kb-space-sm)); }
+.bk-vergroup { display: flex; flex-direction: column; gap: var(--kb-space-xs); }
+.bk-vergroup__name { margin: 0; font-size: 0.8125rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.bk-vergroup__name .rd-tag { margin-left: var(--kb-space-xs); }
+.bk-verpanel .rd-ver { padding-inline: 0; }
+.bk-row :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+
+/* ---------- Your reading data: clear this book's, behind a confirmation ---------- */
+.bk-clear { display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-sm); }
+.bk-clear__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--rd-fs); color: var(--kb-ink); }
+.bk-clear__lead { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 34rem; text-wrap: pretty; }
+.bk-del { color: var(--kb-status-revoked-ink); border-color: var(--kb-border-strong); }
+.bk-del:hover { color: var(--kb-status-revoked-ink); background: var(--kb-status-revoked-soft); border-color: var(--kb-status-revoked); }
+.bk-confirm {
+  display: flex; flex-direction: column; gap: var(--kb-space-sm); align-self: stretch; max-width: 36rem;
+  padding: var(--kb-space-lg) 0; border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border);
+}
+.bk-confirm__q { margin: 0; font-size: 1.0625rem; font-weight: var(--kb-weight-semibold); line-height: 1.35; color: var(--kb-ink); }
+.bk-confirm__p { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); text-wrap: pretty; }
+.bk-confirm__p b { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+.bk-confirm__list { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.9375rem; line-height: 1.45; color: var(--kb-ink); font-variant-numeric: tabular-nums; }
+.bk-confirm__actions { display: flex; flex-wrap: wrap; gap: var(--kb-space-sm); margin-top: var(--kb-space-xs); }
+.bk-confirm__err { margin: 0; font-size: 0.9375rem; line-height: 1.45; color: var(--kb-status-revoked-ink); }
+.bk-confirm__err b { font-weight: var(--kb-weight-semibold); }
+.bk-danger { background: var(--kb-status-revoked); color: var(--rd-on-accent); }
+.bk-danger:hover { background: var(--kb-status-revoked-ink); }
+.bk-clear__done { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 34rem; text-wrap: pretty; border-radius: var(--kb-radius-sm); }
+.bk-clear__done b { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+@container rd (max-width: 39.99rem) {
+  .bk-confirm__actions > .rd-btn { flex: 1 1 0; }
+}
+
+/* A control's labels stacked in one cell: the button is as wide as its widest label, so a state change never resizes it */
+.bk-stack { display: inline-grid; }
+.bk-stack > span { grid-area: 1 / 1; text-align: center; }
+.bk-stack > .is-off { visibility: hidden; }
+/* Cancel while the clear is in flight: the request has gone, so it steps out of view and keeps its place */
+.bk-hold { visibility: hidden; }
+
+/* ---------- Loading: the page's own shape ---------- */
+.bk-sk { display: flex; flex-direction: column; gap: var(--kb-space-md); }
+.bk-sk .rd-skel { display: block; }
+.bk-sk__kind { height: 0.9rem; width: 11rem; max-width: 60%; }
+.bk-sk__title { height: 2.2rem; width: 92%; }
+.bk-sk__title2 { height: 2.2rem; width: 55%; }
+.bk-sk__prog { height: 0.85rem; width: 9rem; margin-top: var(--kb-space-sm); }
+.bk-sk__bar { height: var(--rd-line); width: 100%; }
+.bk-sk__cont { display: flex; flex-direction: column; gap: var(--kb-space-sm); padding: var(--kb-space-lg) 0; margin-top: var(--kb-space-md); border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border); }
+.bk-sk__label { height: 0.7rem; width: 8rem; }
+.bk-sk__ctitle { height: 1.3rem; width: 80%; }
+.bk-sk__btn { height: var(--kb-tap); width: 11rem; border-radius: var(--kb-radius-sm); }
+.bk-sk__head { height: 1.1rem; width: 7rem; }
+.bk-sk__rows { display: flex; flex-direction: column; border-top: 1px solid var(--kb-border); }
+.bk-sk__row { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); column-gap: var(--kb-space-sm); padding: 0.85rem 0.5rem; border-bottom: 1px solid var(--kb-border); }
+.bk-sk__n { height: 0.85rem; width: 1rem; }
+.bk-sk__lines { display: flex; flex-direction: column; gap: 0.45rem; }
+.bk-sk__t { height: 0.95rem; }
+.bk-sk__m { height: 0.75rem; width: 6rem; }
+.bk-sk__w90 { width: 90%; } .bk-sk__w75 { width: 75%; } .bk-sk__w60 { width: 60%; } .bk-sk__w85 { width: 85%; } .bk-sk__w50 { width: 50%; }
+
+/* P30.S23: the reader's ghost button (defined in the canvas's `reader.css`, not in the product's until now). Its rest
+   edge is the reader's 3:1 control edge (`01-reader` round 03 §1: `--rd-control-edge`), so the page's bordered controls
+   ("Cancel" and the clear trigger) are as visible as its secondary buttons; the hovers are as drawn. */
+.bk-page .rd-btn--ghost { border-color: var(--rd-control-edge); color: var(--kb-secondary); }
+.bk-page .rd-btn--ghost:hover { border-color: var(--kb-border-strong); color: var(--kb-ink); }
+.bk-page .bk-del { color: var(--kb-status-revoked-ink); border-color: var(--rd-control-edge); }
+.bk-page .bk-del:hover { color: var(--kb-status-revoked-ink); background: var(--kb-status-revoked-soft); border-color: var(--kb-status-revoked); }

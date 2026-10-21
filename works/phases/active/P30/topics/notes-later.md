@@ -233,3 +233,20 @@ The detail is in `slices/P30.S22/result.md`; the decisions are OQ125-OQ135 (`top
 - **(from P30.S19, for S22, S24 and REVIEW) The quiz as shipped** (the island, what it takes from the reader, the save and return rules, the BFF action, the live-check setup): `topics/notes-later.md` → *The quiz as shipped*.
 - **(from P30.S20, for S24 and REVIEW) Annotations I as shipped** (where things are, the `data-tx` stamps and the `data-an-skip` rule for new inline text, the layer and its API; the live-check setup): `topics/notes-later.md` → *Annotations I as shipped*.
 - **(from P30.S21, for S22, S24, S25 and REVIEW) Annotations II as shipped** (where things are, the layer-injected DOM and focus gotchas, S22's link to the per-book list, S25's legacy bar, the live-check setup): `topics/notes-later.md` → *Annotations II as shipped*.
+
+## (from P30.S23, for S24, S25 and REVIEW) The book page as shipped
+
+The detail is in `slices/P30.S23/result.md`; the decisions are OQ136-OQ146 (`topics/operator-questions-decided.md`).
+
+- **Where things are:**
+  - route: `app/(public)/[org]/[project]/books/[book]/` (page, loading, error, not-found; the `[chapter]` route below it keeps its own);
+  - `components/book/` (`book-page.tsx` composes the head and Continue; `book-frame.tsx` the reader's root at size 3 and the theme from the `kb_reader` cookie; `book-top.tsx` the bar; `top-mid.tsx`, `chapter-rows.tsx` and `clear-data.tsx` are the client parts; `book-states.tsx`);
+  - `lib/book/` (`model.ts` pure and tested in `web/tests/book-model.test.ts`: the Continue table, order, shape, stale translation; `load.ts` server-only; `view.ts` the plain view model; `actions.ts` the clear), copy in `content/book.ts`, CSS in `app/book.css` (the canvas's `book.css` plus the ghost button);
+  - no server change: the page composes `getBook`, `getReaderBook` (now typed with `continue`, `updated`, `counts`), `getReaderBookNotes`, and `getDocument`/`getDocumentVersions` for the version dates, a chapter's lede and the stopped-at section.
+- **What links where:** the library's cards, the chapter's "‹ Book" and "Back to the book →", the per-book list's back link (`?from=book`) all land on the page now. "Notes in this book →" opens `bookNotesHref(..., {from: "book"})`; a row opens the chapter in `readerHref`.
+- **Gotchas:**
+  - **`loading.tsx` and the nonce:** Next renders a `<script async>` WITHOUT the nonce for every client chunk a `loading.tsx` (also `error.tsx`/`template.tsx`) reaches, which the `strict-dynamic` CSP blocks, one console error per load. Keep the loading file's import graph free of client modules, `next/link` included (`BookTop` is plain anchors, the scroll-watched `TopMid` is passed in by the page). Found live; the chapter route escapes it only because its chunks are already injected;
+  - the not-found and failed states are HTTP 200 (the loading boundary has streamed), as on the chapter route; `noindex` is set;
+  - a page read before another tab reads a chapter is not live: after reading, going back may show the old progress until the next request (no `pageshow` re-read; REVIEW observation).
+- **For REVIEW:** version rows all show the document's one publication date (OQ139; no per-version publish date on the wire); Tidewater's chapter 7 legacy row, an all-legacy book and larger-text (175-200%) reflow were not verified; the phone's top-bar middle at 20 chapters was.
+- **Live-check setup that worked:** scratch API `:8871` (database `kb_s23live`, dropped), a pass-through proxy `:8872` that fails or slows the book read and the clear on flag files (`scratchpad/s23/proxy.mjs`), `next start` `:3871` on the production build, `scratchpad/s23/cdp23.mjs` (headless Chrome over CDP: real mouse and keys, `setDeviceMetricsOverride` for true narrow viewports, `setEmulatedMedia` for dark and reduced motion), `seed23.py` (the guide with a stale Korean translation and a chapter on v3, Tidewater's 20 chapters with a description, `lantern`'s phases and per-slice books) and `state.py` (seeds positions), Aside `u1` for one signed-in pass at 1440.

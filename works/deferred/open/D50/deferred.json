@@ -1,0 +1,11 @@
+{
+  "id": "D50",
+  "title": "Per-version publish date on book and version reads",
+  "status": "deferred",
+  "source": "P30.S23",
+  "reason": "Every version row on the book page shows the document's one publication date because the server stores no per-version publish date (P30.S23 for REVIEW)",
+  "trigger": "A reader needs to tell versions apart by date, or the next version-chain change",
+  "created_at": "2026-10-21T11:46:24+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
