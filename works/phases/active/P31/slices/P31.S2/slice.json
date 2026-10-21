@@ -3,14 +3,14 @@
   "phase_id": "P31",
   "name": "explain skill runs knowledge check before publishing",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 20,
   "depends_on": [
     "P31.S1"
   ],
   "created_at": "2026-10-21T18:59:24+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T19:11:16+09:00",
+  "completed_at": "2026-10-21T19:13:43+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Explain skill §4.9 Check: knowledge check (or curl /check) before publish; three copies in parity; plugin 0.5.0",
   "validation": {
     "required": [],
     "last_run": null,

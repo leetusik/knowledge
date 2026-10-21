@@ -559,6 +559,16 @@ number-like or colon-bearing YAML string left unquoted, every sources `url` is
 `http(s)`, nothing cited that you did not open. The server tells you every violation, with
 its line, if you miss one — but a clean first publish is better than two.
 
+### 4.9 Check
+
+With §5's fields settled, dry-run the exact publish first: CLI `knowledge check <tmp>/body.md`
+with the publish's flags (not `--json`), or curl `POST <KB_API_BASE_URL>/api/documents/check`
+with §5's payload and headers. It writes nothing. **Exit 0** (curl 200): go to §5. **Exit 1**
+(422/409): fix every listed line, check again; the same list twice → STOP and report the
+codes. **Exit 2**: no `/api/documents/check` (server not yet updated) or a CLI before 0.2.0
+→ skip it, say so in step 8, and let §5's 422 be the backstop; any other cause follows §5/§5.1.
+Offline (§6): no check is possible; say so.
+
 ## 5. Publish via the KB document API
 
 - **project:**
