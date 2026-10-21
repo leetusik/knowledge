@@ -3,13 +3,13 @@
   "phase_id": "P30",
   "name": "Book page (07-book-page)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "in_progress",
   "order": 230,
   "depends_on": [
     "P30.S22"
   ],
   "created_at": "2026-10-21T00:14:50+09:00",
-  "started_at": null,
+  "started_at": "2026-10-21T11:21:32+09:00",
   "completed_at": null,
   "risk": "low",
   "source": {

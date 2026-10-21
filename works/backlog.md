@@ -176,7 +176,7 @@
 | [x] `P30.S20` | `done` | Annotations I: selection, highlights, notes, Review this (05-annotations) | `implementation` | `works/phases/active/P30/slices/P30.S20` |
 | [x] `P30.S21` | `done` | Annotations II: bookmarks, place bar, Notes sheet, per-book list (05-annotations) | `implementation` | `works/phases/active/P30/slices/P30.S21` |
 | [x] `P30.S22` | `done` | Library, app-shell entries and the public org library (06-library) | `implementation` | `works/phases/active/P30/slices/P30.S22` |
-| [ ] `P30.S23` | `todo` | Book page (07-book-page) | `implementation` | `works/phases/active/P30/slices/P30.S23` |
+| [ ] `P30.S23` | `in_progress` | Book page (07-book-page) | `implementation` | `works/phases/active/P30/slices/P30.S23` |
 | [ ] `P30.S24` | `todo` | Review surface (08-review) | `implementation` | `works/phases/active/P30/slices/P30.S24` |
 | [ ] `P30.S25` | `todo` | Legacy reader: full-screen frame, bridge, handshake retired (09-legacy-and-print) | `implementation` | `works/phases/active/P30/slices/P30.S25` |
 | [ ] `P30.S26` | `todo` | Print: the native sheet, legacy Print and the notice sheet (09-legacy-and-print) | `implementation` | `works/phases/active/P30/slices/P30.S26` |
