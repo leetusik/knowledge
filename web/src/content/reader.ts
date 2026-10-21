@@ -184,4 +184,72 @@ export const READER = {
     retry: "Try again",
     refPrefix: "ref",
   },
+  /**
+   * P30.S20 — highlights and notes, from `05-annotations` round 01's *Every string this
+   * job wrote* (the selection bar, the popover, the undo line) and round 02's three hidden
+   * descriptions. The bookmark, margin, Notes sheet and per-book list strings are S21's.
+   */
+  notes: {
+    bar: {
+      highlight: "Highlight",
+      addNote: "Add note",
+      /** "Highlights stay inside one section, so this one stops at the end of {section}." */
+      clippedLead: "Highlights stay inside one section, so this one stops at the end of ",
+      clippedTail: ".",
+      refuse: "Highlights start at the first section.",
+      selected: "Selected text",
+      /** "This section" / "This diagram" / "This quiz" / "This figure" / "This sources". */
+      blockLabel: (word: string): string => `This ${word.toLowerCase()}`,
+    },
+    pop: {
+      close: "Close",
+      addNote: "Add note",
+      editNote: "Edit note",
+      saveNote: "Save note",
+      cancel: "Cancel",
+      deleteNote: "Delete note",
+      deleteHighlight: "Delete highlight",
+      kindHighlight: "Highlight",
+      kindHighlightNote: "Highlight · note",
+      kindNew: "New highlight",
+      kindBlock: (word: "section" | "diagram"): string => `Note on this ${word}`,
+      kindCount: (n: number): string => `${n} ${n === 1 ? "highlight" : "highlights"}`,
+      dialogNew: "Note on a new highlight",
+      dialogChoose: "Choose a highlight",
+      fieldNew: "Note on this highlight",
+      field: "Note",
+      placeholder: "What do you want to remember about this?",
+      hint: "⌘ Enter saves · Esc cancels · line breaks are kept",
+      /** Open question 17, as signed: from 1,800 characters, "1,850 / 2,000". */
+      count: (n: number): string => `${n.toLocaleString("en-US")} / 2,000`,
+      countFull: "2,000 / 2,000 · the most a note holds",
+      review: "Review this",
+      on: "On",
+      off: "Off",
+      reviewOn: "It is a card in your reviews.",
+      reviewPaused: "Its card is paused, and keeps its history.",
+      reviewNever: "Turn on to make it a review card.",
+      goesBoth: "Its note and its review card go with it.",
+      goesCard: "Its review card goes with it.",
+      goesNote: "Its note goes with it.",
+      overlap: "They overlap here. Pick one to open it.",
+    },
+    undo: {
+      cardOnly: "Highlight deleted, and its review card with it.",
+      all: "Highlight, note and review card deleted.",
+      note: "Highlight and its note deleted.",
+      plain: "Highlight deleted.",
+      noteOnly: "Note deleted.",
+      undo: "Undo",
+    },
+    /** Round 02: what a highlight's tab stop is described as (never shown). */
+    desc: {
+      one: "Highlight",
+      note: "Highlight with a note",
+      many: "Highlights overlap here",
+    },
+    /** A write that did not reach the server (undrawn; `04-quiz`'s "Not saved" line, OQ99). */
+    notSaved: "Not saved · check your connection",
+    tryAgain: "Try again",
+  },
 } as const;

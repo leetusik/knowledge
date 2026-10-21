@@ -1460,3 +1460,164 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 .kb-ch .qz-card:focus { outline: none; }
 .kb-ch .qz-card:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); }
 @media print { .kb-ch .qz { break-inside: auto; } .kb-ch .qz-li, .kb-ch .qz-item { break-inside: avoid; } }
+
+/* ======================================================================================
+   P30.S20 — highlights and notes, transcribed from the signed `05-annotations` canvas
+   (round 01's `annot.css`, with round 02's keyboard stop): the paint, the selection bar,
+   the popover and its note editor, Review this, and the undo line. Class names stay as
+   drawn (`an-*`). The canvas's `[data-theme]` becomes the reader's `data-md-color-scheme`
+   (default / slate / sepia, and System on a dark device); its scrolling frame becomes the
+   window, so the bottom slot is `position: fixed` (rendered outside `.rd-page`, the `rd`
+   container). The margin, the rows, the place bar, the Notes sheet and the per-book list
+   are S21's.
+   ====================================================================================== */
+
+/* ---------- The highlight (reader-scoped; Q2 as signed) ---------- */
+.rd-root, .rd-root[data-md-color-scheme="default"] { --an-mark: #f5dc8a; --an-mark-2: #eccb66; --an-edge: #8a6a2a; }
+.rd-root[data-md-color-scheme="slate"] { --an-mark: #4a3c17; --an-mark-2: #574720; --an-edge: #c8a15e; }
+.rd-root[data-md-color-scheme="sepia"] { --an-mark: #e9cc72; --an-mark-2: #e0bd57; --an-edge: #7d5c1d; }
+@media (prefers-color-scheme: dark) {
+  .rd-root[data-theme-choice="system"] { --an-mark: #4a3c17; --an-mark-2: #574720; --an-edge: #c8a15e; }
+}
+
+.rd-root mark.an-m {
+  background: var(--an-mark); color: var(--kb-ink); padding: 0; border-radius: 0;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
+  box-shadow: inset 0 -1px 0 var(--an-edge);
+}
+.rd-root mark.an-m--2 { background: var(--an-mark-2); }
+.rd-root mark.an-m--note { box-shadow: inset 0 -2px 0 var(--an-edge); }
+.rd-root mark.an-m:hover { box-shadow: inset 0 -2px 0 var(--an-edge); }
+.rd-root mark.an-m.is-active, .rd-root mark.an-m.is-active:hover { box-shadow: inset 0 -2px 0 var(--kb-accent); }
+/* A highlighted link still reads as a link: its colour steps to accent-strong on the paint, its underline stays. */
+.kb-ch a mark.an-m { color: var(--kb-accent-strong); }
+/* The text being highlighted, before it is saved: the accent's tint, so it is never mistaken for a highlight. */
+.rd-root mark.an-pending, .rd-root mark.an-pending:hover { background: color-mix(in srgb, var(--kb-accent) 22%, var(--kb-surface)); color: var(--kb-ink); box-shadow: none; cursor: text; padding: 0; border-radius: 0; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.kb-ch a mark.an-pending { color: var(--kb-accent-strong); }
+@media (forced-colors: active) { .rd-root mark.an-m { forced-color-adjust: none; outline: 1px solid CanvasText; } }
+/* Round 02: a highlight's first piece is a tab stop (role button). Its focus is the system ring (the reader's rule on every
+   [tabindex]); in forced colours the ring takes the system's Highlight, over the paint's 1px CanvasText line. */
+@media (forced-colors: active) { .rd-root mark.an-m:focus-visible { outline: var(--kb-focus-w) solid Highlight; outline-offset: var(--kb-focus-offset); } }
+/* The descriptions a highlight's stop points at (aria-describedby): never shown. */
+.an-sr-desc { display: none; }
+/* A member's highlights and notes do not print (`legacy-and-print`). */
+@media print {
+  .rd-root mark.an-m, .rd-root mark.an-pending { background: none; box-shadow: none; color: inherit; outline: none; }
+  .an-float, .an-slot, .an-save { display: none !important; }
+}
+
+/* The article holds the floating parts (the bar, the popover), so it is their positioning box. */
+.rd-article { position: relative; }
+/* The layer itself takes no place in the text column's grid. */
+.an-layer { display: contents; }
+
+/* ---------- Floating boxes: the selection bar, the popover, the note editor ---------- */
+.an-float { position: absolute; z-index: 15; }
+.an-float[data-placed="0"] { visibility: hidden; }
+.an-box {
+  display: flex; flex-direction: column; gap: var(--kb-space-sm);
+  padding: var(--kb-space-sm) var(--kb-space-md) var(--kb-space-md); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius);
+  background: var(--kb-surface); color: var(--kb-ink); box-shadow: var(--kb-shadow-raise); font-family: var(--font-body);
+  font-size: 1rem; line-height: 1.4; text-align: left;
+}
+.an-box--bar { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--kb-space-xs); padding: var(--kb-space-xs); border-radius: var(--kb-radius); width: fit-content; max-width: 100%; }
+.an-box--bar .rd-btn { min-height: var(--kb-tap); }
+.an-box__msg { flex: 1 1 100%; margin: 0; padding: 0.2rem var(--kb-space-sm) 0; font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); text-wrap: pretty; }
+.an-box__msg b { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+.an-box__msg :lang(ko), .an-box__msg b:lang(ko) { word-break: keep-all; }
+.an-box__msg--only { padding: 0.55rem var(--kb-space-sm); font-size: 0.9375rem; color: var(--kb-ink); }
+.an-box__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--kb-space-sm); }
+.an-box__k { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.an-box__where { margin: 0; font-size: 0.8125rem; color: var(--kb-secondary); overflow-wrap: anywhere; }
+.an-box__where:lang(ko) { word-break: keep-all; }
+.an-box__note { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-ink); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 15rem; overflow-y: auto; }
+.an-box__note:lang(ko) { word-break: keep-all; }
+.an-box__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--kb-space-xs) var(--kb-space-sm); }
+.an-box__rule { margin: 0; border: 0; height: 1px; background: var(--kb-border); }
+.an-box__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--kb-border); }
+.an-box__list li { border-bottom: 1px solid var(--kb-border); }
+.an-pick {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; width: 100%; min-height: var(--kb-tap); padding: 0.45rem 0;
+  border: 0; background: transparent; font-family: var(--font-body); text-align: left; cursor: pointer; color: var(--kb-ink);
+}
+.an-pick:hover .an-pick__q { text-decoration: underline; text-underline-offset: 0.2em; }
+.an-pick__q { font-family: var(--font-reading); font-size: 0.9375rem; line-height: 1.45; }
+.an-pick__q:lang(ko) { word-break: keep-all; }
+.an-pick__q mark { background: var(--an-mark); color: var(--kb-ink); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.an-pick__m { font-size: 0.8125rem; color: var(--kb-secondary); }
+.an-del { color: var(--kb-status-revoked-ink); }
+.an-del:hover { color: var(--kb-status-revoked-ink); background: var(--kb-status-revoked-soft); }
+.an-btn-w { display: inline-grid; }
+.an-btn-w > * { grid-area: 1 / 1; }
+.an-btn-w > [aria-hidden="true"] { visibility: hidden; }
+.an-bar__btn { color: var(--kb-ink); }
+.an-pop { max-height: min(32rem, 70vh); overflow-y: auto; }
+.an-pop > *, .an-pop .an-box__note, .an-pop .an-box__list { flex-shrink: 0; }
+.an-pop:focus { outline: none; }
+.an-pop:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.an-box__x { flex: none; margin: calc(var(--kb-space-xs) * -1) calc(var(--kb-space-sm) * -1) 0 0; }
+.an-box__actions--split { justify-content: space-between; }
+.an-box__fine { margin: 0; font-size: 0.8125rem; line-height: 1.45; color: var(--kb-secondary); }
+.an-push { margin-left: auto; }
+.an-float--pop .an-box, .an-float--save .rd-save { width: 100%; box-sizing: border-box; }
+/* The selection bar's separator (the place bar's, drawn in the bar too). */
+.an-place__sep { width: 1px; align-self: stretch; margin-block: 0.55rem; background: var(--kb-border); flex: none; }
+
+/* The note field: 16px, so iOS does not zoom; a visible label. */
+.an-ed { display: flex; flex-direction: column; gap: var(--kb-space-xs); }
+.an-ed__label { font-size: 0.8125rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.an-ed__field {
+  width: 100%; min-height: 6.5rem; max-height: 16rem; resize: vertical; margin: 0; padding: 0.6rem 0.75rem;
+  border: 1px solid var(--kb-secondary); border-radius: var(--kb-radius-sm); background: var(--kb-surface); color: var(--kb-ink);
+  font-family: var(--font-body); font-size: 1rem; line-height: 1.5; box-sizing: border-box;
+}
+.an-ed__field:lang(ko) { word-break: keep-all; }
+.an-ed__field:focus-visible, .an-ed__field:focus { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.an-ed__field::placeholder { color: var(--kb-secondary); opacity: 1; }
+.an-ed__hint { margin: 0; font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+/* Q17: the count joins the end of the hint line; on a coarse pointer the keys are hidden and the line's row is kept for the
+   count, so nothing moves when it appears. */
+.an-ed__count::before { content: " · "; }
+@media (pointer: coarse) {
+  .an-ed__hint { min-height: 1.4em; }
+  .an-ed__keys { display: none; }
+  .an-ed__count::before { content: none; }
+}
+
+/* "Review this": a switch whose state is said in words */
+.an-rev {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.15rem var(--kb-space-sm); width: 100%;
+  min-height: var(--kb-tap); padding: 0.35rem 0; border: 0; background: transparent; color: var(--kb-ink); cursor: pointer; text-align: left;
+  font-family: var(--font-body);
+}
+.an-rev__track { grid-row: 1 / span 2; position: relative; width: 2.25rem; height: 1.25rem; border-radius: var(--kb-radius-pill); border: 1.5px solid var(--kb-secondary); background: var(--kb-surface); transition: background var(--rd-ease), border-color var(--rd-ease); }
+.an-rev__thumb { position: absolute; top: 2px; left: 2px; width: calc(1.25rem - 7px); height: calc(1.25rem - 7px); border-radius: 50%; background: var(--kb-secondary); transition: transform var(--rd-ease), background var(--rd-ease); }
+.an-rev[aria-checked="true"] .an-rev__track { background: var(--kb-accent); border-color: var(--kb-accent); }
+.an-rev[aria-checked="true"] .an-rev__thumb { transform: translateX(1rem); background: var(--rd-on-accent); }
+.an-rev__label { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); }
+.an-rev__label b { font-weight: var(--kb-weight-semibold); color: var(--kb-accent-strong); }
+.an-rev__sub { font-size: 0.8125rem; color: var(--kb-secondary); line-height: 1.35; }
+.an-rev:hover .an-rev__track { border-color: var(--kb-accent); }
+
+/* ---------- The bottom slot: the undo line ---------- */
+.an-slot {
+  position: fixed; z-index: 21; left: 50%; transform: translateX(-50%); bottom: calc(var(--rd-bot-h) + var(--kb-space-sm) + var(--rd-safe-bottom));
+  max-width: calc(100% - 2 * var(--rd-gut)); width: max-content;
+}
+.rd-loose .an-slot { bottom: calc(var(--kb-space-md) + var(--rd-safe-bottom)); }
+.an-slot--toast { z-index: 46; }
+.an-toast {
+  display: flex; align-items: center; gap: var(--kb-space-xs) var(--kb-space-sm); max-width: 100%;
+  padding: 0.15rem 0.2rem 0.15rem 1rem; border-radius: var(--kb-radius-pill);
+  background: var(--kb-ink); color: var(--kb-surface); box-shadow: var(--kb-shadow-raise); font-family: var(--font-body); font-size: 0.9375rem;
+}
+.an-toast__text { min-width: 0; padding-block: 0.4rem; line-height: 1.35; }
+.an-toast .rd-btn { min-height: 2.75rem; border-radius: var(--kb-radius-pill); color: var(--kb-surface); flex: none; }
+.an-toast .rd-btn:hover { background: color-mix(in srgb, var(--kb-surface) 14%, var(--kb-ink)); color: var(--kb-surface); }
+.an-toast .rd-btn:focus-visible { outline-color: var(--kb-surface); }
+.an-save { position: fixed; z-index: 22; left: 50%; transform: translateX(-50%); bottom: calc(var(--rd-bot-h) + var(--kb-space-sm) + var(--rd-safe-bottom)); width: min(30rem, calc(100% - 2 * var(--rd-gut))); }
+.rd-loose .an-save { bottom: calc(var(--kb-space-md) + var(--rd-safe-bottom)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .an-rev__track, .an-rev__thumb { transition: none; }
+}

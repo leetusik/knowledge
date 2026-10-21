@@ -57,11 +57,13 @@ import { plainText } from "@/lib/native/parse";
 import { parseReaderCookie, type ReaderSettings } from "@/lib/reader-cookie";
 import { bookHref, readerHref, type ReaderTarget } from "@/lib/reader-href";
 
+import { loadNotes } from "./notes-load";
 import { loadQuizSaved, type QuizSaved } from "./quiz-saved";
 import type {
   ChapterRow,
   ReaderHeading,
   ReaderLanguage,
+  ReaderNotes,
   ReaderProgress,
   ReaderVersions,
   ReaderView,
@@ -87,6 +89,11 @@ export interface LoadedReader {
    * `<block>--<item>`; empty when signed out or when none was read.
    */
   quiz: QuizSaved;
+  /**
+   * The annotation layer's data (P30.S20): the sections and a member's highlights and notes
+   * resolved for the version on screen; null for a plain Markdown document.
+   */
+  notes: ReaderNotes | null;
 }
 
 /** The result of loading: a reader, or the older frame that still owns this document. */
@@ -511,6 +518,9 @@ export async function loadChapterReader(args: {
           token,
           { org, project, book: book.slug, key: chapter.key },
           variant.lang,
+          undefined,
+          // An older version on screen: its annotations resolve for it (P30.S20).
+          body.version < doc.version ? body.version : undefined,
         ).catch(() => null)
       : Promise.resolve<KbVariantState | null>(null),
     loadVersions(token, doc, variant.lang, variant.translated_from),
@@ -645,6 +655,7 @@ export async function loadChapterReader(args: {
           : undefined,
       resolveRef,
       quiz,
+      notes: loadNotes(checked, variantState),
     },
   };
 }
@@ -678,9 +689,12 @@ export async function loadLooseReader(args: {
   const [resolveRef, variantState, versions] = await Promise.all([
     buildResolver({ token, org, project: doc.project, checked }),
     token && org
-      ? getReaderDoc(token, { org, project: doc.project, doc: stem }).catch(
-          () => null,
-        )
+      ? getReaderDoc(
+          token,
+          { org, project: doc.project, doc: stem },
+          undefined,
+          body.version < doc.version ? body.version : undefined,
+        ).catch(() => null)
       : Promise.resolve<KbVariantState | null>(null),
     loadVersions(token, doc, lang, null),
   ]);
@@ -740,6 +754,7 @@ export async function loadLooseReader(args: {
         : undefined,
     resolveRef,
     quiz,
+    notes: loadNotes(checked, variantState),
   };
 }
 

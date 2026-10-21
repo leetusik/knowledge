@@ -1,0 +1,22 @@
+=== mixed
+Before the image  after it, and bold text.
+A cited claim 1 and the report here.
+An external link and a missing one.
+A hard break
+then 한국어 문장 inside English, and 😀 emoji.
+Col
+Pic
+left  right
+x
+A titled note
+Body text with code.
+Folded
+Hidden words here.
+=== snippet
+const x = "y"; // comment
+let z = 1;
+After the code, a closing paragraph.
+=== sources-list
+
+=== src
+

@@ -148,3 +148,49 @@ export interface ReaderView {
   headings: ReaderHeading[];
   settings: ReaderSettings;
 }
+
+// --- P30.S20: highlights and notes (`05-annotations`) --------------------------------------
+
+/** What a section's kind is called: the bar's "{word} · {title}" and the popover's place. */
+export type SectionWord = "Section" | "Diagram" | "Quiz" | "Figure" | "Sources";
+
+/** A section of a native chapter, as the annotation layer names it and anchors in it. */
+export interface NoteSection {
+  id: string;
+  word: SectionWord;
+  /** The heading's text, or the typed block's title or caption. */
+  title: string;
+  /** The section's text in the shared projection (`project.ts`): what offsets count. */
+  text: string;
+}
+
+/** One of the reader's own highlights or block notes, resolved for the version on screen. */
+export interface ReaderNote {
+  id: string;
+  kind: "hl" | "bnote";
+  /** The section it was made in (never rewritten). */
+  block: string;
+  /** Where it is painted or shown now (the resolved anchor's section), or null. */
+  sec: string | null;
+  start: number | null;
+  end: number | null;
+  /** `anchored` | `block` (Text changed) | `orphan` (Unanchored). */
+  status: string;
+  method: string;
+  quote: { exact: string; prefix: string; suffix: string } | null;
+  note: string;
+  /** "Review this" is on. */
+  review: boolean;
+  lang: string;
+  version: number;
+  created: string;
+}
+
+/** The annotation layer's data: present for a native chapter that renders. */
+export interface ReaderNotes {
+  sections: NoteSection[];
+  /** Anchored and Text changed, in reading order. */
+  items: ReaderNote[];
+  /** Orphans (kept for the Notes sheet, S21). */
+  unanchored: ReaderNote[];
+}

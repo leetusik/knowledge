@@ -60,4 +60,4 @@ export function progressPercent(top: number, max: number): number {
 
 /** A tap or click toggles the chrome unless it lands on one of these. */
 export const TAP_IGNORE =
-  "a, button, summary, details, pre, table, [tabindex], input, label, [role='region'], .kb-ch-code, .kb-ch-table";
+  "a, button, summary, details, pre, table, [tabindex], input, label, [role='region'], .kb-ch-code, .kb-ch-table, .an-layer";
