@@ -1,0 +1,11 @@
+{
+  "id": "D55",
+  "title": "Not-found book and chapter pages answer HTTP 200",
+  "status": "deferred",
+  "source": "P30.REVIEW",
+  "reason": "The reader and book routes stream a loading shell before notFound(), so missing or private pages answer 200 with noindex, titled Documents · knowledge (OQ58)",
+  "trigger": "SEO, monitoring, or a status-sensitive client",
+  "created_at": "2026-10-21T15:49:50+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

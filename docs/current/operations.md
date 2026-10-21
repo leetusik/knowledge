@@ -1,11 +1,11 @@
 ---
 doc_id: operations
-version: v0024
-created_at: 2026-09-21T18:18:18+09:00
-commit: 62c658751d15f6d52c5a84ff6eea600b3e4153c0
-source: P28.REVIEW
-summary: P28 gate: correct the Operator Runtime narrow-viewport caveat (the min-[720px] media query is gone; the console is container-query driven, round 06 adds real viewport @media) and record the true-CSS-viewport harness
-previous: v0023_p27_operator_runtime_manifest_how_the_operator_runs_and_views_the_web_product_dev_production_runtimes_acceptance_origin_devices_viewports_aside_agent_account_u1
+version: v0025
+created_at: 2026-10-21T15:45:18+09:00
+commit: 71ca2c1f0095d44cb3a27b1433ae30df53e4aadd
+source: P30.REVIEW
+summary: P30 gate: Operator Runtime instrument notes - Aside JPEG screenshots, headless Chrome CDP as the narrow-viewport instrument for the reader's viewport media, the web login limiter, the /library landing
+previous: v0024_p28_gate_correct_the_operator_runtime_narrow-viewport_caveat_the_min-_720px_media_query_is_gone_the_console_is_container-query_driven_round_06_adds_real_viewport_media_and_record_the_true-css-viewport_harness
 ---
 
 # Operations
@@ -35,6 +35,10 @@ How the operator runs and views the product, and what any browser-verifying slic
   - Repl sharp edges: each CLI call is its own session and its tabs close at the end — open the page inside the call, never attach to `tabs[0]` blindly. `page` has `evaluate` / `screenshot` / `goto` / `locator` / `getByRole('button', 'Zoom in')` (string form) / `mouse`, but **no** `setViewportSize` and **no** `waitForTimeout` (use the global `sleep(ms)`). Screenshots take a **relative** path and land under `~/.aside/u/1/sessions/<id>/` — in some builds `page.screenshot(path)` writes nothing reachable and **returns** the PNG bytes instead, so pipe them out as base64 and decode on the shell side.
   - **Narrow viewports (corrected at P28).** The repl runs at a fixed 1440×900 and exposes no `setViewportSize` / `emulate*` / CDP handle. The console now responds to its **container** (`.kb-app` → `kbapp`, `.kb-app-main` → `kbmain`), and the app's last width utility (`documents/page.tsx`'s `min-[720px]:`) is **gone** — but round 06 adds real **viewport** `@media` rules (`pointer: coarse`, `width < 40rem`) and an `@page` print box, so narrowing a container is a layout+interaction probe, **never device emulation**. A true CSS viewport comes from a same-origin iframe harness behind a throwaway reverse proxy that serves the harness page and the proxied app from one origin and strips `x-frame-options` / CSP (`GET /__vp?w=&h=&path=`); the session cookie rides across because cookies ignore the port. React does **not** hydrate inside the harness against `next dev` (no HMR websocket) but **does** against the production standalone build, so point a second proxy at that when interaction matters. An anonymous rendering needs the proxy to drop the `Cookie` header — the agent profile is signed in, and a public URL otherwise renders the member branch.
   - Fallback when Aside is unavailable: the same checks, at the same viewports, through any real browser — the demands bind, the instrument does not.
+  - **Screenshots through the repl (P30).** The repl truncates a large output, so a full-size PNG piped as base64 is cut off. Take `page.screenshot({type: "jpeg", quality: 25})` and decode it on the shell side; a 1440×900 JPEG at that quality fits.
+  - **The reader surfaces use viewport media (P30).** The reader, book page, review and legacy reader (`/@{org}/{project}/books/…`, `/review`, the legacy frame) size their compact chrome with viewport `@media` rules, not container queries, so narrowing a container does not exercise them. For a true phone or tablet viewport, P30 used headless Chrome over CDP (`Emulation.setDeviceMetricsOverride` with DPR 2–3, `setTouchEmulationEnabled`, `--disable-features=OverlayScrollbar` for classic scrollbars, `Page.printToPDF` for paper) against the same runtime, with Aside `u1` for desktop flows. Neither instrument stands in for the operator's real iPhone and iPad (WebKit, `100dvh`, momentum scrolling).
+  - **The web login limiter.** The BFF limits sign-ins to about 5 per 15 minutes per `next` process. A live check that signs in on every run gets 429 after a handful of runs, so reuse one session's cookies or restart the scratch `next start` between runs. Never restart `:3030`.
+  - **The signed-in landing is `/library` (P30).** The wordmark and a hostile or missing `next` after sign-in go there.
 
 ## Deployment (Docker Compose)
 

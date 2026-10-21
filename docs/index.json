@@ -891,7 +891,7 @@
       ]
     },
     "operations": {
-      "latest": "v0024_p28_gate_correct_the_operator_runtime_narrow-viewport_caveat_the_min-_720px_media_query_is_gone_the_console_is_container-query_driven_round_06_adds_real_viewport_media_and_record_the_true-css-viewport_harness",
+      "latest": "v0025_p30_gate_operator_runtime_instrument_notes_-_aside_jpeg_screenshots_headless_chrome_cdp_as_the_narrow-viewport_instrument_for_the_reader_s_viewport_media_the_web_login_limiter_the_library_landing",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -1087,6 +1087,15 @@
           "source": "P28.REVIEW",
           "summary": "P28 gate: correct the Operator Runtime narrow-viewport caveat (the min-[720px] media query is gone; the console is container-query driven, round 06 adds real viewport @media) and record the true-CSS-viewport harness",
           "previous": "v0023_p27_operator_runtime_manifest_how_the_operator_runs_and_views_the_web_product_dev_production_runtimes_acceptance_origin_devices_viewports_aside_agent_account_u1"
+        },
+        {
+          "id": "v0025_p30_gate_operator_runtime_instrument_notes_-_aside_jpeg_screenshots_headless_chrome_cdp_as_the_narrow-viewport_instrument_for_the_reader_s_viewport_media_the_web_login_limiter_the_library_landing",
+          "path": "docs/versions/operations/v0025_p30_gate_operator_runtime_instrument_notes_-_aside_jpeg_screenshots_headless_chrome_cdp_as_the_narrow-viewport_instrument_for_the_reader_s_viewport_media_the_web_login_limiter_the_library_landing.md",
+          "created_at": "2026-10-21T15:45:18+09:00",
+          "commit": "71ca2c1f0095d44cb3a27b1433ae30df53e4aadd",
+          "source": "P30.REVIEW",
+          "summary": "P30 gate: Operator Runtime instrument notes - Aside JPEG screenshots, headless Chrome CDP as the narrow-viewport instrument for the reader's viewport media, the web login limiter, the /library landing",
+          "previous": "v0024_p28_gate_correct_the_operator_runtime_narrow-viewport_caveat_the_min-_720px_media_query_is_gone_the_console_is_container-query_driven_round_06_adds_real_viewport_media_and_record_the_true-css-viewport_harness"
         }
       ]
     },
@@ -1209,7 +1218,7 @@
       ]
     },
     "qa": {
-      "latest": "v0017_p28_re-review_gate_append_the_framed-explainer_checks_no_inner_scroll_range_dpr_2_classic_scrollbars_many_width_changes_and_whole-document_print_from_export_pdf_and_cmd-p",
+      "latest": "v0018_p30_gate_append_the_reader_book_review_legacy_and_print_checks_update_three_p28_lines_the_learning_reader_superseded",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1349,6 +1358,15 @@
           "source": "P28.REVIEW",
           "summary": "P28 re-review gate: append the framed-explainer checks — no inner scroll range (DPR 2, classic scrollbars, many width changes) and whole-document print from Export PDF and Cmd-P",
           "previous": "v0016_p28_gate_append_the_phase_s_headline_regression_checks_graph_fit_dock_tag_switch_project_documents_panel_full-width_view_print_export_pdf_390_console_next_round_trip"
+        },
+        {
+          "id": "v0018_p30_gate_append_the_reader_book_review_legacy_and_print_checks_update_three_p28_lines_the_learning_reader_superseded",
+          "path": "docs/versions/qa/v0018_p30_gate_append_the_reader_book_review_legacy_and_print_checks_update_three_p28_lines_the_learning_reader_superseded.md",
+          "created_at": "2026-10-21T15:44:38+09:00",
+          "commit": "71ca2c1f0095d44cb3a27b1433ae30df53e4aadd",
+          "source": "P30.REVIEW",
+          "summary": "P30 gate: append the reader, book, review, legacy and print checks; update three P28 lines the learning reader superseded",
+          "previous": "v0017_p28_re-review_gate_append_the_framed-explainer_checks_no_inner_scroll_range_dpr_2_classic_scrollbars_many_width_changes_and_whole-document_print_from_export_pdf_and_cmd-p"
         }
       ]
     },
@@ -1527,5 +1545,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-10-20T23:53:28+09:00"
+  "last_rebuilt_at": "2026-10-21T15:45:27+09:00"
 }

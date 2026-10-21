@@ -1,0 +1,11 @@
+{
+  "id": "D53",
+  "title": "Mark as unread across a chapter's languages",
+  "status": "deferred",
+  "source": "P30.REVIEW",
+  "reason": "Mark as unread resets only the language variant on screen; a chapter finished in the other language stays finished for the unit (P30.S15)",
+  "trigger": "Reading KO/EN variants in earnest",
+  "created_at": "2026-10-21T15:49:50+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

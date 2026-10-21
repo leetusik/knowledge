@@ -1198,3 +1198,23 @@
 {"ts": "2026-10-21T15:16:00+09:00", "type": "slice_status_changed", "slice": "P30.S28", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-21T15:20:34+09:00", "type": "executor_dispatched", "slice": "P30.S28", "phase": "P30", "kind": "docs", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-21T15:20:34+09:00", "type": "slice_status_changed", "slice": "P30.S28", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-21T15:20:34+09:00", "type": "slice_status_changed", "slice": "P30.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-21T15:44:38+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0018_p30_gate_append_the_reader_book_review_legacy_and_print_checks_update_three_p28_lines_the_learning_reader_superseded", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T15:45:18+09:00", "type": "doc_version_created", "doc": "operations", "version": "v0025_p30_gate_operator_runtime_instrument_notes_-_aside_jpeg_screenshots_headless_chrome_cdp_as_the_narrow-viewport_instrument_for_the_reader_s_viewport_media_the_web_login_limiter_the_library_landing", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T15:49:40+09:00", "type": "deferred_dropped", "deferred": "D18", "reason": "Shipped in P30.S11: guard bounces carry /login?next=, anonymous misses return to the page (closed at P30.REVIEW)"}
+{"ts": "2026-10-21T15:49:40+09:00", "type": "deferred_dropped", "deferred": "D32", "reason": "Shipped in P30.S11: requireSession and its 401 branch carry next=, laundered by safeNextPath (closed at P30.REVIEW)"}
+{"ts": "2026-10-21T15:49:40+09:00", "type": "deferred_dropped", "deferred": "D37", "reason": "Shipped in P30.S25: Cache-Control no-transform on both raw relays, seen live at P30.REVIEW"}
+{"ts": "2026-10-21T15:49:40+09:00", "type": "deferred_dropped", "deferred": "D38", "reason": "Moot after P30.S25: the measured box, frame print slicing and height reporter are retired (P30.REVIEW)"}
+{"ts": "2026-10-21T15:49:40+09:00", "type": "deferred_dropped", "deferred": "D39", "reason": "Moot after P30.S25: the measured box, frame print slicing and height reporter are retired (P30.REVIEW)"}
+{"ts": "2026-10-21T15:49:40+09:00", "type": "deferred_dropped", "deferred": "D40", "reason": "Moot after P30.S25: the measured box, frame print slicing and height reporter are retired (P30.REVIEW)"}
+{"ts": "2026-10-21T15:49:50+09:00", "type": "deferred_created", "deferred": "D52", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T15:49:50+09:00", "type": "deferred_created", "deferred": "D53", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T15:49:50+09:00", "type": "deferred_created", "deferred": "D54", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T15:49:50+09:00", "type": "deferred_created", "deferred": "D55", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T15:49:50+09:00", "type": "deferred_created", "deferred": "D56", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T15:49:50+09:00", "type": "deferred_created", "deferred": "D57", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T15:49:50+09:00", "type": "deferred_created", "deferred": "D58", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T15:49:50+09:00", "type": "deferred_created", "deferred": "D59", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T15:50:03+09:00", "type": "executor_dispatched", "slice": "P30.REVIEW", "phase": "P30", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-21T15:50:04+09:00", "type": "phase_status_changed", "phase": "P30", "old_status": "planned", "new_status": "pending"}
+{"ts": "2026-10-21T15:50:04+09:00", "type": "acceptance_opened", "phase": "P30"}

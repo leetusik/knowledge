@@ -2,7 +2,7 @@
   "id": "P30",
   "name": "Learning reader — apply",
   "objective": "Apply half of the learning-reader pair: build P29's signed design and decisions - books, chapters, image assets and per-reader state (resume position, bookmarks, highlights and notes, quiz results, spaced-repetition review) on the server; the library, book page and reader with one scroller and no iframe height handshake (legacy HTML explainers full-screen); the new chapter format in this repo's /explain copies - verified in the operator runtime on phone, iPad and desktop, closing with the handoff note for the bootstrap workspace repo's /explain.",
-  "status": "planned",
+  "status": "pending",
   "order": 10,
   "created_at": "2026-10-17T18:36:36+09:00",
   "started_at": null,
@@ -15,8 +15,8 @@
   },
   "acceptance": {
     "required": true,
-    "walkthrough": null,
-    "requested_at": null,
+    "walkthrough": "Before walking, each on your word: (1) integrate the kb-api commits from origin/main and push main; (2) wait for a green Production Deploy (brings the S4/S25 nginx knowledge.conf changes and migration 0006); (3) the orchestrator runs the S6 production migration (topics/migration-runbook.md); (4) walk. Walk https://knowledge.hi2vi.com on iPhone and iPad (Safari and Chrome) and Mac (Chrome and Safari): sign in and land on /library, open a book and Continue reading; Display size and theme (column width fixed); scroll halfway and reload (resumes); highlight a sentence, add a note, reload, open Notes in this book; answer a quiz and reload (Your answer from ...), turn on Review this, open Review and rate a card; open an old HTML explainer (ORIGINAL LAYOUT): only the frame scrolls, momentum, URL bar, an external link, Print · new tab; print a chapter (masthead, answer key, colophon); an old shared /documents/{id} link of a book chapter lands on the chapter; device-only: diagram hairlines, Korean line breaks in Safari, Safari print. Decisions, accept takes them as drawn: S28 /explain moves to the knowledge plugin as /knowledge:explain 0.4.0, give works/phases/active/P30/handoff-explain.md to the bootstrap agent; OQ184 the legacy document bar scrolls on a tight page (the one drawn inner scroller); OQ21 the production migration merges into an existing book, never replaces; OQ27 a document delete purges readers notes first and fails 503 if the purge fails; delete the nine P29 design canvases (links in slices/P30.REVIEW/result.md)? Every other OQ1-OQ183 decided as drawn (topics/operator-questions-decided.md). Deferred D52-D59 filed. To clear: say accept (accept-gate P30 --clear) or list what failed.",
+    "requested_at": "2026-10-21T15:50:04+09:00",
     "cleared_at": null,
     "note": null
   },

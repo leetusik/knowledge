@@ -1,11 +1,11 @@
 {
   "id": "D37",
   "title": "Stop Cloudflare rewriting framed explainers: Cache-Control no-transform on the raw relay",
-  "status": "deferred",
+  "status": "dropped",
   "source": "P28.S10",
   "reason": "Cloudflare's edge injects its Web Analytics beacon (runs inside the sandbox, reports private document views by id) and email obfuscation into /api/documents/{id}/raw and the versions raw route; the relay already sends no-store, so add no-transform there; that it stops both is unverified against Cloudflare docs",
   "trigger": "operator picks turning it off at the P28 walkthrough, or the next change to the raw relay",
   "created_at": "2026-10-08T15:28:45+09:00",
   "promoted_to": null,
-  "dropped_reason": null
+  "dropped_reason": "Shipped in P30.S25: Cache-Control no-transform on both raw relays, seen live at P30.REVIEW"
 }

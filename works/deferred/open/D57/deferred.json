@@ -1,0 +1,11 @@
+{
+  "id": "D57",
+  "title": "Reindex production after the P30 deploy so charts get search text",
+  "status": "deferred",
+  "source": "P30.REVIEW",
+  "reason": "After P30.F2 top-level charts contribute labels to search, but stored rows keep their old text until a reindex",
+  "trigger": "Right after the P30 production deploy (could be a runbook step)",
+  "created_at": "2026-10-21T15:49:50+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
