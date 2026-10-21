@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P30`
-- Current slice: `P30.S27`
-- Next slice: `P30.S28`
+- Current slice: `P30.S28`
+- Next slice: `P30.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `38`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P30` | planned | `P30.S27` | 29/32 | - | working tree |
+| `default` | `P30` | planned | `P30.S28` | 30/32 | - | working tree |
 
 ## Active Phases
 
@@ -30,7 +30,7 @@
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
-| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S27` | `works/phases/active/P30` |
+| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S28` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
 
@@ -180,6 +180,6 @@
 | [x] `P30.S24` | `done` | Review surface (08-review) | `implementation` | `works/phases/active/P30/slices/P30.S24` |
 | [x] `P30.S25` | `done` | Legacy reader: full-screen frame, bridge, handshake retired (09-legacy-and-print) | `implementation` | `works/phases/active/P30/slices/P30.S25` |
 | [x] `P30.S26` | `done` | Print: the native sheet, legacy Print and the notice sheet (09-legacy-and-print) | `implementation` | `works/phases/active/P30/slices/P30.S26` |
-| [ ] `P30.S27` | `todo` | Fidelity and functional sweep: every surface, three viewports, no inner scroller | `qa` | `works/phases/active/P30/slices/P30.S27` |
+| [x] `P30.S27` | `done` | Fidelity and functional sweep: every surface, three viewports, no inner scroller | `qa` | `works/phases/active/P30/slices/P30.S27` |
 | [ ] `P30.S28` | `todo` | Bootstrap handoff note for /explain | `docs` | `works/phases/active/P30/slices/P30.S28` |
 | [ ] `P30.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P30/slices/P30.REVIEW` |
