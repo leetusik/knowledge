@@ -1,0 +1,553 @@
+<!--kb
+title: "P8: 1단계 사실 확인과 1차 프로젝트 계획"
+date: 2026-10-08
+tags:
+  - stage-1
+  - research-agent
+  - fact-check
+  - project-plan
+  - ko
+source:
+  project: glide-ilab
+  repo: glide-ilab
+-->
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>P8: 1단계 사실 확인과 1차 프로젝트 계획</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff; --fg: #1d1d1f; --muted: #5b5f66;
+      --panel: #f4f5f7; --line: #d9dde3;
+      --accent: #2f6f4f; --accent-bg: #eef7f1;
+      --warn: #b3541e; --warn-bg: #fdf2ea;
+      --info: #2b5fa8; --info-bg: #edf3fc;
+      --ok-bg: #d6f5d6; --bad-bg: #f7d6d6;
+      --box: #ffffff; --box-dim: #f0f1f3; --dash: #8a8f98;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121417; --fg: #e8e9eb; --muted: #a2a7ae;
+        --panel: #1c2026; --line: #343a43;
+        --accent: #7fc7a1; --accent-bg: #16271e;
+        --warn: #f0a16a; --warn-bg: #2d1f14;
+        --info: #8fb4ee; --info-bg: #15202f;
+        --ok-bg: #1f4a25; --bad-bg: #5a2323;
+        --box: #1a1e24; --box-dim: #242931; --dash: #6c727c;
+      }
+    }
+    body { max-width: 46rem; margin: 2rem auto; padding: 0 1rem; background: var(--bg); color: var(--fg);
+           font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+           line-height: 1.7; word-break: keep-all; }
+    h1 { font-size: 1.85rem; line-height: 1.3; margin-bottom: .25rem; }
+    h2 { margin-top: 2.5rem; padding-top: .5rem; border-top: 1px solid var(--line); }
+    h3 { margin-top: 1.6rem; }
+    .lede { color: var(--muted); margin-top: 0; }
+    nav ol { padding-left: 1.3rem; }
+    a { color: var(--info); }
+    pre  { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--panel); padding: .75rem; border-radius: 6px;
+           font-size: .9em; border: 1px solid var(--line); }
+    code { background: var(--panel); padding: .05rem .3rem; border-radius: 4px; font-size: .92em; }
+    pre code { background: none; padding: 0; }
+    .callout { border-left: 4px solid var(--accent); background: var(--accent-bg); padding: .75rem 1rem; margin: 1rem 0; border-radius: 4px; }
+    .callout.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+    .callout.assess { border-left-color: var(--info); background: var(--info-bg); }
+    .callout h4 { margin: 0 0 .4rem; font-size: 1em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92em; }
+    th, td { border: 1px solid var(--line); padding: .4rem .55rem; vertical-align: top; text-align: left; }
+    th { background: var(--panel); }
+    .num { text-align: right; white-space: nowrap; }
+    .ev { color: var(--muted); font-size: .86em; }
+    .ev::before { content: "근거: "; }
+    .fig { margin: 1.25rem 0; }
+    .fig figcaption { font-size: .88em; color: var(--muted); margin-top: .4rem; }
+    .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: .5rem; }
+    .flow .node { flex: 1 1 10rem; background: var(--box); border: 1px solid var(--line); border-radius: 8px; padding: .55rem .7rem; font-size: .88em; }
+    .flow .node b { display: block; }
+    .flow .node.store { background: var(--box-dim); border-style: solid; }
+    .flow .node.dormant { border-style: dashed; border-color: var(--dash); color: var(--muted); }
+    .flow .node.ext { border-color: var(--warn); }
+    .flow .arrow { align-self: center; color: var(--muted); font-size: 1.2em; padding: 0 .1rem; }
+    .lane { border: 1px dashed var(--line); border-radius: 10px; padding: .6rem .7rem .7rem; margin: .6rem 0; }
+    .lane .lane-title { font-size: .8em; letter-spacing: .02em; color: var(--muted); margin-bottom: .4rem; }
+    .bar { display: flex; width: 100%; height: 2.2rem; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); font-size: .8em; }
+    .bar div { display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; }
+    .bar .a { background: #4f8f6f; color: #fff; }
+    .bar .b { background: #c98a3a; color: #fff; }
+    .bar .c { background: var(--box-dim); color: var(--muted); }
+    .legend { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; font-size: .86em; margin-top: .4rem; }
+    .legend span::before { content: ""; display: inline-block; width: .8em; height: .8em; border-radius: 2px; margin-right: .35em; vertical-align: -1px; }
+    .legend .la::before { background: #4f8f6f; } .legend .lb::before { background: #c98a3a; } .legend .lc::before { background: var(--box-dim); border: 1px solid var(--line); }
+    .ui { border: 1px solid var(--line); border-radius: 10px; background: var(--box); padding: .8rem; font-size: .9em; }
+    .ui .crumb { color: var(--muted); font-size: .85em; }
+    .ui .card { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .7rem; margin: .5rem 0; background: var(--bg); }
+    .ui .badge { display: inline-block; font-size: .78em; padding: .05rem .45rem; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); }
+    .ui .head { font-weight: 600; margin: .25rem 0 .15rem; }
+    .ui .teaser { color: var(--muted); font-size: .92em; }
+    .ui .date { font-size: .82em; color: var(--muted); margin-top: .25rem; }
+    .ui .footer { text-align: center; color: var(--muted); font-size: .85em; margin-top: .5rem; }
+    .ui .dark { background: #1d2330; color: #e8ecf3; border-radius: 8px; padding: .6rem .75rem; margin: .5rem 0; }
+    .ui .dark .lbl { font-size: .75em; letter-spacing: .06em; color: #9fb3d1; }
+    .ui .field { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78em; color: var(--info); }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; }
+    .grid .wk { background: var(--box-dim); border: 1px solid var(--line); border-radius: 8px; padding: .5rem .6rem; font-size: .84em; }
+    .grid .wk b { display: block; margin-bottom: .3rem; }
+    .grid .pp { display: block; background: var(--box); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 4px; padding: .25rem .45rem; margin: .3rem 0; }
+    .grid .pp.milestone { border-left-color: var(--warn); }
+    @media (max-width: 40rem) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    .q { margin: 1.25rem 0; padding: .9rem 1rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .q .opt { display: block; width: 100%; text-align: left; margin: .3rem 0; padding: .5rem .75rem; cursor: pointer;
+              background: var(--box); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; font: inherit; line-height: 1.55; }
+    .q .opt:focus-visible { outline: 2px solid var(--info); }
+    .q .opt.correct   { background: var(--ok-bg); }
+    .q .opt.incorrect { background: var(--bad-bg); }
+    .q .why { margin: .4rem 0 0; font-size: .95em; }
+    .small { font-size: .88em; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <h1>P8: 1단계 사실 확인과 1차 프로젝트 계획</h1>
+  <p class="lede">워크스페이스 페이즈 P8(2026-10-08)에 대한 리서치 해설. 팀의 1단계, 글로벌 IB 대시보드 + 주간 이메일이 오늘 실제로 무엇인지, 문서와 시스템이 어디서 어긋나는지, 그리고 P8이 운영자의 첫 프로젝트를 위해 제안한 8개 페이즈 계획을 다룬다. 영문판: <a href="https://knowledge.hi2vi.com/@leetusik/glide-ilab/p8-stage-1-fact-check-and-the-project-1-plan">P8: Stage 1 Fact-Check and the Project-1 Plan</a> (knowledge.hi2vi.com).</p>
+
+  <nav aria-label="목차">
+    <strong>목차</strong>
+    <ol>
+      <li><a href="#the-question">질문과 짧은 답</a></li>
+      <li><a href="#how-p8-worked">P8은 어떻게 사실을 확인했나</a></li>
+      <li><a href="#stage-1-today">실제로 돌아가고 있는 1단계</a></li>
+      <li><a href="#signal-prototype">잠들어 있는 시그널 프로토타입</a></li>
+      <li><a href="#discrepancies">문서와 현실이 어긋나는 곳</a></li>
+      <li><a href="#the-plan">제안된 계획: 4주 안의 8개 페이즈</a></li>
+      <li><a href="#decisions-and-questions">운영자가 정할 것, Jake에게 물을 것</a></li>
+      <li><a href="#assessment">평가</a></li>
+      <li><a href="#sources">출처</a></li>
+      <li><a href="#quiz">퀴즈</a></li>
+    </ol>
+  </nav>
+
+  <section id="the-question">
+    <h2>1. 질문과 짧은 답</h2>
+    <p>운영자 수강은 팀의 새 리서치 에이전트 엔지니어로 합류해 첫 프로젝트를 받았다. 리서치 에이전트 로드맵의 <em>1단계</em>, <strong>글로벌 IB 대시보드 + 주간 이메일</strong>(글로벌 투자은행 리서치 대시보드와 주간 이메일)을 11/3까지 개선하는 일이다. 무언가를 만들기 전에, 1단계가 실제로 무엇인지 알아내기 위해 P8이 만들어졌다. <code>intent.md</code>에 남은 운영자의 원문은 영어 그대로 이렇다.</p>
+    <blockquote>
+      <p>“I'm very new to this repo and team. and My first job is to improve the stage 1: 글로벌 IB 대시보드 + 주간 이메일. I heard that the feature it self is already built and running in production. […] The phase's purpose is factcheck for first project( the stage 1 ). the latest version of the repo, supabase db, and the two onboarding and roadmap docs. and listup what to do for project 1. […] the running website is :"https://dashboard.glide-path.org/global-ib-research" our project 1 will include this page improvement too. using themes and signals. like user click certain themes, show what's the new on the themes, and market condition(bull, bear, etc..) showing conflict if opinions are splitted and sutff.”</p>
+    </blockquote>
+    <p>요지는 이렇다. 1단계는 이미 운영 중이라고 들었으니, 최신 저장소와 Supabase DB와 온보딩·로드맵 문서 두 개를 대조해 사실을 확인하고, 1차 프로젝트에서 할 일을 목록으로 만들라는 것. 그리고 실제 페이지의 개선(테마를 클릭하면 그 테마의 새 소식, 강세·약세 같은 시장 국면, 의견이 갈릴 때의 엇갈림 표시)도 1차 프로젝트에 포함한다는 것. 확인 게이트에서 운영자는 두 가지를 더했다. 로컬 파이프라인 실행은 이후 페이즈로 옮겼고(“local pipeline run will be done later phase.”), Jake에게 물을 질문 목록을 산출물로 추가했다(“you also need to list up the questions for the jake. in order to complete the first project”). <span class="ev">intent.md, Clarifications Resolved</span></p>
+
+    <div class="callout">
+      <h4>짧은 답</h4>
+      <p><strong>오늘의 1단계는 주간 요약 파이프라인 하나와 읽기 전용 목록 페이지 하나다. 로드맵의 나머지는 어디에서도 돌지 않는다.</strong> GitHub Actions 작업이 매주 일요일 9개 투자 하우스에서 링크를 수집하고, 각 리포트를 Codex로 요약해 <code>research_documents</code> 한 테이블의 요약 컬럼 8개에 쓴다(878행, 그중 872행 요약 완료, 72주 연속 이력). 다른 팀이 소유한 Next.js 페이지가 그중 347행을 목록으로 보여 준다. <strong>페이지에는 테마·신호·입장·의견 엇갈림이 전혀 없고</strong>, <strong>주간 이메일은 어떤 저장소·테이블·스케줄에도 존재하지 않는다.</strong> <span class="ev">P8.S5 result §0; P8.S2 §0–§1; P8.S3 §1; P8.S4 §1–§2</span></p>
+    </div>
+
+    <p>다른 무엇보다 계획을 바꾸는 발견 다섯 가지(S5 §0):</p>
+    <ol>
+      <li><strong>로드맵의 신호 계층은 이미 잠든 프로토타입으로 존재한다.</strong> 머지되지 않은 2026년 7월 브랜치가 라이브 테이블 5개를 만들고 2026-07-08에 한 번 채웠다. 문서 3건에서 나온 신호 201개, 테마 120개, 별칭 644개, 종목 95개. 그 뒤로 아무것도 쓰지 않았다. 따라서 “0단계”는 <em>데이터가 든 테이블을 채택하거나 마이그레이션하는 일</em>이 되고, 신호 추출은 <em>이식이냐 재구축이냐</em>의 선택이 된다. <span class="ev">S2 §9; S3 §2</span></li>
+      <li><strong>이메일은 어디에도 없다.</strong> 코드도, 의존성도, 스케줄도, 수신자 목록도 없다. 유일한 이메일 테이블 <code>mk_email_logs</code>에는 결제·해지 메일 30건뿐이고 마지막은 2026-04-07이다. 이메일 산출물 둘 다 백지에서 시작한다. <span class="ev">S2 §0; S3 DB-13; S4 §6</span></li>
+      <li><strong>페이지는 다른 팀 저장소에 있고, 목록 꼬리는 잡음이다.</strong> <code>dashboard-frontend</code>와 <code>dashboard-backend</code>는 운영자의 GitHub 계정에서 보이지 않는다. 목록의 마지막 페이지들은 Deutsche Bank 이동 안내 페이지 12건과 2023년 J.P. Morgan 글을 리서치로 보여 주고, 요약된 이력의 60.2 %는 아예 목록에 나오지 않는다. <span class="ev">S2 §1.3; S4 §1.6–§1.8</span></li>
+      <li><strong>“한경 1년 이상” 테이블은 6개월치다.</strong> <code>reports</code>에는 2026-01-02부터 06-25까지의 2,270행이 한 번 적재돼 있다. <span class="ev">S3 DB-6</span></li>
+      <li><strong>운영자는 어디에도 쓸 수 없다.</strong> 모노레포 READ 권한뿐이고, DB 역할은 읽기 전용에 스테이징 사본도 없으며, GCP 접근 없음, 풀 리퀘스트에 도는 CI 없음, CODEOWNERS 없음. 모든 코드 페이즈는 끝내기 전에 머지 경로가 필요하다. <span class="ev">S2 §0; S3 DB-20/21</span></li>
+    </ol>
+    <p>이 사실들로부터 P8은 8개 페이즈(PP-1~PP-8)를 제안하고, 프로토타입의 선별 이식을 권하고, 대표를 위한 범위 축소 제안서를 초안하고, 운영자에게 결정 10개(Q1~Q10)를 올리고, Jake에게 보낼 25개 항목의 한국어 질문 블록을 건넸다. 리뷰는 근거 표본 점검 36건을 모두 통과했고, 바뀐 제품 파일은 0개였다. <span class="ev">phase.json review note; P8.REVIEW result §3</span></p>
+  </section>
+
+  <section id="how-p8-worked">
+    <h2>2. P8은 어떻게 사실을 확인했나</h2>
+    <p>사실 확인은 근거 규율만큼만 좋다. 그래서 페이즈가 어떻게 잘렸는지 볼 가치가 있다. P8은 다섯 개의 <em>리서치</em> 슬라이스로 분해돼 엄격히 순서대로, 각기 다른 도구로 실행됐고, 마지막에 리뷰가 따랐다. 어떤 슬라이스도 제품 코드를 쓰지 않았고, DB에 쓰지 않았으며, GitHub Actions 워크플로는 한 번도 수동 실행되지 않았다. 페이즈 전체는 2026-10-08 10:26부터 13:45(KST) 사이에 끝났다. <span class="ev">phase.json created_at / completed_at; phase.md ## Decisions, Breakdown</span></p>
+
+    <figure class="fig">
+      <div class="flow">
+        <div class="node"><b>S1 · 문서</b>로드맵·온보딩 .docx → 138개 주장 등록부(C-1…C-138), 산출물 id R1–R6 / X1–X4, 용어 가설 17개, 문서 간 차이 22개</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>S2 · 저장소</b><code>7225f24</code> 시점의 glide-ilab, 모든 브랜치, 읽기 전용 <code>gh</code> → <code>path:line</code>으로 확인한 주장 46개, 차이 DR-1…23</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>S3 · 운영 DB</b>SELECT 전용 역할로 기록된 읽기 전용 쿼리 140개 → 주장 48개 확인, 차이 DB-1…22</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>S4 · 실제 페이지</b>오케스트레이터가 찍은 캡처 17개(페이지 텍스트, 상호작용 트리, 네트워크 호출, API 응답, 스크린샷 2장) → 주장 11개, DP-1…11</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>S5 · 종합</b>현황 지도, 78개 id를 모두 담은 병합 차이 44개, 제안 페이즈 8개, Q6–Q10, Jake 질문 36개</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>REVIEW</b>근거 표본 점검 36건, 슬라이스 간 숫자 대조, 질문 라우팅 → <code>pass</code></div>
+      </div>
+      <figcaption>P8의 여섯 슬라이스와 각각의 산출물. 주장은 한 방향으로 흘렀다. 문서가 1단계가 무엇이어야 하는지 말했고(S1), 저장소·DB·페이지가 실제로 무엇인지 말했으며(S2–S4), S5가 둘을 비교했다.</figcaption>
+    </figure>
+
+    <p><strong>주장 먼저, 사실 다음.</strong> S1이 먼저 두 한국어 문서를 번호 매긴 등록부로 바꾸고, 각 주장에 어디서 확인할 수 있는지(<em>저장소</em>, <em>DB</em>, <em>페이지</em>) 표시를 달았다. 뒤의 슬라이스들은 막연한 임무 대신 체크리스트를 받았고, 리뷰는 커버리지를 기계적으로 셀 수 있었다. 저장소로 확인 가능한 46개, DB로 48개, 페이지로 11개 주장이 각각 한 행씩 받았다. <span class="ev">phase.md ## Slices; P8.REVIEW result §1</span></p>
+
+    <p><strong>구조적으로 읽기 전용.</strong> 데이터베이스에는 SELECT 권한만 가진 <code>agent_readonly</code>라는 Postgres 역할로, Supabase의 세션 풀러를 거쳐 접근했다. 모든 public 테이블에 행 수준 보안(RLS)이 켜져 있는데, 이것이 중요한 이유는 Postgres가 그런 테이블에 <em>기본 거부</em> 규칙을 적용하기 때문이다. “If no policy exists for the table, a default-deny policy is used, meaning that no rows are visible or can be modified”(<a href="https://www.postgresql.org/docs/current/ddl-rowsecurity.html">PostgreSQL 문서, Row Security Policies</a> — postgresql.org). 그래서 운영자는 Jake와 먼저 확인한 뒤 public 테이블 351개 모두에 그 역할용 <code>for select … using (true)</code> 정책을 추가했다. 쓰기 시도는 “permission denied”를 돌려줬고, 나중에 만들어지는 테이블은 정책이 추가될 때까지 0행으로 읽히는데, 이것이 Jake에게 묻는 질문 중 하나다(F-4). <span class="ev">intent.md Clarifications; S3 DB-20</span></p>
+
+    <div class="callout warn">
+      <h4>의도된 예외 하나</h4>
+      <p>페이지는 로그인 뒤에 있다. 운영자는 오케스트레이터가 Claude in Chrome 확장을 통해 Pro 구독으로 이미 로그인된 <em>운영자 본인의</em> Chrome을 몰도록 허용했다. 이동, 텍스트 읽기, 스크린샷뿐, 그 외에는 아무것도 하지 않는다. 워크스페이스 계약은 보통 운영자 프로필을 모는 것을 금지한다. 이것은 명시적이고 P8에 한정된 읽기 전용 예외였고, 리뷰는 이것을 “운영자가 대시보드를 보는 방법”으로만 기록하고 에이전트의 검증 런타임으로는 절대 기록하지 말 것을 요구한다. 실행자들은 브라우저를 건드리지 않았고 캡처 파일을 분석했다. <span class="ev">intent.md, Access and instruments; P8.REVIEW result §5</span></p>
+    </div>
+
+    <p><strong>리뷰가 점검한 것.</strong> 각 슬라이스의 자체 검증을 다시 돌리는 것 외에, 리뷰어는 근거 포인터 36개를 무작위로 열어 봤다. 워크플로 줄, publish SQL, 핵심 숫자 뒤의 쿼리 로그 행, 페이지 사실 뒤의 캡처 파일, 산출물 목록 뒤의 추출 문서 줄. 36건 모두 맞았다. 슬라이스 간 숫자도 대조해 모순이 없음을 확인했고, 뒤의 슬라이스가 바로잡은 초기 단서 몇 개를 나열했다. <code>intent.md</code>의 뉴스 테이블 수 4,985 대 S3의 4,988(읽은 시점이 다름), 후보 0개라는 낡은 <code>reltuples</code> 추정 대 실제 26개, 캡처 메모의 “발행일 없는 32건”을 S4가 35건으로 다시 합산한 것. <span class="ev">P8.REVIEW result §3</span></p>
+  </section>
+
+  <section id="stage-1-today">
+    <h2>3. 실제로 돌아가고 있는 1단계</h2>
+    <p>네 출처가 일치하는 대로 그린 시스템이다. 점선 상자는 존재하지만 돌지 않는 것, 주황 테두리는 모노레포 밖의 구성 요소다.</p>
+
+    <figure class="fig">
+      <div class="lane">
+        <div class="lane-title">모노레포 · ib-research-report-pipeline · GitHub Actions, 매주 일요일</div>
+        <div class="flow">
+          <div class="node"><b>하우스 사이트 9곳</b>Goldman Sachs, J.P. Morgan, Morgan Stanley, Merrill, Bank of America Institute, Vanguard Investor, Vanguard Advisors, HSBC US, Jefferies</div>
+          <div class="arrow">→</div>
+          <div class="node"><b>collect → register</b>새 링크가 <code>crawl_status='discovered'</code>인 <code>research_documents</code> 행이 되고, 소스마다 <code>research_crawl_runs</code> 행 하나</div>
+          <div class="arrow">→</div>
+          <div class="node"><b>capture → extract → summarize / judge / arbiter / derive</b>Codex CLI, 요약은 <code>gpt-6-luna</code>, judge와 arbiter는 <code>gpt-5.6-terra</code>; 문서당 최대 약 40분</div>
+          <div class="arrow">→</div>
+          <div class="node store"><b>publish</b><code>research_documents</code>의 요약 컬럼 8개, 그리고 KB 저장소 <code>glide-llm-wiki-kb</code>의 브랜치와 PR</div>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-title">운영 Supabase (Postgres)</div>
+        <div class="flow">
+          <div class="node store"><b>research_documents</b>878행 · 872행 요약 · 발행일 없음 35 · 최신 2026-10-04</div>
+          <div class="node store"><b>research_sources</b>코드 12개: 하우스 9곳 + 6월 크롤의 잔재 3개</div>
+          <div class="node store"><b>research_crawl_runs</b>소스별 실행 로그; Merrill은 2026-09-13 이후 매 실행 실패</div>
+          <div class="node dormant"><b>신호 테이블 5개</b>2026-07-08 프로토타입이 한 번 채움; 갱신된 적 없음(4절)</div>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-title">다른 팀 저장소 · 운영자에게 보이지 않음</div>
+        <div class="flow">
+          <div class="node ext"><b>dashboard-backend</b><code>GET /api/v1/research/articles?page&amp;page_size[&amp;source_code]</code>와 <code>/{uuid}</code>; <code>summary_short_ko is not null</code> 필터, 약 183일 창, 발행일 없는 행은 맨 뒤</div>
+          <div class="arrow">→</div>
+          <div class="node ext"><b>dashboard-frontend</b>Next.js 페이지 <code>/global-ib-research</code>: 페이지당 카드 15장, “전체 347건 · 1 / 24 페이지”</div>
+        </div>
+      </div>
+      <figcaption>발견된 그대로의 1단계. 모노레포가 소유한 것은 파이프라인뿐이다. 페이지와 API는 이슈 #65에 이름이 나오는 별도 저장소다. <span class="ev">S5 §A.1; S2 §1–§2; S3 §1; S4 §1.5</span></figcaption>
+    </figure>
+
+    <h3>3.1 주간 작업과 그 시계</h3>
+    <p><code>main</code>에 있는 유일한 예약된 1단계 작업은 워크플로 <code>.github/workflows/ib-research-report-pipeline.yml</code>이다. 파일에서 그대로 인용한 트리거:</p>
+<pre><code>schedule:
+  - cron: "37 0 * * 0"</code></pre>
+    <p>GitHub는 cron을 UTC로 평가하므로(“By default, scheduled workflows run in UTC” — <a href="https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows">GitHub Docs, Events that trigger workflows</a> — docs.github.com) <code>37 0 * * 0</code>은 일요일 00:37 UTC, 곧 일요일 09:37 KST다. 팀 로드맵은 수집이 일요일에 일어난다고 하고, 그 점은 사실이다. 그러나 최근 세 번의 예약 실행은 14:21, 14:41, 15:17 KST에 <em>생성</em>됐고 그 뒤 몇 시간을 돌았다. GitHub 문서는 “the schedule event can be delayed during periods of high loads of GitHub Actions workflow runs”라고 경고하며 매시 정각이 고부하 시간대에 포함된다고 말한다(같은 페이지). 부하가 다섯 시간의 간격을 설명하는지는 이 페이즈가 확정하지 않았다. 계획이 한 일은 <em>관찰된</em> 오후 시작을 설계의 전제로 삼는 것이고, 그래서 주간 집계 시각이 가정이 아니라 Jake에게 묻는 질문(F-21)이 됐다. <span class="ev">S2 §1.1 and §0 (gh run list); S5 B-25</span></p>
+    <p>시계에 관한 사실 둘 더. 두 번째 워크플로가 Codex 인증 토큰을 매일 <code>24 19 * * *</code> UTC, 곧 04:24 KST에 갱신한다. 그리고 예약된 링크 수집은 2026-09-28의 풀 리퀘스트 #78 이후에야 존재하므로, 새 링크가 처음 예약 등록된 날은 2026-10-04다. 각 작업은 “each job in a workflow can run for up to 6 hours of execution time”이라는 GitHub 한도(<a href="https://docs.github.com/en/actions/reference/limits">GitHub Docs, Actions limits</a> — docs.github.com)에 묶이고, 워크플로 파일 자체에 문서 한 건이 40분 45초 걸린 기록이 있다. 신호 추출 단계를 추가하는 일이 예산 질문을 낳는 이유다(PP-4 위험 6). <span class="ev">S2 §1.1; P8.REVIEW spot-checks 1–4</span></p>
+
+    <h3>3.2 publish가 쓰는 것, 절대 쓰지 않는 것</h3>
+    <p>사용자가 보는 “AI RESEARCH SUMMARY”는 전부 이 파이프라인이 만든다. publish 단계는 UPDATE 하나를 실행하는데, <code>storage/supabase.py</code>(439–449행)에서 그대로 인용하면 다음과 같다.</p>
+<pre><code>update public.research_documents
+   set title_ko = %(title_ko)s,
+       summary_short_ko = %(summary_short_ko)s,
+       summary_detailed_ko = %(summary_detailed_ko)s,
+       summary_status = %(summary_status)s,
+       summary_model = %(summary_model)s,
+       summary_prompt_version = %(summary_prompt_version)s,
+       summary_generated_at = now(),
+       updated_at = now()</code></pre>
+    <p>컬럼 여덟 개, 그 이상은 없다. 특히 파이프라인은 <strong>리포트 본문을 절대 저장하지 않는다</strong>. <code>text_content</code>, <code>content_hash</code>, <code>storage_uri</code> 등은 풀 리퀘스트 #102에서 퇴역한 크롤러가 쓰던 것이고 그 뒤로 손대지 않았다. 본문은 실행 중 Actions 러너에만 존재한다. 이 한 가지 사실이 계획의 상당 부분을 끌고 간다. 로드맵의 원문 비저장 원칙(원문을 저장하지 않는다)을 오늘의 코드는 지키고 있지만, 레거시 822행에는 옛 크롤러의 본문 660만 자가 아직 남아 있고, 어떤 신호 추출 단계든 본문이 아직 있는 주간 실행 <em>안에서</em> 돌거나 페이지를 다시 캡처해야 한다. <span class="ev">S2 §2; S3 DB-3, DB-4; S5 B-14</span></p>
+
+    <p>이 단계에서 세 필드가 페이지에 닿는다. <code>title_ko</code>는 제목이고, <code>summary_short_ko</code>의 다섯 불릿이 “AI RESEARCH SUMMARY” 패널이며(첫 불릿은 목록 카드의 미리보기 문장을 겸한다), <code>summary_detailed_ko</code>는 문단 섹션 “리서치 본문 요약”이다. 프롬프트 라벨은 766행에서 <code>inline-materials-v1+derive-v1</code>이고, 106행은 아직 퇴역 크롤러의 라벨(그중 104행이 <code>v7_reader_tone</code>)을 달고 있으며, 6행은 요약이 아예 없다. 따라서 산출물 R3 “기존 AI 요약 무영향”은 필드 세 개, 프롬프트 파일 두 개, 라벨, 모델을 동결해야 하고, 기준선이 이미 섞여 있다는 사실을 받아들여야 한다. <span class="ev">S2 §3; S3 DB-17; S4 DP-4; S5 B-26</span></p>
+
+    <h3>3.3 페이지가 보여 주는 것</h3>
+    <p>캡처 덕분에 페이지를 충실하게 그릴 수 있다. 목록은 섞인 피드 하나다. 각 카드에는 하우스 배지, 한국어 제목, 한 문장 미리보기, 날짜가 있다. 상세 페이지는 원문 링크와 요약 섹션 두 개를 더한다. 아래는 2026-10-08에 캡처한 1페이지의 첫 카드이고, 각 요소 뒤의 API 필드를 함께 표시했다.</p>
+
+    <figure class="fig">
+      <div class="ui">
+        <div class="crumb">도구 › 글로벌 IB 리서치</div>
+        <div class="head" style="font-size:1.05em">글로벌 IB 리서치</div>
+        <div class="card">
+          <span class="badge">Vanguard Advisors</span> <span class="field">source_name</span>
+          <div class="head">오늘날 시장에 맞게 채권 포트폴리오를 구성했는가? <span class="field">title_ko</span></div>
+          <div class="teaser">뱅가드는 현금과 고수익 신용채권에 치우친 포트폴리오가 경기 둔화 때 안전자산 수요에 대응하지 못하거나 기회를 놓칠 수 있다고 본다. <span class="field">summary_short_ko[0]</span></div>
+          <div class="date">2026.10.02 <span class="field">published_at</span></div>
+        </div>
+        <div class="card" style="opacity:.75">
+          <span class="badge">J.P. Morgan</span>
+          <div class="head">차분한 지수, 들썩이는 시장</div>
+          <div class="teaser">J.P.모건 프라이빗뱅크는 인플레이션 불확실성과 예상보다 강한 성장, AI 데이터센터 투자 확대로 … </div>
+          <div class="date">2026.10.02</div>
+        </div>
+        <div class="footer">전체 347건 · 1 / 24 페이지</div>
+      </div>
+      <figcaption>캡처 01에서 다시 그린 목록 1페이지. 페이지당 이런 카드 15장. 필터, 검색, 테마, 신호 컨트롤은 어디에도 없다. <span class="ev">S4 captures 01, 02, 03</span></figcaption>
+    </figure>
+
+    <figure class="fig">
+      <div class="ui">
+        <div class="crumb">← 목록으로</div>
+        <span class="badge">Vanguard Advisors</span>
+        <div class="head">오늘날 시장에 맞게 채권 포트폴리오를 구성했는가?</div>
+        <div class="date">Vanguard Advisors | 발행일 2026.10.02 &nbsp;·&nbsp; 원문 링크 ↗ <span class="field">canonical_url</span></div>
+        <div class="dark">
+          <div class="lbl">AI RESEARCH SUMMARY <span class="field" style="color:#9fb3d1">summary_short_ko · 불릿 5개</span></div>
+          • 뱅가드는 현금과 고수익 신용채권에 치우친 포트폴리오가 …<br>• 2026년 중반 관찰한 채권 포트폴리오 962개 중 약 3분의 2는 …<br>• … (불릿 3개 더)
+        </div>
+        <div class="head" style="font-size:.95em">리서치 본문 요약 <span class="field">summary_detailed_ko</span></div>
+        <div class="teaser">뱅가드는 현금과 고수익 신용채권에 치우친 채권 포트폴리오가 경기 둔화 시 … (문단 3개)</div>
+        <div class="card" style="text-align:center">글로벌 리서치, 내 포트폴리오에는 어떤 의미일까요? · <b>내 자산 진단하기</b></div>
+        <div class="small">※ 본 콘텐츠는 AI가 데이터를 분석해 작성한 참고용 리포트로 …</div>
+      </div>
+      <figcaption>캡처 05에서 다시 그린 같은 글의 상세 페이지. API 항목의 uuid로 딥링크된다. 보여 주지 않는 것: 영어 <code>title</code>, <code>source_code</code>, <code>doc_type</code>, <code>pdf_url</code>, <code>summary_generated_at</code>, 그리고 발행일 품질 표시. <span class="ev">S4 §1.2–§1.4, U-8–U-10</span></figcaption>
+    </figure>
+
+    <h3>3.4 푸터가 347이라고 말하는 이유</h3>
+    <p>데이터베이스에는 요약된 문서 872건이 있는데 페이지는 347건이라고 말한다. S4는 이 숫자를 하우스별로 정확히 설명했다. 목록은 <code>published_at</code>이 약 183일 창 안에 드는 날짜 있는 항목 312건(가장 오래된 항목 2026-04-10은 캡처 181일 전)을 최신순으로 보여 주고, 그다음 <strong>발행일 없는 35행 전부를 맨 뒤에 붙인다</strong>. Deutsche Bank 13, Merrill 12, J.P. Morgan 9, Goldman Sachs 1. 나머지 요약 525행, 이력의 60.2 %는 페이지에서 전혀 닿을 수 없다. <span class="ev">S4 §1.6–§1.7, captures 10, 14, 16; S3 Q2ak</span></p>
+
+    <figure class="fig">
+      <div class="bar" role="img" aria-label="요약 872행: 날짜 있는 312행 목록 표시, 발행일 없는 35행 맨 뒤, 525행 목록 불가">
+        <div class="a" style="width:35.8%">312 날짜 있음, 목록 표시</div>
+        <div class="b" style="width:4.0%">35</div>
+        <div class="c" style="width:60.2%">525 요약됐지만 목록에 없음</div>
+      </div>
+      <div class="legend"><span class="la">약 183일 창 안</span><span class="lb">발행일 없음, 맨 뒤에 추가</span><span class="lc">창보다 오래됨</span></div>
+      <figcaption>페이지가 노출하는 대로 본 <code>research_documents</code>의 요약 872행. 312 + 35 = 347.</figcaption>
+    </figure>
+
+    <p>이 발행일 없는 꼬리가 페이지가 체면을 구기는 곳이다. Deutsche Bank 링크 이동 안내 페이지 12건, 2023년 J.P. Morgan 글 5건, 목록 페이지 1건, 상시 게시 페이지 13건을 리서치로 내보이고, 정말로 최신인 발행일 없는 글 4건을 그 뒤에 묻는다. Morgan Stanley 요약 하나는 같은 문장을 반복한다. 페이지의 11개 하우스 중 둘, BlackRock Investment Institute와 Deutsche Bank는 파이프라인 레지스트리에 아예 없다. 2026-06-30의 일회성 크롤에서 왔고 그 뒤로 수집되지 않았다. 수집기가 많은 날짜를 추정하는데도 날짜에는 품질 표시가 없다. 843개 날짜 중 최소 736개가 일 단위 정밀도뿐이고, Bank of America의 107개 날짜 중 73개가 18일이나 30일이다. <span class="ev">S4 §1.8 U-1–U-13, DP-2, DP-3, DP-7; S3 DB-1, DB-5</span></p>
+
+    <div class="callout">
+      <h4>용어: 로드맵의 이름 대 라이브 이름</h4>
+      <p>로드맵은 <code>reports</code>, <code>signals</code>, <code>theme_taxonomy</code>, <code>theme_alias</code>, <code>entity</code>, <code>email_log</code>, <code>theme_trend</code>라고 쓴다. 라이브 데이터베이스에서 이들은 각각 <code>research_documents</code>, <code>research_signals</code>, <code>signal_topics</code>, <code>theme_aliases</code>, <code>signal_entity_registry</code>, <em>없음</em>, <em>없음</em>이다. <code>reports</code>라는 이름의 테이블은 실제로 존재하지만 한경 컨센서스 데이터를 담고 있지 IB 리서치가 아니다. S1이 이것을 가설 17개로 적었고 S2–S4가 하나씩 확정했다. <span class="ev">phase.md ## Decisions, Vocabulary map V-1…V-17</span></p>
+    </div>
+  </section>
+
+  <section id="signal-prototype">
+    <h2>4. 잠들어 있는 시그널 프로토타입</h2>
+    <p>가장 결과가 큰 발견은 <code>main</code>에 없었다. S2는 모든 브랜치를 뒤져 <code>origin/data-investment-research-crawling/feat/new-tasks</code>를 찾았다. 2026-06-25부터 07-08까지의 커밋 6개, 어떤 <code>main</code>이나 <code>develop</code>에도 머지되지 않았고, 풀 리퀘스트 #102에서 해당 컴포넌트가 제거될 때 언급 없이 사라졌다. 여기에는 로드맵의 신호 계층 전체가 프로토타입 형태로 들어 있다. 라이브 테이블 5개를 만든 마이그레이션 002–005, OpenAI API로 <code>gpt-5.5</code>를 부르는 <code>v3_taxonomy_constrained</code> 라벨의 추출 프롬프트, 임베딩 기반 테마 재매핑, 그리고 CLI에서 3층 “시그널 보드”를 그리는 트렌드·하우스·불일치 엔진. S3는 데이터에서 이 프로토타입이 정확히 한 번 돌았음을 확인했다. <span class="ev">S2 §9.1–§9.5; S3 §2</span></p>
+
+    <table>
+      <thead><tr><th>라이브 테이블</th><th>로드맵 이름</th><th class="num">행</th><th>2026-10-08 기준 상태</th></tr></thead>
+      <tbody>
+        <tr><td><code>signal_topics</code></td><td><code>theme_taxonomy</code></td><td class="num">120</td><td>17개 카테고리의 테마, 2026-07-07에 CSV로 시드; 상태 어휘 대신 <code>is_active</code> 플래그; 120개 모두 임베딩 있음</td></tr>
+        <tr><td><code>theme_aliases</code></td><td><code>theme_alias</code></td><td class="num">644</td><td>모두 <code>source='seed'</code>; <code>reviewed</code>로 표시된 것 없음</td></tr>
+        <tr><td><code>signal_entity_registry</code></td><td><code>entity</code></td><td class="num">95</td><td>국내 26 + 해외 69 종목(로드맵은 27 / 68); 티커만의 키, <code>market:ticker</code> id 없음</td></tr>
+        <tr><td><code>research_signals</code></td><td><code>signals</code></td><td class="num">201</td><td>문서 3건에서(J.P. Morgan 128, Vanguard Investor 52, Goldman Sachs 21), 2026-07-08 16:19–16:26에 기록</td></tr>
+        <tr><td><code>signal_topic_candidates</code></td><td>(후보)</td><td class="num">26</td><td>임베딩·병합·검토된 적 없음</td></tr>
+      </tbody>
+    </table>
+    <p class="ev">S5 §A.3; S3 §2.2–§2.3, queries Q3a–Q3v, Q8m</p>
+
+    <p>신호 201개의 모습은 이식이 무엇을 물려받을지 말해 준다. 입장은 강세 149, 약세 39, 중립 13. 신뢰도는 0.62에서 0.98, 평균 0.847이라 로드맵의 “0.6 미만은 검토로” 게이트는 아무것도 거르지 못한다. 모든 행에 <code>evidence_ref</code>가 있지만 페이지 번호는 합성된 것이고, 모든 행의 <code>evidence_text</code>는 비어 있으며 실제 근거 문장은 <code>topic_raw</code>에 들어 있다(201건 중 190건이 저장된 본문에 그대로 나타난다). 종목 언급 430건 중 레지스트리 티커에 연결된 것은 2건뿐인데, 매칭이 <code>name_keys</code>의 정확 일치이기 때문이다. 그리고 실행이 <code>success</code>로 표시한 문서 39건 중 36건은 신호 행을 하나도 만들지 않았다. 아무도 설명하지 못한 조용한 실패다. <span class="ev">S3 §2.2, DB-9–DB-12</span></p>
+
+    <div class="callout warn">
+      <h4>이것이 계획을 바꾸는 이유</h4>
+      <p>온보딩 문서는 0단계를 “공유 테이블 만들기”로, R2를 “신호 추출을 만들고 6개월을 백필하기”로 적는다. 두 전제 모두 어긋난다. 테이블은 외래 키와 <code>ON DELETE CASCADE</code>를 가진 채 데이터와 함께 존재하므로 0단계는 <em>데이터가 든 테이블의 마이그레이션</em>이 된다(PP-2). 문서 백필도 이미 있다. 최근 183일에 날짜 있는 문서 318건이 있고, 퇴역 크롤러의 2026-05-18 실행 덕분에 72주 연속 ISO 주 이력이 테이블에 있다. 없는 것은 <em>신호</em> 백필이므로 R2는 “6개월치 리포트 수집”이 아니라 “기존 행에 대한 신호 추출”이 된다. <span class="ev">S5 B-7, B-11, B-28; S3 Q2aa, Q2as</span></p>
+    </div>
+
+    <h3>이식이냐 재구축이냐</h3>
+    <p>S5는 두 선택지와 기본안을 제시한다. <strong>선택지 A, 선별 이식</strong>: 마이그레이션 뒤 라이브 테이블을 유지하고, 시드된 사전들을 유지하고, v3 프롬프트와 그 JSON 스키마를 출발 프롬프트로 유지하되, 추출 호출을 파이프라인의 새 단계로 옮겨 실행 중 캡처된 텍스트 위에서 파이프라인의 Codex 런타임으로 돌린다. 집계 규칙은 프로토타입 엔진이 아니라 R1의 숫자로부터 다시 구현한다. <strong>선택지 B, 재구축</strong>: 로드맵의 단계대로 파이프라인 안에 추출을 새로 쓰고 시드 데이터만 가져온다. 여섯 가지 사실이 둘을 가른다. 프로토타입은 파이프라인이 쓰지 않는 저장된 <code>text_content</code>를 읽는다. 트렌드 규칙이 로드맵과 다르다(24주 기울기에 고정 임계값 0.3 / −0.1, 하우스 최소 수 없음 대 로드맵의 4주 기울기, 두 하우스 규칙, 로그 불일치 공식). 스키마에 0단계 id가 없다. 행에 근거 문장이 없다. 빈 success 36건. 종목 연결 430건 중 2건. 권장 기본안은 A이고, Jake가 프로토타입이 의도적으로 기각됐다고 하거나, 빈 success가 모델 실패로 밝혀지거나, Codex가 JSON 스키마 추출을 수용 가능한 비용으로 못 돌리거나, PP-2가 새 테이블을 택하면 B로 뒤집힌다. <span class="ev">S5 §D.2; S2 §9.4, DR-19–DR-22</span></p>
+  </section>
+
+  <section id="discrepancies">
+    <h2>5. 문서와 현실이 어긋나는 곳</h2>
+    <p>S1–S4가 차이 id 78개를 냈고, S5가 이를 44행으로 병합했다. 각 행에는 근거, 1차 프로젝트에 미치는 영향, 심각도가 있다. 5개는 <strong>차단</strong>(그것 없이는 페이즈를 시작하거나 끝낼 수 없음), 23개는 <strong>결정 필요</strong>(누군가 지정된 페이즈 전이나 안에서 골라야 함), 16개는 <strong>참고</strong>다. 리뷰는 78개 id 각각이 정확히 한 행에 들어갔음을 확인했다. <span class="ev">S5 §B, §B.7; P8.REVIEW result §1</span></p>
+
+    <h3>차단 행 다섯 개</h3>
+    <table>
+      <thead><tr><th>행</th><th>문서의 주장</th><th>사실</th><th>막는 것</th></tr></thead>
+      <tbody>
+        <tr><td>B-1</td><td>1단계 작업은 <code>schema/</code>, <code>prompts/</code>, <code>taxonomy/</code>, <code>docs/tables/</code>, <code>docs/runbooks/</code>, CODEOWNERS, 브랜치 보호를 갖춘 독립 <code>research-agent</code> 저장소에 산다</td><td>그런 저장소는 보이지도 참조되지도 않는다. 코드는 모노레포의 <code>ib-research-report-pipeline/</code>이고, 스키마는 마이그레이션 없는 덤프(<code>db_schema.sql</code>)이며 그 폴더들은 하나도 없다</td><td>모든 마이그레이션·명세·런북·프롬프트·CSV의 위치: PP-2, PP-4, PP-7</td></tr>
+        <tr><td>B-5</td><td>화면은 시운, API 계약은 Jake; API 서비스는 이름이 없다</td><td>페이지는 <code>dashboard-frontend</code>, API는 <code>dashboard-backend</code>; 둘 다 운영자에게 보이지 않고 담당자 미확인</td><td>테마·신호 필드, 엔드포인트, 필터 전부: PP-8</td></tr>
+        <tr><td>B-36</td><td>월요일 07:00 KST 고객 이메일과 금요일 운영자 메일이 발송 도구로 나가고 <code>email_log</code>가 오픈·클릭을 기록한다</td><td>어떤 ref나 테이블에도 메일 코드·의존성·스케줄·데이터 없음; 마케팅 수신 동의 5건뿐, 리서치 이메일 수신자 목록 없음</td><td>도구, 수신자, 스케줄러, 로그: PP-5, PP-6</td></tr>
+        <tr><td>B-38</td><td>상호 리뷰, 배포 전 승인 1건, CODEOWNERS, 보호된 <code>main</code></td><td>풀 리퀘스트에 도는 CI 체크 없음, CODEOWNERS 없음, 운영자 계정은 READ 전용이라 브랜치 push도 머지도 못 함</td><td>모든 코드 페이즈의 머지 경로</td></tr>
+        <tr><td>B-39</td><td>수강이 만들고 백필하고 롤백할 수 있는 공유 DB 하나</td><td><code>research_*</code>의 dev·스테이징 사본 없음; 읽기 전용 역할은 select 정책이 있어야 새 테이블을 봄; 마이그레이션 적용자 미상</td><td>PP-2의 대상과 PP-7의 롤백 실습</td></tr>
+      </tbody>
+    </table>
+    <p class="ev">S5 §B.1–§B.6, rows B-1, B-5, B-36, B-38, B-39</p>
+
+    <h3>데이터 작업을 좌우하는 결정 필요 행</h3>
+    <ul>
+      <li><strong>B-12, 신호 정의에 빈칸이 있다.</strong> 로드맵은 떠오름(4주 기울기가 “상위”, 하우스 2곳 이상), 식어감(12주 평균보다 “뚜렷이” 낮음), 불일치(같은 호라이즌에서 8주 안에 강세 하우스와 약세 하우스, 강도 공식 포함), 신규 테마를 정의하지만 임계값, 언급 단위, 공식의 <em>n</em>과 로그 밑을 비워 두고, “신규 테마”를 후보와 편입된 테마 둘 다에 쓴다. PP-1이 숫자를 초안한다. <span class="ev">S1 DD-10, DD-11, DD-13; S2 DR-20</span></li>
+      <li><strong>B-14, 원문 비저장 대 저장된 660만 자.</strong> 오늘의 파이프라인은 본문을 저장하지 않지만 레거시 행, 뉴스 테이블(2억 6,800만 자), 챗봇 청크는 저장한다. 원칙의 범위를 명시해야 하고, 백필이 창 안의 레거시 본문 271건을 읽어도 되는지는 Jake에게 묻는 질문이다(F-10). <span class="ev">S2 DR-5, DR-6, DR-19; S3 DB-3, DB-4</span></li>
+      <li><strong>B-20, 추정된 날짜가 발행일로 표시된다.</strong> 어댑터에 추정 경로가 네 가지 있고, 36행은 처음 발견된 날보다 <em>뒤</em>의 날짜가 찍혀 있다. 주간 창과 이메일 주가 이 날짜를 물려받으므로 PP-4에는 발행일 품질 표시가 필요하다. <span class="ev">S2 §4, DR-7; S3 DB-5; S4 DP-7</span></li>
+      <li><strong>B-21, 중복.</strong> 유일 키는 canonical URL뿐이고 Jefferies는 제목 24개가 두 번 저장돼 있다(48행). 중복 제거 키 없이는 트렌드 수가 이중 집계된다. <span class="ev">S2 DR-4; S3 DB-16</span></li>
+      <li><strong>B-22와 B-23, 무엇이 코퍼스인가.</strong> 잡음 꼬리(이동 안내 페이지, 2023년 글, 상시 페이지)는 R2의 추출 코퍼스이기도 하고, 레지스트리 밖 소스 코드 3개가 데이터에 살아 있다. 추출 전에 콘텐츠 품질 규칙이 먼저다. <span class="ev">S4 DP-2, DP-3; S3 DB-1</span></li>
+      <li><strong>B-25, 일요일 시계.</strong> 명목 09:37 KST, 실제 14:21–15:17 KST에 몇 시간의 실행이 더해지므로 “일요일 오후 집계, 월요일 07:00 발송” 계획은 시각을 의도적으로 골라야 한다. <span class="ev">S2 DR-12; S3 DB-14</span></li>
+      <li><strong>B-32, 183일 창.</strong> 6개월 트렌드가 정확히 창의 가장자리에 걸리고, 오래된 근거로 가는 이메일 딥링크는 상세 API에서 404를 만날 수 있다(이슈 #65의 간접 정보, 미검증). <span class="ev">S2 DR-13; S4 DP-1</span></li>
+    </ul>
+
+    <p>행 하나는 페이즈 자체의 전제를 바로잡기 때문에 한 문장을 들일 만하다. 분해 단계는 파이프라인의 Codex “허용 이메일” 가드가 모든 Codex 호출을 막는다고 가정했고, 그렇다면 로컬 실행에 쓸 계정은 코드 문제가 된다. S2는 그 가드가 개발용 평가 CLI(<code>evals/cli.py:83</code>)에서만 돈다는 것을 찾았다. 주간 체인은 <code>CODEX_HOME</code>에 든 계정이 무엇이든 확인 없이 Codex를 부른다. 따라서 질문(Q2)은 정책의 문제, 곧 누구의 쿼터와 약관이냐의 문제이고, CI 갱신 토큰을 로컬 로그인과 공유하지 말라는 배포 README의 규칙은 팀의 시크릿을 복사하는 쪽에 반대한다. <span class="ev">S2 §6.1, DR-16; S5 B-29; P8.REVIEW spot-checks 5 and 12</span></p>
+  </section>
+
+  <section id="the-plan">
+    <h2>6. 제안된 계획: 4주 안의 8개 페이즈</h2>
+    <p>1차 프로젝트의 날짜는 온보딩 문서에 고정돼 있다. 킥오프 수 10/7, 중간 피드백 금 10/16, 데모와 첫 평가 화 11/3. 필수 산출물 6개 R1–R6과 확장 항목 4개 X1–X4가 채점표다. S5는 이를 제안 페이즈 8개에 대응시켰다. 워크스페이스 페이즈 id와 충돌하지 않도록 PP-1~PP-8로 번호를 붙였고, 각각 <code>/create-phase</code>에 붙여 넣을 수 있는 목표문을 갖는다. 이 절의 어떤 것도 결정된 것이 아니다. 운영자가 결정하고, 여러 항목은 Jake를 기다린다. <span class="ev">S1 §2, §3; S5 §D</span></p>
+
+    <table>
+      <thead><tr><th>페이즈</th><th>닫는 산출물</th><th>내용</th><th>문서의 목표</th><th>10/8 기준 현실적 일정</th></tr></thead>
+      <tbody>
+        <tr><td><b>PP-1</b> 정확도 검증 기준</td><td>R1</td><td>테마 매핑·입장 판정 임계값, 주간 20건 검증 절차, 로드맵이 비워 둔 신호 정의 숫자, 대표 승인. 접근 권한 불필요.</td><td>W1</td><td>10/13까지 초안, 10/16 중간 피드백에서 승인</td></tr>
+        <tr><td><b>PP-2</b> 0단계 채택</td><td>RM-0, R6 명세, X4 스트레치</td><td>프로토타입 테이블 5개를 0단계 형태로(<code>market:ticker</code> id, 테마 상태 어휘, 별칭 출처, 소스 타입·종목·테마·근거 신호 컬럼), 같은 PR에 테이블별 명세</td><td>W1</td><td>Jake가 10/13까지 F-4, F-7, F-32에 답하면 W2; 아니면 PP-4가 프로토타입 형태에 먼저 쓰고 W3</td></tr>
+        <tr><td><b>PP-3</b> 로컬 파이프라인 실행</td><td>R2, R6의 전제</td><td>운영자 머신에서 <code>--publication preview</code> 모드로 소스 1곳, limit 1 실행; 런북식 기록; KB push·DB 쓰기·워크플로 수동 실행 없음</td><td>—</td><td>KB 접근 또는 대용 저장소 질문(F-5)이 정리되면 W2</td></tr>
+        <tr><td><b>PP-4</b> 신호 추출 + 6개월 신호 백필</td><td>R2, R3, X3 스트레치</td><td>창 안 문서 318건과 매주 새 리포트의 신호를 주간 실행 안에서; 코퍼스 규칙(잡음, 중복, 날짜 표시); R3 동결 증명; 요약–신호 불일치 검토 큐</td><td>10/20까지</td><td>W2 구축, 화 10/27까지 백필·검증, 첫 예약 주간 실행 일 10/25 또는 11/1</td></tr>
+        <tr><td><b>PP-5</b> 이메일 경로 + 금요일 운영자 메일</td><td>R5</td><td>1차 프로젝트가 쓸 발송 경로를 후보 테마·저신뢰 신호·불일치·실패 소스(오늘은 Merrill) 목록의 내부 메일로 먼저 증명; 결정을 사전에 기록; <code>email_log</code></td><td>W2–3</td><td>도구가 10/16까지 정해지면 첫 메일 금 10/23, 아니면 10/30</td></tr>
+        <tr><td><b>PP-6</b> 주간 고객 이메일</td><td>R4</td><td>신호 정의에 따른 집계, 신호와 요약에 묶인 LLM 초안, 품질 필터, 발송, <code>email_log</code>; 대표가 검토하는 내부 테스트 발송 2회</td><td>W2–4</td><td>월 10/26과 11/2 테스트 발송; 월요일 07:00 자동 발송은 데모에서 <em>설정 완료</em>로 표시, 첫 무인 발송 11/9</td></tr>
+        <tr><td><b>PP-7</b> 공동 소유 런북과 실습</td><td>R6</td><td>PP-2부터 쌓이는 명세, 재실행·백필·롤백 런북, 수강이 각각 한 번씩 직접 수행</td><td>W1–4</td><td>명세는 내내; 실습은 W4, 금 10/30 리뷰; 스테이징 대상 필요(F-4)</td></tr>
+        <tr><td><b>PP-8</b> 테마·시장 국면·엇갈림을 위한 페이지 데이터와 API</td><td>R/X 행 없음</td><td>목록 리포트별 테마와 입장; 테마별 이번 주 새 소식, 호라이즌별 하우스 입장 분포(시장 국면), 하우스 간 엇갈림; DB 데이터와 <code>dashboard-backend</code> 담당자와 합의한 API 계약으로 전달, 화면은 시운이 구축(기본 프레이밍)</td><td>—</td><td>데이터와 계약은 빨라야 W4; 저장소가 보이지 않는 동안 11/3까지 화면 출시는 어려움</td></tr>
+      </tbody>
+    </table>
+    <p class="ev">S5 §D.3, §D.4, §D.6</p>
+
+    <figure class="fig">
+      <div class="grid">
+        <div class="wk"><b>W1 · 10/7–10/13</b><span class="pp">PP-1 R1 초안</span><span class="pp milestone">Jake에게 질문 25개 발송</span><span class="pp milestone">킥오프 기록(Q3)</span></div>
+        <div class="wk"><b>W2 · 10/14–10/20</b><span class="pp milestone">금 10/16 중간 피드백: R1 승인, 범위 제안</span><span class="pp">PP-2 마이그레이션 + 명세</span><span class="pp">PP-3 로컬 preview 실행</span><span class="pp">PP-4 시작: 동결 기준선, 코퍼스 규칙</span></div>
+        <div class="wk"><b>W3 · 10/21–10/27</b><span class="pp">PP-4 백필 + 20건 검증, 10/27까지</span><span class="pp">PP-5 첫 운영자 메일 금 10/23</span><span class="pp">PP-6 템플릿, 테스트 발송 1 월 10/26</span></div>
+        <div class="wk"><b>W4 · 10/28–11/3</b><span class="pp">PP-6 테스트 발송 2 월 11/2, 자동 발송 설정</span><span class="pp">PP-7 실습, 금 10/30 리뷰</span><span class="pp">X3, X4 스트레치 · PP-8 데이터 + 계약</span><span class="pp milestone">데모 화 11/3</span></div>
+      </div>
+      <figcaption>S5의 주별 보기. 프로젝트 주는 수요일부터 화요일까지다. 이 중첩 설치에서는 페이즈가 한 번에 하나씩 돌므로 한 주 안의 순서는 엄격하다. <span class="ev">S5 §D.6, §D.7</span></figcaption>
+    </figure>
+
+    <h3>채점표 커버리지</h3>
+    <p>R1–R6은 모두 커버된다. R2는 문서가 원하는 것보다 약 일주일 늦고, R4의 “자동 발송 전환”은 설정 완료로만 보여 줄 수 있다. 프로젝트 안에 드는 자동 월요일이 최대 하나(11/2)뿐이기 때문이다. X3(일치·엇갈림 규칙 검증)은 PP-4의 마지막 슬라이스로, X4(에코프로와 두 글자 키 <code>lg</code>, <code>kt</code>, <code>ms</code>, <code>ti</code>, <code>ge</code> 같은 별칭 수정과 국내 후보 테마 5개)는 PP-2의 마지막 슬라이스로 들어간다. <strong>X1과 X2는 들어가지 않는다.</strong> X1은 S2도 S3도 찾지 못한 국내 산업 리포트 소스가 필요하고, X2는 예측·결과 테이블(없음), 트랙레코드 설계 문서(위치 미상), 1년치 한경 데이터(6개월만 존재)가 필요하다. 온보딩의 채점 기준은 모든 필수 행 충족에 3점, 확장 1–2개 추가에 4점을 주므로 R1–R6에 X3·X4를 더하면 4점을 노린다. <span class="ev">S5 §D.4; S1 C-120</span></p>
+
+    <h3>범위 축소 선택지</h3>
+    <p>온보딩 문서는 필수 산출물을 지키는 범위 축소 제안을 환영하고, 벌점이 아닌 판단력으로 평가한다. S5는 대표를 위해 세 변형을 초안하고 선택은 운영자에게 남긴다(Q8). <strong>SC-1</strong>, 그대로 제안하길 권하는 최소 변형: R1–R6을 유지하되 R4와 R5를 단계적으로(테스트 발송은 내부로, 자동 발송은 설정 완료로, 검토 결정은 메일 링크 대신 PR이나 Jake의 SQL로 기록), X1·X2를 빼고 X3·X4는 스트레치로 유지, 페이지 화면은 시운 또는 2차 프로젝트로. <strong>SC-2</strong>는 머지 경로나 접근 답변이 10/16까지 오지 않을 때만: 백필은 본문이 있는 문서부터, PP-8은 2차 프로젝트로. <strong>SC-3</strong>는 이메일 도구와 수신자가 10/20까지 미정일 때만: 테스트 발송 둘 다 W4에 내부로, “자동 전환” 기준은 2차 프로젝트 첫 주로. <span class="ev">S5 §D.5; S1 C-117</span></p>
+
+    <h3>이전 계획의 재검증</h3>
+    <p>P8 전에 워크스페이스에는 온보딩 목록에서 곧바로 초안된 페이즈 6개가 있었다. 운영자는 사실로부터 계획을 다시 세울 수 있도록 이를 삭제하게 했다. S5는 옛 의도 각각을 발견된 사실과 대조했다. 0단계 스키마 페이즈는 <em>변경</em>(빈 테이블 생성이 아니라 데이터가 든 테이블 마이그레이션), 정확도 페이즈는 <em>유지</em>에 추가 둘(비어 있는 정의 숫자, 그리고 모델 신뢰도가 0.62 아래로 내려가지 않으므로 라벨된 표본으로 보정), 추출 페이즈는 <em>변경</em>(문서 백필은 존재, 신호 백필은 부재, 이식이냐 재구축이냐), 운영자 메일 페이즈는 <em>변경하고 고객 메일 앞으로 이동</em>(내부 메일이 발송 경로를 먼저 증명하도록), 고객 메일 페이즈는 <em>유지하되 단계화</em>, 공동 소유 실습은 <em>유지하되 재단</em>해 명세를 스키마 페이즈 안으로 옮김. 버려진 것은 없다. <span class="ev">S5 §D.1; intent.md, Deleted before creation</span></p>
+  </section>
+
+  <section id="decisions-and-questions">
+    <h2>7. 운영자가 정할 것, Jake에게 물을 것</h2>
+    <p>P8은 리서치 전용이라 수용 게이트가 면제됐고, 이는 결정을 실어 나르는 워크스루가 없다는 뜻이다. 그래서 리뷰는 페이즈가 닫힐 때 아무것도 사라지지 않도록 열린 항목 전부를 보류 작업 네 개 중 하나로 라우팅했다. <span class="ev">P8.REVIEW result §6</span></p>
+
+    <h3>운영자 질문 10개와 S5의 기본안</h3>
+    <table>
+      <thead><tr><th>Q</th><th>결정</th><th>제안된 기본안</th><th>기한</th></tr></thead>
+      <tbody>
+        <tr><td>Q1</td><td>이후 로컬 실행을 위한 KB 저장소 읽기 권한(enumerate는 preview에서도 KB 전체를 clone한다)</td><td>Jake에게 요청(F-5); 대안은 <code>IB_RESEARCH_REPORT_PIPELINE_KB_REPO</code>로 운영자 소유 대용 저장소, 미검증</td><td>PP-3 전</td></tr>
+        <tr><td>Q2</td><td>로컬 실행에 쓸 Codex 계정</td><td>운영자 본인 로그인, CI 시크릿 복사는 금지</td><td>PP-3 전</td></tr>
+        <tr><td>Q3</td><td>10/7 킥오프가 산출물 목록에서 조정한 것</td><td>이번 주 결정 기록에 킥오프 기록 작성</td><td>첫 <code>/create-phase</code> 전</td></tr>
+        <tr><td>Q4 → Q6</td><td>페이지 개선은 1차 프로젝트 산출물인가?</td><td>선택지 (c): 시운이 화면을 만들고 운영자는 데이터와 API 계약 제안을 공급; 범위 제안서에서 대표에게 언급</td><td>첫 <code>/create-phase</code> 전</td></tr>
+        <tr><td>Q5 → Q6</td><td>페이지 품질 수정의 담당</td><td>분할: 데이터 쪽 제외·중복 제거·날짜 표시는 PP-4 안에서; 표시 규칙은 Jake와 대시보드 팀에 서면 보고</td><td>동일</td></tr>
+        <tr><td>Q7</td><td>Jake에게 제시할 이식·재구축 기본안</td><td>선택지 A, 선별 이식</td><td>동일</td></tr>
+        <tr><td>Q8</td><td>대표에게 범위 축소를 제안할지, 언제</td><td>10/16 중간 피드백까지 SC-1을 서면으로</td><td>금 10/16</td></tr>
+        <tr><td>Q9</td><td>금요일 전에 보낼 Jake 질문과 방식</td><td>25개 블록 전체, 또는 우선순위 1의 11개와 접근 권한 줄, 또는 워크스루에 가져가기; 워크스루 날짜부터 확인</td><td>금 10/9 전</td></tr>
+        <tr><td>Q10</td><td>어느 페이즈를 먼저, 어떤 순서로</td><td>지금 PP-1(접근 권한 불필요), 그다음 Jake의 답이 오는 대로 PP-2, PP-3, PP-4; 추출이 파이프라인 안에서 돌면 PP-3가 PP-4보다 먼저</td><td>지금</td></tr>
+      </tbody>
+    </table>
+    <p class="ev">phase.md ## Operator Questions Q1–Q10; S5 §E</p>
+
+    <p>Q9의 달력 메모는 사실이다. 2026-10-09는 한글날로, 금요일 공휴일로 등재돼 있다(<a href="https://publicholidays.co.kr/ko/hangeul-day/">publicholidays.co.kr, 한글날 2026</a> — publicholidays.co.kr). 그래서 첫 금요일 워크스루는 옮겨야 할 수 있다. S5는 이것을 S1–S4 밖에서 온 유일한 사실로 표시했다. <span class="ev">S5 §D.7 item 2, deviations 3</span></p>
+
+    <h3>Jake에게 물을 질문</h3>
+    <p>S1–S4는 각각 후보 질문으로 끝났고, 모두 62개다. S5는 자체 질문 6개를 더해 36개 항목으로 병합하고, P1(지금 1차 프로젝트를 막음, 11개), P2(지정된 페이즈 전에 필요, 16개), P3(알면 좋음, 9개)로 등급을 매겼다. 각 항목에는 한국어 질문문, 중요한 이유, 이미 아는 것, 답이 없을 때의 기본안이 있다. 붙여 넣을 수 있는 첫 블록에는 P1 전부, P2 13개, 그리고 이전 보류 작업이 이미 담고 있던 머지 경로·GCP 질문 한 줄이 들어가 25개 항목이다. 우선순위 1의 열한 질문을 요약하면 다음과 같다. <span class="ev">S5 §F.0–§F.9</span></p>
+    <ol>
+      <li><code>dashboard-frontend</code>와 <code>dashboard-backend</code>의 담당자는 누구이고, 운영자가 읽기 권한을 받을 수 있는가? (F-1)</li>
+      <li>주간 파이프라인은 누구의 Codex 계정과 쿼터를 쓰며, 추출과 318건 백필을 그 계정으로 돌려도 되는가? (F-2)</li>
+      <li>로드맵의 Google Drive 폴더와 업무 기록 템플릿이 실제로 있는가? 문서 속 경로가 깨져 있다. (F-3)</li>
+      <li>마이그레이션은 누가 어느 DB에 적용하고, 스테이징 사본이 있으며, 새 테이블에 읽기 전용 select 정책이 들어가는가? (F-4)</li>
+      <li>READ 전용 계정인 운영자의 PR은 누가 리뷰·머지하고, GCP·수동 실행·PROD·마이그레이션은 누가 승인하는가? (보류 작업 줄)</li>
+      <li>7월 시그널 보드 프로토타입은 누가 요청했고, 왜 머지되지 않았으며, 1단계의 출발점으로 써도 되는가? (F-7)</li>
+      <li>설계 문서들(“Doc 1” 소스 목록, “Doc 2” 백엔드 설계, 트랙레코드 설계)과 시드 CSV 3종은 어디 있는가? (F-8)</li>
+      <li>신호 추출을 주간 Actions 실행 안의 새 단계로, 6시간 한도와 비용 안에서, 수강이 맡고 Jake가 리뷰하는 방식으로 넣어도 되는가? (F-19)</li>
+      <li>테마 클릭·시장 국면·하우스 엇갈림을 페이지에 넣는 일이 시운의 일정에 있고, 운영자의 몫은 데이터·API까지인가 화면까지인가? (F-24, 시운·대표 확인)</li>
+      <li>지금 고객 이메일은 어떤 도구로 보내고, 주간 리서치 이메일은 누가 받아야 하며, 오픈·클릭 추적이 되는가, 백엔드의 내부 이메일 API를 써도 되는가? (F-29)</li>
+      <li>별도 <code>research-agent</code> 저장소가 있는가, 아니면 1단계는 모노레포에 사는가, 그리고 마이그레이션·명세·런북·프롬프트·CSV는 어디에 두는가? (F-32); 그리고 대표는 문서의 예시 임계값 90 %·85 %에서 출발하는 정확도 기준을 언제 승인하는가? (F-33)</li>
+    </ol>
+
+    <h3>보류 작업 넷과 관찰 셋</h3>
+    <p>리뷰는 <strong>J-A</strong>(로컬 실행 전제 정리: Q1, Q2), <strong>J-B</strong>(1차 프로젝트 계획 결정: Q3와 Q6–Q10, Q9는 10/9 전, Q8은 10/16 전), <strong>J-C</strong>(Jake에게 질문하고 답을 기록; 머지 경로·GCP 질문을 담고 있던 이전 보류 작업도 함께 발동), <strong>J-D</strong>(Q5가 보고나 분할로 결정되면 페이지 품질 발견을 Jake와 대시보드 팀에 보고)를 등록하자고 제안했다. 페이즈 경계 밖의 세 가지는 발견이 아니라 관찰로 기록됐다. 챗 백엔드의 클라이언트 모델이 <code>published_at</code>을 필수 문자열로 타입 지정하는데 실제 API는 35개 항목에서 null을 돌려주므로 리서치 도구를 다시 켜면 깨진다는 것. Merrill 링크 수집이 2026-09-13 이후 매 실행 ReadTimeout으로 실패하고 <code>running</code>에 멈춘 실행이 하나 있다는 것. 비어 있는 아키텍처·데이터 문서를 P8의 검증된 지도로 채울 수 있다는 것. <span class="ev">P8.REVIEW result §6, §9</span></p>
+  </section>
+
+  <section id="assessment">
+    <h2>8. 평가</h2>
+    <div class="callout assess">
+      <h4>평가 (이 글을 쓴 쪽의 판단이며, 페이즈의 발견이 아님)</h4>
+      <p><strong>이 사실 확인은 이례적으로 탄탄하게 근거를 갖췄다.</strong> 독립된 세 도구가 347이라는 숫자에 하우스별로 일치하는 것(페이지 푸터, API의 total, DB 쿼리)은 대부분의 감사가 도달하지 못하는 삼각 검증이고, 리뷰의 표본 점검 36건은 모두 맞았다. 독자는 현황 지도를 믿어도 된다.</p>
+      <p><strong>계획은 시간에 대해 정직하고, 그것이 가장 큰 미덕이자 가장 큰 경고다.</strong> 모든 PP 행은 문서가 원하는 것보다 늦은 “10/8 기준 현실적” 일정을 달고 있고, 그 현실적 일정조차 Jake가 1주차 안에 P1 질문에 답한다는 가정 위에 있다. F-4(마이그레이션과 스테이징), F-7(프로토타입의 지위), F-29(이메일 도구)가 10/16을 넘기면 SC-2와 SC-3 변형은 비관이 아니라 계획 그 자체다.</p>
+      <p><strong>임계 경로는 엔지니어링이 아니라 접근 권한이다.</strong> 차단 행 다섯 개가 모두 접근과 소유에 관한 것이다(머지 경로, 보이지 않는 저장소, 스테이징 DB 없음, 이메일 도구 없음, 저장소 위치 없음). 따라서 금요일 워크스루 전에 25개 블록을 보내는 것이 이번 주 가장 지렛대가 큰 행동이고, 코드가 필요 없는 유일한 행동이다.</p>
+      <p><strong>문서와 다르게 근거를 저울질할 곳.</strong> 로드맵의 “일요일 수집, 월요일 07:00 이메일”은 파이프라인이 일요일 아침에 끝나는 것처럼 쓰여 있다. 관찰된 오후 시작과 몇 시간의 실행을 더하면 월요일 이른 새벽 집계(F-21에 대한 S5의 기본안)가 더 안전한 설계이고, 예약 실행이 부하 때 지연될 수 있다는 GitHub의 안내도 명목 시각에 기대지 않는 쪽을 뒷받침한다.</p>
+      <p><strong>미검증으로 남아 표시를 유지해야 할 두 가지.</strong> 183일 창 밖 상세 API의 404는 이슈 #65의 간접 정보이고, 다섯 시간 cron 간격의 원인은 조사되지 않았다. 둘 다 오늘의 계획을 바꾸지는 않는다.</p>
+    </div>
+
+    <p>출처가 충돌한 곳에서는 뒤의 슬라이스가 이기고 정정이 기록에 남았다. 뉴스 테이블 수(4,985 대 4,988, 읽은 시점 차이), 후보 수(낡은 플래너 추정 0 대 실제 26), 발행일 없는 수(잘못 합산한 32 대 35), 그리고 S3의 “정확히 다섯 불릿” 주장을 S4가 파이프라인 행은 다섯, 레거시 3행은 여섯으로 다듬은 것. 종목 레지스트리의 국내·해외 분포 26 / 69 대 로드맵의 27 / 68은 CSV를 찾으면 대조할 항목으로 남겼다(F-8). <span class="ev">P8.REVIEW result §3; S5 B-9</span></p>
+  </section>
+
+  <section id="sources">
+    <h2>9. 출처</h2>
+    <p>내부 출처는 비공개 워크플로 워크스페이스의 파일이며 모두 2026-10-08에 읽었다. 본문의 “S<i>n</i> §<i>k</i>”는 해당 슬라이스 <code>result.md</code>의 <i>k</i>절, “Q<i>xx</i>”는 S3 로그의 쿼리 id, “캡처 <i>nn</i>”은 S4의 <code>captures/</code> 아래 파일이다.</p>
+    <ul>
+      <li><code>workflow/works/phases/active/P8/intent.md</code> — 운영자의 원문 요청, 확정 의도, 접근 결정, 범위 변경, 추가 산출물 F.</li>
+      <li><code>workflow/works/phases/active/P8/phase.json</code>, <code>phase.md</code> — 상태, 리뷰 메모, 결정 노트(용어 지도 V-1…V-17, 파이프라인의 DB 쓰기 범위, 라이브 대 잔재 테이블, 페이지 사실, 계획 제안), Doc impact, 운영자 질문 Q1–Q10.</li>
+      <li><code>slices/P8.S1/result.md</code> — 138개 주장 등록부, 산출물 표 R1–R6 / X1–X4(§2), 일정(§3), DD-1…22, J-1…18.</li>
+      <li><code>slices/P8.S2/result.md</code> — <code>7225f24</code> 시점의 저장소 지도, 파이프라인의 DB 쓰기 범위(§2), 요약 체인(§3), 로컬 실행 전제(§6), 프로토타입 브랜치(§9), DR-1…23, J2-1…20.</li>
+      <li><code>slices/P8.S3/result.md</code> — 읽기 전용 쿼리 140개, 라이브 대 잔재 테이블(§1), 신호 계층(§2), DB-1…22, J3-1…14.</li>
+      <li><code>slices/P8.S4/result.md</code>와 <code>captures/00…17</code> — 목록·상세 페이지의 텍스트, 상호작용 트리, 네트워크 호출, API 응답, DP-1…11, U-1…13, J4-1…10.</li>
+      <li><code>slices/P8.S5/result.md</code> — 운영자용 산출물: §0 요약, §A 현황 지도, §B 차이 44개, §D 페이즈 PP-1…8, §E Q6–Q10, §F Jake 질문 36개와 25개 블록.</li>
+      <li><code>slices/P8.REVIEW/result.md</code> — 검증, 근거 표본 점검 36건, 질문 라우팅, 보류 작업 J-A…J-D, 관찰 J-E…J-G.</li>
+      <li>직접 인용한 저장소 파일: <code>.github/workflows/ib-research-report-pipeline.yml</code> 57행(cron), <code>ib-research-report-pipeline/src/ib_research_report_pipeline/collection/registry.py</code>(어댑터 9개), <code>ib-research-report-pipeline/src/ib_research_report_pipeline/storage/supabase.py</code> 439–449행(publish UPDATE).</li>
+      <li>영문판: <a href="https://knowledge.hi2vi.com/@leetusik/glide-ilab/p8-stage-1-fact-check-and-the-project-1-plan">P8: Stage 1 Fact-Check and the Project-1 Plan</a> — knowledge.hi2vi.com. 같은 날 같은 출처로 쓴 영어 해설.</li>
+    </ul>
+    <p>외부 출처, 모두 2026-10-08에 열어 확인:</p>
+    <ul>
+      <li><a href="https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows">Events that trigger workflows — <code>schedule</code> 이벤트</a> — docs.github.com. 예약 워크플로는 UTC로, 기본 브랜치에서만 돌며 “can be delayed during periods of high loads”.</li>
+      <li><a href="https://docs.github.com/en/actions/reference/limits">GitHub Actions limits</a> — docs.github.com. “Each job in a workflow can run for up to 6 hours of execution time.”</li>
+      <li><a href="https://www.postgresql.org/docs/current/ddl-rowsecurity.html">PostgreSQL 문서: Row Security Policies</a> — postgresql.org. 정책이 없으면 기본 거부; 슈퍼유저, <code>BYPASSRLS</code> 역할, 테이블 소유자는 행 수준 보안을 우회.</li>
+      <li><a href="https://supabase.com/docs/guides/database/postgres/row-level-security">Supabase 문서: Row Level Security</a> — supabase.com. “Once RLS is enabled, no data is accessible through the API when using a publishable key, until you create policies”, 그리고 <code>to anon using (true)</code> 정책이 모든 방문자에게 읽기를 허용한다는 경고.</li>
+      <li><a href="https://publicholidays.co.kr/ko/hangeul-day/">한글날 2026, 2027 과 2028</a> — publicholidays.co.kr. 2026년: 10월 9일, 금요일, 공휴일.</li>
+    </ul>
+  </section>
+
+  <section id="quiz">
+    <h2>10. 퀴즈</h2>
+    <p class="small">발견과 그 뒤의 추론에 관한 다섯 문제. 답을 클릭하면 바로 확인된다.</p>
+
+    <div class="q" id="q1">
+      <p><strong>1.</strong> 페이지 푸터는 “전체 347건”이라고 하지만 데이터베이스에는 요약된 문서 872건이 있다. 347을 설명하는 진술은?</p>
+      <button class="opt" data-correct="false">347은 파이프라인이 이번 분기에 요약한 문서 수이고, 오래된 요약은 1년 삭제 함수가 지웠다.</button>
+      <button class="opt" data-correct="true">API는 약 183일 창 안의 날짜 있는 항목 312건을 보여 주고 발행일 없는 35행 전부를 맨 뒤에 붙인다. 나머지 요약 525행은 창 밖이라 목록에 나올 수 없다.</button>
+      <button class="opt" data-correct="false">347은 <code>is_visible = true</code>인 행 수이고, 나머지는 대시보드 팀이 숨겼다.</button>
+      <button class="opt" data-correct="false">페이지는 레지스트리 하우스 9곳만 보여 주며 347은 그 합계다. BlackRock과 Deutsche Bank 행은 제외된다.</button>
+      <p class="why" hidden>S4는 페이지와 DB를 하우스별로 맞췄다. 날짜 있음 312(2026-10-02에서 04-10까지) + 발행일 없음 35 = 347, 그리고 525행(60.2 %)은 닿을 수 없다. 878행 모두 <code>is_visible = true</code>이고, 삭제 함수는 뉴스 테이블만 건드리며, BlackRock과 Deutsche Bank는 페이지에 <em>있다</em>.</p>
+    </div>
+
+    <div class="q" id="q2">
+      <p><strong>2.</strong> P8이 0단계를 “공유 테이블 만들기”에서 “데이터가 든 테이블의 채택 또는 마이그레이션”으로 다시 짠 이유는?</p>
+      <button class="opt" data-correct="false">로드맵의 테이블 이름이 온보딩 문서에서 바뀌어 스키마를 두 번 써야 하기 때문.</button>
+      <button class="opt" data-correct="false">운영 DB에 dev 사본이 없어 테이블을 채택만 할 수 있고 만들 수는 없기 때문.</button>
+      <button class="opt" data-correct="true">머지되지 않은 7월 프로토타입 브랜치가 이미 운영에 신호 테이블 5개를 만들고 한 번 채웠으며(신호 201, 테마 120, 별칭 644, 종목 95), 마이그레이션이 지켜야 할 외래 키와 캐스케이드가 있기 때문.</button>
+      <button class="opt" data-correct="false">파이프라인의 publish 단계가 이미 <code>research_documents</code>에 신호 컬럼을 쓰고 있어 별도 테이블이 불필요하기 때문.</button>
+      <p class="why" hidden>S2 §9가 브랜치와 마이그레이션 002–005를 찾았고, S3 §2가 테이블이 라이브이고 시드됐으며 2026-07-08에 한 번 쓰인 뒤 갱신되지 않았음을 확인했다. publish 단계는 요약 컬럼 8개만 쓰고, dev 사본 부재는 별개의 차단 행(B-39)이지 재구성의 이유가 아니다.</p>
+    </div>
+
+    <div class="q" id="q3">
+      <p><strong>3.</strong> 파이프라인은 리포트 본문을 저장하지 않는다. 계획은 여기서 어떤 결론을 끌어내는가?</p>
+      <button class="opt" data-correct="true">신호 추출은 캡처된 텍스트가 아직 있는 주간 실행 안에서 돌거나 페이지를 다시 캡처해야 한다. 프로토타입을 이식하면 프롬프트와 스키마는 건지지만 배관은 못 건진다. 프로토타입은 저장된 <code>text_content</code>를 읽었기 때문이다.</button>
+      <button class="opt" data-correct="false">6개월 백필이 불가능하므로 R2는 범위 제안에서 빠진다.</button>
+      <button class="opt" data-correct="false">추출 전에 파이프라인이 본문을 저장하도록 먼저 바꾸는 페이즈가 필요하다.</button>
+      <button class="opt" data-correct="false">요약을 더 이상 검증할 수 없으므로 R3는 면제된다.</button>
+      <p class="why" hidden>S5 B-14와 D.2의 사실 1: 두 선택지 모두 추출을 실행 안으로 옮긴다. 백필은 창 안 문서 318건을 다시 캡처하거나, Jake가 허용할 때만(F-10) 레거시 본문 271건을 읽는다. 본문 저장은 계획이 지키려는 원문 비저장 원칙과 충돌한다.</p>
+    </div>
+
+    <div class="q" id="q4">
+      <p><strong>4.</strong> S5는 금요일 운영자 검토 메일(PP-5)을 주간 고객 이메일(PP-6) <em>앞에</em> 두어 문서의 순서를 뒤집는다. 왜인가?</p>
+      <button class="opt" data-correct="false">운영자 메일은 신호가 필요 없어 오늘 데이터로 1주차에 보낼 수 있기 때문.</button>
+      <button class="opt" data-correct="true">아직 어디에도 이메일 경로가 없으므로 내부 메일로 발송 도구·스케줄러·<code>email_log</code>를 먼저 증명하고, 고객 메일의 테스트 발송이 그 경로를 재사용하기 때문.</button>
+      <button class="opt" data-correct="false">로드맵이 고객 메일을 시운에게 맡겼고 시운은 W4까지 화면으로 바쁘기 때문.</button>
+      <button class="opt" data-correct="false">고객 메일 초안을 쓰기 전에 대표가 운영자 메일을 검토해야 하기 때문.</button>
+      <p class="why" hidden>S5 D.1과 PP-5: 이메일은 백지 상태(B-36)라 내부 메일이 경로의 위험을 줄인다. 운영자 메일의 후보 테마·저신뢰 신호 섹션은 PP-4의 신호가 필요하고, 실패 소스 섹션만 오늘 데이터로 작동한다(Merrill).</p>
+    </div>
+
+    <div class="q" id="q5">
+      <p><strong>5.</strong> 다음 중 결정 필요나 참고가 아니라 <strong>차단</strong>으로 분류된 것은, 그리고 그 이유는?</p>
+      <button class="opt" data-correct="false">Jefferies 제목 24개가 두 번 저장된 것. 트렌드 수가 이중 집계되므로.</button>
+      <button class="opt" data-correct="false">Bank of America 날짜가 18일과 30일에 몰린 것. 이메일 주가 잘못된 날짜를 물려받으므로.</button>
+      <button class="opt" data-correct="true">풀 리퀘스트에 CI가 없고 CODEOWNERS가 없으며 운영자 계정에 쓰기 권한이 없는 것. 머지 경로 없이는 어떤 코드 페이즈도 끝낼 수 없으므로.</button>
+      <button class="opt" data-correct="false">cron이 09:37 대신 14:21–15:17 KST에 시작하는 것. 월요일 07:00 발송이 데이터를 놓치므로.</button>
+      <p class="why" hidden>B-38은 차단 행 다섯 개 중 하나다(B-1, B-5, B-36, B-39와 함께). “차단”은 그것 없이는 페이즈를 시작하거나 끝낼 수 없다는 뜻이다. 중복 제거 키(B-21), 발행일 품질 표시(B-20), 집계 시각(B-25)은 PP-4나 PP-6 안에서 내릴 결정이므로 결정 필요다.</p>
+    </div>
+  </section>
+
+  <script>
+    document.querySelectorAll('.q').forEach(function (q) {
+      var why = q.querySelector('.why');
+      q.querySelectorAll('.opt').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var right = btn.dataset.correct === 'true';
+          btn.classList.add(right ? 'correct' : 'incorrect');
+          if (why) why.hidden = false;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -24,6 +24,14 @@ hide:
 <div class="kb-sec" id="recent"><h2>Recent · 최근</h2></div>
 
 <!-- explain:recent -->
+- 2026-10-16 · [P24: The Research Page Signal and Theme Fixes, Explained](glide-ilab/2026-10-16-p24-the-research-page-signal-and-theme-fixes-explained.html) — glide-ilab
+- 2026-10-15 · [P17 and P18: Signal Extraction and the Weekly Aggregation, Explained](glide-ilab/2026-10-15-p17-and-p18-signal-extraction-and-the-weekly-aggregation-explained.html) — glide-ilab
+- 2026-10-14 · [The signal-tables PR, explained: what it covers, how it looks, and how it fits the repo](glide-ilab/2026-10-14-the-signal-tables-pr-explained-what-it-covers-how-it-looks-and-how-it-fits-the-r.html) — glide-ilab
+- 2026-10-10 · [P9: The Stage-1 System, Explained](glide-ilab/2026-10-10-p9-the-stage-1-system-explained.html) — glide-ilab
+- 2026-10-08 · [P8: 1단계 사실 확인과 1차 프로젝트 계획](glide-ilab/2026-10-08-p8-stage-1-fact-check-and-the-project-1-plan-ko.html) — glide-ilab
+- 2026-10-08 · [P8: Stage 1 Fact-Check and the Project-1 Plan](glide-ilab/2026-10-08-p8-stage-1-fact-check-and-the-project-1-plan.html) — glide-ilab
+- 2026-10-07 · [How the glide-ilab team ships code: commits, PRs, deploys and your first ticket](glide-ilab/2026-10-07-how-the-glide-ilab-team-ships-code-commits-prs-deploys-and-your-first-ticket.html) — glide-ilab
+- 2026-10-07 · [Reading Your Glide Onboarding Doc — The Background Knowledge, Explained for Beginners](base/2026-10-07-reading-your-glide-onboarding-doc-the-background-knowledge-explained-for-beginne.md) — base
 - 2026-09-21 · [The Korbit Fish Book v2: Measured Rungs, a Rest-then-Taker Exit, and a ₩5 M Live Start](arb_upbit_1/2026-09-21-the-korbit-fish-book-v2-measured-rungs-a-rest-then-taker-exit-and-a-5-m-live-sta.html) — arb_upbit_1
 - 2026-09-21 · [Read, Verify, Speak — the AI inside 주주의관제탑](Mijual/2026-09-21-jujutower-ai-architecture.html) — Mijual
 - 2026-09-19 · [The Fish Ladder: Catching Upbit-Local Price Spikes with Deep Limit Orders](arb_upbit_1/2026-09-19-the-fish-ladder-catching-upbit-local-price-spikes-with-deep-limit-orders.html) — arb_upbit_1
