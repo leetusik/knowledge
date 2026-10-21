@@ -1,0 +1,44 @@
+{
+  "slug": "maintainer-guide",
+  "title": "knowledge maintainer guide",
+  "kind": "codebase",
+  "subject": null,
+  "description": null,
+  "chapters": [
+    {
+      "key": "knowledge-what-it-is-and-how-it-is-used",
+      "position": 1,
+      "variants": {
+        "en": "knowledge/2026-08-08-knowledge-what-it-is-and-how-it-is-used.html"
+      }
+    },
+    {
+      "key": "knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts",
+      "position": 2,
+      "variants": {
+        "en": "knowledge/2026-08-08-knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts.html"
+      }
+    },
+    {
+      "key": "knowledge-s-read-surfaces-two-front-ends-one-corpus",
+      "position": 3,
+      "variants": {
+        "en": "knowledge/2026-08-08-knowledge-s-read-surfaces-two-front-ends-one-corpus.html"
+      }
+    },
+    {
+      "key": "shipping-and-running-knowledge-distribution-the-edge-security-and-the-gates",
+      "position": 4,
+      "variants": {
+        "en": "knowledge/2026-08-08-shipping-and-running-knowledge-distribution-the-edge-security-and-the-gates.html"
+      }
+    },
+    {
+      "key": "why-knowledge-is-this-way-and-how-to-change-it",
+      "position": 5,
+      "variants": {
+        "en": "knowledge/2026-08-08-why-knowledge-is-this-way-and-how-to-change-it.html"
+      }
+    }
+  ]
+}
