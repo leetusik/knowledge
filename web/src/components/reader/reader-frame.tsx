@@ -22,7 +22,12 @@ import {
   type TextSize,
   type ThemeChoice,
 } from "@/lib/reader-cookie";
-import { LIBRARY_HREF, readerHref, signInToSaveHref } from "@/lib/reader-href";
+import {
+  bookNotesHref,
+  LIBRARY_HREF,
+  readerHref,
+  signInToSaveHref,
+} from "@/lib/reader-href";
 import {
   progressPercent,
   QUIET_MS,
@@ -35,6 +40,7 @@ import type { ChapterRow, ReaderView } from "@/lib/reader/types";
 
 import { ChapterList } from "./chapter-list";
 import { DisplayPanel } from "./display-panel";
+import { NotesBridgeContext, type NotesBridge } from "./reader-notes";
 import {
   ReaderProgressContext,
   type ReaderProgressValue,
@@ -68,21 +74,28 @@ import "@/app/reader.css";
  * `state` other than `ready` is the loading / not found / failed screen: the line and
  * top bar stay, the chapter bar appears only once the chapter is ready.
  */
-type Panel = "contents" | "display" | "versions" | null;
+type Panel = "contents" | "notes" | "display" | "versions" | null;
 
 export function ReaderFrame({
   view,
   state = "ready",
+  notes = false,
   children,
 }: {
   view: ReaderView;
   state?: "ready" | "loading" | "notfound" | "failed";
+  /**
+   * P30.S21: the annotation layer is mounted, so the Contents sheet has its Notes view
+   * (and a loose document's top bar its Notes button).
+   */
+  notes?: boolean;
   children: ReactNode;
 }) {
   const router = useRouter();
   const ready = state === "ready";
   const loose = view.kind === "loose" || view.book === null;
   const hasBottom = ready && !loose;
+  const notesOn = notes && ready;
 
   const [settings, setSettings] = useState<ReaderSettings>(view.settings);
   const [panel, setPanel] = useState<Panel>(null);
@@ -90,6 +103,8 @@ export function ReaderFrame({
   const [pct, setPct] = useState(0);
   const [section, setSection] = useState<string | null>(null);
   const [os, setOs] = useState<"light" | "dark">("light");
+  const [notesCount, setNotesCount] = useState(0);
+  const [notesHost, setNotesHost] = useState<HTMLElement | null>(null);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLElement>(null);
@@ -230,6 +245,17 @@ export function ReaderFrame({
     if (hidden) dismissPill();
   }, [hidden, dismissPill]);
 
+  // A sheet returns focus to its opener when it closes (not when it switches views).
+  const sheetOpen = panel !== null;
+  useEffect(() => {
+    if (!sheetOpen) return;
+    return () => {
+      const o = opener.current;
+      opener.current = null;
+      if (o && o.isConnected) o.focus({ preventScroll: true });
+    };
+  }, [sheetOpen]);
+
   useEffect(() => {
     if (panel === null) return;
     const sheet = sheetRef.current;
@@ -252,11 +278,6 @@ export function ReaderFrame({
         }
       }
     }
-    return () => {
-      const o = opener.current;
-      opener.current = null;
-      if (o && o.isConnected) o.focus({ preventScroll: true });
-    };
   }, [panel]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -443,6 +464,34 @@ export function ReaderFrame({
     [view.member, rd, signIn, rows, finishedCount],
   );
 
+  // The Notes view's bridge to the annotation layer (P30.S21): the sheet's body to mount
+  // the list in, the count for its head, and what covers the page. "All notes in this
+  // book →" returns to the chapter at the section being read, in this language and version.
+  const target = view.target;
+  const bookHref =
+    target.kind === "chapter"
+      ? bookNotesHref(target, {
+          from: "chapter",
+          chapter: target.chapter,
+          lang: hasLangs ? view.lang : null,
+          version: olderVersion ? view.version : null,
+          section,
+        })
+      : null;
+  const pillUp = ready && !!rd.pill && !hidden && panel === null;
+  const notesBridge = useMemo<NotesBridge>(
+    () => ({
+      open: panel === "notes",
+      host: panel === "notes" ? notesHost : null,
+      setCount: setNotesCount,
+      close: closePanel,
+      sheetOpen: panel !== null,
+      pillUp,
+      bookHref,
+    }),
+    [panel, notesHost, closePanel, pillUp, bookHref],
+  );
+
   return (
     <div
       ref={rootRef}
@@ -493,6 +542,17 @@ export function ReaderFrame({
           </div>
           <div className="rd-top__end">
             {langSwitch("bar")}
+            {notesOn && !hasBottom ? (
+              <button
+                type="button"
+                className="rd-tbtn"
+                aria-haspopup="dialog"
+                aria-expanded={panel === "notes"}
+                onClick={(e) => openPanel("notes", e.currentTarget)}
+              >
+                {READER.top.notes}
+              </button>
+            ) : null}
             <button
               type="button"
               className="rd-tbtn"
@@ -514,7 +574,9 @@ export function ReaderFrame({
         <main className="rd-page" id="main-content">
           <div className="rd-article" onClick={onTap}>
             <ReaderProgressContext.Provider value={progressValue}>
-              {children}
+              <NotesBridgeContext.Provider value={notesBridge}>
+                {children}
+              </NotesBridgeContext.Provider>
             </ReaderProgressContext.Provider>
           </div>
         </main>
@@ -567,8 +629,12 @@ export function ReaderFrame({
               type="button"
               className="rd-bnav rd-bnav--mid"
               aria-haspopup="dialog"
-              aria-expanded={panel === "contents"}
-              onClick={(e) => openPanel("contents", e.currentTarget)}
+              aria-expanded={panel === "contents" || panel === "notes"}
+              onClick={(e) =>
+                panel === "notes"
+                  ? closePanel()
+                  : openPanel("contents", e.currentTarget)
+              }
             >
               <span className="rd-bnav__dir">{READER.bottom.contents}</span>
               <span className="rd-bnav__sub">
@@ -629,19 +695,57 @@ export function ReaderFrame({
             />
             <div
               ref={sheetRef}
-              className={`rd-sheet ${panel === "contents" ? "rd-sheet--left" : "rd-sheet--right"}`}
+              className={`rd-sheet ${panel === "contents" || panel === "notes" ? "rd-sheet--left" : "rd-sheet--right"}`}
               role="dialog"
               aria-modal="true"
-              aria-labelledby={titleId}
+              {...(panel === "notes"
+                ? { "aria-label": READER.notes.sheet.notes }
+                : { "aria-labelledby": titleId })}
             >
               <div className="rd-sheet__head">
-                <h2 className="rd-sheet__title" id={titleId}>
-                  {panel === "contents"
-                    ? READER.sheets.contents
-                    : panel === "versions"
+                {panel === "contents" || panel === "notes" ? (
+                  <div className="an-shead">
+                    {panel === "notes" && book ? (
+                      <button
+                        type="button"
+                        className="rd-btn rd-btn--quiet an-shead__btn"
+                        onClick={() => setPanel("contents")}
+                      >
+                        {READER.notes.sheet.contents}
+                      </button>
+                    ) : null}
+                    {panel === "contents" ? (
+                      <h2 className="rd-sheet__title" id={titleId}>
+                        {READER.sheets.contents}
+                      </h2>
+                    ) : (
+                      <h2 className="rd-sheet__title" id={titleId}>
+                        {READER.notes.sheet.notes}
+                        {notesCount > 0 ? (
+                          <span className="an-shead__n"> · {notesCount}</span>
+                        ) : null}
+                      </h2>
+                    )}
+                    {panel === "contents" && notesOn ? (
+                      <button
+                        type="button"
+                        className="rd-btn rd-btn--quiet an-shead__btn"
+                        onClick={() => setPanel("notes")}
+                      >
+                        {READER.notes.sheet.notes}
+                        {notesCount > 0 ? (
+                          <span className="an-shead__n"> · {notesCount}</span>
+                        ) : null}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <h2 className="rd-sheet__title" id={titleId}>
+                    {panel === "versions"
                       ? READER.sheets.versionHistory
                       : READER.sheets.display}
-                </h2>
+                  </h2>
+                )}
                 <button
                   type="button"
                   className="rd-btn rd-btn--quiet rd-sheet__close"
@@ -651,6 +755,9 @@ export function ReaderFrame({
                 </button>
               </div>
               <div className="rd-sheet__body">
+                {panel === "notes" ? (
+                  <div ref={setNotesHost} className="an-host" />
+                ) : null}
                 {panel === "contents" && book ? (
                   <>
                     <p className="rd-sheet__booktitle">

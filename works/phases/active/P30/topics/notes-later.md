@@ -185,5 +185,23 @@ The detail is in `slices/P30.S20/result.md`; the decisions are OQ99-OQ110 (`topi
   - `components/reader/annotations.tsx`: `AnnotationLayer({notes, write, version, lang, chapterTitle, place})`, mounted by `ReaderArticle` after `ChapterEnd` for a native chapter when the reader is signed out or has somewhere to write. It owns selection, the bar, the popover (modes hl, new, bnote, bnew, choose), the undo line and the 401 Sign in to save (both portalled into `.rd-root`, because `.rd-page` is a container and traps `position: fixed`), and the write queue.
   - Data: `lib/reader/notes-load.ts` (server-only) builds `ReaderNotes {sections, items, unanchored}` from the read's `annotations`; `load.ts` → `LoadedReader.notes`. Writes: `saveAnnotation`/`editAnnotation`/`removeAnnotation` in `lib/reader/actions.ts` over `lib/knowledge/reader.ts`.
   - `lib/reader/chrome.ts` `TAP_IGNORE` includes `.an-layer`; `reader-frame.tsx` listens for `reader:quiet` (the layer fires it before revealing a low popover).
-- **For S21:** the block bar has the slot for Bookmark (`Add note` only today); a plain Markdown document mounts no layer (S21's "Bookmark this position" bar goes there); `unanchored`, other languages, the margin, marker rows, the Place bar and the Notes sheet are not drawn yet, and `ReaderNotes.unanchored` is loaded but unused. "Review this" history: `everOn` is per session (OQ102).
+- **For S21:** consumed; see *Annotations II as shipped* below.
 - **Live-check setup that worked:** scratch API `:8831` (database `kb_s20live`, dropped after), `next start` `:3831` and a dev clone `:3832` at `localhost`; `scratchpad/s20/cdp20.mjs` (headless Chrome over CDP, throwaway or `PROFILE=` profile, real mouse, touch and key events, prints writes, console and CSP) with scenarios `s1`-`s5`; theme and size go through the `kb_reader` cookie (`size=N&theme=light|dark|sepia|system`), never by editing `.rd-root`'s class (React puts it back); the web's login is limited to a few tries per 15 minutes per server process, so reuse one profile; `scratchpad/s20/verify.py` checks every stored row against Python's projection and the S9 ladder.
+
+## (from P30.S21, for S22, S24, S25 and REVIEW) Annotations II as shipped
+
+The detail is in `slices/P30.S21/result.md`; the decisions are OQ111-OQ124 (`topics/operator-questions-decided.md`).
+
+- **Where things are:**
+  - `lib/reader/note-list.ts` (pure, tested in `web/tests/reader-note-list.test.ts`): `buildGroups` (the sheet's groups, never drops a mark), `rowView`, `groupBook`/`bookCountLine`/`bookCounts`, `positionNear` (2%);
+  - `components/reader/annotation-parts.tsx` (BookmarkButton, PlaceBar, margin item, row), `note-row.tsx` (a list row and its label field), `notes-panel.tsx` (the sheet's Notes view), `reader-notes.tsx` (`NotesBridgeContext`: the frame hands the layer the sheet body, the layer reports its count); `reader-frame.tsx` owns the Contents|Notes switch (`Panel` = contents | notes | display);
+  - `annotations.tsx` now also owns bookmarks (optimistic, `bm-save/bm-edit/bm-remove` through the same queue), the margin rail (from 64rem), rows under headings (below), the "Bookmarked" tag, the place bar, and `?note=` landing;
+  - the per-book list: `app/(public)/[org]/[project]/notes/[book]/page.tsx` + `components/reader/book-notes.tsx` + `lib/reader/book-notes-load.ts` (server-only; S9's per-book read). The address helper is `bookNotesHref` in `lib/reader-href.ts`; S22's book page must link to it with `{from: "book"}`;
+  - server: `GET` annotation reads carry `card` ("active" | "suspended" | ""), `review` is `card == "active"`; `review.highlight_card_status`.
+- **Gotchas:**
+  - DOM the layer injects into the chapter (`.an-rows` hosts, the `[data-an-tag]` tag) is created in a layout effect; its cleanup must be a layout effect declared BEFORE it (a passive cleanup runs after the sync and removes what it just made: found live, rows were missing on a fresh load);
+  - a list row's label field unmounts its focused input: focus returns to the opener, else the sheet's Escape and Tab trap stop working;
+  - signed-out and legacy html: the layer is `layerOn(reader)` (`lib/reader/layer.ts`); a legacy html chapter has none, so its bar needs S25's bookmark control and the line "Highlights are not available in this document.";
+  - the web's login throttle is per server process (5 per 15 min): restart `next start` between scenarios or reuse one session.
+- **Live-check setup that worked:** scratch API `:8841` (database `kb_s21live`, dropped), `next start` `:3841` on the production build only (no dev clone this slice), `scratchpad/s21/cdp21.mjs` (CDP driver) with `run.sh <scenario>` (restarts `next start` first), a second chapter version published from `scratchpad/s21/write-lock.en.v2.md` for Text changed / Unanchored, Aside `u1` for one signed-in pass.
+

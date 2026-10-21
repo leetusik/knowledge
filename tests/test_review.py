@@ -219,6 +219,36 @@ def test_review_is_idempotent_and_review_this_suspends(rv):
     assert left == 0
 
 
+def test_annotation_reads_carry_the_callers_own_card_status(rv):
+    """P30.S21 (S20's OQ102): ``card`` is ``active`` | ``suspended`` | ``""`` on every
+    read and write, for the caller's own card only."""
+
+    client, _, _ = rv
+    a, a_tenant, pid = _member(client, "cs")
+    b, _ = _signup(client, f"cs2-{uuid4()}@example.com")
+    assert client.patch(f"/app/projects/{pid}", json={"visibility": "public"}, headers=a).status_code == 200
+    _, doc = _doc(a_tenant, "lab", "lantern")
+    key = _key(a_tenant, "lab", doc)
+    mine = _highlight(client, a, key)
+    theirs = _highlight(client, b, key)
+
+    def read(h, id_):
+        got = client.get(f"/app/reader/docs/{a_tenant}/lab/{doc}", headers=h).json()["annotations"]
+        book = client.get("/app/reader/annotations", headers=h,
+                          params={"org": a_tenant, "project": "lab", "doc": doc}).json()["annotations"]
+        return [x["card"] for x in got + book if x["id"] == id_]
+
+    assert read(a, mine) == ["", ""]
+    on = client.patch(f"/app/reader/annotations/{mine}", headers=a, json={"review": True})
+    assert on.json()["annotation"]["card"] == "active"
+    assert read(a, mine) == ["active", "active"]
+    off = client.patch(f"/app/reader/annotations/{mine}", headers=a, json={"review": False})
+    assert off.json()["annotation"]["card"] == "suspended" and off.json()["annotation"]["review"] is False
+    assert read(a, mine) == ["suspended", "suspended"]
+    # The other reader's highlight on the same text has no card, and never sees mine.
+    assert read(b, theirs) == ["", ""] and read(b, mine) == []
+
+
 def test_unreadable_cards_are_hidden_and_writes_404(rv):
     client, _, _ = rv
     a, a_tenant, pid = _member(client, "ua")

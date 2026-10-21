@@ -164,6 +164,9 @@ export interface NoteSection {
   text: string;
 }
 
+/** A highlight's review card: `active` (Review this on), `suspended` (paused) or none (P30.S21, OQ102). */
+export type CardStatus = "" | "active" | "suspended";
+
 /** One of the reader's own highlights or block notes, resolved for the version on screen. */
 export interface ReaderNote {
   id: string;
@@ -179,18 +182,68 @@ export interface ReaderNote {
   method: string;
   quote: { exact: string; prefix: string; suffix: string } | null;
   note: string;
-  /** "Review this" is on. */
+  /** "Review this" is on (the card is active). */
   review: boolean;
+  /** The caller's own review card on it, as the server holds it (P30.S21). */
+  card: CardStatus;
+  lang: string;
+  /** The version it was made on. */
+  version: number;
+  created: string;
+  /** What it was made on, kept for an orphan's row (the text, its section, its chapter). */
+  snapshot: { text: string; block: string; chapter: string } | null;
+}
+
+/**
+ * A highlight or note made in another language variant of this chapter (P30.S9): its
+ * section mapped onto this variant by id, never painted.
+ */
+export interface ReaderOtherNote extends ReaderNote {
+  /** The section on THIS variant it belongs to; null = no mappable section. */
+  at: string | null;
+}
+
+/**
+ * A bookmark (P29 *Anchors*): a native one is a section; a position (plain Markdown, or
+ * migrated from an HTML chapter) is a fraction. `place` is where it lands in this variant now.
+ */
+export interface ReaderBookmark {
+  id: string;
+  /** The section it was made on (native), or null for a position. */
+  block: string | null;
+  /** The section it lands on now (the nearest preceding one when its own was retired), or null. */
+  at: string | null;
+  /** True when `at` is the bookmark's own section. */
+  exact: boolean;
+  /** A position's fraction of the text read, 0..1. */
+  fraction: number | null;
+  label: string;
+  snippet: string;
+  /** A position bookmark (plain document). */
+  pos: boolean;
+  /** Placed from an HTML version (a migrated bookmark). */
+  approx: boolean;
   lang: string;
   version: number;
   created: string;
 }
 
-/** The annotation layer's data: present for a native chapter that renders. */
+/** A bookmark made in another language variant of this chapter. */
+export type ReaderOtherBookmark = ReaderBookmark;
+
+/** The annotation layer's data: present for a native chapter that renders, and a plain document. */
 export interface ReaderNotes {
+  /** A plain Markdown document: no sections, no highlights; bookmarks are positions. */
+  plain: boolean;
   sections: NoteSection[];
   /** Anchored and Text changed, in reading order. */
   items: ReaderNote[];
-  /** Orphans (kept for the Notes sheet, S21). */
+  /** Orphans: the Unanchored group (S21), never dropped. */
   unanchored: ReaderNote[];
+  bookmarks: ReaderBookmark[];
+  /** Other languages' highlights and notes (markers, never paint). */
+  other: ReaderOtherNote[];
+  otherBookmarks: ReaderOtherBookmark[];
+  /** Each language on screen or in another variant, named in itself ("English", "한국어"). */
+  langNames: Record<string, string>;
 }
