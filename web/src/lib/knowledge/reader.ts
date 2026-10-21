@@ -127,6 +127,28 @@ export interface KbResume {
   fraction: number;
 }
 
+/**
+ * One saved quiz attempt, as a variant read returns it under `quiz` (P30.S19): the
+ * LATEST attempt per (block, item) of the chapter's unit, in any language and version.
+ */
+export interface KbQuizAttempt {
+  id: string;
+  doc: string;
+  lang: string;
+  version: number;
+  block_id: string;
+  item_id: string;
+  item_type: "choice" | "recall" | "cloze";
+  response: {
+    selected?: string[];
+    blanks?: string[];
+    self_grade?: "got" | "missed";
+  };
+  correct: boolean;
+  attempt: number;
+  answered_at: string;
+}
+
 /** The slice of a variant read the reader's progress needs. */
 export interface KbVariantState {
   position: KbPosition | null;
@@ -136,6 +158,8 @@ export interface KbVariantState {
     finished_version: number | null;
     updated: boolean;
   };
+  /** The latest saved quiz attempt per item (empty when none). */
+  quiz?: KbQuizAttempt[];
 }
 
 /**
@@ -168,6 +192,45 @@ export async function getReaderDoc(
   const e = encodeURIComponent;
   return getJson<KbVariantState>(
     `/app/reader/docs/${e(target.org)}/${e(target.project)}/${e(target.doc)}`,
+    { token, signal },
+  );
+}
+
+/** The `POST /app/reader/quiz-attempts` body (P29 *Quiz results*). */
+export interface KbQuizAttemptWrite {
+  org: string;
+  project: string;
+  /** The document stem `<date>-<slug>`. */
+  doc: string;
+  /** A client-generated UUID: a repeat of the same id is a no-op on the server. */
+  id: string;
+  version?: number;
+  block_id: string;
+  item_id: string;
+  item_type: "choice" | "recall" | "cloze";
+  response:
+    | { selected: string[] }
+    | { blanks: string[] }
+    | { self_grade: "got" | "missed" };
+  correct: boolean;
+  answered_at?: string;
+}
+
+/**
+ * `POST /app/reader/quiz-attempts` (bearer) → 201 (200 on a repeated `id`)
+ * `{attempt, card, result}`. The server numbers `attempt` (first = 1, per unit and item,
+ * any language or version); the FIRST attempt seeds the item's review card, later ones
+ * leave it untouched. A private or deleted document is a 404, a bad shape a 422.
+ */
+export async function postQuizAttempt(
+  token: string,
+  body: KbQuizAttemptWrite,
+  signal?: AbortSignal,
+): Promise<{ attempt: number; card: unknown }> {
+  return sendJson<{ attempt: number; card: unknown }>(
+    "/app/reader/quiz-attempts",
+    "POST",
+    body,
     { token, signal },
   );
 }

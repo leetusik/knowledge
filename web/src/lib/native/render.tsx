@@ -27,9 +27,13 @@ import {
   MissingBox,
   ScrollFigure,
 } from "@/components/reader/figure-parts";
+import { ClozeBlank, QuizBlock, type QuizItemProps } from "@/components/reader/quiz";
 import { ArtBox, TableBox } from "@/components/reader/scroll-box";
 import { CHAPTER } from "@/content";
 import { hangulRuns, isKorean } from "@/lib/reader/hangul";
+import { specOf } from "@/lib/reader/quiz";
+import type { QuizSaved } from "@/lib/reader/quiz-saved";
+import { signInToSaveHref, type ReaderTarget } from "@/lib/reader-href";
 
 import { letters, planCitations, type CitationPlan } from "./cites";
 import { diagramParts, kindOf } from "./diagram-kinds";
@@ -52,6 +56,30 @@ import {
 } from "./svg";
 import type { Block, Inline, TypedBlock } from "./tree";
 import { validateChapter, type CheckedChapter } from "./validate";
+
+/**
+ * What the quiz island needs from the reader (P30.S19): who is reading, where an attempt
+ * is saved, the saved answers as they show on return, and the place Sign in to save
+ * returns to. Absent (the older `/documents` pages), a quiz still answers, grades and
+ * retries; it saves nothing and offers no sign-in.
+ */
+export interface QuizViewContext {
+  member: boolean;
+  write: { org: string; project: string; doc: string } | null;
+  /** The version on screen. */
+  version: number;
+  place: "chapter" | "document";
+  /** The chapter's language, as the reader carries it. */
+  lang: string;
+  signIn: {
+    target: ReaderTarget;
+    /** The `?lang=` of the return address (null = the default variant). */
+    lang: string | null;
+    /** The `?v=` of the return address (null = the newest). */
+    version: number | null;
+  } | null;
+  saved: QuizSaved;
+}
 
 export interface NativeChapterProps extends Omit<LinkContext, "format"> {
   /** The stored file: a native chapter's whole `source` (header included), or an md body. */
@@ -82,10 +110,13 @@ export function ChapterView({
   lang,
   links,
   omitTitle,
+  quiz,
 }: {
   checked: CheckedChapter;
   lang?: string;
   links: LinkContext;
+  /** The reader's context for quiz blocks (see `QuizViewContext`). */
+  quiz?: QuizViewContext;
   /**
    * The document's title, when the reader's chapter opening already shows it: an `md`
    * body starts at its own H1, which is then left out (only that first H1, and only
@@ -111,6 +142,7 @@ export function ChapterView({
     links,
     lang !== undefined && !isKorean(lang),
     checked.blocks.flatMap((e) => (e.block && !e.refused ? [e.block] : [])),
+    quiz,
   );
   const first = checked.blocks.find((b) => b.block !== null);
   const skip =
@@ -196,12 +228,15 @@ class Renderer {
   private readonly plan: CitationPlan;
   /** How many plain images of each asset the chapter has had (`img-<name>`, `-2`, `-3` …). */
   private readonly imageIds = new Map<string, number>();
+  /** Set while a cloze sentence renders: its blanks become the island's inputs, counted in order. */
+  private cloze: { n: number } | null = null;
 
   constructor(
     private readonly links: LinkContext,
     /** Wrap each Hangul run in `lang="ko"` (the text's language is not Korean). */
     private readonly wrap: boolean = false,
     blocks: readonly Block[] = [],
+    private readonly quizCtx?: QuizViewContext,
   ) {
     this.plan = planCitations(links.format === "md" ? [] : blocks);
   }
@@ -215,7 +250,42 @@ class Renderer {
 
   inline(nodes: readonly Inline[] | null | undefined): ReactNode {
     if (!nodes) return null;
+    if (this.cloze) return this.clozeRun(nodes);
     return nodes.map((node, i) => this.inlineNode(node, i));
+  }
+
+  /**
+   * A cloze sentence's inline run (`04-quiz` §6): each blank becomes the island's input,
+   * numbered in reading order. What touches a blank's end with no space between (a comma,
+   * a full stop, a Korean particle such as 을 or 에) rides in the blank's no-wrap group, so a
+   * line never starts with "," or "에". Only plain characters are taken: up to the first
+   * space or Markdown mark, and only from a text node that directly follows.
+   */
+  private clozeRun(nodes: readonly Inline[]): ReactNode {
+    let skip = 0;
+    return nodes.map((node, i) => {
+      if (node.type === "blank" && this.cloze) {
+        this.cloze.n += 1;
+        const next = nodes[i + 1];
+        const m =
+          next?.type === "text" ? /^[^\s`*_\[\]~{}<>]+/.exec(next.text) : null;
+        skip = m ? m[0].length : 0;
+        return (
+          <ClozeBlank
+            key={i}
+            n={this.cloze.n}
+            tail={m ? this.text(m[0]) : undefined}
+          />
+        );
+      }
+      if (node.type === "text" && skip > 0) {
+        const rest = node.text.slice(skip);
+        skip = 0;
+        return rest ? <Fragment key={i}>{this.text(rest)}</Fragment> : null;
+      }
+      skip = 0;
+      return this.inlineNode(node, i);
+    });
   }
 
   inlineNode(node: Inline, key: number): ReactNode {
@@ -944,76 +1014,66 @@ class Renderer {
     });
   }
 
+  /**
+   * The quiz (`04-quiz` round 01): the chapter's one client island. The block's items are
+   * handed over as data (`spec`: grading is client-side, so the key ships in the page) and
+   * as rendered inline Markdown, so a link in a prompt, an option or an explanation is the
+   * reader's link. The island paints the state the view model gives (saved answers
+   * included) and hydrates to answer, grade, retry and save.
+   */
   quiz(block: TypedBlock, id: string | undefined): ReactNode {
+    const bid = id ?? "quiz";
     const title = str(block.title);
+    const q = this.quizCtx;
+    const items: QuizItemProps[] = [];
+    recs(block.items).forEach((item, i) => {
+      const spec = specOf(item, i + 1);
+      if (!spec) return;
+      const domId = `${bid}--${spec.id}`;
+      const explain = inl(item.explain);
+      const props: QuizItemProps = {
+        spec,
+        domId,
+        prompt: null,
+        explain: explain && explain.length ? this.inline(explain) : undefined,
+        signInHref: q?.signIn
+          ? signInToSaveHref(q.signIn.target, {
+              lang: q.signIn.lang,
+              version: q.signIn.version,
+              section: domId,
+            })
+          : null,
+        saved: q?.saved[domId],
+      };
+      if (spec.type === "choice") {
+        props.prompt = this.inline(inl(item.prompt));
+        props.options = recs(item.options).map((o) => this.inline(inl(o.text)));
+      } else if (spec.type === "recall") {
+        props.prompt = this.inline(inl(item.prompt));
+        props.answer = this.inline(inl(item.answer));
+      } else {
+        this.cloze = { n: 0 };
+        try {
+          props.prompt = this.inline(inl(item.text));
+        } finally {
+          this.cloze = null;
+        }
+      }
+      items.push(props);
+    });
     return (
-      <section
-        className="kb-ch-quiz"
-        id={id}
-        data-block={id}
-        aria-label={title ?? CHAPTER.quiz.label}
-      >
-        {title ? <p className="kb-ch-quiz__title">{title}</p> : null}
-        <ol className="kb-ch-quiz__items">
-          {recs(block.items).map((item, i) => (
-            <li
-              key={i}
-              id={str(item.id) ?? undefined}
-              data-type={str(item.type) ?? undefined}
-            >
-              {this.quizItem(item)}
-            </li>
-          ))}
-        </ol>
-      </section>
+      <QuizBlock
+        id={bid}
+        name={title ? `${CHAPTER.quiz.label}: ${title}` : CHAPTER.quiz.label}
+        title={title ? this.text(title) : undefined}
+        items={items}
+        member={q?.member ?? false}
+        write={q?.write ?? null}
+        version={q?.version ?? 0}
+        place={q?.place ?? "chapter"}
+        lang={q?.lang ?? "en"}
+      />
     );
-  }
-
-  quizItem(item: Rec): ReactNode {
-    const explain = inl(item.explain);
-    const explanation =
-      explain && explain.length ? (
-        <details className="kb-ch-quiz__explain">
-          <summary>{CHAPTER.quiz.explanation}</summary>
-          <p>{this.inline(explain)}</p>
-        </details>
-      ) : null;
-    if (item.type === "choice") {
-      return (
-        <>
-          <p className="kb-ch-quiz__prompt">{this.inline(inl(item.prompt))}</p>
-          <ul className="kb-ch-quiz__options">
-            {recs(item.options).map((o, j) => (
-              <li key={j} data-option={str(o.id) ?? undefined}>
-                {this.inline(inl(o.text))}
-              </li>
-            ))}
-          </ul>
-          {explanation}
-        </>
-      );
-    }
-    if (item.type === "recall") {
-      return (
-        <>
-          <p className="kb-ch-quiz__prompt">{this.inline(inl(item.prompt))}</p>
-          <details className="kb-ch-quiz__answer">
-            <summary>{CHAPTER.quiz.showAnswer}</summary>
-            <p>{this.inline(inl(item.answer))}</p>
-          </details>
-          {explanation}
-        </>
-      );
-    }
-    if (item.type === "cloze") {
-      return (
-        <>
-          <p className="kb-ch-quiz__prompt">{this.inline(inl(item.text))}</p>
-          {explanation}
-        </>
-      );
-    }
-    return null;
   }
 
   /** §7 the sources list; each item draws its way back from the citations (`cites.ts`). */

@@ -1,5 +1,6 @@
 import { ChapterView } from "@/lib/native";
 import { documentAssets } from "@/lib/native";
+import type { QuizViewContext } from "@/lib/native/render";
 import type { LoadedReader } from "@/lib/reader/load";
 
 import { ChapterEnd } from "./chapter-end";
@@ -19,6 +20,22 @@ import { ChapterHead } from "./chapter-head";
 export function ReaderArticle({ reader }: { reader: LoadedReader }) {
   const { view, checked } = reader;
   const loose = view.kind === "loose" || view.book === null;
+  // The quiz island's context (P30.S19): who is reading, where an attempt is saved, the
+  // saved answers as they show on return, and the address Sign in to save returns to
+  // (this chapter, language and version; the island adds the item).
+  const quiz: QuizViewContext = {
+    member: view.member,
+    write: view.write,
+    version: view.version,
+    place: loose ? "document" : "chapter",
+    lang: view.lang,
+    signIn: {
+      target: view.target,
+      lang: view.langs.length > 1 ? view.lang : null,
+      version: view.version < view.newest ? view.version : null,
+    },
+    saved: reader.quiz,
+  };
   return (
     <div className="rd-flow">
       <ChapterHead view={view} />
@@ -27,6 +44,7 @@ export function ReaderArticle({ reader }: { reader: LoadedReader }) {
           checked={checked}
           lang={view.lang}
           omitTitle={checked.format === "md" ? view.title : null}
+          quiz={quiz}
           links={{
             format: checked.format,
             assetInfo: documentAssets(reader.docId, reader.assets),

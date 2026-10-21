@@ -57,6 +57,7 @@ import { plainText } from "@/lib/native/parse";
 import { parseReaderCookie, type ReaderSettings } from "@/lib/reader-cookie";
 import { bookHref, readerHref, type ReaderTarget } from "@/lib/reader-href";
 
+import { loadQuizSaved, type QuizSaved } from "./quiz-saved";
 import type {
   ChapterRow,
   ReaderHeading,
@@ -81,6 +82,11 @@ export interface LoadedReader {
   /** `md` only: the document's absolute URL, which a relative link resolves against. */
   baseUrl?: string;
   resolveRef: (ref: ChapterRef | DocRef) => string | null;
+  /**
+   * A member's saved quiz answers as the blocks show them on return (P30.S19), keyed
+   * `<block>--<item>`; empty when signed out or when none was read.
+   */
+  quiz: QuizSaved;
 }
 
 /** The result of loading: a reader, or the older frame that still owns this document. */
@@ -571,6 +577,29 @@ export async function loadChapterReader(args: {
     checked,
   });
 
+  const quiz = await loadQuizSaved({
+    token,
+    attempts: variantState?.quiz ?? [],
+    checked,
+    project,
+    here: {
+      stem: docStem(project, variant.rel_path),
+      lang: variant.lang,
+      version: body.version,
+      docId: doc.id,
+      newest: doc.version,
+    },
+    loose: false,
+    variants: chapter.variants
+      .filter((v) => v.lang !== variant.lang && v.format === "native")
+      .map((v) => ({
+        stem: docStem(project, v.rel_path),
+        docId: v.doc_id,
+        version: v.version,
+      })),
+    langName: languageName,
+  }).catch((): QuizSaved => ({}));
+
   const view: ReaderView = {
     kind: "chapter",
     member: !!token,
@@ -615,6 +644,7 @@ export async function loadChapterReader(args: {
           ? `${SITE.url}${doc.canonical_path ?? `/documents/${doc.id}`}`
           : undefined,
       resolveRef,
+      quiz,
     },
   };
 }
@@ -655,6 +685,23 @@ export async function loadLooseReader(args: {
     loadVersions(token, doc, lang, null),
   ]);
 
+  const quiz = await loadQuizSaved({
+    token,
+    attempts: variantState?.quiz ?? [],
+    checked,
+    project: doc.project,
+    here: {
+      stem,
+      lang,
+      version: body.version,
+      docId: doc.id,
+      newest: doc.version,
+    },
+    loose: true,
+    variants: [],
+    langName: languageName,
+  }).catch((): QuizSaved => ({}));
+
   const view: ReaderView = {
     kind: "loose",
     member: !!token,
@@ -692,6 +739,7 @@ export async function loadLooseReader(args: {
         ? `${SITE.url}${doc.canonical_path ?? `/documents/${doc.id}`}`
         : undefined,
     resolveRef,
+    quiz,
   };
 }
 

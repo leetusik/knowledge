@@ -229,3 +229,8 @@ Each `## Doc impact` line there is one short line; its full text is here, under 
 
 - **frontend.md:** the `03-diagrams` round 01 is also the design record of the sequence, stack, timeline and chart kinds. Sequence is `web/src/lib/native/diagram-sequence.ts` (the canvas's `layoutSequence` ported) drawn by the same `Drawing` as flow and state. Stack, timeline and chart are HTML in `em`: `diagram-rows.ts` (the numbers: stack layers, timeline rows, the chart's y range, ticks, bars, lines, intervals, rule and end-label nudging, the data table) and `diagram-kinds.tsx` (the elements and the text alternatives), inside the same `DiagramFigure`. `reader.css` carries the row kinds' CSS (the last block); every position is a numeric `--dg-*` variable. S12's text bodies are gone.
 - **security.md:** the only `style` attributes remain numbers set as `--dg-*` custom properties (the render test allows a minus sign); author strings are React text children.
+
+## P30.S19
+
+- **frontend.md:** the `04-quiz` round 01 is the design record of the quiz block. The chapter's one client island (`components/reader/quiz.tsx`) grades on the client (`lib/reader/quiz.ts`: choice sets, cloze match after NFC, trim and case-fold, recall self-grade), saves every graded attempt through the server action `saveQuizAttempt` (the server numbers it; the first seeds the review card) and shows the latest saved answer on return with its provenance, or fresh with a drift note (`lib/reader/quiz-saved.ts`). The option border is the reader's 3:1 control edge.
+- **api.md:** `GET /app/reader/chapters/…` and `/docs/…` `quiz` (the latest attempt per item) is now read by the web; the BFF write is `POST /app/reader/quiz-attempts` through a server action.
