@@ -1,5 +1,12 @@
 import "server-only";
 
+import type {
+  Profile as ReviewProfile,
+  RateReply,
+  ReviewQueue,
+  StatusReply,
+} from "@/lib/review/types";
+
 import { getJson, sendJson } from "./client";
 
 // P30.S8 — typed server-side calls against knowledge's user-scoped `/app/reader/*`
@@ -588,6 +595,87 @@ export async function clearBookReaderState(
     `/app/reader/state?scope=book&org=${e(target.org)}&project=${e(target.project)}&book=${e(target.book)}`,
     "DELETE",
     undefined,
+    { token, signal },
+  );
+}
+
+// P30.S24 — the review surface (`08-review` round 01; S10's routes).
+
+/**
+ * `GET /app/reader/review/queue?limit=` (bearer): the caller's queue for their local day —
+ * the counts (held cards stay in them), `limit_reached`, the next due time, the profile and
+ * the cards in the server's order. A card whose document the caller can no longer read is in
+ * no list; an anonymous caller is a 401.
+ */
+export async function getReviewQueue(
+  token: string,
+  limit: number,
+  signal?: AbortSignal,
+): Promise<ReviewQueue> {
+  return getJson<ReviewQueue>(`/app/reader/review/queue?limit=${limit}`, {
+    token,
+    signal,
+  });
+}
+
+/**
+ * `POST /app/reader/review/cards/{id}/review` (bearer): rate a card Again or Good,
+ * idempotently by `review_id` — a repeat is a no-op that answers the stored outcome. A
+ * suspended card is a 409, a card the caller cannot read the constant 404.
+ */
+export async function postCardReview(
+  token: string,
+  cardId: string,
+  body: {
+    rating: "again" | "good";
+    review_id: string;
+    response?: Record<string, unknown>;
+  },
+  signal?: AbortSignal,
+): Promise<RateReply> {
+  return sendJson<RateReply>(
+    `/app/reader/review/cards/${encodeURIComponent(cardId)}/review`,
+    "POST",
+    body,
+    { token, signal },
+  );
+}
+
+/**
+ * `PATCH /app/reader/review/cards/{id} {status}` (bearer): suspend a card, or put it back.
+ * For a highlight's card this IS "Review this" off and on.
+ */
+export async function patchReviewCard(
+  token: string,
+  cardId: string,
+  status: "active" | "suspended",
+  signal?: AbortSignal,
+): Promise<StatusReply> {
+  return sendJson<StatusReply>(
+    `/app/reader/review/cards/${encodeURIComponent(cardId)}`,
+    "PATCH",
+    { status },
+    { token, signal },
+  );
+}
+
+/**
+ * `PATCH /app/reader/profile` (bearer): the time zone and the two daily limits. The day's
+ * start hour is not editable (a 422).
+ */
+export async function patchReaderProfile(
+  token: string,
+  body: {
+    time_zone?: string;
+    max_reviews_per_day?: number;
+    new_highlights_per_day?: number;
+  },
+  signal?: AbortSignal,
+): Promise<{ profile: ReviewProfile }> {
+  return sendJson<{ profile: ReviewProfile }>(
+    "/app/reader/profile",
+    "PATCH",
+    body,
     { token, signal },
   );
 }
