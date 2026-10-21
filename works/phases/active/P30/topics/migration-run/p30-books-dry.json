@@ -1,0 +1,78 @@
+{
+  "mode": "dry-run",
+  "documents": 42,
+  "app_checks": true,
+  "books": [
+    {
+      "project": "changple5",
+      "book": "curriculum",
+      "action": "create",
+      "diff": [
+        "+ book changple5/curriculum 'changple5 curriculum' (codebase)",
+        "  + chapter 01-big-picture @1 {'en': 'changple5/2026-08-26-01-big-picture.html'}",
+        "  + chapter 02-configuration-and-boundaries @2 {'en': 'changple5/2026-08-26-02-configuration-and-boundaries.html'}",
+        "  + chapter 03-identity-and-auth @3 {'en': 'changple5/2026-08-26-03-identity-and-auth.html'}",
+        "  + chapter 04-conversations-system-of-record @4 {'en': 'changple5/2026-08-26-04-conversations-system-of-record.html'}",
+        "  + chapter 05-chat-turn-end-to-end @5 {'en': 'changple5/2026-08-26-05-chat-turn-end-to-end.html'}",
+        "  + chapter 06-chat-context-and-memory @6 {'en': 'changple5/2026-08-26-06-chat-context-and-memory.html'}",
+        "  + chapter 07-retrieval-read-path @7 {'en': 'changple5/2026-08-26-07-retrieval-read-path.html'}",
+        "  + chapter 08-ingestion-pipeline @8 {'en': 'changple5/2026-08-26-08-ingestion-pipeline.html'}",
+        "  + chapter 09-indexing-and-embeddings @9 {'en': 'changple5/2026-08-26-09-indexing-and-embeddings.html'}",
+        "  + chapter 10-consulting-mode @10 {'en': 'changple5/2026-08-26-10-consulting-mode.html'}",
+        "  + chapter 11-safety-and-grounding @11 {'en': 'changple5/2026-08-26-11-safety-and-grounding.html'}",
+        "  + chapter 12-content-library @12 {'en': 'changple5/2026-08-26-12-content-library.html'}",
+        "  + chapter 13-content-agent-intake-and-scaffold @13 {'en': 'changple5/2026-08-28-13-content-agent-intake-and-scaffold.html'}",
+        "  + chapter 14-content-agent-build-and-publish @14 {'en': 'changple5/2026-08-28-14-content-agent-build-and-publish.html'}",
+        "  + chapter 15-content-agent-agent-side @15 {'en': 'changple5/2026-08-28-15-content-agent-agent-side.html'}",
+        "  + chapter 16-running-it-celery-and-observability @16 {'en': 'changple5/2026-09-13-16-running-it-celery-and-observability.html'}",
+        "  + chapter 17-operator-console-and-llm-runtime @17 {'en': 'changple5/2026-09-13-17-operator-console-and-llm-runtime.html'}",
+        "  + chapter 18-billing-toss @18 {'en': 'changple5/2026-09-13-18-billing-toss.html'}",
+        "  + chapter 19-leaf-subsystems @19 {'en': 'changple5/2026-09-13-19-leaf-subsystems.html'}",
+        "  + chapter 20-reading-guide @20 {'en': 'changple5/2026-09-13-20-reading-guide.html'}"
+      ]
+    },
+    {
+      "project": "glide-ilab",
+      "book": "phases",
+      "action": "create",
+      "diff": [
+        "+ book glide-ilab/phases 'glide-ilab, phase by phase' (codebase)",
+        "  + chapter p8 @8 {'en': 'glide-ilab/2026-10-08-p8-stage-1-fact-check-and-the-project-1-plan.html', 'ko': 'glide-ilab/2026-10-08-p8-stage-1-fact-check-and-the-project-1-plan-ko.html'}",
+        "  + chapter p9 @9 {'en': 'glide-ilab/2026-10-10-p9-the-stage-1-system-explained.html'}",
+        "  + chapter p17-p18 @17 {'en': 'glide-ilab/2026-10-15-p17-and-p18-signal-extraction-and-the-weekly-aggregation-explained.html'}",
+        "  + chapter p24 @24 {'en': 'glide-ilab/2026-10-16-p24-the-research-page-signal-and-theme-fixes-explained.html'}"
+      ]
+    },
+    {
+      "project": "knowledge",
+      "book": "maintainer-guide",
+      "action": "create",
+      "diff": [
+        "+ book knowledge/maintainer-guide 'knowledge maintainer guide' (codebase)",
+        "  + chapter knowledge-what-it-is-and-how-it-is-used @1 {'en': 'knowledge/2026-08-08-knowledge-what-it-is-and-how-it-is-used.html'}",
+        "  + chapter knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts @2 {'en': 'knowledge/2026-08-08-knowledge-system-internals-the-content-plane-the-write-path-and-the-contracts.html'}",
+        "  + chapter knowledge-s-read-surfaces-two-front-ends-one-corpus @3 {'en': 'knowledge/2026-08-08-knowledge-s-read-surfaces-two-front-ends-one-corpus.html'}",
+        "  + chapter shipping-and-running-knowledge-distribution-the-edge-security-and-the-gates @4 {'en': 'knowledge/2026-08-08-shipping-and-running-knowledge-distribution-the-edge-security-and-the-gates.html'}",
+        "  + chapter why-knowledge-is-this-way-and-how-to-change-it @5 {'en': 'knowledge/2026-08-08-why-knowledge-is-this-way-and-how-to-change-it.html'}"
+      ]
+    },
+    {
+      "project": "vocky",
+      "book": "maintainer-guide",
+      "action": "create",
+      "diff": [
+        "+ book vocky/maintainer-guide 'vocky maintainer guide' (codebase)",
+        "  + chapter vocky-what-it-is-and-how-it-is-used @1 {'en': 'vocky/2026-08-06-vocky-what-it-is-and-how-it-is-used.html'}",
+        "  + chapter vocky-system-internals-architecture-code-map-data-model-and-contracts @2 {'en': 'vocky/2026-08-06-vocky-system-internals-architecture-code-map-data-model-and-contracts.html'}",
+        "  + chapter vocky-security-operations-and-qa-keeping-it-safe-and-keeping-it-running @3 {'en': 'vocky/2026-08-06-vocky-security-operations-and-qa-keeping-it-safe-and-keeping-it-running.html'}",
+        "  + chapter vocky-decisions-history-and-the-agentic-workspace-why-it-is-this-way-and-how-to @4 {'en': 'vocky/2026-08-06-vocky-decisions-history-and-the-agentic-workspace-why-it-is-this-way-and-how-to.html'}"
+      ]
+    }
+  ],
+  "unmapped": [],
+  "conflicts": [],
+  "puts": [],
+  "failures": [],
+  "checks": 167,
+  "ok": true
+}
