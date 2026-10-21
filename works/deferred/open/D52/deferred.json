@@ -1,0 +1,11 @@
+{
+  "id": "D52",
+  "title": "Review: delete a single card",
+  "status": "deferred",
+  "source": "P30.REVIEW",
+  "reason": "P29 Privacy promises a reader can delete any single review card; S10 shipped only suspend and clear-all",
+  "trigger": "The next review-surface or privacy change",
+  "created_at": "2026-10-21T15:49:50+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

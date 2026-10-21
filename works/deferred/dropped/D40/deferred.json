@@ -1,11 +1,11 @@
 {
   "id": "D40",
   "title": "Explainer reporter: measureAt can loop with a document that mutation-observes <html>",
-  "status": "deferred",
+  "status": "dropped",
   "source": "P28.REVIEW",
   "reason": "F4's paper emulation writes an inline style on <html> twice per post; a document whose MutationObserver watches <html> attributes and changes layout in response loops the reporter until the per-width budget latches, then a later growth at that width leaves a stale frame with an inner scroll (probe: 300 posts <12s, maxTop 374); none of docs 25-33 nor the /explain template does this; fix: cap measureAt per width separately from the posting budget, correct the header comment",
   "trigger": "the /explain template or any framed document gaining a MutationObserver, or an explainer seen churning or stale after load",
   "created_at": "2026-10-08T16:47:46+09:00",
   "promoted_to": null,
-  "dropped_reason": null
+  "dropped_reason": "Moot after P30.S25: the measured box, frame print slicing and height reporter are retired (P30.REVIEW)"
 }

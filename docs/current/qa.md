@@ -1,11 +1,11 @@
 ---
 doc_id: qa
-version: v0017
-created_at: 2026-10-08T16:43:59+09:00
-commit: e41eb40589d57ec58b227ec8b9d8b7f539fd52f3
-source: P28.REVIEW
-summary: P28 re-review gate: append the framed-explainer checks — no inner scroll range (DPR 2, classic scrollbars, many width changes) and whole-document print from Export PDF and Cmd-P
-previous: v0016_p28_gate_append_the_phase_s_headline_regression_checks_graph_fit_dock_tag_switch_project_documents_panel_full-width_view_print_export_pdf_390_console_next_round_trip
+version: v0018
+created_at: 2026-10-21T15:44:38+09:00
+commit: 71ca2c1f0095d44cb3a27b1433ae30df53e4aadd
+source: P30.REVIEW
+summary: P30 gate: append the reader, book, review, legacy and print checks; update three P28 lines the learning reader superseded
+previous: v0017_p28_re-review_gate_append_the_framed-explainer_checks_no_inner_scroll_range_dpr_2_classic_scrollbars_many_width_changes_and_whole-document_print_from_export_pdf_and_cmd-p
 ---
 
 # QA
@@ -248,28 +248,66 @@ apply there; use *In-app graph label focus (P22)* instead._
 - [ ] Project page (`/projects/{id}`): a **Documents** panel lists the five
       newest documents with an "All documents" link, and a failure of that panel
       alone leaves the rest of the page up with a working Retry (P28)
-- [ ] Document views: `?view=full` on the member, anonymous and past-version
-      routes hides the rail/topbar/docbar and mounts an exit pill that `Esc`
-      and browser-back also honour (P28)
-- [ ] Print / Export PDF: printing a document produces the **masthead**
+- [ ] Document views: `?view=full` on the past-version route
+      (`/documents/{id}/versions/{v}`) hides the rail/topbar/docbar and mounts
+      an exit pill that `Esc` and browser-back also honour; a document's
+      current version opens in the reader instead, which has no rail (P28;
+      updated P30)
+- [ ] Print / Export PDF: printing a past-version document produces the **masthead**
       (wordmark · URL · version · printed date) and the **colophon** on paper,
       and the Export PDF control shows its hint, goes `Preparing…`, and clears
       on `afterprint` (P28)
-- [ ] Console at 390: dashboard, documents, project, graph and the document
-      views show the **bottom navbar** and have **no horizontal page scroll**
-      (`documentElement.scrollWidth === 390`) (P28)
+- [ ] Console at 390: dashboard, documents, project, graph and the
+      past-version view show the **bottom navbar** and have **no horizontal
+      page scroll** (`documentElement.scrollWidth === 390`) (P28; updated P30)
 - [ ] `/login?next=/@{org}/{project}/{slug}` returns to that path after sign-in,
-      and a hostile `next` (`//evil.example.com`) falls closed to `/dashboard`
-      (P28)
-- [ ] Framed explainer (member, anonymous and `?view=full`): **no inner scroll
-      range** — the framed document's maximum `scrollTop` is 0 and a wheel over
-      the frame scrolls the page — at DPR 1 and DPR 2, with classic
-      (always-visible) scrollbars on a document wider than its frame, and after
-      hundreds of width changes (a window or side-docked DevTools drag) (P28)
-- [ ] Print / Export PDF on a framed explainer: **both** Export PDF and ⌘P print
-      it whole — its last paragraph or quiz question and the colophon are on
-      paper — on A4 and US Letter, and the frame returns to its screen height
-      (no inner scroll) after `afterprint` (P28)
+      and a hostile `next` (`//evil.example.com`) falls closed to `/library`
+      (P28; the landing moved to `/library` in P30)
+- [ ] Reader chapter (native, md, KO): on a 390 phone, signed in and with a
+      quiz answered, `documentElement.scrollWidth` equals the viewport width,
+      and the Contents/Notes sheet fits the screen (P30)
+- [ ] Quiz: an answered item shows exactly one foot sentence (every other
+      `.qz-st` hidden) in light, dark and sepia (P30)
+- [ ] Reader chapter: no inner vertical scroller on a native chapter or a loose
+      document at DPR 2 with classic scrollbars across many widths (horizontal
+      figure, diagram and drawing boxes, and the long-table box below 40rem,
+      are designed); the page is the only vertical scroller (P30)
+- [ ] Legacy reader (replaces P28's framed-explainer lines; the height
+      handshake is retired): the sandboxed frame is the only scroller — page
+      `scrollHeight` equals `innerHeight` at 390, 820, 1024 and 1440 and across
+      many widths at DPR 2 with classic scrollbars; the document bar may scroll
+      only on a tight page, as drawn (OQ184); a reader link navigates, an
+      external link opens a new tab, a refused or `javascript:` link does
+      nothing; Bookmark this position and the resume pill work (P30)
+- [ ] Deep link: `/@{org}/{project}/books/{book}/{chapter}#{section}` (a fresh
+      load, and after the sign-in round trip) lands with the section under the
+      top bar, not at 0% (P30)
+- [ ] Old links: `/documents/{id}` and `/@{org}/{project}/{slug}` of a document
+      bound into a book redirect to its chapter URL; a loose document keeps its
+      address (P30)
+- [ ] Library (`/library`, public `/@{org}`): books and loose documents group
+      By project and By subject; the signed-in landing and the wordmark go to
+      `/library`; Continue reading opens the last place (P30)
+- [ ] Resume: scroll a signed-in chapter to about 45%, wait 3 s, reload: it
+      lands within one block of the same place with "Picked up where you left
+      off"; From the top clears it (P30)
+- [ ] Quiz save: an answer persists across a reload and shows "Your answer
+      from <date>" (", on vN" after a newer version); signed out shows Sign in
+      to save and writes nothing (P30)
+- [ ] Annotations: a highlight, a note and a section bookmark persist across a
+      reload; after a new version a changed passage re-anchors and a removed
+      one reads Text changed in the Notes sheet and the per-book list (P30)
+- [ ] Review: a highlight with Review this on and an answered quiz become
+      cards; rate, suspend, Undo and the Done for today end state work; Clear
+      this book and Clear all remove only what their confirm text says (P30)
+- [ ] Visibility: a private project's chapter, book and document answer the
+      same not-found as one that does not exist, signed out and as another
+      org's member; a public one reads (P30)
+- [ ] Print: ⌘P of a native chapter prints the masthead, the answer key and the
+      colophon on A4 and Letter; a legacy document prints one notice sheet
+      pointing at its own page and Print · new tab (P30)
+- [ ] Text size 150% and 200% (root font) at 390 and 820: no horizontal page
+      scroll on the chapter, book page or review (P30)
 
 ## Verifying the Guard Itself (negative-test pattern)
 

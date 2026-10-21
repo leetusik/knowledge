@@ -1,0 +1,11 @@
+{
+  "id": "D56",
+  "title": "Stored reader unit lags after a hand-edited manifest",
+  "status": "deferred",
+  "source": "P30.REVIEW",
+  "reason": "Reindex never rewrites reader-state unit; reads derive it fresh but review lookups by stored unit can lag (P30.S8)",
+  "trigger": "Hand-edited manifests, or the next reader-state phase",
+  "created_at": "2026-10-21T15:49:50+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
