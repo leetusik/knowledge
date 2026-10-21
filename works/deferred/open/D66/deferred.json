@@ -1,0 +1,11 @@
+{
+  "id": "D66",
+  "title": "A missing FILE exits 1 under knowledge check",
+  "status": "deferred",
+  "source": "P31.REVIEW",
+  "reason": "Exit 1 means would-be-refused with lines to fix, but a missing file has nothing to fix (P31.REVIEW)",
+  "trigger": "An agent loops on fix the listed lines",
+  "created_at": "2026-10-21T19:59:50+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

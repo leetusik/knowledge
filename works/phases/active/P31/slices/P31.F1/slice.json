@@ -1,0 +1,32 @@
+{
+  "id": "P31.F1",
+  "phase_id": "P31",
+  "name": "Fix the explain review's privacy probe and two package nits",
+  "kind": "fix",
+  "status": "todo",
+  "order": 9000,
+  "depends_on": [],
+  "created_at": "2026-10-21T19:59:50+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": null,
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

@@ -1274,3 +1274,10 @@
 {"ts": "2026-10-21T19:50:07+09:00", "type": "slice_status_changed", "slice": "P31.S6", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-21T19:51:36+09:00", "type": "executor_dispatched", "slice": "P31.S6", "phase": "P31", "kind": "docs", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-21T19:51:37+09:00", "type": "slice_status_changed", "slice": "P31.S6", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-21T19:51:56+09:00", "type": "slice_status_changed", "slice": "P31.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-21T19:59:50+09:00", "type": "executor_dispatched", "slice": "P31.REVIEW", "phase": "P31", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": "round 1: changes_requested (privacy probe, PATCHES line, doc impact) → F1"}
+{"ts": "2026-10-21T19:59:50+09:00", "type": "slice_status_changed", "slice": "P31.REVIEW", "old_status": "in_progress", "new_status": "changes_requested"}
+{"ts": "2026-10-21T19:59:50+09:00", "type": "phase_reviewed", "phase": "P31", "verdict": "changes_requested", "reviewer": "slice-executor-high"}
+{"ts": "2026-10-21T19:59:50+09:00", "type": "slice_created", "phase": "P31", "slice": "P31.F1"}
+{"ts": "2026-10-21T19:59:50+09:00", "type": "deferred_created", "deferred": "D65", "source": "P31.REVIEW"}
+{"ts": "2026-10-21T19:59:50+09:00", "type": "deferred_created", "deferred": "D66", "source": "P31.REVIEW"}

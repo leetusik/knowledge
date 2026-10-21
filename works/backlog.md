@@ -6,16 +6,16 @@
 ## Pointer
 
 - Current phase: `P31`
-- Current slice: `P31.REVIEW`
-- Next slice: `none`
+- Current slice: `P31.F1`
+- Next slice: `P31.REVIEW`
 - Waiting on operator: `none`
-- Open deferred jobs: `45`
+- Open deferred jobs: `47`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P31` | planned | `P31.REVIEW` | 7/8 | - | working tree |
+| `default` | `P31` | in_progress | `P31.F1` | 7/9 | - | working tree |
 
 ## Active Phases
 
@@ -31,7 +31,7 @@
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
-| [ ] `P31` | `planned` | `pending` | Explain phase route | `P31.REVIEW` | `works/phases/active/P31` |
+| [ ] `P31` | `in_progress` | `changes_requested` | Explain phase route | `P31.F1` | `works/phases/active/P31` |
 
 ## Phase P21: Web document deletion
 
@@ -200,4 +200,5 @@
 | [x] `P31.S4` | `done` | package: explain route, DECOMP and REVIEW references, install patch notes | `implementation` | `works/phases/active/P31/slices/P31.S4` |
 | [x] `P31.S5` | `done` | rehearse one sample chapter through the package | `qa` | `works/phases/active/P31/slices/P31.S5` |
 | [x] `P31.S6` | `done` | handoff note: retire old explain and apply the package | `docs` | `works/phases/active/P31/slices/P31.S6` |
-| [ ] `P31.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P31/slices/P31.REVIEW` |
+| [ ] `P31.F1` | `todo` | Fix the explain review's privacy probe and two package nits | `fix` | `works/phases/active/P31/slices/P31.F1` |
+| [ ] `P31.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P31/slices/P31.REVIEW` |
