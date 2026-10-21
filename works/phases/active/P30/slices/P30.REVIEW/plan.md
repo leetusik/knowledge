@@ -104,6 +104,33 @@ Return `review_verdict` (`pass` | `changes_requested` | `blocked`) with:
 
 Never run `accept-gate`, `review-phase` or any state command.
 
+## Re-review (round 2, after the operator's walkthrough)
+
+The first pass returned `pass` (see `result.md` round 1). At the walkthrough the operator reported the reader
+chrome (`review-phase … changes_requested`, quoted in `slices/P30.F5/plan.md`), and **P30.F5** fixed it.
+This round is **focused**. Don't redo the whole first pass.
+
+1. **Validate everything together again:** the server suite, the CLI tests, the web gates, both parity
+   checks and `workflow.py validate`.
+2. **F5 against the operator's words:**
+   - read `slices/P30.F5/plan.md` (the verbatim words and the rules) and `result.md`;
+   - in a fresh scratch stack (production build; never `:8766` or `:3030`; stop only your own PIDs; one
+     sign-in), check the rules on a native and a legacy chapter at 1440, 820 and 390;
+   - confirm nothing else in the reader regressed: Display, sheets, resume pill, keyboard reach, chapter
+     end, print, and the legacy bridge messages, including the spoofing refusals.
+3. **Review the post-gate commits:** the production deploy record, the migration run and its reports, the
+   redaction republish, D60–D62, and F5. Check that `## Doc impact` has F5, and that OQ185–OQ190 are routed
+   (decided; fold the two F5 flagged into the walkthrough).
+4. **The walkthrough:** return a short one covering only what changed since the operator's first walk:
+   - the chrome rules, to re-walk on PC, iPhone and iPad;
+   - the items from the first walkthrough the operator hasn't confirmed;
+   - the decisions still open from round 1 (S28 handoff, OQ184, OQ21, OQ27, the canvases).
+
+   Note that F5 must be deployed before the operator re-walks; the orchestrator does that.
+
+Return `review_verdict`, with the walkthrough on `pass`. Write the round-2 result above the round-1 text in
+`result.md`, verdict block first, and keep round 1 below it. No state commands, no commit.
+
 ## Dispatch
 
 slice=P30.REVIEW

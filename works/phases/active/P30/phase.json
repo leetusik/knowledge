@@ -9,9 +9,9 @@
   "completed_at": null,
   "review": {
     "status": "changes_requested",
-    "reviewed_at": "2026-10-21T16:34:40+09:00",
-    "reviewer": "operator",
-    "note": "operator-reported (walkthrough 2026-10-21): (1) the bottom bar comes up on even a very slight scroll up, super annoying — stick it to the bottom, a drawer the user can bring while reading; (2) on PC the header (logo, back, Display) is not hidden, it follows the scroll — hide it scrolling down, show it only when the user taps the screen or scrolls up. 'you may just fix like what I just said'."
+    "reviewed_at": "2026-10-21T17:18:58+09:00",
+    "reviewer": "slice-executor-high",
+    "note": "round 2: F5 passes against the operator's words; R3 found — chapter-to-chapter navigation keeps the old scroll position and, signed in, records the next chapter Finished unread (predates F5, on production). Fix: P30.F6."
   },
   "acceptance": {
     "required": true,
