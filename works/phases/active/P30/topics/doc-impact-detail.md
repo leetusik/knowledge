@@ -280,6 +280,22 @@ Each `## Doc impact` line there is one short line; its full text is here, under 
 
 
 
+## P30.S27
+
+- qa.md: the P30 regression lines the REVIEW adds to `## Regression Checklist` (each `- [ ] <surface>: <one observable behaviour> (P30)`):
+  - `- [ ] Reader chapter (native, md, KO): on a 390 phone, signed in and with a quiz answered, `documentElement.scrollWidth` equals the viewport width (a long visually-hidden `.qz-vh` sentence must not widen the page), and the Contents/Notes sheet fits the screen (P30)`
+  - `- [ ] Quiz: an answered item shows exactly one foot sentence (every other `.qz-st` is hidden, none carries a glued `is-off` class) in light, dark and sepia (P30)`
+  - `- [ ] Reader chapter: no inner vertical scroller on a native chapter or a loose document at 1440, 1024 and 820 (DPR 2, classic scrollbars), the long table box excepted below 40rem; on a legacy document the frame is the only scroller and the page scrollHeight equals innerHeight, across 200 random widths (P30)`
+  - `- [ ] Deep link: opening `/@{org}/{project}/books/{book}/{chapter}#{section}` (fresh load, and after the sign-in round trip) lands with the section at the top bar, not at 0% (P30)`
+  - `- [ ] Resume: scroll a signed-in chapter to about 45%, wait 3 s, reload: it lands within one block of the same place with "Picked up where you left off"; From the top clears it (P30)`
+  - `- [ ] Quiz save: an answer persists across a reload and shows "Your answer from <date>" (and ", on vN" after a newer version); signed out shows Sign in to save and writes nothing (P30)`
+  - `- [ ] Annotations: a highlight, a note and a section bookmark persist across a reload; after a new version the changed passage re-anchors and a removed one reads Text changed in the Notes sheet and the per-book list (P30)`
+  - `- [ ] Review: rate, suspend, Undo and the Done for today end state work; Clear this book and Clear all remove only what their confirm text says (P30)`
+  - `- [ ] Visibility: a private project's chapter, book and document answer the same not-found as one that does not exist, signed out and as another org's member; a public one reads (P30)`
+  - `- [ ] Legacy reader: only the frame scrolls (page `scrollHeight` = `innerHeight` at 390, 820, 1024, 1440); a native link navigates, an external link opens a new tab, a refused and a javascript link do nothing; Bookmark here and the resume pill work (P30)`
+  - `- [ ] Print: ⌘P of a native chapter prints the masthead, the answer key and the colophon on A4 and Letter; of a legacy chapter one notice sheet (P30)`
+  - `- [ ] Text size 150% and 200% (root font) at 390 and 820: no horizontal page scroll on the chapter, book page or review (P30)`
+
 ## phase.md Doc impact lines as written by S20–S26, shortened there by the orchestrator (word for word)
 
 - api.md, backend.md, data.md, decisions.md, frontend.md, operations.md, security.md: P30.S4 — full lines in topics/doc-impact-detail.md → *P30.S4, folded* (P30.S4)

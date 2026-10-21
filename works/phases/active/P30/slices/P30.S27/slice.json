@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Fidelity and functional sweep: every surface, three viewports, no inner scroller",
   "kind": "qa",
-  "status": "todo",
+  "status": "done",
   "order": 270,
   "depends_on": [
     "P30.S26"
   ],
   "created_at": "2026-10-21T00:14:51+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T13:42:39+09:00",
+  "completed_at": "2026-10-21T14:35:17+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "QA sweep across every surface (CDP, true viewports, DPR 2/3, classic scrollbars): persistence, visibility, CSP, themes, keyboard, scrollers and print pass; defects X1–X6 (two High) routed to F3/F4; OQ183 decided (redirect bound chapters)",
   "validation": {
     "required": [],
     "last_run": null,
