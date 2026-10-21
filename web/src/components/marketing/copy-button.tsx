@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 //   • `text`     — a literal string resolved at build time (the snippet blocks: the two
 //                  locked export lines, the whole health-check curl line).
 //   • `fetchUrl` — fetch the served file and copy its whole body (the skill at /SKILL.md;
-//                  never a pasted fork of the 486-line canonical).
+//                  never a pasted fork of the canonical).
 // States (build-prompt §(c)): idle "Copy" (double-sheet icon) → success "Copied" (check,
 // teal accent + accent border, reverts after 2 s) → failure "Copy failed" (dashed border,
 // hint text; clipboard denied / insecure origin / fetch fail). The value is NEVER logged,

@@ -3,19 +3,23 @@
 Turn what you just figured out into a personal knowledge base. The plugin ships
 two skills:
 
-- `/knowledge:explain <topic or change-ref>` — researches a topic **or a code
-  change** in your current repo or conversation and writes a single
-  self-contained **interactive HTML explainer** — Background, Intuition, Code, a
-  cited "Best practices & next steps" section from web research, and a 5-question
-  quiz with immediate feedback — into your own knowledge base (API-first, with a
-  plain-file fallback). The best-practices section is default-on but skips itself
-  for purely-internal subjects or when offline (`research` / `no-research` force
-  it on/off; add `here` to also drop a copy in the current project). The first
-  explainer filed under a brand-new project also creates that project's landing
-  page automatically, so your published site keeps building as the library grows.
+- `/knowledge:explain <topic or change-ref>` — researches a topic, a **code
+  change** in your current repo or conversation, or a general subject, and
+  publishes a **native chapter** into your own knowledge base: Markdown with a
+  few typed blocks (diagrams, figures, callouts, SVG, a quiz, sources) that the
+  knowledge base renders itself. A code chapter follows Background, Intuition,
+  Code, a cited "Best practices & next steps" section from web research, and a
+  quiz; a general-subject chapter fits its outline to the question. A chapter
+  joins a book when the work is a phase or a slice (`book=<slug>`, `lang=<xx>`
+  for a translation); otherwise it is a loose document. It publishes through the
+  document API and never writes HTML. The best-practices section is default-on but
+  skips itself for purely-internal subjects or when offline (`research` /
+  `no-research` force it on/off; add `here` to also drop a copy of the source in
+  the current project). Skill text:
+  [`skills/explain/SKILL.md`](skills/explain/SKILL.md).
 - `/knowledge:setup` — wires `/knowledge:explain` to a knowledge base, two ways.
   **Connect** (the zero-infra default): sign up at the hosted KB
-  (<https://knowledge.hi2vi.com>), mint one ingest key, paste it, and your explainers
+  (<https://knowledge.hi2vi.com>), mint one ingest key, paste it, and your chapters
   post to your own tenant — no server to run, one key serves every repo. **Scaffold**
   (full control): stand up your own self-hosted KB from scratch — a MkDocs Material site,
   a FastAPI + SQLite document API, an interactive knowledge graph, and a GitHub Pages
@@ -35,8 +39,9 @@ whenever you want something explained and kept.
 list is for **scaffold** (self-hosted) mode:
 
 - Python 3.12+ (the document API and site tooling).
-- Docker (optional but recommended — runs the local viewer + API; without it
-  the KB still works through the file-write fallback).
+- Docker (optional but recommended — runs the local viewer + API; without a
+  running API there is nothing to publish to, because a native chapter cannot be
+  written by hand).
 - A GitHub repository (optional — only needed to publish the site via Pages).
 
 The live demo of what you get: <https://leetusik.github.io/knowledge/>.
