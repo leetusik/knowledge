@@ -1,0 +1,11 @@
+{
+  "id": "D65",
+  "title": "CLI line numbers are body-relative for files with a --- header",
+  "status": "deferred",
+  "source": "P31.REVIEW",
+  "reason": "Old save behaviour also inherited by knowledge check: err-quiz file line 13 prints as line 9 (P31.REVIEW)",
+  "trigger": "Someone fixes a headered file by the printed line numbers",
+  "created_at": "2026-10-21T19:59:50+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
