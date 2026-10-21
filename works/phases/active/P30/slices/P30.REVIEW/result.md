@@ -1,6 +1,176 @@
 # P30.REVIEW: result
 
-Round 2 (after P30.F5) is first, and round 1 is kept unchanged below it.
+Round 3 (after P30.F6) is first. Round 2 (after P30.F5) and round 1 are kept unchanged below it.
+
+## Verdict (round 3)
+
+- **status:** done
+- **tier:** high
+- **model:** opus
+- **effort:** high
+- **review_verdict:** **pass**. R3 is fixed, and F5 still holds.
+- **summary:** All gates pass together. I checked F6 live on a fresh scratch production build, signed in and signed out, with CDP and Aside `u1`. Every chapter-to-chapter path lands at y 0, or at the saved place with its pill. Signed in, the opened chapter's DB row is `started` at fraction 0, never `finished`. Hash, `?note=`, the sign-in return and a reload keep their landing. F5's chrome gives the same table as round 2 on both readers at 1440, 820 and 390. I wrote the qa gate lines as v0019 and finalised the walkthrough.
+- **files_changed:**
+  - this file (round 3 added above round 2);
+  - `docs/versions/qa/v0019_p30.review_round_3_regression_checklist_gains_f6_s_chapter-navigation_line_next_opens_the_next_chapter_at_its_top_not_finished_and_f5_s_reader-chrome_line.md`, plus `docs/current/qa.md` and `docs/index.json` through `rebuild-docs`;
+  - `works/phases/active/P30/phase.md`: *Notes for later slices* (consumed F6's round-3 note) and *Now*.
+- **validation:** every command passed (table below).
+- **deviations:**
+  1. No dev clone this round. The round-3 plan names the production build only, and F6 ran its matrix on a dev clone already.
+  2. Two sign-ins, not one: one BFF sign-in over CDP (the cookie was reused for every signed-in CDP run) and one real form sign-in in Aside, which was the sign-in return check itself. The scratch API ran with `KB_AUTH_RATE_LIMIT=200`. No 429 was seen.
+  3. I ran `uv run alembic upgrade head` on the scratch database too, since the stack needed a schema. It is not in round 3's gate list.
+- **doc_versions:** qa **v0019**, `## Regression Checklist` only. It adds two lines: "Next opens the next chapter at its top, not Finished" (F6), and the reader chrome rules (F5; round 1's v0018 predates F5, so it lacked them). Operations is unchanged: the runtime did not change. Everything else is deferred to a docs phase.
+- **walkthrough:** below, under *Walkthrough (round 3, for the gate)*.
+- **explain:** not written — run /explain for this phase.
+
+### Validation (round 3)
+
+| Command | Result |
+|---|---|
+| `KB_TEST_DATABASE_URL=postgresql://kb:kb@127.0.0.1:55432/kb uv run pytest -q` | pass, 229 passed |
+| `cd cli && uv run pytest -q` | pass, 55 passed |
+| `pnpm --dir web typecheck` | pass |
+| `pnpm --dir web lint` | pass |
+| `pnpm --dir web test` | pass, 37 files, 395 tests |
+| `NEXT_PUBLIC_APP_URL=https://knowledge.hi2vi.com pnpm --dir web build` | pass |
+| `python3 scripts/plugin_parity.py` | PASS |
+| `python3 scripts/skills_parity.py` | PASS |
+| `python3 scripts/workflow.py validate` | passed, before and after the qa version (pre-existing warnings only: P22/P26 kinds, P28 debt, stale docs, oversized sections) |
+| `uv run alembic upgrade head` on the scratch database `kb_rv3live` | pass, 0001 → 0006 |
+
+### Stack and instruments (round 3)
+
+**Stack** (session scratchpad `…/scratchpad/rv3/`):
+- a scratch API `:8993` (PID 77379), with a scratch git `KB_ROOT`, the database `kb_rv3live` in `kb-p28s2-pg`, `KB_GIT_COMMIT=false`, `KB_STARTUP_REINDEX=false`, `KB_AUTH_RATE_LIMIT=200` and no Gemini keys;
+- one member, `rv3-member@example.com` (org `rv3org`), with an org-level `vk_` key;
+- the fixture book via `publish_fixture_book.py`, plus round 2's 12-part `long-legacy` html chapter at position 4;
+- `fixtures` set public;
+- a block note on `write-lock` / `lock-quiz`, for `?note=`;
+- the production build (HEAD `9650654`, built by the gate run) with `next start :3996` (PID 77473).
+
+**Cleanup:** I stopped exactly PIDs 77379 and 77473. The headless Chromes exited with their scripts, and Aside's tab closed with its call. Aside was signed out of the scratch BFF at the end (`POST /api/auth/logout` 200). I dropped `kb_rv3live`. Afterwards `:3030` (8452) and `:8766` (66506) were still listening. I never touched either.
+
+**Instruments:**
+- Headless Chrome over CDP (round 2's `cdp.mjs` driver), with a new matrix script (`rv3/nav.mjs`). It recorded the scroll position 150 ms and 3.6 s after each click, every position POST body, and the `reader_positions` rows via `psql`. The table was cleared before each row.
+- Round 2's chrome script (`rv3/chrome.mjs`, `Input.synthesizeScrollGesture`, mouse at 1440 and touch at 820/390).
+- Aside `aside repl --account u1` at 1440×900, with real `mouse.wheel`, clicks, the `End` key and a real form sign-in.
+- **Not run:** real iPhone and iPad, Safari, Firefox. Those stay the operator's.
+
+### F6 live (production build)
+
+**Chapter to chapter, CDP 1440×900.** Each row is one navigation from `all-blocks` to `write-lock`. Signed-in "row after" is the `reader_positions` row for `write-lock`.
+
+| From `all-blocks` | Via | Signed out lands | Signed in lands | Signed in: writes after the click | Signed in: row after |
+|---|---|---|---|---|---|
+| top (0) | bar Next / end Next / Contents | 0 / 0 / 0 | 0 / 0 / 0 | `fraction 0, max_fraction 0` | `0.000 / 0.000 started` |
+| y 1500 | bar Next / end Next / Contents | 0 / 0 / 0 | 0 / 0 / 0 | the same | `0.000 / 0.000 started` |
+| the end (9006 / 9066) | bar Next / end Next / Contents | 0 / 0 / 0 | 0 / 0 / 0 | the same | `0.000 / 0.000 started` |
+
+- 150 ms after the click the page sometimes reads y 193 (the loading skeleton's clamp). It is at 0 once the chapter is in, and nothing is written before then.
+- **Previous** from `write-lock` at 1500 and at its end: `all-blocks` at 0. Signed in, the `every-block-once` row is `0.000 started`.
+- **Book page row** at 1440×420, from the book page's end (168/168 signed out, 348/348 signed in): `write-lock` at 0, row `0.000 started`.
+- **A chapter with a saved place:** `write-lock` saved at `0.520 started how-it-works`, then Next from `all-blocks`' end. It lands at 1183 with the pill "Picked up where you left off · How it works". The row stays `started` (0.513 / 0.520). `every-block-once` is `1.000 finished`, which is right: that page really was read to its end.
+- **No `finished: true`, and no inflated `max_fraction`, was sent for any opened chapter.**
+
+**Landings that own the place** (CDP):
+
+| Check | Signed out | Signed in |
+|---|---|---|
+| router push `write-lock#how-it-works` from `all-blocks` at 1500 | y 1186, block top 72 | y 1186, block top 72 |
+| hard load `write-lock#how-it-works` | y 1186, top 72 | y 1186, top 72 |
+| router push `write-lock?note=<id>` from `all-blocks` at 1500 | (members only) | y 1508, block top 91 |
+| hard load `write-lock?note=<id>` | (members only) | y 1508, block top 91 |
+| reload of `all-blocks` at 3000 | y 3000 (the browser keeps its place) | y 2960, with the resume pill (the saved place) |
+| `write-lock` end → Contents → `long-legacy` (native → legacy) | window y 0 | y 0, row `long-legacy 0.000 started` |
+| `long-legacy` → Contents → `write-lock` (legacy → native) | y 0 | y 0, row `write-lock 0.000 started` |
+
+**Real browser: Aside `u1`, production build, 1440×900:**
+- Signed out:
+  - wheel to 1500, then bar Next: `write-lock` y 0;
+  - `End` (2248), then bar Previous: `all-blocks` y 0;
+  - `End` (8863), then the end section's Next: `write-lock` y 0;
+  - wheel to 2100, a tap on the text, Contents, then `write-lock`: y 0.
+- **Sign-in return:** on `write-lock` at 660, the top bar's Sign in links `/login?next=…/write-lock?lang=en#background`. After a real form sign-in it returned to `write-lock?lang=en#background` at y 547, with the heading at 72.
+- Signed in, `End` on `all-blocks` (8923), then bar Next: `write-lock` opened at 544, its saved place (the landing just before saved it). The same from mid-chapter.
+- The database afterwards: `every-block-once 0.134 / 1.000 finished` (really read to its end), **`write-lock 0.236 / 0.237 started background`, not finished**, and `legacy-explainer 1.000 finished`. The last is the short-chapter rule: its 1.8 KB explainer fits in the frame on opening. That is not R3, and F6 found the same.
+
+**Code read of F6** (`position.ts`, `use-reading.ts`, the 7 new tests):
+- the landing order and the settle rule are pure, and they are tested;
+- every write path is gated on `settled`: the cadence, `measure`, the beacon and the end rule;
+- Mark as finished / unread stay immediate;
+- the landing is decided once per page (a `decided` ref), so a `router.refresh()` does not re-land.
+
+It matches F6's plan and its `## Decisions` line.
+
+### F5 still holds (production, CDP, signed out)
+
+Round 2's chrome sequence gives **the same outcome at every step**, on native and legacy at 1440, 820 and 390:
+- the top bar hides on a scroll down, desktop included (the legacy topbox goes from 59 px to 3 px);
+- slow nudges of 12 and 30 px bring nothing back;
+- a deliberate 150 px up brings only the top bar;
+- a tap toggles both bars;
+- at the end the bottom chrome shows (170, 190 and 276 px on legacy) and stays held on a scroll down and on a slow nudge up;
+- a deliberate 400 up from the end shows both bars (OQ186);
+- 300 down hides both.
+
+The end positions were native 8863, 8541 and 10333, and legacy 6900, 6640 and 12641, as in round 2.
+
+Keyboard: on a fresh load scrolled 600 down, both bars are hidden, and the first Tab lands on "Show reading controls" (opacity 1). Enter shows both bars.
+
+**Console and CSP:**
+- Signed out, every run was empty.
+- Signed in, the run logged 7 `log.warning`s, all the same: the app layout's CSS chunk (`kb-app-layout` rules) "was preloaded using link preload but not used within a few seconds". This is a browser performance hint, not an error, and it has no CSP line. It is not a finding. Round 2's dev-clone run logged the same kind of warning.
+
+### Notebook cross-check (round 3)
+
+- `## Decisions` carries *The reader owns its landing (P30.F6)*.
+- `## Doc impact` carries F6's `frontend.md, qa.md` line. Its qa half is paid by v0019. Its `frontend.md` half waits for the docs phase.
+- F6 raised no operator question. OQ1–OQ190 are all decided and collapsed, so none is unrouted.
+- F6's deferred-job candidate is filed as **D64**.
+- No `result.md` decision is missing.
+- I consumed F6's round-3 note in *Notes for later slices* and rewrote *Now*. `phase.md` is 38,972 B.
+
+### Walkthrough (round 3, for the gate)
+
+**First, on your word:** push `main`, then wait for a green Production Deploy carrying F5 and F6.
+
+**Walk** https://knowledge.hi2vi.com on the Mac (Chrome and Safari), iPhone and iPad, on a native chapter and an ORIGINAL LAYOUT one:
+1. Scroll down: both bars go, on the Mac too. A small or slow scroll up brings nothing. A deliberate one brings only the top bar.
+2. Tap the text: both bars appear. Tap again: both go. At the end, the bottom bar appears and stays.
+3. Signed in, press Next at the end of a chapter, and again from the middle of one, and use Contents. The next chapter opens at its top (or at your saved place, with "Picked up where you left off"), and it is not marked Finished (F6).
+4. Still unconfirmed from your first walk:
+   - Display;
+   - resume after a reload;
+   - a highlight with a note, then Notes in this book;
+   - a quiz answer, then Review;
+   - ORIGINAL LAYOUT momentum scrolling, external links and Print · new tab;
+   - printing a chapter;
+   - an old `/documents/{id}` link;
+   - the device checks: diagram hairlines, Korean line breaks in Safari, Safari print.
+
+**Decisions** ("accept" takes them as drawn):
+1. **The chrome as built (F5).**
+   - The "drawer" is a tap on the text, with no visible handle.
+   - A scroll up never brings the bottom bar back, even from the end (OQ186).
+   - On an ORIGINAL LAYOUT page, the top bar folds away, so the document moves up (OQ188).
+   - A handle would need a new design round.
+2. **S28:** `/explain` moves to the knowledge plugin as `/knowledge:explain`. Give `works/phases/active/P30/handoff-explain.md` to the bootstrap agent.
+3. **OQ184:** on a tight page, the ORIGINAL LAYOUT bar scrolls. It is the one drawn inner scroller.
+4. **OQ21 and OQ27:** the migration merges and never replaces. Deleting a document purges every reader's notes, and the delete fails (503) if the purge fails.
+5. **Delete the nine P29 design canvases?** Their surfaces have shipped. The list is in round 1's walkthrough.
+
+**Production note:** before F6, members who pressed Next may have chapters marked Finished that they never read. Mark as unread clears them. Nothing was written to production. D57 (the reindex) is due, on your word.
+
+**Decided as drawn:**
+- OQ1–OQ183;
+- OQ185, OQ187, OQ189 and OQ190;
+- D52–D64 filed.
+
+**To clear the gate:** say "accept" (→ `accept-gate P30 --clear`), or list what failed.
+
+---
+
+# Round 2 (after P30.F5)
 
 ## Verdict (round 2)
 

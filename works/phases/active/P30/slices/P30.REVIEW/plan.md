@@ -104,6 +104,27 @@ Return `review_verdict` (`pass` | `changes_requested` | `blocked`) with:
 
 Never run `accept-gate`, `review-phase` or any state command.
 
+## Re-review (round 3, after P30.F6)
+
+Round 2 returned `changes_requested` on R3. **P30.F6** fixed it (`slices/P30.F6/result.md`), and D64 is filed
+for the same Next bug on other pages. This round is **narrower** than round 2:
+1. All gates together: the server suite, CLI, the web gates, both parity checks and `validate`.
+2. **F6 live**, in a fresh scratch stack (production build; never `:8766` or `:3030`; stop only your own
+   PIDs; as few sign-ins as possible). Signed in and out:
+   - Next, Previous, the end section's Next and Contents land at the top or the resume;
+   - the new chapter's DB row is never `finished`;
+   - a hash, `?note=`, the sign-in return and a reload keep their landing;
+   - F5's chrome is still as round 2 found it.
+3. **Write the qa gate line** "Next opens the next chapter at its top, not Finished" (and F5's chrome rules,
+   if round 1's section lacks them) as a new qa version of `## Regression Checklist` (`doc-new-version`,
+   never patch the old one).
+4. **The walkthrough:** finalise round 2's draft (in `result.md`) for the gate. Keep it short, at most about
+   5 decisions, and include F6. Name the open decisions: the chrome as built (OQ186, OQ188), S28 handoff,
+   OQ184, OQ21/OQ27, the nine P29 canvases. Add the production note on wrongly Finished chapters.
+
+Return `review_verdict` and, on `pass`, the walkthrough. Put round 3 above round 2 in `result.md`, verdict
+block first. No state commands, no commit.
+
 ## Re-review (round 2, after the operator's walkthrough)
 
 The first pass returned `pass` (see `result.md` round 1). At the walkthrough the operator reported the reader

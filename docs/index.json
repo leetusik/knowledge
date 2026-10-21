@@ -1218,7 +1218,7 @@
       ]
     },
     "qa": {
-      "latest": "v0018_p30_gate_append_the_reader_book_review_legacy_and_print_checks_update_three_p28_lines_the_learning_reader_superseded",
+      "latest": "v0019_p30.review_round_3_regression_checklist_gains_f6_s_chapter-navigation_line_next_opens_the_next_chapter_at_its_top_not_finished_and_f5_s_reader-chrome_line",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1367,6 +1367,15 @@
           "source": "P30.REVIEW",
           "summary": "P30 gate: append the reader, book, review, legacy and print checks; update three P28 lines the learning reader superseded",
           "previous": "v0017_p28_re-review_gate_append_the_framed-explainer_checks_no_inner_scroll_range_dpr_2_classic_scrollbars_many_width_changes_and_whole-document_print_from_export_pdf_and_cmd-p"
+        },
+        {
+          "id": "v0019_p30.review_round_3_regression_checklist_gains_f6_s_chapter-navigation_line_next_opens_the_next_chapter_at_its_top_not_finished_and_f5_s_reader-chrome_line",
+          "path": "docs/versions/qa/v0019_p30.review_round_3_regression_checklist_gains_f6_s_chapter-navigation_line_next_opens_the_next_chapter_at_its_top_not_finished_and_f5_s_reader-chrome_line.md",
+          "created_at": "2026-10-21T18:02:24+09:00",
+          "commit": "96506542f8064e1eeeb98a9e59f04701de2cf9bd",
+          "source": "P30.REVIEW",
+          "summary": "P30.REVIEW round 3: Regression Checklist gains F6's chapter-navigation line (Next opens the next chapter at its top, not Finished) and F5's reader-chrome line",
+          "previous": "v0018_p30_gate_append_the_reader_book_review_legacy_and_print_checks_update_three_p28_lines_the_learning_reader_superseded"
         }
       ]
     },
@@ -1545,5 +1554,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-10-21T15:45:27+09:00"
+  "last_rebuilt_at": "2026-10-21T18:02:34+09:00"
 }
