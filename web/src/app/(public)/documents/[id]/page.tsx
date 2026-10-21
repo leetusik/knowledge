@@ -11,6 +11,7 @@ import { getDocument } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import { loginHref } from "@/lib/next-path";
 import { parseReaderCookie, READER_COOKIE } from "@/lib/reader-cookie";
+import { chapterRedirectHref } from "@/lib/reader-href";
 import { loadLooseReader, type ReaderLoad } from "@/lib/reader/load";
 import type { KbDocument } from "@/lib/knowledge/types";
 
@@ -101,6 +102,11 @@ const loadOnce = cache(
     }),
 );
 
+function langOf(raw: string | string[] | undefined): string | null {
+  const l = Array.isArray(raw) ? raw[0] : raw;
+  return l && /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(l) ? l : null;
+}
+
 function versionOf(raw: string | string[] | undefined): number | null {
   const v = Array.isArray(raw) ? raw[0] : raw;
   return v && /^\d{1,6}$/.test(v) ? Number(v) : null;
@@ -118,8 +124,10 @@ export async function generateViewport({
     if (Number.isInteger(id) && id >= 1) {
       const ctx = await optionalIdentity();
       const doc = await getDocumentOnce(ctx?.token, id);
-      // An anonymous visit to a document with a pretty URL is redirected there.
+      // An anonymous visit to a document with a pretty URL is redirected there, and a
+      // bound chapter to its chapter URL (P30.F4): nothing is rendered here.
       if (!ctx && doc.canonical_path) return {};
+      if (chapterRedirectHref(doc)) return {};
       const loaded = await loadOnce(
         ctx?.token,
         id,
@@ -165,7 +173,11 @@ export default async function DocumentPage({
 
   // ── Member branch. ─────────────────────────────────────────────────────────
   if (ctx) {
-    await loadDocument(ctx.token, id, notFound);
+    const doc = await loadDocument(ctx.token, id, notFound);
+    // P30.F4 (X4 / OQ183): a document bound as a book chapter reads inside its book.
+    // Temporary (307), like the pretty-URL redirect below; the browser keeps `#section`.
+    const chapter = chapterRedirectHref(doc, { v, lang: langOf(query.lang) });
+    if (chapter) redirect(chapter);
     return render(await loadOnce(ctx.token, id, v, cookie));
   }
 
@@ -175,6 +187,9 @@ export default async function DocumentPage({
   const doc = await loadDocument(undefined, id, () =>
     redirect(loginHref(`/documents/${id}`)),
   );
+  // P30.F4 (X4 / OQ183): a bound chapter goes straight to its chapter URL.
+  const chapter = chapterRedirectHref(doc, { v, lang: langOf(query.lang) });
+  if (chapter) redirect(chapter);
   // P25.S3 — an anonymous visitor who followed an old id link is sent on to the
   // PRETTY URL when the document has one (`canonical_path`, built once in the backend
   // from durable parts; `null` until the owning tenant claims an org slug, and then

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { safeNextPath } from "@/lib/next-path";
 import {
   bookHref,
+  chapterRedirectHref,
   orgSegment,
   readerHref,
   signInToSaveHref,
@@ -112,5 +113,31 @@ describe("Sign in to save — the round trip at the URL level", () => {
     expect(safeNextPath(next)).toBe(
       `/@${TENANT_ID}/handbook/books/phases/p8#h-1`,
     );
+  });
+});
+
+// P30.F4 (OQ183) — a bound chapter opened by its loose address goes to its chapter URL.
+// Core because a wrong decision either strands a chapter outside its book or sends a
+// loose document somewhere it is not; the query must survive (`?v=` is a version).
+describe("chapterRedirectHref", () => {
+  const bound = {
+    project: "tidewater",
+    canonical_path: "/@s27org/tidewater/tw-9",
+    chapter: { book: "tide", chapter_key: "tw-9", lang: "en" },
+  };
+
+  it("sends a bound chapter to its chapter URL, keeping ?v= and ?lang=", () => {
+    expect(chapterRedirectHref(bound)).toBe(
+      "/@s27org/tidewater/books/tide/tw-9?lang=en",
+    );
+    expect(chapterRedirectHref(bound, { v: 2, lang: "ko" })).toBe(
+      "/@s27org/tidewater/books/tide/tw-9?lang=ko&v=2",
+    );
+  });
+
+  it("leaves an unbound document, and one with no org to build on, alone", () => {
+    expect(chapterRedirectHref({ ...bound, chapter: null })).toBeNull();
+    expect(chapterRedirectHref({ ...bound, chapter: undefined })).toBeNull();
+    expect(chapterRedirectHref({ ...bound, canonical_path: null })).toBeNull();
   });
 });

@@ -114,6 +114,47 @@ export function readerHref(
 }
 
 /**
+ * P30.F4 (X4 / OQ183): where a document bound as a book chapter goes when it is opened by
+ * its loose address (`/documents/{id}` or `/@{org}/{project}/{slug}`), or `null` when it
+ * stays where it is (an unbound document, or one with no org to build the chapter URL
+ * on: a slug-less tenant keeps its id address).
+ *
+ * The chapter URL is `readerHref`'s, with the incoming `?v=` and `?lang=` kept (the
+ * variant's own language when the link named none); the browser carries the `#fragment`.
+ * The caller redirects 307 (never permanent: a later unbinding must not stick in a cache).
+ */
+export function chapterRedirectHref(
+  doc: {
+    project: string;
+    canonical_path?: string | null;
+    chapter?: { book: string; chapter_key: string; lang: string } | null;
+  },
+  query: { v?: number | null; lang?: string | null } = {},
+): string | null {
+  const chapter = doc.chapter;
+  const path = doc.canonical_path;
+  if (!chapter || !path || !path.startsWith("/@")) return null;
+  const raw = path.split("/")[1]?.slice(1) ?? "";
+  let org = raw;
+  try {
+    org = decodeURIComponent(raw);
+  } catch {
+    // keep the raw segment
+  }
+  if (!org) return null;
+  return readerHref(
+    {
+      kind: "chapter",
+      org,
+      project: doc.project,
+      book: chapter.book,
+      chapter: chapter.chapter_key,
+    },
+    { lang: query.lang || chapter.lang, version: query.v ?? null },
+  );
+}
+
+/**
  * "Sign in to save" (`01-reader` §12; *Wiring*: "the existing auth flow,
  * returning to this chapter, language, version and section"): the sign-in URL
  * whose `?next=` is this reader place. The gate launders it with `safeNextPath`

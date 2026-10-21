@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 
 import { LegacyReaderPage } from "@/components/reader/legacy-reader-page";
@@ -11,6 +11,7 @@ import { resolveDocument } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import type { KbDocument } from "@/lib/knowledge/types";
 import { parseReaderCookie, READER_COOKIE } from "@/lib/reader-cookie";
+import { chapterRedirectHref } from "@/lib/reader-href";
 import { loadLooseReader, type ReaderLoad } from "@/lib/reader/load";
 
 // P25.S3 — the PRETTY public document URL, `/@{org}/{project}/{doc-slug}`. Same page
@@ -130,6 +131,11 @@ const loadOnce = cache(
     }),
 );
 
+function langOf(raw: string | string[] | undefined): string | null {
+  const l = Array.isArray(raw) ? raw[0] : raw;
+  return l && /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(l) ? l : null;
+}
+
 function versionOf(raw: string | string[] | undefined): number | null {
   const v = Array.isArray(raw) ? raw[0] : raw;
   return v && /^\d{1,6}$/.test(v) ? Number(v) : null;
@@ -147,6 +153,13 @@ export async function generateViewport({
     const org = safeDecode(p.org);
     if (org.startsWith("@") && org.length >= 2) {
       const ctx = await optionalIdentity();
+      const doc = await resolveDocumentOnce(
+        ctx?.token,
+        org.slice(1),
+        safeDecode(p.project),
+        safeDecode(p.slug),
+      );
+      if (chapterRedirectHref(doc)) return {};
       const loaded = await loadOnce(
         ctx?.token,
         org.slice(1),
@@ -191,7 +204,11 @@ export default async function PrettyDocumentPage({
   const ctx = await optionalIdentity();
   const cookie = (await cookies()).get(READER_COOKIE)?.value;
   // A miss is the branded not-found (outside any try, so the throw survives).
-  await loadDocument(ctx?.token, orgSlug, project, slug);
+  const doc = await loadDocument(ctx?.token, orgSlug, project, slug);
+  // P30.F4 (X4 / OQ183): a document bound as a book chapter reads inside its book.
+  // Temporary (307), outside any try; the browser keeps `#section`.
+  const chapter = chapterRedirectHref(doc, { v, lang: langOf(query.lang) });
+  if (chapter) redirect(chapter);
   const loaded = await loadOnce(ctx?.token, orgSlug, project, slug, v, cookie);
   return loaded.kind === "reader" ? (
     <ReaderPage reader={loaded.reader} />

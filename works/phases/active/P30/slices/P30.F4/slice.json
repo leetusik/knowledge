@@ -3,12 +3,12 @@
   "phase_id": "P30",
   "name": "Sweep fixes: hash scroll and sign-in return land on the block; bound chapters redirect to the book URL",
   "kind": "fix",
-  "status": "todo",
+  "status": "done",
   "order": 274,
   "depends_on": [],
   "created_at": "2026-10-21T14:35:44+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T14:55:59+09:00",
+  "completed_at": "2026-10-21T15:16:00+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Hash landing (links and sign-in return land on the block, hash beats resume), bound chapters redirect 307 from loose URLs (OQ183, chapter binding on detail reads), legacy print-date hydration 418 fixed; server 229, web 383",
   "validation": {
     "required": [],
     "last_run": null,

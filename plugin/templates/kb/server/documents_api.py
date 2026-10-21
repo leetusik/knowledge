@@ -57,7 +57,9 @@ The ``/app`` projector drops the internal ``tags_text`` FTS denormalization AND 
 ``tenant_id`` scoping column (the ``/api`` projector leaks ``tenant_id``; this one must
 not), plus ``markdown`` on the list. Search result items already exclude
 ``markdown``/``tenant_id`` (``server/search.py::_finalize``), so they pass through
-unchanged. The two DETAIL reads additionally carry ``canonical_path`` (P25.S2) —
+unchanged. The two DETAIL reads additionally carry ``chapter`` (P30.F4: ``{book,
+chapter_key, lang}`` of the chapter variant the document is bound as, else ``null``)
+and ``canonical_path`` (P25.S2) —
 injected at their call sites, never inside the shared projector, so the list route
 never pays the tenant lookup it costs. On the **id** read it is emitted only when
 the dateless pretty path round-trips back to that same row (P25.F1), so a superseded
@@ -284,6 +286,18 @@ def _owns_its_canonical_path(conn, doc: dict) -> bool:
     return latest is not None and latest["id"] == doc["id"]
 
 
+def _chapter_of(conn, doc: dict) -> dict[str, str] | None:
+    """The ``{book, chapter_key, lang}`` this document is bound to as a chapter variant
+    (P30.F4, additive on the two DETAIL reads), or ``None`` for a loose document.
+
+    One indexed read on the connection in hand. It names only a book of the document's
+    own project, so it reveals nothing the caller could not already read; the web plane
+    uses it to send a bound chapter's loose address to its chapter URL (OQ183).
+    """
+
+    return db.chapter_bindings_for_docs(conn, [doc["id"]]).get(int(doc["id"]))
+
+
 async def _owner_org_slug(doc: dict, ctx: AuthContext | None) -> str | None:
     """The owning tenant's org slug, or ``None`` — free on the member path.
 
@@ -394,6 +408,7 @@ async def get_document(
     return {
         **_app_doc(doc, include_markdown=True),
         "canonical_path": await _document_canonical_path(conn, doc, ctx),
+        "chapter": _chapter_of(conn, doc),
     }
 
 
@@ -438,6 +453,7 @@ async def resolve_document_by_slug(
     return {
         **_app_doc(doc, include_markdown=True),
         "canonical_path": _canonical_path(tenant_slug, doc),
+        "chapter": _chapter_of(conn, doc),
     }
 
 
