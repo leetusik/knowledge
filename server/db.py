@@ -1102,6 +1102,45 @@ def get_book(
     }
 
 
+def list_loose_documents(
+    conn: sqlite3.Connection,
+    *,
+    tenant_id: str,
+    projects: Optional[Sequence[str]] = None,
+) -> list[dict[str, Any]]:
+    """The tenant's loose documents (not a chapter variant), newest first, lean rows.
+
+    P30.S22 (the library). Carries no body, source or asset map: the shelves need the
+    title, date, format, language, subject and the document's pretty-path parts.
+    ``projects`` is a project-name allowlist (an empty one matches nothing, fail-closed).
+    A superseded duplicate of ``(project, slug)`` (a re-publish that computed another
+    date) is left out, as the pretty path belongs to the newest row only.
+    """
+    sql = (
+        "SELECT d.id, d.project, d.slug, d.date, d.title, d.rel_path, d.format, d.version, "
+        "d.lang, d.subject, d.updated_at "
+        "FROM documents d WHERE d.tenant_id = ? "
+        "AND NOT EXISTS (SELECT 1 FROM chapter_variants cv "
+        "WHERE cv.tenant_id = d.tenant_id AND cv.rel_path = d.rel_path)"
+    )
+    params: list[Any] = [tenant_id]
+    if projects is not None:
+        if not projects:
+            return []
+        sql += " AND d.project IN (" + ",".join("?" for _ in projects) + ")"
+        params.extend(projects)
+    sql += " ORDER BY d.date DESC, d.id DESC"
+    seen: set[tuple[str, str]] = set()
+    out: list[dict[str, Any]] = []
+    for row in conn.execute(sql, params).fetchall():
+        key = (row["project"], row["slug"])
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(dict(row))
+    return out
+
+
 def chapter_bindings_for_docs(
     conn: sqlite3.Connection, doc_ids: Sequence[int]
 ) -> dict[int, dict[str, Any]]:

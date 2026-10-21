@@ -245,3 +245,10 @@ Each `## Doc impact` line there is one short line; its full text is here, under 
 - frontend.md: `05-annotations` rounds 01 and 02 (§2 back link) are the design record of bookmarks (section and position), the place bar, the margin and rows, the "Bookmarked" tag, the Notes view of the Contents sheet with its Unanchored and other-language groups, a row in a list, and the per-book list at `/@{org}/{project}/notes/{book}` with its back link (`?from=book` or `?ch=&lang=&v=&at=`); the layer's DOM hosts and `?note=` landing.
 - api.md: annotation reads (chapter, document, per-book, POST/PATCH) carry `card` ("active" | "suspended" | "") for the caller; `review` equals `card == "active"`.
 
+
+## P30.S22
+
+- **frontend.md:** `06-library` rounds 01 (`jobs/06-library/rounds/01-library`) and 02 (`02-control-border`, C11: `--lib-control-edge` on the grouping control and the secondary buttons, `--lib-ghost-edge` on the shell's ghost buttons where the shell frames a library page) are the design record of the library (`/library`), the public org library (`/@{org}`), the shell's Reading group (Library, Review with the due count), the 44 px shell targets and "Your reading data / Clear all". The post-sign-in landing is `/library`.
+- **api.md:** new `GET /app/orgs/{org}/library?scope=all|public` (optional identity; a member reads every project, anyone else the public ones; `scope=public` gives a member the public view; books with chapters and variants, loose documents, the project list; one 404 for every miss); `GET /app/reader/library` books carry `updated`.
+- **backend.md:** `server/books_api.py` `org_library`, `server/db.py` `list_loose_documents`.
+- **operations.md:** none (the runtime manifest is unchanged).

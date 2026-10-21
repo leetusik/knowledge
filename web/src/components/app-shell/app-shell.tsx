@@ -5,6 +5,7 @@ import { FullWidthExit } from "@/app/(public)/documents/[id]/full-width-exit";
 import { ToastRegion } from "@/components/states";
 import { APP_SHELL, BRAND, SKIP_TO_CONTENT } from "@/content";
 import type { KbIdentity } from "@/lib/knowledge/types";
+import { reviewDue } from "@/lib/library/due";
 import { isRailCollapsed, RAIL_COOKIE } from "@/lib/rail-cookie";
 
 import { AppFrame } from "./app-frame";
@@ -48,6 +49,8 @@ export async function AppShell({
 }) {
   const tenantName = identity.tenant?.name ?? APP_SHELL.noTenant;
   const store = await cookies();
+  // P30.S22 — the Review pill; never fails the shell (a fault is 0).
+  const due = await reviewDue();
   const collapsed = isRailCollapsed(store.get(RAIL_COOKIE)?.value);
   // Round 03 §4.2 — the phone account disclosure's avatar: the first character of
   // the email's local part, uppercased. An empty local part can't happen for a
@@ -87,9 +90,11 @@ export async function AppShell({
         </a>
         <AppFrame
           defaultCollapsed={collapsed}
+          due={due}
           topbar={
             <>
-              <Link className="kb-topbar__brand" href="/dashboard">
+              {/* P30.S22 (`06-library` open question 3): the wordmark goes to the library. */}
+              <Link className="kb-topbar__brand" href="/library">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={BRAND.logo} alt="" width={22} height={22} />
                 <span className="kb-topbar__word">{BRAND.wordmark}</span>
@@ -108,7 +113,7 @@ export async function AppShell({
                   Rendered at EVERY width — `display: none` above 40rem decides. */}
               <details className="kb-account">
                 <summary aria-label={APP_SHELL.accountMenuLabel}>
-                  {initial}
+                  <span className="kb-account__avatar">{initial}</span>
                 </summary>
                 <div className="kb-account__menu">
                   <div className="kb-account__email">{identity.user.email}</div>

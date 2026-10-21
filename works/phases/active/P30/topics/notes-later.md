@@ -68,8 +68,6 @@ For a tenant-mode stack (Postgres) use a `vk_` key from the stack as `--token`.
   sign-in (hash included, the browser keeps it). Any guard that refuses a page should redirect to
   `loginHref(path)`, or rely on `requireSession`/`requireIdentity`, which read the proxy's
   `x-kb-request-path`. Public reads never redirect; only a save action prompts.
-- **S22:** the default landing is `DEFAULT_NEXT_PATH` in `web/src/lib/next-path.ts` (`/dashboard`); moving
-  it to `/library` there moves every fallback at once (`loginHref` then also omits `next=/library`).
 - **Live checks after S11:** a second `next dev` in `web/` is refused while the standing `:3030` runs
   (Next 16's one-dev-server lock). Clone `web/` (minus `.next`) with `cp -Rc` into the scratchpad and
   run it there on a spare port; `next build` and `next start -p <spare>` from `web/` are fine
@@ -206,6 +204,20 @@ The detail is in `slices/P30.S21/result.md`; the decisions are OQ111-OQ124 (`top
 - **Live-check setup that worked:** scratch API `:8841` (database `kb_s21live`, dropped), `next start` `:3841` on the production build only (no dev clone this slice), `scratchpad/s21/cdp21.mjs` (CDP driver) with `run.sh <scenario>` (restarts `next start` first), a second chapter version published from `scratchpad/s21/write-lock.en.v2.md` for Text changed / Unanchored, Aside `u1` for one signed-in pass.
 
 
+
+## (from P30.S22, for S23, S24, S25 and REVIEW) The library as shipped
+
+The detail is in `slices/P30.S22/result.md`; the decisions are OQ125-OQ135 (`topics/operator-questions-decided.md`).
+
+- **Where things are:**
+  - pages: `app/(app)/library/` (page, loading, error) and `app/(public)/[org]/(library)/` (layout = the shell, page, loading, error, not-found; the group holds only `/@{org}`, the graph and reader routes keep theirs);
+  - `components/library/` (`library-view.tsx` composes; `shelves.tsx` and `clear-all.tsx` are the client islands), `lib/library/` (`model.ts` pure and tested in `web/tests/library-model.test.ts`; `continue.ts` Continue reading composed in the BFF; `load.ts`; `due.ts` the Review count; `actions.ts` Clear all), copy in `content/library.ts`, CSS in `app/library.css` (the shell additions, the roles, `lib-*`);
+  - server: `GET /app/orgs/{org}/library?scope=` (`books_api.py`, `db.list_loose_documents`; optional identity; `scope=public` narrows a member to the public view; one 404 for every miss) and `updated` (finished chapters on an older version) on each book of `GET /app/reader/library`.
+- **For S23 (the book page):** the library's cards link to `bookHref(...)` = `/@{org}/{project}/books/{book}` and Continue / rows to the reader; that route does not exist yet, so prefetches log 404s in the console until S23 ships. Link "Notes in this book" with `bookNotesHref(..., {from: "book"})`.
+- **For S24 (review):** the shell's Review item links to `/review` (a not-found until S24) and wears `reviewDue()` (`lib/library/due.ts`, `GET review/queue?limit=1` → `counts.due`, a fault is 0, read once per request in `AppShell`). `/review` should be `aria-current` automatically.
+- **The shell is shared:** the Reading group, the 44 px targets, the count pill, `kb-secondary` on the topbar user line and the rail eyebrow, and `kb-accent-strong` on the current rail item apply on every `(app)` page; the round-02 ghost edge (`--lib-ghost-edge`) is scoped to pages that carry `[data-lib]` (`.kb-app:has([data-lib])`), the round's Q1 (a); a console-wide edge is D45.
+- **Gotchas:** the web login throttle is per `next start` process (5 per 15 min): restart between scenarios; a scroll made with `scrollIntoView` before reading a rect needs `behavior: 'instant'` (`scroll-behavior`); a JS `.click()` does not move focus, so check focus with real mouse events.
+- **Live-check setup that worked:** scratch API `:8851` (database `kb_s22live`, dropped), a pass-through proxy `:8852` that fails or slows the library listing and the clear on a flag file (`scratchpad/s22/proxy.mjs`), `next start` `:3851` on the production build, `scratchpad/s22/cdp22.mjs` (headless Chrome over CDP, real mouse/key, `Emulation.setDeviceMetricsOverride` for true narrow viewports and `setEmulatedMedia` for the dark scheme), `state.py` to seed positions, Aside `u1` for one signed-in pass at 1440.
 
 ## phase.md pointer lines as they stood before P30.S22 (word for word; shortened there)
 

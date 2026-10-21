@@ -72,10 +72,13 @@ function writeRail(collapsed: boolean): void {
 export function AppFrame({
   defaultCollapsed,
   topbar,
+  due,
   children,
 }: {
   defaultCollapsed: boolean;
   topbar: ReactNode;
+  /** The Review pill's count (`counts.due`, P30.S22). */
+  due: number;
   children: ReactNode;
 }) {
   // No stored preference means the visitor has never toggled — then the server's value
@@ -125,7 +128,7 @@ export function AppFrame({
 
       {/* Always immediately after the topbar in the DOM, at every width (§4.1) —
           the phone placement is a CSS `order`, never a re-mount. */}
-      <NavbarNav />
+      <NavbarNav due={due} />
 
       {/* NO inline `minHeight` any more: `.kb-app` is now a 100dvh flex column and
           `.kb-app-layout` is its `flex: 1 1 auto` child (§3), so the old inline
@@ -137,7 +140,7 @@ export function AppFrame({
       >
         {/* The rail stays MOUNTED when folded — `app-frame.css` hides it — so the no-JS
             floor is the rail in its default expanded state, links and all. */}
-        <RailNav />
+        <RailNav due={due} />
         <main id="main-content" className="kb-app-main">
           {children}
         </main>

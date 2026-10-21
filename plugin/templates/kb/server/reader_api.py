@@ -707,7 +707,7 @@ async def _book_progress(
     )
     by_doc = {p.doc: p for p in positions}
     chapters = []
-    finished = started = 0
+    finished = started = updated = 0
     latest = None
     for ch in book["chapters"]:
         rows = []
@@ -736,6 +736,8 @@ async def _book_progress(
         resume = max(rows, key=lambda rv: rv[0].updated_at) if rows else None
         if state["state"] == "finished":
             finished += 1
+            if state["updated"]:
+                updated += 1
         elif state["state"] == "started":
             started += 1
         position = None
@@ -769,6 +771,9 @@ async def _book_progress(
         "progress": {"finished": finished, "started": started, "total": len(book["chapters"])},
         "continue": cont,
         "chapters": chapters,
+        # Finished chapters with a newer version than the one finished (P30.S22: the
+        # library card's "Updated" tag).
+        "updated": updated,
         "last_read_at": cont["updated_at"] if cont else None,
     }
 
@@ -864,6 +869,7 @@ async def read_library(
                 "book": slug,
                 "title": found["title"],
                 "progress": progress["progress"],
+                "updated": progress["updated"],
                 "continue": progress["continue"],
                 "last_read_at": progress["last_read_at"],
             }
