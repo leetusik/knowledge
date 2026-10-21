@@ -159,3 +159,17 @@ The detail is in `slices/P30.S18/result.md`; the decisions are OQ87–OQ92 (`top
 - **Source keys:** a chart's source key is `type: bar|line|interval` (the tree key is `chart`); a timeline lane needs `bars: []` when it has only marks (OQ90, a contract observation for REVIEW).
 - **Dev server:** a long-running `next dev` clone can print a stray React "unique key" warning after hot reloads (it did here, then showed none on a fresh start and on the production build); check console on a fresh start.
 - **Live-check setup that worked:** scratch API `:8811` (database `kb_s18live`), `next start` `:3811`, dev clone `:3813`, anonymous harnesses `:3812`/`:3814` and a cookie-keeping one `:3815` (text sizes through the `kb_reader` cookie); scripts and the chapter generator (`mk.mjs`, from the canvas's `dgdata.js` samples) in the session scratchpad `s18/`.
+
+## (from P30.S19, for S20, S22, S24 and REVIEW) The quiz as shipped
+
+The detail is in `slices/P30.S19/result.md`; the decisions are OQ93-OQ98 (`topics/operator-questions-decided.md`).
+
+- **Where things are:**
+  - `web/src/lib/reader/quiz.ts`: the pure rules (grading, `reduce`, the foot's words, `landSend`, provenance and drift notes, `shapeOf`), tested in `web/tests/reader-quiz.test.ts`;
+  - `web/src/components/reader/quiz.tsx`: the island (`QuizBlock`, `ClozeBlank`), the chapter's only client island; the renderer (`render.tsx` → `quiz()`, `clozeRun()`) hands it the items as data (`spec`, with the key) plus rendered inline Markdown as props;
+  - `web/src/lib/reader/quiz-saved.ts` (server-only): what each saved answer shows on return (graded with its provenance, or fresh with a note); `load.ts` fills `LoadedReader.quiz`; `ReaderArticle` builds `QuizViewContext` (member, `write`, version, place, the sign-in address) and `ChapterView` takes it as `quiz`;
+  - the write: server action `saveQuizAttempt` in `lib/reader/actions.ts` over `postQuizAttempt` in `lib/knowledge/reader.ts` (the client's UUID is the idempotency key; the reply's `attempt` words the save line);
+  - CSS: the last block of `reader.css` ("P30.S19"), every rule `.kb-ch`-prefixed; the option's border is `--rd-control-edge`.
+- **For S20/S24:** a block that wants the same pattern (state in one island, content as server-rendered props) can copy `QuizBlock`; the review surface re-asks `choice`/`cloze` with the same `gradeItem`/`norm`. No review entry from the quiz (D42).
+- **A page that renders `NativeChapter`/`ChapterView` without `quiz`** (the older `/documents` pages) still answers and grades but saves nothing and offers no sign-in.
+- **Live-check setup that worked:** the S18 setup (scratch API `:8821`, database `kb_s19live`, `next start` `:3821` + a dev clone `:3823` at `localhost`, anonymous and signed-in harnesses) plus `scratchpad/s19/cdp19.mjs` (headless Chrome, real mouse and keyboard events via CDP, `LOGIN=1` signs in, JSON scenarios, prints POSTs, console and CSP); publishing a v2 with a changed item shape tests drift; killing the scratch API tests "Not saved".

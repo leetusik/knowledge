@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 
-import { putReaderPosition } from "@/lib/knowledge/reader";
+import { postQuizAttempt, putReaderPosition } from "@/lib/knowledge/reader";
 import { getSession } from "@/lib/session";
 
 /**
@@ -63,6 +63,65 @@ export async function saveReaderPosition(
   } catch {
     // 401 (session gone), 404 (private or deleted), 422, or an outage: nothing to
     // retry here. The next sample writes again, and the page never fails over a save.
+    return { ok: false };
+  }
+}
+
+/**
+ * P30.S19 — one graded quiz attempt (`04-quiz` round 01, *Saving*), as a server action
+ * (the same pattern as the position write: the session is unsealed here, the body is
+ * strict, nothing throws). Every graded attempt is sent; the SERVER numbers it, and
+ * only the first of an item seeds its review card (P29 *Quiz results*), so the page
+ * keeps no count: it words its save line from the `attempt` in the reply. The client
+ * generates the `id`, so a repeated send is a no-op on the server.
+ */
+const idPart = z
+  .string()
+  .min(1)
+  .max(200)
+  .regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
+
+const attemptSchema = z
+  .object({
+    org: z.string().min(1).max(200),
+    project: segment,
+    doc: segment,
+    id: z.string().uuid(),
+    version: z.number().int().min(1).optional(),
+    block_id: idPart,
+    item_id: idPart,
+    item_type: z.enum(["choice", "recall", "cloze"]),
+    response: z.union([
+      z.object({ selected: z.array(idPart).max(6) }).strict(),
+      z.object({ blanks: z.array(z.string().max(1000)).max(5) }).strict(),
+      z.object({ self_grade: z.enum(["got", "missed"]) }).strict(),
+    ]),
+    correct: z.boolean(),
+    answered_at: z.string().max(40).optional(),
+  })
+  .strict();
+
+export type QuizAttemptWrite = z.input<typeof attemptSchema>;
+
+export interface QuizAttemptResult {
+  ok: boolean;
+  /** The server's number for this attempt (1 = the first, the one review keeps). */
+  attempt?: number;
+}
+
+export async function saveQuizAttempt(
+  input: QuizAttemptWrite,
+): Promise<QuizAttemptResult> {
+  const parsed = attemptSchema.safeParse(input);
+  if (!parsed.success) return { ok: false };
+  const token = await getSession();
+  if (!token) return { ok: false };
+  try {
+    const reply = await postQuizAttempt(token, parsed.data);
+    return { ok: true, attempt: reply.attempt };
+  } catch {
+    // 401 (session gone), 404 (private or deleted), 422 or an outage: the grade
+    // stands on the page and the line says it was not saved.
     return { ok: false };
   }
 }

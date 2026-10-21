@@ -722,8 +722,8 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 }
 
 /* ---------- Until S17-S19: the blocks they own keep a column rhythm and legible lists ----------
-   Diagrams (S17/S18) and the quiz (S19) draw their own look; until then they sit in the column. */
-.kb-ch > :where(figure, section):not(.kb-ch-code, .kb-ch-diagram, .dg, .fg-fig, .fg-row) { margin-top: calc(var(--kb-space-lg) * var(--rd-k)); }
+   Diagrams (S17/S18) and the quiz (S19) draw their own look (all three are done). */
+.kb-ch > :where(figure, section):not(.kb-ch-code, .kb-ch-diagram, .dg, .fg-fig, .fg-row, .qz) { margin-top: calc(var(--kb-space-lg) * var(--rd-k)); }
 .kb-ch-unshowable { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; color: var(--kb-secondary); }
 .kb-ch img:not(.fg-media__img) { max-width: 100%; height: auto; }
 
@@ -1274,3 +1274,189 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 .dgc-xt.is-first { transform: none; }
 .dgc-xt.is-last { transform: translateX(-100%); }
 @container dgc (max-width: 26em) { .dgc-xt.is-minor { visibility: hidden; } }
+
+/* ======================================================================================
+   P30.S19 — the quiz, transcribed from the signed `04-quiz` canvas (round 01's `quiz.css`;
+   its build prompt §1-§9). Class names stay as drawn (`qz-*`). The prose kit's list, link and
+   paragraph rules (`.kb-ch ol`, `.kb-ch li`, `.kb-ch a`) are more specific than the canvas's
+   single-class rules, so each rule here carries `.kb-ch`. Only the option's border differs
+   from the canvas: it is the reader's control edge (round 03 §1). Every value is a `kb-*`
+   token or a signed `--rd-*` value; the block adds `--qz-nfs` and `--qz-hang`.
+   ====================================================================================== */
+/* ---------- The block ---------- */
+.kb-ch .qz {
+  --qz-nfs: calc(var(--rd-fs) * 1.18);
+  --qz-hang: calc(var(--qz-nfs) * 1.75);
+  --qz-gap: var(--kb-space-sm);
+  margin: calc(var(--kb-space-xl) * var(--rd-k)) 0 0;
+  border-top: 1px solid var(--kb-border-strong);
+  scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + var(--kb-space-md));
+}
+.kb-ch .qz__head {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--kb-space-xs) var(--kb-space-md);
+  padding-top: calc(var(--kb-space-sm) * var(--rd-k));
+}
+.kb-ch .qz__label {
+  margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; line-height: 1.4;
+  letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary);
+}
+.kb-ch .qz__count { margin: 0; font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+/* Always in the head, hidden until the first answer, so the head keeps one height and nothing below it moves. */
+.kb-ch .qz__count.is-off { visibility: hidden; }
+.kb-ch .qz__title {
+  margin: calc(var(--kb-space-xs) * var(--rd-k)) 0 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold);
+  font-size: 1.18em; line-height: 1.25; letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word;
+}
+.kb-ch .qz__title:lang(ko),
+.kb-ch .qz__title :lang(ko) { word-break: keep-all; }
+.kb-ch .qz__items { list-style: none; margin: calc(var(--kb-space-sm) * var(--rd-k)) 0 0; padding: 0; border-bottom: 1px solid var(--kb-border-strong); }
+.kb-ch .qz__li { margin: 0; padding: 0; scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + var(--kb-space-md)); }
+.kb-ch .qz__li + .qz__li { border-top: 1px solid var(--kb-border); }
+/* Read by assistive technology only (clip-path, so the text is never cut by an overflow box). */
+.kb-ch .qz-vh { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; border: 0; white-space: nowrap; clip-path: inset(50%); pointer-events: none; }
+/* ---------- One question: the grading margin and the body ---------- */
+.kb-ch .qz-item {
+  --qz-nfs: calc(var(--rd-fs) * 1.18);
+  --qz-hang: calc(var(--qz-nfs) * 1.75);
+  display: grid; grid-template-columns: var(--qz-hang) minmax(0, 1fr); column-gap: var(--kb-space-sm); align-items: baseline;
+  padding: calc(var(--kb-space-lg) * var(--rd-k)) 0;
+}
+/* The bold move: the number hangs in its own column, in the display face, and is marked as a teacher marks a page,
+   circled when right and struck through when wrong. The words say the same thing; the mark is for the eye. */
+.kb-ch .qz-n {
+  position: relative; display: grid; place-items: center; width: 1.75em; height: 1.75em; border-radius: 50%;
+  font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--qz-nfs); line-height: 1;
+  color: var(--kb-secondary); font-variant-numeric: lining-nums tabular-nums;
+}
+.kb-ch .qz-n--ok { color: var(--kb-status-active-ink); box-shadow: inset 0 0 0 2px var(--kb-status-active); }
+.kb-ch .qz-n--bad { color: var(--kb-status-revoked-ink); }
+.kb-ch .qz-n--bad::after {
+  content: ""; position: absolute; left: calc(50% - 1px); top: -0.1em; width: 2px; height: calc(100% + 0.2em);
+  border-radius: 1px; background: var(--kb-status-revoked); transform: rotate(38deg);
+}
+.kb-ch .qz-body { min-width: 0; }
+.kb-ch .qz-q { margin: 0; text-wrap: pretty; overflow-wrap: break-word; }
+.kb-ch .qz-hint { margin: calc(var(--kb-space-xs) * var(--rd-k)) 0 0; font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); }
+.kb-ch .qz-note {
+  margin: calc(var(--kb-space-sm) * var(--rd-k)) 0 0; padding: var(--kb-space-xs) var(--kb-space-sm);
+  font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.45; color: var(--kb-ink);
+  background: var(--kb-surface-sunken); border-radius: var(--kb-radius-sm);
+}
+/* ---------- Choice: the options ---------- */
+/* Options sit md apart, so a tag on an option's top border (half of it above the border) clears the option above. */
+.kb-ch .qz-opts { list-style: none; margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--kb-space-md); }
+/* The signed Display panel's choice look (.rd-opt). Its 1px border is the 3:1 control edge (`01-reader` round 03 §1; quiz
+   critique C09), not kb-border-strong (1.6:1); hover, pressed and graded keep their own rings. */
+.kb-ch .qz-opt {
+  position: relative; margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--kb-space-sm);
+  align-items: start; align-content: center; min-height: var(--kb-tap); padding: 0.5rem 0.85rem 0.5rem 0.55rem;
+  border: 1px solid var(--rd-control-edge); border-radius: var(--kb-radius-sm); background: var(--kb-surface);
+  box-shadow: inset 0 0 0 1px transparent; transition: border-color var(--rd-ease), box-shadow var(--rd-ease), background var(--rd-ease);
+}
+.kb-ch .qz-opt:not(.is-done):hover { border-color: var(--kb-accent); }
+.kb-ch .qz-opt.is-sel { border-color: var(--kb-accent); box-shadow: inset 0 0 0 1px var(--kb-accent); background: var(--kb-accent-soft); }
+.kb-ch .qz-opt.is-ok-mine { border-color: var(--kb-status-active); box-shadow: inset 0 0 0 1px var(--kb-status-active); background: var(--kb-status-active-soft); }
+.kb-ch .qz-opt.is-bad-mine { border-color: var(--kb-status-revoked); box-shadow: inset 0 0 0 1px var(--kb-status-revoked); background: var(--kb-status-revoked-soft); }
+.kb-ch .qz-opt.is-ok-other { border-color: var(--kb-status-active); box-shadow: inset 0 0 0 1px var(--kb-status-active); }
+/* The whole row is the target; a link inside the option's text sits above it and stays a link. */
+.kb-ch .qz-opt__hit {
+  position: absolute; inset: -1px; z-index: 1; margin: 0; padding: 0; border: 0; border-radius: inherit;
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.kb-ch .qz-opt.is-done .qz-opt__hit { cursor: default; }
+/* `margin-top: 0` on the text and the tag: the prose kit's `li > * + *` step would push them down inside the option. */
+.kb-ch .qz-opt__text { margin-top: 0; min-width: 0; font-size: var(--rd-fs); line-height: 1.5; overflow-wrap: break-word; }
+.kb-ch .qz-opt__text a { position: relative; z-index: 2; }
+.kb-ch .qz-key {
+  display: grid; place-items: center; width: 1.75rem; height: 1.75rem; margin-top: calc((var(--rd-fs) * 1.5 - 1.75rem) / 2);
+  border: 1.5px solid var(--kb-secondary); border-radius: 50%; background: var(--kb-surface);
+  font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 700; line-height: 1; color: var(--kb-secondary);
+}
+.kb-ch .qz-key--sq { border-radius: var(--kb-radius-sm); }
+.kb-ch .qz-key.is-sel { background: var(--kb-accent); border-color: var(--kb-accent); color: var(--rd-on-accent); }
+.kb-ch .qz-key.is-ok-mine { background: var(--kb-status-active); border-color: var(--kb-status-active); color: var(--rd-on-accent); }
+.kb-ch .qz-key.is-bad-mine { background: var(--kb-status-revoked); border-color: var(--kb-status-revoked); color: var(--rd-on-accent); }
+.kb-ch .qz-key.is-ok-other { border-color: var(--kb-status-active); color: var(--kb-status-active-ink); }
+/* The word on a graded option sits on its top border, like a legend: it takes no space, so nothing moves. */
+.kb-ch .qz-tag {
+  margin-top: 0; position: absolute; z-index: 2; top: 0; right: 0.7rem; transform: translateY(-50%); padding: 0 0.3rem;
+  background: var(--kb-surface); font-family: var(--font-body); font-size: 0.8125rem; font-weight: var(--kb-weight-semibold);
+  line-height: 1.15; white-space: nowrap; pointer-events: none;
+}
+.kb-ch .qz-tag--ok { color: var(--kb-status-active-ink); }
+.kb-ch .qz-tag--bad { color: var(--kb-status-revoked-ink); }
+/* ---------- Recall: the answer card ---------- */
+.kb-ch .qz-card {
+  margin-top: calc(var(--kb-space-md) * var(--rd-k)); padding: var(--kb-space-sm) var(--kb-space-md) calc(var(--kb-space-md) * var(--rd-k));
+  background: var(--kb-surface-sunken); border-radius: var(--kb-radius-sm);
+}
+.kb-ch .qz-card--hidden { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--kb-space-xs) var(--kb-space-md); padding: var(--kb-space-sm) var(--kb-space-sm) var(--kb-space-sm) var(--kb-space-md); }
+.kb-ch .qz-card__label {
+  margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; line-height: 1.4;
+  letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary);
+}
+.kb-ch .qz-card__answer { margin: calc(var(--kb-space-xs) * var(--rd-k)) 0 0; text-wrap: pretty; overflow-wrap: break-word; }
+.kb-ch .qz-card__why { margin: calc(var(--kb-space-sm) * var(--rd-k)) 0 0; color: var(--kb-secondary); text-wrap: pretty; overflow-wrap: break-word; }
+.kb-ch .qz-card .rd-btn { flex: none; }
+/* ---------- Cloze: blanks inside the sentence ---------- */
+/* Lines are tall enough for a 44px field on every line, so a blank never pushes its line apart from the next. */
+.kb-ch .qz-cloze { line-height: max(3.25rem, 2.3em); }
+.kb-ch .qz-bw { white-space: nowrap; }
+.kb-ch .qz-bn { margin-inline: 0.1em 0.15em; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; color: var(--kb-secondary); }
+/* Every blank is the same width whatever it accepts, so its length gives nothing away; longer text scrolls inside it. */
+.kb-ch .qz-blank {
+  box-sizing: border-box; width: min(7.5em, 100%); height: var(--kb-tap); margin: 0 0.1em; padding: 0 0.3em; vertical-align: baseline;
+  font-family: var(--font-reading); font-size: max(1rem, 1em); line-height: normal; color: var(--kb-ink);
+  background: transparent; border: 0; border-bottom: 2px solid var(--kb-secondary); border-radius: 0; appearance: none; -webkit-appearance: none;
+  scroll-margin-block: calc(var(--rd-line) + var(--rd-top-h) + var(--kb-space-md)) calc(var(--rd-bot-h) + var(--kb-space-md));
+  transition: border-color var(--rd-ease);
+}
+.kb-ch .qz-blank:not([readonly]):hover,
+.kb-ch .qz-blank:not([readonly]):focus { border-bottom-color: var(--kb-accent); }
+/* Graded, a long answer is cut on purpose with an ellipsis (the width stays, so nothing moves); a wrong blank's whole
+   answer is in its "You wrote" line below. */
+.kb-ch .qz-blank[readonly] { cursor: default; text-overflow: ellipsis; }
+.kb-ch .qz-blank.is-ok { border-bottom-color: var(--kb-status-active); color: var(--kb-status-active-ink); }
+.kb-ch .qz-blank.is-bad { border-bottom-color: var(--kb-status-revoked); color: var(--kb-status-revoked-ink); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.kb-ch .qz-card:focus { outline: none; }
+/* ---------- The foot: what happened, beside the action ---------- */
+.kb-ch .qz-foot {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: var(--kb-space-md);
+  margin-top: calc(var(--kb-space-md) * var(--rd-k)); font-family: var(--font-body);
+}
+/* Every sentence the status can show is in one cell, the others hidden, so it is always as tall as the longest:
+   grading changes the words and moves nothing (the chapter end's own rule). */
+.kb-ch .qz-stack { display: grid; min-width: 0; padding-top: calc((var(--kb-tap) - 0.9375rem * 1.3) / 2); }
+.kb-ch .qz-st { grid-area: 1 / 1; margin: 0; display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.kb-ch .qz-st.is-off { visibility: hidden; }
+.kb-ch .qz-st__word { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.3; color: var(--kb-ink); }
+.kb-ch .qz-st__word--ok { color: var(--kb-status-active-ink); }
+.kb-ch .qz-st__word--bad { color: var(--kb-status-revoked-ink); }
+.kb-ch .qz-st__sub { font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.kb-ch .qz-acts { display: grid; justify-items: end; }
+.kb-ch .qz-acts__layer { grid-area: 1 / 1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--kb-space-xs); }
+.kb-ch .qz-acts__layer.is-off { visibility: hidden; }
+/* One button, two labels: it keeps the width of the longer, so Check → Try again moves nothing. */
+.kb-ch .qz-swap { display: grid; }
+.kb-ch .qz-swap > span { grid-area: 1 / 1; }
+.kb-ch .qz-swap > .is-off { visibility: hidden; }
+.kb-ch .rd-btn.qz-act { padding-inline: 1rem; }
+/* ---------- After grading: accepted answers and the explanation ---------- */
+.kb-ch .qz-result { margin-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.kb-ch .qz-why { margin: 0; text-wrap: pretty; overflow-wrap: break-word; }
+.kb-ch .qz-acc {
+  list-style: none; margin: 0 0 calc(var(--kb-space-sm) * var(--rd-k)); padding: 0; display: flex; flex-direction: column; gap: var(--kb-space-xs);
+  font-family: var(--font-body); font-size: 0.9375rem; line-height: 1.45; color: var(--kb-secondary);
+}
+.kb-ch .qz-acc li { margin: 0; }
+.kb-ch .qz-acc b { font-weight: var(--kb-weight-semibold); color: var(--kb-ink); }
+.kb-ch .qz-acc__n { display: inline-block; min-width: 1.1rem; font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 700; color: var(--kb-secondary); }
+.kb-ch .qz-acc__wrote { color: var(--kb-ink); white-space: pre-wrap; }
+/* ---------- Sign in to save, under the first question a signed-out reader grades ---------- */
+.kb-ch .qz-save { margin: 0 0 calc(var(--kb-space-lg) * var(--rd-k)) calc(var(--qz-hang) + var(--kb-space-sm)); }
+/* The system's focus ring on a blank (the reader's generic rule covers buttons and [tabindex]); the answer card takes
+   focus from a click, so only a keyboard-reached card shows the ring. */
+.rd-root .qz-blank:focus-visible, .rd-root .qz-card:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.kb-ch .qz-card:focus { outline: none; }
+.kb-ch .qz-card:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); }
+@media print { .kb-ch .qz { break-inside: auto; } .kb-ch .qz-li, .kb-ch .qz-item { break-inside: avoid; } }

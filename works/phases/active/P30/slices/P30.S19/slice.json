@@ -3,14 +3,14 @@
   "phase_id": "P30",
   "name": "Quiz block: choice, recall, cloze, saving, return (04-quiz)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 190,
   "depends_on": [
     "P30.S18"
   ],
   "created_at": "2026-10-21T00:14:50+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T08:46:09+09:00",
+  "completed_at": "2026-10-21T09:07:21+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Quiz from 04-quiz: choice/recall/cloze graded on the client, every attempt saved (first seeds the review card), saved answer with provenance on return, drift note, signed out, keyboard and AT; 3:1 option edge; web 282",
   "validation": {
     "required": [],
     "last_run": null,
