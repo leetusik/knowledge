@@ -1195,3 +1195,6 @@
 {"ts": "2026-10-21T14:55:59+09:00", "type": "slice_status_changed", "slice": "P30.F4", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-21T15:16:00+09:00", "type": "executor_dispatched", "slice": "P30.F4", "phase": "P30", "kind": "fix", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-21T15:16:00+09:00", "type": "slice_status_changed", "slice": "P30.F4", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-21T15:16:00+09:00", "type": "slice_status_changed", "slice": "P30.S28", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-21T15:20:34+09:00", "type": "executor_dispatched", "slice": "P30.S28", "phase": "P30", "kind": "docs", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-21T15:20:34+09:00", "type": "slice_status_changed", "slice": "P30.S28", "old_status": "in_progress", "new_status": "done"}

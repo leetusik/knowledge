@@ -14,7 +14,7 @@ thing this skill does is ask which one the user wants:
 - **Connect** (recommended for most plugin users) — link to the **hosted** knowledge base
   at `https://knowledge.hi2vi.com`. No Docker, no server to run: the user signs up in
   their browser, mints one org-level ingest key, pastes it here, and is done. Their
-  explainers post to their own org and render in the web app.
+  chapters post to their own org and render in the web app.
 - **Scaffold** — stand up the user's **own self-hosted** knowledge base from the plugin's
   templates: a MkDocs Material site, a FastAPI + SQLite document API, an interactive
   knowledge graph, and a GitHub Pages publishing workflow. Full control, runs on their own
@@ -47,7 +47,7 @@ app. This is the zero-infrastructure default for plugin users.
 
 **One key, all repos.** The user mints a **single** org-level `vk_` key, once.
 `/knowledge:explain` sends the current repo's directory name as each document's `project`
-on every call, so the same key files explainers from **every** repo the user works in —
+on every call, so the same key files chapters from **every** repo the user works in —
 each under its own project name in their org. An org key has **no** bound project of its
 own; one key authorizes every project, and usage is attributed to whichever project each
 save targets. There is **no** need for a second key per repo.
@@ -75,7 +75,7 @@ minted key comes back here.
 
 Signup already gave the user a **default** org and a **default** project, and the write
 path get-or-creates any project on its first save, so there is **nothing to create here**:
-`/knowledge:explain` files each explainer under its repo's name automatically, and a
+`/knowledge:explain` files each chapter under its repo's name automatically, and a
 new project name springs into existence the moment it is first saved to.
 
 (A user who wants a named project *ready in advance* — to watch its usage before the first
@@ -427,10 +427,10 @@ anything:
   `uv run uvicorn server.main:app --port <api port>` from the target dir.
 - Serve the site alone later with the pinned mkdocs-material image, or just
   build it (`docker compose run --rm kb build`) when Docker is available.
-- **State clearly:** even with nothing running, `/knowledge:explain` still works
-  — when the API is unreachable it falls back to writing the explainer straight
-  into this local KB (that fallback is exactly why the config points `kb_root`
-  at the target dir).
+- **State clearly:** `/knowledge:explain` publishes through the document API, so
+  the API must be running to save a chapter. There is no file fallback: when it is
+  unreachable the skill stops, keeps the authored chapter and says so (`kb_root`
+  in the config is only how it tells you where to start the API).
 
 ## 7. Go-live handoff
 

@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P30`
-- Current slice: `P30.S28`
-- Next slice: `P30.REVIEW`
+- Current slice: `P30.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `38`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P30` | planned | `P30.S28` | 32/34 | - | working tree |
+| `default` | `P30` | planned | `P30.REVIEW` | 33/34 | - | working tree |
 
 ## Active Phases
 
@@ -30,7 +30,7 @@
 | [x] `P27` | `done` | `pass` | Console visual redesign — design system + responsive surfaces (design) | `none` | `works/phases/active/P27` |
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
-| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.S28` | `works/phases/active/P30` |
+| [ ] `P30` | `planned` | `pending` | Learning reader — apply | `P30.REVIEW` | `works/phases/active/P30` |
 
 ## Phase P21: Web document deletion
 
@@ -183,5 +183,5 @@
 | [x] `P30.S27` | `done` | Fidelity and functional sweep: every surface, three viewports, no inner scroller | `qa` | `works/phases/active/P30/slices/P30.S27` |
 | [x] `P30.F3` | `done` | Sweep fixes: quiz foot classes, sr-only overflow, book page at 200%, legacy bar scroller | `fix` | `works/phases/active/P30/slices/P30.F3` |
 | [x] `P30.F4` | `done` | Sweep fixes: hash scroll and sign-in return land on the block; bound chapters redirect to the book URL | `fix` | `works/phases/active/P30/slices/P30.F4` |
-| [ ] `P30.S28` | `todo` | Bootstrap handoff note for /explain | `docs` | `works/phases/active/P30/slices/P30.S28` |
+| [x] `P30.S28` | `done` | Bootstrap handoff note for /explain | `docs` | `works/phases/active/P30/slices/P30.S28` |
 | [ ] `P30.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P30/slices/P30.REVIEW` |
