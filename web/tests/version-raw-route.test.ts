@@ -9,7 +9,8 @@ import {
 } from "vitest";
 
 import { GET as versionRawGET } from "@/app/api/documents/[id]/versions/[v]/raw/route";
-import { HEIGHT_REPORTER_MARKER } from "@/lib/explainer-height";
+import { LEGACY_BRIDGE_MARKER } from "@/lib/legacy/bridge";
+import { LEGACY_SANDBOX } from "@/lib/legacy/messages";
 import { SESSION_COOKIE, sealSession } from "@/lib/session";
 
 // P23.S3 — the version-aware BFF raw-HTML relay, driven against a STUBBED knowledge
@@ -74,14 +75,21 @@ describe("GET /api/documents/[id]/versions/[v]/raw — the archived-explainer re
     );
     const body = await res.text();
     expect(body).toContain("<h1>Quiz v1</h1>");
-    expect(body).toContain(HEIGHT_REPORTER_MARKER);
+    expect(body).toContain(LEGACY_BRIDGE_MARKER);
     expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");
-    expect(res.headers.get("content-security-policy")).toBe(
-      "sandbox allow-scripts; frame-ancestors 'self'",
+    // P30.S25: the sandbox matches the frame's attribute (scripts and popups) and
+    // NEVER grants `allow-same-origin`.
+    const csp = res.headers.get("content-security-policy") ?? "";
+    expect(csp).toBe(
+      "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox; frame-ancestors 'self'",
     );
+    expect(csp).toBe(`sandbox ${LEGACY_SANDBOX}; frame-ancestors 'self'`);
+    expect(csp).not.toContain("allow-same-origin");
+    expect(csp).not.toContain("allow-top-navigation");
     expect(res.headers.get("x-frame-options")).toBe("SAMEORIGIN");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(res.headers.get("cache-control")).toBe("no-store");
+    // D37: an edge must not rewrite the relayed document.
+    expect(res.headers.get("cache-control")).toBe("no-store, no-transform");
   });
 
   it("relays anonymously with NO Authorization header when the cookie is absent", async () => {

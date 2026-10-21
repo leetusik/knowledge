@@ -42,13 +42,16 @@ const nextConfig: NextConfig = {
       // entry wins per key" rule resolves `X-Frame-Options` to SAMEORIGIN. The
       // values match the route handler's own headers verbatim, so no layering order
       // can ever produce a wrong value. The parent document page keeps `DENY`.
+      // P30.S25: the sandbox gains the two popup tokens (the legacy reader's external
+      // links open a new tab), never `allow-same-origin`.
       {
         source: "/api/documents/:id/raw",
         headers: [
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           {
             key: "Content-Security-Policy",
-            value: "sandbox allow-scripts; frame-ancestors 'self'",
+            value:
+              "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox; frame-ancestors 'self'",
           },
         ],
       },
@@ -65,7 +68,8 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           {
             key: "Content-Security-Policy",
-            value: "sandbox allow-scripts; frame-ancestors 'self'",
+            value:
+              "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox; frame-ancestors 'self'",
           },
         ],
       },

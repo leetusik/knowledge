@@ -440,7 +440,8 @@ export interface KbBookmarkWrite {
   /** A client-generated UUID: a repeat of the same id is a no-op (200) on the server. */
   id: string;
   version?: number;
-  anchor: { block_id: string } | { fraction: number };
+  /** A legacy position also carries the bridge's `anchor` (P30.S25). */
+  anchor: { block_id: string } | { fraction: number; anchor?: string };
   label?: string | null;
   snippet?: string;
 }

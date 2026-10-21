@@ -88,6 +88,49 @@ export const READER = {
   },
   /** The skip button, first in the tab order, shown while the chrome is hidden. */
   showControls: "Show reading controls",
+  /**
+   * P30.S25 — the legacy reader (`09-legacy-and-print` round 01, *Every string this job
+   * wrote*, on screen), word for word. The chapter end's words, the version notices, the
+   * bookmark control and "Highlights are not available in this document." are the signed
+   * strings above, reused.
+   */
+  legacy: {
+    /** The document bar's region label. */
+    region: "This document",
+    print: "Print · new tab",
+    printHint:
+      "Opens the original document in a new tab, where it prints in its own layout.",
+    noRestyle: "The theme and text size don't restyle it.",
+    skip: "Skip to the document",
+    frameLabel: (title: string): string => `${title}, in its original layout`,
+    loading: "Loading the original document…",
+    slow: "Still loading. This document is taking longer than usual.",
+    loadingLabel: "Loading",
+    slowLabel: "Still loading",
+    missingCode: "Not found · 404",
+    missingTitle: (noun: "chapter" | "document"): string =>
+      `This ${noun}'s file is missing`,
+    missingSub: (noun: "chapter" | "document"): string =>
+      `The library lists this ${noun}, but the file that holds its text isn't there, so there is nothing to show. ${
+        noun === "chapter"
+          ? "The book's other chapters still open."
+          : "The rest of the library still opens."
+      }`,
+    backToBook: "Back to the book",
+    backToLibrary: "Back to the library",
+    failedCode: "Error · 502",
+    failedTitle: "The original document didn't load.",
+    failedSub:
+      "The connection to its file failed on our side. Try again — and if it keeps failing, the reference below tells us where it stopped.",
+    display: {
+      label: "In this document",
+      note: {
+        auto: "It keeps its original layout. The theme colours the reading controls, and Dark (or System, when this device is dark) also shows the document's own dark look. Text size doesn't reach inside: to read it larger, use your browser's zoom.",
+        light:
+          "It keeps its original layout, which is light only. The theme colours the reading controls around it. Text size doesn't reach inside: to read it larger, use your browser's zoom.",
+      },
+    },
+  },
   top: {
     logoLabel: "knowledge library",
     /** A loose document's back link (and its short form) go to the library. */

@@ -17,7 +17,6 @@ import type { KbDocument, KbDocumentVersion } from "@/lib/knowledge/types";
 import { documentAssets, NativeChapter } from "@/lib/native";
 
 import { Meta } from "../../document-view";
-import { ExplainerFrame } from "../../explainer-frame";
 import { ExportPdfButton } from "../../export-pdf-button";
 import { MarkdownBody } from "../../markdown-body";
 import { PrintColophon, PrintMasthead } from "../../print-blocks";
@@ -160,16 +159,11 @@ function PastVersion({
         </Meta>
       </div>
 
-      {/* The body. An archived HTML explainer is exactly as untrusted as the
-          current one, so it renders through the same sandboxed opaque-origin
-          iframe, pointed at the version-aware BFF relay (which re-asserts the
-          pinned sandbox headers). Markdown renders XSS-safe via <MarkdownBody>. */}
-      {version.format === "html" ? (
-        <ExplainerFrame
-          src={`/api/documents/${id}/versions/${version.version}/raw`}
-          title={`${version.title} — ${label}`}
-        />
-      ) : version.format === "native" && version.source ? (
+      {/* The body. An html version never reaches here: it opens in the legacy reader
+          (P30.S25, redirected in the page below). Markdown renders XSS-safe via
+          <MarkdownBody>. */}
+      {version.format === "html" ? null : version.format === "native" &&
+        version.source ? (
         // P30.S12 — an archived native version renders from its archived file
         // through the same native pipeline as the live document.
         <div className="kb-panel kb-doc__body">
@@ -246,6 +240,9 @@ export default async function DocumentVersionPage({
     () => getDocumentVersion(token, id, version),
     onMiss,
   );
+  // P30.S25 — an archived html explainer opens in the legacy reader, at the version
+  // address the reader's Version history uses (`?v=`), which frames the version relay.
+  if (row.format === "html") redirect(`/documents/${id}?v=${version}`);
 
   const body = <PastVersion doc={doc} version={row} id={id} />;
   const fullPath = `/documents/${id}/versions/${version}`;
