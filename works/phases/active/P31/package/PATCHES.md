@@ -276,7 +276,7 @@ Add a new top section. It is one release with P30's change. In house style, it s
   into the host's `.claude/agents/`, renamed `wf-explain-critic` on a clash). Explain phases need
   the knowledge plugin at 0.5.0 or later and `/knowledge:setup` done once (the review publishes
   with its org key); `knowledge check` needs a server with `POST /api/documents/check`, and
-  without it the check is skipped and the publish's 422 stays the backstop. (P30's migration
+  without it (a 404 or 405) the check is skipped and the publish's 422 stays the backstop, while an unreachable server or a rejected key stops the chapter. (P30's migration
   lines: delete an old `.claude/skills/explain/` by hand, once.)
 ```
 

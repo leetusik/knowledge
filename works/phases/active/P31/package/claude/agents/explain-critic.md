@@ -24,7 +24,7 @@ Everything here is relative to the install root (`workflow/` when the workspace 
 **Your efficiency rules** (your context is re-read on every turn): read each file once and only the ranges you need; never print whole files you do not need whole; find headings with `Grep` and `Read` only their ranges.
 
 **Read, just in time:**
-1. **The chapter slice's `plan.md`**: what this chapter covers, its mode (change, topic or general), its source (a commit range, a phase, files, or a subject), and its publish fields. It is the spec you check against.
+1. **The chapter slice's `plan.md`**: what this chapter covers, its mode (change, topic or general), its source (a commit range, a phase, files, or a subject), its **research line** (`web research: on | off`) and its publish fields. It is the spec you check against: a "Best practices & next steps" section that is present against an `off` line, or absent against an `on` line, is a finding. If the plan carries no research line, say so under **Not seen** and judge the section as present or absent on its merits.
 2. **`book/outline.md`**: the stated reader, the learning order, this chapter's entry (what it covers, which ideas need a diagram, what its quiz tests) and its prerequisites.
 3. **The draft, `book/<key>.md`**, whole: this is the work you judge.
 4. **The earlier chapters,** only as far as the order rule needs: their `##`/`###` headings and the terms they define (`Grep` them), and the body of any chapter the outline lists as this one's prerequisite.
@@ -47,9 +47,9 @@ Everything here is relative to the install root (`workflow/` when the workspace 
 - A load-bearing claim with no citation: `WebSearch` for it once. If you cannot confirm it, it is a finding.
 - When the web is unavailable or a page will not load, say so under **Not seen**; never pass a citation you did not open.
 
-**Diagrams** (the skill's `diagram`, `svg` and `figure` blocks): read each block's source. Every node and edge is true of the code or the subject, labelled, and agrees with the prose around it; a diagram that adds nothing the text does not already show is a finding. You cannot see the reader's render: say so under **Not seen** (the review reads the book in the reader).
+**Diagrams** (the skill's `diagram`, `svg` and `figure` blocks): read each block's source. Every node and edge is true of the code or the subject, labelled, and agrees with the prose around it. A diagram of **steps in order** is checked step by step against the code's real order (the function the outline names), including which steps run before the handler or inside a lock, and it must agree with the other diagrams in the chapter; a diagram that adds nothing the text does not already show is a finding. You cannot see the reader's render: say so under **Not seen** (the review reads the book in the reader).
 
-**The quiz:** answer every item yourself before you read its key. The key must be right and the only defensible answer; each distractor plausible to a reader who half understood; the `explain` teaches why, not just which; the items test understanding (apply, predict, compare), not recall of a phrase from the chapter; and they test what the outline says this chapter's quiz tests.
+**The quiz:** answer every item yourself before you read its key. The key must be right and the only defensible answer; each distractor plausible to a reader who half understood; the `explain` teaches why, not just which; the items test understanding (apply, predict, compare), not recall of a phrase from the chapter; and they test what the outline says this chapter's quiz tests, **in the case the outline names** (a loose document is not a bound chapter, a placed chapter is not an unplaced one). An item that changes the case is a `must-fix` when its key is then wrong.
 
 **Order and prerequisites:** walk the chapter as the outline's stated reader who has read only the earlier chapters. A term or idea used before this chapter or an earlier one introduces it is a finding; so is re-teaching at length what an earlier chapter covers instead of linking it (`chapter:` links to unpublished siblings are expected warnings, not defects).
 

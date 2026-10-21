@@ -3,14 +3,14 @@
   "phase_id": "P31",
   "name": "rehearse one sample chapter through the package",
   "kind": "qa",
-  "status": "todo",
+  "status": "done",
   "order": 50,
   "depends_on": [
     "P31.S4"
   ],
   "created_at": "2026-10-21T18:59:25+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T19:33:47+09:00",
+  "completed_at": "2026-10-21T19:49:53+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Rehearsed outline + one chapter on a scratch stack: critic found 2 must-fix (quiz case, diagram order), answered in one revision; package fixed (plan fields, target-free ## Publish, exit-2 branching, research line, critique lessons); nothing published",
   "validation": {
     "required": [],
     "last_run": null,

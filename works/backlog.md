@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P31`
-- Current slice: `P31.S5`
-- Next slice: `P31.S6`
+- Current slice: `P31.S6`
+- Next slice: `P31.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `45`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P31` | planned | `P31.S5` | 5/8 | - | working tree |
+| `default` | `P31` | planned | `P31.S6` | 6/8 | - | working tree |
 
 ## Active Phases
 
@@ -31,7 +31,7 @@
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
-| [ ] `P31` | `planned` | `pending` | Explain phase route | `P31.S5` | `works/phases/active/P31` |
+| [ ] `P31` | `planned` | `pending` | Explain phase route | `P31.S6` | `works/phases/active/P31` |
 
 ## Phase P21: Web document deletion
 
@@ -198,6 +198,6 @@
 | [x] `P31.S2` | `done` | explain skill runs knowledge check before publishing | `implementation` | `works/phases/active/P31/slices/P31.S2` |
 | [x] `P31.S3` | `done` | package: explain-critic agent and chapter-slice procedure | `implementation` | `works/phases/active/P31/slices/P31.S3` |
 | [x] `P31.S4` | `done` | package: explain route, DECOMP and REVIEW references, install patch notes | `implementation` | `works/phases/active/P31/slices/P31.S4` |
-| [ ] `P31.S5` | `todo` | rehearse one sample chapter through the package | `qa` | `works/phases/active/P31/slices/P31.S5` |
+| [x] `P31.S5` | `done` | rehearse one sample chapter through the package | `qa` | `works/phases/active/P31/slices/P31.S5` |
 | [ ] `P31.S6` | `todo` | handoff note: retire old explain and apply the package | `docs` | `works/phases/active/P31/slices/P31.S6` |
 | [ ] `P31.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P31/slices/P31.REVIEW` |

@@ -27,13 +27,17 @@ What differs is the work it reviews, which is a book rather than product code, a
    - **overruled:** it gets a line in `result.md` saying why.
 
    No dispute is left open.
-4. **Checks every chapter.** Run its `## Publish` command exactly as written (the skill's §4.9):
+4. **Checks every chapter.** Run its `## Publish` command from the repo root, with the global `--base-url
+   <KB_API_BASE_URL>` (from the skill's §2) put before `check`; the section holds nothing else to change
+   (`reference/explain-chapter.md`, *The `## Publish` section*). Then read the exit code (the skill's §4.9):
    - **exit 1:** a finding; that chapter is not published, and its fix slice publishes it;
-   - **exit 2:** the server has no check route; say so, and let §5's 422 be the backstop.
+   - **exit 2:** read stderr. Only `has no /api/documents/check (HTTP 404 or 405)` and argparse's `invalid choice`
+     mean "no check route here": say so, and let §5's 422 be the backstop. `cannot reach` or `your API key was
+     rejected` is no verdict at all: stop and return `blocked` or `needs_operator`, and publish nothing.
 5. **Publishes every chapter, private**, in the outline's order:
    - **The credential** is the operator's org key, the one `/knowledge:setup` wrote and §2 resolves. **Never** use the master token or a tenant #1 key: those publish public by definition. If you are not sure which one you hold, return `needs_operator` before the first publish.
    - **The project** is the one in `## Explain`, which is private. A new name is created private on its first publish.
-   - **Each chapter** is published with its `## Publish` command, `check` swapped for `save`, and `--json` added to read the response. Its `book/assets/<key>/` files are re-attached; the command already names them (§4.7, §5). Record each response's `url`, `rel_path` and `version` in a `## Published` table in `result.md`.
+   - **Each chapter** is published with its `## Publish` command from step 4, `check` swapped for `save` and `--json` added to read the response; nothing else changes. Its `book/assets/<key>/` files are re-attached; the command already names them (§4.7, §5). Record each response's `url`, `rel_path` and `version` in a `## Published` table in `result.md`.
    - **After the first chapter, prove it is private.** Fetch its `url`, and `GET <KB_API_BASE_URL>/api/documents/by-path/<rel_path>`, with **no** credential and no cookie. Both must miss (404). If either one reads, stop publishing and return `needs_operator`: the project is public, and the operator fixes its visibility. Never publish the rest into it.
    - **A transport failure** is verified before any retry, per §5.1. Never re-send blind.
    - **A `chapter:` link warning** for a sibling not yet published is expected mid-run; step 6 confirms the link lands.
@@ -74,7 +78,7 @@ A fix slice:
 1. revises `book/<key>.md` and its assets;
 2. re-reads the result (§4.8);
 3. re-runs `knowledge check` (§4.9) to exit 0;
-4. **republishes** the chapter with its `## Publish` command, with `check` swapped for `save`. This is a new version of the same document: the id and URL are kept, and it stays private. Its plan says so; that one publish is the fix slice's carve-out. A chapter that never published (step 4's exit 1) is published by its fix in the same way.
+4. **republishes** the chapter with its `## Publish` command (rewritten if a flag changed), with the target added and `check` swapped for `save`. This is a new version of the same document: the id and URL are kept, and it stays private. Its plan says so; that one publish is the fix slice's carve-out. A chapter that never published (step 4's exit 1) is published by its fix in the same way.
 
 No critic runs again, because the review has already judged the chapter.
 

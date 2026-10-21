@@ -61,6 +61,6 @@ Apply it as **one release**, together with P30's `/explain` handoff (both are me
 ## The minimums
 
 - **The knowledge plugin 0.5.0 or later**, installed and set up once (`/knowledge:setup` writes the org-level key the review publishes with). 0.5.0 is the version whose explain skill has §4.9, `knowledge check`.
-- **A knowledge server with `POST /api/documents/check`**, for the dry run. Without it, `knowledge check` exits 2, the check is skipped and noted, and the publish's own 422 stays the backstop (§4.9). The `knowledge` CLI must be 0.2.0 or later for `knowledge check`.
+- **A knowledge server with `POST /api/documents/check`**, for the dry run. Without it (the server answers 404 or 405), `knowledge check` exits 2 with `has no /api/documents/check`, the check is skipped and noted, and the publish's own 422 stays the backstop (§4.9). Exit 2 for an unreachable server or a rejected key is **not** a skip: the chapter slice stops (`explain-chapter.md`). The `knowledge` CLI must be 0.2.0 or later for `knowledge check`.
 - **A private project** in the operator's org. A publish with the master token or a tenant #1 key is public by definition, so the review never uses one.
 - **For the review's reading:** a filled `## Operator Runtime` with an agent browser account (Aside `--account <id>`), whose profile is signed into the reader as a member of the org, because a private book shows only to members.
