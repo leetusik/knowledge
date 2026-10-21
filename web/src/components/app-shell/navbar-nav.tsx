@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { APP_NAV, APP_SHELL } from "@/content";
+import { APP_NAV_GROUPS, APP_SHELL, dueText } from "@/content";
+import { cn } from "@/lib/utils";
 
 /**
  * The shell's phone/tablet navigation (round 03 §4.3) — ONE element with two
@@ -17,41 +18,70 @@ import { APP_NAV, APP_SHELL } from "@/content";
  * CSS `order` is what moves it below the content visually on a phone. Nothing here
  * measures a width or writes `data-rail` — the responsive layer never does.
  *
- * Same three destinations and labels as `rail-nav.tsx` (one `APP_NAV` source), no
+ * Same destinations and labels as `rail-nav.tsx` (one `APP_NAV_GROUPS` source), no
  * icons, and `aria-current="page"` is the single source of truth for the active
- * state. A client island for exactly the reason the rail is one: the active item
- * comes from `usePathname()`.
+ * state. P30.S22 (`06-library` §1): five links, Library and Review first; the strip draws a
+ * 1px separator before Dashboard (the phone bar draws none, `library.css`), and Review
+ * wears the due count exactly as the rail does. A client island for exactly the reason the
+ * rail is one: the active item comes from `usePathname()`.
  */
-export function NavbarNav() {
+export function NavbarNav({ due }: { due: number }) {
   const pathname = usePathname();
+  const count = dueText(due);
 
   return (
     <nav className="kb-navbar" aria-label={APP_SHELL.navLabel}>
-      {APP_NAV.map((item) =>
-        item.soon ? (
-          // A route announced before it exists renders as muted text, never a
-          // link that 404s — the rail's rule, kept identical here.
-          <span
-            key={item.href}
-            aria-disabled="true"
-            className="kb-navbar__link"
-          >
-            {item.label}
-          </span>
-        ) : (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={
-              pathname === item.href || pathname.startsWith(`${item.href}/`)
-                ? "page"
-                : undefined
-            }
-            className="kb-navbar__link"
-          >
-            {item.label}
-          </Link>
-        ),
+      {APP_NAV_GROUPS.flatMap((group, g) =>
+        group.items.map((item, i) => {
+          const sep = g > 0 && i === 0;
+          const link = item.soon ? (
+            // A route announced before it exists renders as muted text, never a
+            // link that 404s — the rail's rule, kept identical here.
+            <span
+              key={item.href}
+              aria-disabled="true"
+              className="kb-navbar__link"
+            >
+              {item.label}
+            </span>
+          ) : (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={
+                pathname === item.href || pathname.startsWith(`${item.href}/`)
+                  ? "page"
+                  : undefined
+              }
+              aria-label={
+                item.count && count ? `${item.label}, ${count} due` : undefined
+              }
+              className="kb-navbar__link"
+            >
+              <span className="kb-navbar__row">
+                <span>{item.label}</span>
+                {item.count ? (
+                  <span
+                    className={cn("kb-count", !count && "is-zero")}
+                    aria-hidden="true"
+                  >
+                    {count || "0"}
+                  </span>
+                ) : null}
+              </span>
+            </Link>
+          );
+          return sep
+            ? [
+                <span
+                  key={`${item.href}-sep`}
+                  className="kb-navbar__sep"
+                  aria-hidden="true"
+                />,
+                link,
+              ]
+            : [link];
+        }),
       )}
     </nav>
   );

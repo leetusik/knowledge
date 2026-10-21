@@ -482,3 +482,76 @@ export async function getReaderBookNotes(
     { token, signal },
   );
 }
+
+// P30.S22 — the library's reads and its one destructive write (`06-library`; S8, S10).
+
+/** The public face of a document in a state read (`reader_state.DocRef.public`). */
+export interface KbStateDoc {
+  org: string;
+  project: string;
+  doc: string;
+  unit: string;
+  lang: string;
+  format: "md" | "html" | "native";
+  version: number;
+  doc_id: number;
+  title: string;
+  book: string | null;
+  chapter_key: string | null;
+}
+
+/** `GET /app/reader/continue?limit=`: the latest position per readable book and loose document. */
+export async function getReaderContinue(
+  token: string,
+  limit: number,
+  signal?: AbortSignal,
+): Promise<{ items: { doc: KbStateDoc; position: KbPosition }[] }> {
+  return getJson(`/app/reader/continue?limit=${limit}`, { token, signal });
+}
+
+/** `GET /app/reader/library`: progress per book the reader has state in, and per loose document. */
+export interface KbReaderLibrary {
+  books: {
+    org: string;
+    project: string;
+    book: string;
+    title: string;
+    progress: { finished: number; started: number; total: number };
+    /** Finished chapters with a newer version than the one finished. */
+    updated: number;
+  }[];
+  docs: { doc: KbStateDoc; position: KbPosition }[];
+}
+
+export async function getReaderLibrary(
+  token: string,
+  signal?: AbortSignal,
+): Promise<KbReaderLibrary> {
+  return getJson<KbReaderLibrary>("/app/reader/library", { token, signal });
+}
+
+/** The Review pill's `counts.due` (`GET /app/reader/review/queue?limit=1`, S10). */
+export async function getReviewDue(
+  token: string,
+  signal?: AbortSignal,
+): Promise<number> {
+  const queue = await getJson<{ counts?: { due?: number } }>(
+    "/app/reader/review/queue?limit=1",
+    { token, signal },
+  );
+  return queue.counts?.due ?? 0;
+}
+
+/**
+ * `DELETE /app/reader/state?scope=all`: every position, bookmark, annotation, quiz attempt
+ * and review card of the caller, in every tenant. Keeps the profile (time zone, limits).
+ */
+export async function clearAllReaderState(
+  token: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  await sendJson<unknown>("/app/reader/state?scope=all", "DELETE", undefined, {
+    token,
+    signal,
+  });
+}

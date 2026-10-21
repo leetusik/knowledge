@@ -15,8 +15,8 @@ export { AUTH_ERRORS, AUTH_TRUST_ITEMS, LOGIN_PAGE, SIGNUP_PAGE } from "./auth";
 export type { AuthPageCopy } from "./auth";
 
 // Authenticated app shell (P12.S2) — chrome labels + rail nav.
-export { APP_NAV, APP_SHELL } from "./app";
-export type { AppNavItem } from "./app";
+export { APP_NAV, APP_NAV_GROUPS, APP_SHELL, dueText } from "./app";
+export type { AppNavGroup, AppNavItem } from "./app";
 
 // Tenant dashboard (P12.S3) — usage tiles / trend / projects / activity + create.
 // P18.S3 adds the org-level API-keys panel copy + its status-keyed mint/revoke errors;
@@ -72,3 +72,7 @@ export { CHAPTER } from "./chapter";
 // The reader shell (P30.S13) — the `01-reader` round's strings for the top bar, the
 // chapter bar, the Contents and Display sheets, Sign in to save and the states.
 export { READER } from "./reader";
+
+// The library (P30.S22) — the `06-library` round's strings: the page head, Continue reading,
+// the shelves, the cards and rows, Your reading data and the five states.
+export { LIBRARY } from "./library";

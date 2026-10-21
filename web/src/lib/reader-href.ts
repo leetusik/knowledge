@@ -129,8 +129,8 @@ export function signInToSaveHref(
 /**
  * The library — "the reader's home" (`01-reader` *Wiring*: the logo, and a loose
  * document's "‹ Library" and "‹ Back to the library"). It is the app's landing
- * (`DEFAULT_NEXT_PATH`), so S22 moving the landing to `/library` there moves the
- * reader's links with it; until then it is the dashboard.
+ * (`DEFAULT_NEXT_PATH`, `/library` since P30.S22), so the landing and the reader's links
+ * move together.
  */
 export const LIBRARY_HREF = DEFAULT_NEXT_PATH;
 

@@ -55,8 +55,14 @@ import { BRAND, PUBLIC_SHELL, SKIP_TO_CONTENT } from "@/content";
  */
 export function PublicShell({
   fullWidth,
+  signInHref = "/login",
   children,
 }: {
+  /**
+   * Where "Sign in" goes (P30.S22): `loginHref(path)` on a page that returns the visitor
+   * to itself (`/@{org}`), the bare gate otherwise.
+   */
+  signInHref?: string;
   /** Round 06 §4.4 — see `AppShell`; the CSS hides the chrome, nothing unmounts. */
   fullWidth?: boolean;
   children: React.ReactNode;
@@ -79,7 +85,7 @@ export function PublicShell({
         </Link>
         <span className="kb-topbar__spacer" />
         <Link
-          href="/login"
+          href={signInHref}
           className={`${appButtonClass("ghost", "sm")} kb-topbar__signin`}
         >
           {PUBLIC_SHELL.signIn}

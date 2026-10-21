@@ -481,6 +481,60 @@ export interface KbBook {
   canonical_path: string;
 }
 
+/** One chapter variant in an org library listing (`GET /app/orgs/{org}/library`, P30.S22). */
+export interface KbLibraryVariant {
+  lang: string;
+  /** The document stem `<date>-<slug>`: what reader state is keyed by. */
+  doc: string;
+  doc_id: number;
+  title: string;
+  version: number;
+  format: "md" | "html" | "native";
+}
+
+export interface KbLibraryBook {
+  project: string;
+  slug: string;
+  title: string;
+  kind: string;
+  subject: string | null;
+  chapters: {
+    key: string;
+    position: number;
+    title: string | null;
+    variants: KbLibraryVariant[];
+  }[];
+}
+
+export interface KbLibraryDocument {
+  id: number;
+  project: string;
+  slug: string;
+  doc: string;
+  title: string;
+  /** `YYYY-MM-DD`. */
+  date: string;
+  format: "md" | "html" | "native";
+  lang: string;
+  version: number;
+  subject: string | null;
+  /** `/@{org}/{project}/{slug}`, or null for a slug-less org. */
+  canonical_path: string | null;
+}
+
+/**
+ * `GET /app/orgs/{org}/library` (optional identity): the org's books (with chapters) and
+ * loose documents over the projects the caller may read. `projects` lists every project the
+ * response is over, so a project with nothing to read can be counted.
+ */
+export interface KbOrgLibrary {
+  org: { id: string; slug: string | null; name: string; label: string };
+  member: boolean;
+  projects: { name: string; visibility: "private" | "public" }[];
+  books: KbLibraryBook[];
+  documents: KbLibraryDocument[];
+}
+
 // ── /app/graph shapes (P12.S6) ─────────────────────────────────────────────
 // Mirror the `server/graph_api.py` twin of `scripts/graph_hook.py`'s inversion —
 // the SAME `{version, projects, nodes, edges}` contract graph.json emits, so the

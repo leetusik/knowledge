@@ -26,6 +26,34 @@ export const APP_NAV: AppNavItem[] = [
   { label: "Graph", href: "/graph" },
 ];
 
+/**
+ * P30.S22 (`06-library` §1) — the shell's two groups: Reading (Library, Review) above the
+ * Org items. The Review count (`counts.due`) rides on the item flagged `count`. Review is
+ * S24's route; until it ships the link is a real `<a href>` to a not-found page.
+ */
+export interface AppNavGroup {
+  /** The rail's eyebrow; the strip and the bar show the groups as one row. */
+  heading: string;
+  items: (AppNavItem & { count?: boolean })[];
+}
+
+export const APP_NAV_GROUPS: AppNavGroup[] = [
+  {
+    heading: "Reading",
+    items: [
+      { label: "Library", href: "/library" },
+      { label: "Review", href: "/review", count: true },
+    ],
+  },
+  { heading: "Org", items: APP_NAV },
+];
+
+/** The Review pill: `counts.due`, "99+" above 99, nothing at 0 (`06-library` §1). */
+export function dueText(due: number): string {
+  if (!(due > 0)) return "";
+  return due > 99 ? "99+" : String(Math.floor(due));
+}
+
 export const APP_SHELL = {
   /**
    * Accessible name for the phone/tablet navbar's <nav> landmark (round 03 §4.1
@@ -39,6 +67,8 @@ export const APP_SHELL = {
   accountMenuLabel: "Account menu",
   /** Mono-uppercase eyebrow heading over the rail's nav section. */
   railHeading: "Org",
+  /** The rail's second eyebrow (P30.S22): the first group, above `railHeading`. */
+  railReadingHeading: "Reading",
   /**
    * Prefix before the org (tenant) name in the topbar identity. Key name kept
    * (`workspaceLabel`) — code identifiers are not renamed in the P18 copy pass; only

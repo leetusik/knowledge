@@ -325,3 +325,71 @@ def test_slugless_tenant_book_is_addressed_on_its_tenant_id(documents_client):
     assert client.patch("/app/tenant", json={"slug": org}, headers=headers).status_code == 200
     again = client.get(f"/app/orgs/{tenant}/shelf/books/intro")
     assert again.json()["canonical_path"] == f"/@{org}/shelf/books/intro"
+
+
+# --- the org library (P30.S22) ---------------------------------------------------
+
+
+def _seed_loose(tenant: str, project: str, slug: str, subject: str | None = None) -> None:
+    conn = db.connect()
+    try:
+        db.upsert_document(
+            conn, project=project, slug=slug, date="2026-02-01", title=f"Doc {slug}",
+            tags=[], source_repo="r", rel_path=f"{project}/2026-02-01-{slug}.md",
+            markdown="body", tenant_id=tenant, subject=subject,
+        )
+    finally:
+        conn.close()
+
+
+def test_org_library_shows_a_stranger_only_public_projects(documents_client):
+    client, _ = documents_client
+    headers, tenant = _tenant_with_books(client)
+    _seed_loose(tenant, "shelf", "open-note", subject="Law")
+    _seed_loose(tenant, "secret", "closed-note")
+    org = f"org-{uuid4().hex[:10]}"
+    assert client.patch("/app/tenant", json={"slug": org}, headers=headers).status_code == 200
+
+    # Anonymous: the public project's book and loose document, nothing of the private one.
+    anon = client.get(f"/app/orgs/{org}/library")
+    assert anon.status_code == 200, anon.text
+    body = anon.json()
+    assert body["member"] is False
+    assert [p["name"] for p in body["projects"]] == ["shelf"]
+    assert [b["project"] for b in body["books"]] == ["shelf"]
+    assert [d["slug"] for d in body["documents"]] == ["open-note"]
+    assert body["documents"][0]["canonical_path"] == f"/@{org}/shelf/open-note"
+    assert "secret" not in anon.text
+
+    # The member sees both, and `scope=public` narrows them to the stranger's view.
+    mem = client.get(f"/app/orgs/{org}/library", headers=headers).json()
+    assert mem["member"] is True
+    assert {"shelf", "secret"} <= {p["name"] for p in mem["projects"]}
+    assert {b["project"] for b in mem["books"]} == {"shelf", "secret"}
+    assert {d["slug"] for d in mem["documents"]} == {"open-note", "closed-note"}
+    pub = client.get(f"/app/orgs/{org}/library?scope=public", headers=headers).json()
+    assert [b["project"] for b in pub["books"]] == ["shelf"]
+
+    # A chapter variant is never a loose document.
+    assert all(d["slug"] != "ch1" for d in mem["documents"])
+
+    # Another org's member is a stranger: public only.
+    other, _ = _signup(client, f"stranger-{uuid4()}@example.com")
+    cross = client.get(f"/app/orgs/{org}/library", headers=other).json()
+    assert cross["member"] is False and [b["project"] for b in cross["books"]] == ["shelf"]
+
+
+def test_org_library_misses_are_one_404(documents_client):
+    client, _ = documents_client
+    headers, tenant = _signup(client, f"closed-{uuid4()}@example.com")
+    _project(client, headers, "hidden")  # private: nothing public at all
+    org = f"org-{uuid4().hex[:10]}"
+    assert client.patch("/app/tenant", json={"slug": org}, headers=headers).status_code == 200
+    nothing = client.get(f"/app/orgs/{org}/library")
+    unknown = client.get(f"/app/orgs/no-such-{uuid4().hex[:8]}/library")
+    assert nothing.status_code == unknown.status_code == 404
+    assert nothing.json() == unknown.json()
+    # The member still reads their own (empty) library, and its public view.
+    assert client.get(f"/app/orgs/{org}/library", headers=headers).status_code == 200
+    mine = client.get(f"/app/orgs/{org}/library?scope=public", headers=headers)
+    assert mine.status_code == 200 and mine.json()["projects"] == []

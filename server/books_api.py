@@ -9,6 +9,10 @@ the manifests in ``server/books.py`` are the truth):
 * ``GET /app/books/{project}/{book}`` — one of the caller's books by project NAME
   and book slug, with its ordered chapters and their live variants. Member-only
   (``require_user``): another tenant's book, or none, is a 404.
+* ``GET /app/orgs/{org}/library`` — an org's library (P30.S22): its books with their
+  chapters and variants, and its loose documents, over the projects the caller may read
+  (every project for a member, only the public ones for anyone else; ``scope=public``
+  narrows a member to the public ones too, for the org's public page).
 * ``GET /app/orgs/{org}/{project}/books/{book}`` — the same book addressed by its
   durable public identity, backing the reader URL ``/@{org}/{project}/books/{book}``.
   ``org`` is the org slug, or the tenant id for a tenant without one (P30.S11,
@@ -28,6 +32,7 @@ Never sets ``request.state.usage``.
 
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -36,7 +41,7 @@ from server import config, db
 from server.accounts.auth import AuthContext, optional_user, require_user
 from server.accounts.service import get_accounts_service
 from server.documents_api import _resolve_project_name, get_conn
-from server.reader_state import org_label
+from server.reader_state import doc_of, org_label
 
 router = APIRouter()
 
@@ -141,4 +146,104 @@ async def resolve_book_by_slug(
     return {
         **_app_book(found),
         "canonical_path": _book_canonical_path(org_label(tenant), project, book),
+    }
+
+
+_NO_SUCH_LIBRARY_DETAIL = "no library at that address"
+
+
+@router.get("/app/orgs/{org}/library")
+async def org_library(
+    org: str,
+    scope: Literal["all", "public"] = "all",
+    ctx: AuthContext | None = Depends(optional_user),
+    conn=Depends(get_conn),
+) -> dict[str, object]:
+    """An org's library: books (with chapters) and loose documents, visibility-gated.
+
+    A member of the org reads every project (``scope=all``, the default) or only the
+    public ones (``scope=public``, the org's public page); any other caller, anonymous
+    or cross-org, reads the public ones only. Every miss, an unknown org and an org
+    that shows a stranger nothing (no public project), is the one identical 404, never
+    a 403. A member's response also carries their private projects, flagged by
+    ``visibility``; they are the only ones that name it. ``projects`` lists every
+    project the response is over, so a project with nothing to read is countable.
+    """
+
+    if config.database_url() is None:
+        raise HTTPException(status_code=404, detail=_NO_SUCH_LIBRARY_DETAIL)
+    tenant = await _resolve_org(org)
+    if tenant is None:
+        raise HTTPException(status_code=404, detail=_NO_SUCH_LIBRARY_DETAIL)
+    member = ctx is not None and ctx.tenant.id == tenant.id
+    registry = await get_accounts_service().list_projects_for_tenant(tenant.id)
+    if member and scope == "all":
+        visible = list(registry)
+    else:
+        visible = [p for p in registry if p.visibility == "public"]
+    if not member and not visible:
+        raise HTTPException(status_code=404, detail=_NO_SUCH_LIBRARY_DETAIL)
+    names = [p.name for p in visible]
+    tid = str(tenant.id)
+    label = org_label(tenant)
+
+    books = []
+    for row in db.list_books(conn, tenant_id=tid):
+        if row["project"] not in names:
+            continue
+        found = db.get_book(conn, project=row["project"], slug=row["slug"], tenant_id=tid)
+        if found is None:
+            continue
+        books.append(
+            {
+                "project": found["project"],
+                "slug": found["slug"],
+                "title": found["title"],
+                "kind": found["kind"],
+                "subject": found["subject"],
+                "chapters": [
+                    {
+                        "key": ch["key"],
+                        "position": ch["position"],
+                        "title": ch["title"],
+                        "variants": [
+                            {
+                                "lang": v["lang"],
+                                "doc": doc_of(found["project"], v["rel_path"]),
+                                "doc_id": v["doc_id"],
+                                "title": v["title"],
+                                "version": v["version"],
+                                "format": v["format"],
+                            }
+                            for v in ch["variants"]
+                        ],
+                    }
+                    for ch in found["chapters"]
+                ],
+            }
+        )
+    documents = [
+        {
+            "id": d["id"],
+            "project": d["project"],
+            "slug": d["slug"],
+            "doc": doc_of(d["project"], d["rel_path"]),
+            "title": d["title"],
+            "date": d["date"],
+            "format": d["format"] or "md",
+            "lang": d["lang"] or "en",
+            "version": int(d["version"] or 1),
+            "subject": d["subject"],
+            "canonical_path": (
+                f"/@{tenant.slug}/{d['project']}/{d['slug']}" if tenant.slug else None
+            ),
+        }
+        for d in db.list_loose_documents(conn, tenant_id=tid, projects=names)
+    ]
+    return {
+        "org": {"id": str(tenant.id), "slug": tenant.slug, "name": tenant.name, "label": label},
+        "member": member,
+        "projects": [{"name": p.name, "visibility": p.visibility} for p in visible],
+        "books": books,
+        "documents": documents,
     }

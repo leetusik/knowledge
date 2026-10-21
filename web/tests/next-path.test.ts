@@ -112,3 +112,13 @@ describe("loginHref — the sign-in URL that returns to a path (P30.S11)", () =>
     expect(loginHref(DEFAULT_NEXT_PATH)).toBe("/login");
   });
 });
+
+describe("the landing after sign-in (P30.S22)", () => {
+  it("is the library, and a safe next still wins", () => {
+    expect(DEFAULT_NEXT_PATH).toBe("/library");
+    expect(safeNextPath(undefined)).toBe("/library");
+    expect(safeNextPath("//evil.example")).toBe("/library");
+    expect(safeNextPath("/dashboard")).toBe("/dashboard");
+    expect(loginHref("/dashboard")).toBe("/login?next=%2Fdashboard");
+  });
+});

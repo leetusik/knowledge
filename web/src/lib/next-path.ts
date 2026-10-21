@@ -6,7 +6,7 @@
  * the user's password, and then hands the browser to the attacker's page with our
  * origin in the referrer and the user primed to trust whatever it says. So this
  * guard is written to **fail closed**: anything it does not positively recognise as
- * an in-app path becomes `/dashboard`, and it never throws.
+ * an in-app path becomes the default landing (`/library`), and it never throws.
  *
  * THE ACCEPTED SHAPE — the contract `P28.S6`'s public-graph gate line must match
  * (it emits `/login?next={publicBase}/documents/{id}` with `publicBase = "/@{org}"`,
@@ -20,7 +20,7 @@
  *   - it is re-serialised through `URL`, so `/a/../b` normalises to `/b` before it
  *     is ever handed to `redirect()` or `router.replace()`.
  *
- * REJECTED (→ `/dashboard`), each for a reason:
+ * REJECTED (→ the default landing), each for a reason:
  *
  *   - anything not starting with `/` — `https://evil.example`, `evil.example`,
  *     `javascript:alert(1)`, `mailto:…`: a different origin, or not a location;
@@ -48,8 +48,11 @@
  * must be the SAME function in both places — two copies would drift.
  */
 
-/** Where a missing or rejected `next` lands. */
-export const DEFAULT_NEXT_PATH = "/dashboard";
+/**
+ * Where a missing or rejected `next` lands. P30.S22 (`06-library` open question 3): the
+ * library, for every member; it was `/dashboard`. A safe `next` still wins.
+ */
+export const DEFAULT_NEXT_PATH = "/library";
 
 /** The sign-in gate. */
 export const LOGIN_PATH = "/login";

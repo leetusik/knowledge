@@ -11,6 +11,7 @@ import type {
   KbDocumentVersion,
   KbDocumentVersionsPage,
   KbGraph,
+  KbOrgLibrary,
   KbMintedCredential,
   KbProject,
   KbProjectUsage,
@@ -472,6 +473,26 @@ export async function getBook(
 ): Promise<KbBook> {
   const path = `/app/orgs/${encodeURIComponent(org)}/${encodeURIComponent(project)}/books/${encodeURIComponent(book)}`;
   return getJson<KbBook>(path, { token, signal });
+}
+
+/**
+ * `GET /app/orgs/{org}/library` → 200 the org's books and loose documents (P30.S22).
+ * `org` is the BARE slug, or the tenant id for a tenant without one. OPTIONAL-IDENTITY: a
+ * member reads every project (`scope: "all"`) or only the public ones (`"public"`, the
+ * org's public page); anyone else reads the public ones. Every miss, an unknown org or an
+ * org showing a stranger nothing, is one indistinguishable **404**.
+ */
+export async function getOrgLibrary(
+  token: string | undefined,
+  org: string,
+  scope: "all" | "public" = "all",
+  signal?: AbortSignal,
+): Promise<KbOrgLibrary> {
+  const qs = scope === "public" ? "?scope=public" : "";
+  return getJson<KbOrgLibrary>(
+    `/app/orgs/${encodeURIComponent(org)}/library${qs}`,
+    { token, signal },
+  );
 }
 
 /**

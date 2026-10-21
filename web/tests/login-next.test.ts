@@ -57,9 +57,9 @@ describe.each([
     ["javascript:alert(1)"],
   ])("ignores %j", async (unsafe) => {
     expect(await nextOf(page, unsafe)).toEqual({
-      card: "/dashboard",
-      form: "/dashboard",
+      card: "/library",
+      form: "/library",
     });
-    expect(redirectIfAuthenticated).toHaveBeenCalledWith("/dashboard");
+    expect(redirectIfAuthenticated).toHaveBeenCalledWith("/library");
   });
 });
