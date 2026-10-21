@@ -1245,3 +1245,4 @@
 {"ts": "2026-10-21T18:46:47+09:00", "type": "slice_status_changed", "slice": "P30.REVIEW", "old_status": "changes_requested", "new_status": "done"}
 {"ts": "2026-10-21T18:46:47+09:00", "type": "phase_reviewed", "phase": "P30", "verdict": "pass", "reviewer": "slice-executor-high"}
 {"ts": "2026-10-21T18:46:47+09:00", "type": "phase_consolidation_owed", "phase": "P30", "notes": 33}
+{"ts": "2026-10-21T18:54:00+09:00", "type": "phase_created", "phase": "P31"}

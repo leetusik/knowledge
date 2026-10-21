@@ -5,9 +5,9 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P31`
+- Current slice: `P31.DECOMP`
+- Next slice: `P31.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `45`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | - | idle | - | - | - | working tree |
+| `default` | `P31` | planned | `P31.DECOMP` | 0/2 | - | working tree |
 
 ## Active Phases
 
@@ -31,6 +31,7 @@
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
+| [ ] `P31` | `planned` | `pending` | Explain phase route | `P31.DECOMP` | `works/phases/active/P31` |
 
 ## Phase P21: Web document deletion
 
@@ -187,3 +188,10 @@
 | [x] `P30.F5` | `done` | Reader chrome per the operator: top bar hides on scroll down and returns on tap or a deliberate scroll up; bottom bar only at the end or on tap | `fix` | `works/phases/active/P30/slices/P30.F5` |
 | [x] `P30.F6` | `done` | Chapter-to-chapter navigation lands at the top and never records an unread chapter Finished | `fix` | `works/phases/active/P30/slices/P30.F6` |
 | [x] `P30.REVIEW` | `done` | phase review | `review` | `works/phases/active/P30/slices/P30.REVIEW` |
+
+## Phase P31: Explain phase route
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P31.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P31/slices/P31.DECOMP` |
+| [ ] `P31.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P31/slices/P31.REVIEW` |

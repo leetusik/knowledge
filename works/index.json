@@ -122,10 +122,22 @@
       "slice_count": 36,
       "done_slice_count": 36,
       "consolidation": "pending"
+    },
+    {
+      "id": "P31",
+      "name": "Explain phase route",
+      "objective": "Prepare, in this repo, everything the workflow needs to run explaining as a phase: (1) knowledge check — a CLI command and server endpoint that validates a chapter against the publish rules without publishing; (2) a ready-to-apply package for the bootstrap: the create-phase explain route, the DECOMP reference (research, book outline, an outline gate the operator signs), the per-chapter slice procedure (draft, validate, critic, one revision), an explain-critic agent, and the REVIEW reference (whole-book read, render in the reader, publish every chapter at once, private) plus the acceptance gate; (3) an updated handoff-explain.md. The bootstrap repo itself is out of scope; the operator relays the package.",
+      "status": "planned",
+      "order": 11,
+      "path": "works/phases/active/P31",
+      "review_status": "pending",
+      "current_slice": "P31.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
     }
   ],
   "deferred_open_count": 45,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-21T18:46:47+09:00"
+  "last_rebuilt_at": "2026-10-21T18:54:00+09:00"
 }
