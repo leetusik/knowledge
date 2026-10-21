@@ -192,3 +192,23 @@ The routes and payloads are `server/reader_api.py`'s docstring; the logic and it
 - **For REVIEW:** P29 *Privacy* says a reader can delete any single card; no such route exists (the plan
   did not ask for it; a highlight card goes with its highlight, every card with `DELETE state`). An
   observation for the walkthrough or a deferred job, beside D41 (the suspended-cards list).
+
+
+## phase.md note lines retired or shortened by the orchestrator before P30.S20 (word for word)
+
+- **(from P30.S2, for S7 and S13) The book API as shipped** (helpers, manifest and GET shapes,
+  the S7 items, the Postgres-gated test DSN): `topics/notes-server.md` → *S2*.
+- **(from P30.S4, for S7, S25 and S27) Image assets as shipped:** `POST /api/documents`
+  `assets: [...]`, one 422 list in S3's shape (codes `asset-*`), the map `{name: {file, media_type,
+  width, height, animated[, still]}}` on header, rows and detail reads, no inheritance across versions,
+  the BFF relay `/api/documents/{id}/assets/{file}` (S16's `Asset.url`), the new nginx location and the
+  20m body cap (deploy), and an observation for S25 (the version-raw relay has no nginx location):
+  `topics/notes-server.md` → *S4*.
+- **(from P30.S5, for S7 and S28) Native ingest as shipped:** `format: "native"` sends the
+  body WITHOUT a header (the server writes it; `summary` is a request field); one 422 list with lines in
+  the body as sent; the 201's `assigned_ids`, `warnings` and `migrated_from`; `source` on every detail
+  and version read; only native chapters carry images; html → native through any re-publish; the stem
+  alias and the one-document-per-stem 409. The S7/S16/S28 items: `topics/notes-server.md` →
+  *S5*; the spec is `server/native/README.md` → *Ingest (S5)*.
+- **(from P30.S8, for S13+) Reader state as shipped** (keys, the `Gate`, what S9/S10
+  add, the beacon and limits for the UI): `topics/notes-server.md` → *S8*.
