@@ -1,0 +1,149 @@
+{
+  "slug": "curriculum",
+  "title": "changple5 curriculum",
+  "kind": "codebase",
+  "subject": null,
+  "description": null,
+  "chapters": [
+    {
+      "key": "01-big-picture",
+      "position": 1,
+      "variants": {
+        "en": "changple5/2026-08-26-01-big-picture.html"
+      }
+    },
+    {
+      "key": "02-configuration-and-boundaries",
+      "position": 2,
+      "variants": {
+        "en": "changple5/2026-08-26-02-configuration-and-boundaries.html"
+      }
+    },
+    {
+      "key": "03-identity-and-auth",
+      "position": 3,
+      "variants": {
+        "en": "changple5/2026-08-26-03-identity-and-auth.html"
+      }
+    },
+    {
+      "key": "04-conversations-system-of-record",
+      "position": 4,
+      "variants": {
+        "en": "changple5/2026-08-26-04-conversations-system-of-record.html"
+      }
+    },
+    {
+      "key": "05-chat-turn-end-to-end",
+      "position": 5,
+      "variants": {
+        "en": "changple5/2026-08-26-05-chat-turn-end-to-end.html"
+      }
+    },
+    {
+      "key": "06-chat-context-and-memory",
+      "position": 6,
+      "variants": {
+        "en": "changple5/2026-08-26-06-chat-context-and-memory.html"
+      }
+    },
+    {
+      "key": "07-retrieval-read-path",
+      "position": 7,
+      "variants": {
+        "en": "changple5/2026-08-26-07-retrieval-read-path.html"
+      }
+    },
+    {
+      "key": "08-ingestion-pipeline",
+      "position": 8,
+      "variants": {
+        "en": "changple5/2026-08-26-08-ingestion-pipeline.html"
+      }
+    },
+    {
+      "key": "09-indexing-and-embeddings",
+      "position": 9,
+      "variants": {
+        "en": "changple5/2026-08-26-09-indexing-and-embeddings.html"
+      }
+    },
+    {
+      "key": "10-consulting-mode",
+      "position": 10,
+      "variants": {
+        "en": "changple5/2026-08-26-10-consulting-mode.html"
+      }
+    },
+    {
+      "key": "11-safety-and-grounding",
+      "position": 11,
+      "variants": {
+        "en": "changple5/2026-08-26-11-safety-and-grounding.html"
+      }
+    },
+    {
+      "key": "12-content-library",
+      "position": 12,
+      "variants": {
+        "en": "changple5/2026-08-26-12-content-library.html"
+      }
+    },
+    {
+      "key": "13-content-agent-intake-and-scaffold",
+      "position": 13,
+      "variants": {
+        "en": "changple5/2026-08-28-13-content-agent-intake-and-scaffold.html"
+      }
+    },
+    {
+      "key": "14-content-agent-build-and-publish",
+      "position": 14,
+      "variants": {
+        "en": "changple5/2026-08-28-14-content-agent-build-and-publish.html"
+      }
+    },
+    {
+      "key": "15-content-agent-agent-side",
+      "position": 15,
+      "variants": {
+        "en": "changple5/2026-08-28-15-content-agent-agent-side.html"
+      }
+    },
+    {
+      "key": "16-running-it-celery-and-observability",
+      "position": 16,
+      "variants": {
+        "en": "changple5/2026-09-13-16-running-it-celery-and-observability.html"
+      }
+    },
+    {
+      "key": "17-operator-console-and-llm-runtime",
+      "position": 17,
+      "variants": {
+        "en": "changple5/2026-09-13-17-operator-console-and-llm-runtime.html"
+      }
+    },
+    {
+      "key": "18-billing-toss",
+      "position": 18,
+      "variants": {
+        "en": "changple5/2026-09-13-18-billing-toss.html"
+      }
+    },
+    {
+      "key": "19-leaf-subsystems",
+      "position": 19,
+      "variants": {
+        "en": "changple5/2026-09-13-19-leaf-subsystems.html"
+      }
+    },
+    {
+      "key": "20-reading-guide",
+      "position": 20,
+      "variants": {
+        "en": "changple5/2026-09-13-20-reading-guide.html"
+      }
+    }
+  ]
+}
