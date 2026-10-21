@@ -131,13 +131,13 @@
       "order": 11,
       "path": "works/phases/active/P31",
       "review_status": "pending",
-      "current_slice": "P31.DECOMP",
-      "slice_count": 2,
-      "done_slice_count": 0
+      "current_slice": "P31.S1",
+      "slice_count": 8,
+      "done_slice_count": 1
     }
   ],
   "deferred_open_count": 45,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-21T18:54:00+09:00"
+  "last_rebuilt_at": "2026-10-21T19:02:02+09:00"
 }

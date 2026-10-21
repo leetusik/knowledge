@@ -3,12 +3,12 @@
   "phase_id": "P31",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-21T18:54:00+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-21T18:56:56+09:00",
+  "completed_at": "2026-10-21T19:02:02+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut S1 knowledge check (high), S2 skill uses it, S3 explain-critic + chapter procedure (high), S4 route + references (high), S5 rehearsal (qa), S6 handoff (docs); ~$70-75",
   "validation": {
     "required": [],
     "last_run": null,
