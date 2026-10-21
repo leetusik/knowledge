@@ -1236,3 +1236,7 @@
 {"ts": "2026-10-21T17:48:32+09:00", "type": "executor_dispatched", "slice": "P30.F6", "phase": "P30", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-21T17:48:32+09:00", "type": "slice_status_changed", "slice": "P30.F6", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-10-21T17:48:32+09:00", "type": "deferred_created", "deferred": "D64", "source": "P30.F6"}
+{"ts": "2026-10-21T18:02:24+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0019_p30.review_round_3_regression_checklist_gains_f6_s_chapter-navigation_line_next_opens_the_next_chapter_at_its_top_not_finished_and_f5_s_reader-chrome_line", "source": "P30.REVIEW"}
+{"ts": "2026-10-21T18:04:38+09:00", "type": "executor_dispatched", "slice": "P30.REVIEW", "phase": "P30", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": "round 3: pass (F6 verified live; qa v0019)"}
+{"ts": "2026-10-21T18:04:38+09:00", "type": "phase_status_changed", "phase": "P30", "old_status": "in_progress", "new_status": "pending"}
+{"ts": "2026-10-21T18:04:38+09:00", "type": "acceptance_opened", "phase": "P30"}

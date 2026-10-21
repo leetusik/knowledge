@@ -235,15 +235,13 @@ _Gotchas and constraints the next slices need, each tagged `(from P<N>.Sk)`. A s
 - **(from P30.REVIEW, for any fix slice) What each surface does as shipped:** the per-slice notes in
   `topics/notes-later.md` (*… as shipped*) and `topics/notes-server.md`; the sweep's defects and the
   operator-run device list in `slices/P30.S27/result.md`.
-- **(from P30.F6, for P30.REVIEW round 3) The landing re-check:** the stack recipe, the CDP matrix and the numbers are in `slices/P30.F6/result.md` → *Live check*. The book page has the same Next scroll bug (out of F6's scope; a deferred-job candidate in that file).
 
 ## Now
 
-- **F6 landed (R3 fixed, not yet deployed).** The real cause: Next's scroll handler takes the `[chapter]` segment's first node, which is the reader stylesheet React hoists into `<head>`, walks `<head>` and gives up, so the next chapter kept the old scroll position, and the cadence and the end rule recorded it, `finished` included. The reader now lands once (hash, `?note=`, resume, top) and writes nothing until the landing settles. Live, on the production build, signed in and out: Next, Previous, the end's Next, Contents and the book rows all land at y 0, or at the resume with its pill. The new chapter's row is `started` at fraction 0, never `finished`. Hash, sign-in return, `?note=`, language switch and legacy ↔ native all still land. The gates pass (web 395 tests). Detail: `slices/P30.F6/result.md`.
-- **Next (orchestrator):** REVIEW round 3: F6 itself, plus one regression pass over Next, Contents and resume. Then deploy F5 and F6 on the operator's word, and open the gate with the round-2 walkthrough (it is drafted in `slices/P30.REVIEW/result.md`).
-- **Production:** chapters may already be marked Finished unread, from members who pressed Next. Mark as unread clears them. Never write to production. D57 (reindex) is due, on the operator's word.
-- **Deferred-job candidate (from F6):** the book page, and likely other pages with their own CSS, keep the previous page's scroll position on a client navigation (the same Next bug).
+- **REVIEW round 3: `pass`.** F6 holds live on a fresh scratch production build, signed in and out (CDP and Aside `u1`): Next, Previous, the end section's Next, Contents and the book rows land at y 0, or at the saved place with the pill. The opened chapter's row is `started` at 0, never `finished`. Hash, `?note=`, the sign-in return and a reload keep their landing. F5's chrome matches round 2 at 1440, 820 and 390 on both readers. All gates pass together (server 229, CLI 55, web 395, build, both parity checks, validate). qa v0019 adds the F6 and F5 checklist lines. Detail: `slices/P30.REVIEW/result.md`, round 3.
+- **Next (orchestrator):** on the operator's word, push `main` and deploy F5 and F6. Then open the gate with round 3's walkthrough, and stop.
+- **Production:** chapters may already be marked Finished unread (members who pressed Next before F6). Mark as unread clears them. Never write to production. D57 (reindex) is due on the operator's word.
 - **Open:**
-  - the operator's device checks;
+  - the operator's device walk and the five walkthrough decisions;
   - deleting the nine canvases (on the operator's yes);
   - removing `.claude/skills/explain/` after the bootstrap applies the handoff.

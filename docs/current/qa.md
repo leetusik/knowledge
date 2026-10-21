@@ -1,11 +1,11 @@
 ---
 doc_id: qa
-version: v0018
-created_at: 2026-10-21T15:44:38+09:00
-commit: 71ca2c1f0095d44cb3a27b1433ae30df53e4aadd
+version: v0019
+created_at: 2026-10-21T18:02:24+09:00
+commit: 96506542f8064e1eeeb98a9e59f04701de2cf9bd
 source: P30.REVIEW
-summary: P30 gate: append the reader, book, review, legacy and print checks; update three P28 lines the learning reader superseded
-previous: v0017_p28_re-review_gate_append_the_framed-explainer_checks_no_inner_scroll_range_dpr_2_classic_scrollbars_many_width_changes_and_whole-document_print_from_export_pdf_and_cmd-p
+summary: P30.REVIEW round 3: Regression Checklist gains F6's chapter-navigation line (Next opens the next chapter at its top, not Finished) and F5's reader-chrome line
+previous: v0018_p30_gate_append_the_reader_book_review_legacy_and_print_checks_update_three_p28_lines_the_learning_reader_superseded
 ---
 
 # QA
@@ -308,6 +308,18 @@ apply there; use *In-app graph label focus (P22)* instead._
       pointing at its own page and Print · new tab (P30)
 - [ ] Text size 150% and 200% (root font) at 390 and 820: no horizontal page
       scroll on the chapter, book page or review (P30)
+- [ ] Reader chrome, on a native and a legacy chapter at 390, 820 and 1440: a
+      scroll down hides the top and bottom bars (desktop too); a small or slow
+      scroll up brings nothing back, a deliberate one brings only the top bar;
+      a tap on the text shows and hides both; the bottom bar appears at the
+      chapter's end and stays; with both hidden, the first Tab reaches "Show
+      reading controls" (P30)
+- [ ] Next opens the next chapter at its top, not Finished: from the middle
+      and the end of a chapter, the bar's Next and Previous, the end section's
+      Next and a Contents link open the chapter at y 0 (or at its saved place,
+      with the pill); signed in, that chapter's saved position is `started` at
+      0%, never `finished`; a `#section`, `?note=`, the sign-in return and a
+      reload keep their landing (P30)
 
 ## Verifying the Guard Itself (negative-test pattern)
 
