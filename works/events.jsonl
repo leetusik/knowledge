@@ -1327,3 +1327,4 @@
 {"ts": "2026-10-23T00:46:57+09:00", "type": "slice_status_changed", "slice": "P32.S4", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-23T01:15:30+09:00", "type": "executor_dispatched", "slice": "P32.S4", "phase": "P32", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-23T01:15:30+09:00", "type": "slice_status_changed", "slice": "P32.S4", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-23T01:15:35+09:00", "type": "slice_status_changed", "slice": "P32.S5", "old_status": "todo", "new_status": "pending", "stop_kind": "decision"}

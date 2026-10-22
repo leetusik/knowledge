@@ -8,7 +8,7 @@
 - Current phase: `P32`
 - Current slice: `P32.S5`
 - Next slice: `P32.S6`
-- Waiting on operator: `none`
+- Waiting on operator: `P32.S5`
 - Open deferred jobs: `49`
 
 ## Streams
@@ -214,7 +214,7 @@
 | [x] `P32.S3` | `done` | where the research team runs: hosts, the plugin and the book package | `research` | `works/phases/active/P32/slices/P32.S3` |
 | [x] `P32.DECOMP2` | `done` | cut the build from the research | `decomposition` | `works/phases/active/P32/slices/P32.DECOMP2` |
 | [x] `P32.S4` | `done` | Part B and the five plugin agents: briefs, ladder, verifier, critic, converter; AGENTS parity check | `implementation` | `works/phases/active/P32/slices/P32.S4` |
-| [ ] `P32.S5` | `todo` | Part A research stage: core card, preflight, waves, dossier and resume, gap rounds, evidence gate, quick and no-research | `implementation` | `works/phases/active/P32/slices/P32.S5` |
+| [~] `P32.S5` | `pending` | Part A research stage: core card, preflight, waves, dossier and resume, gap rounds, evidence gate, quick and no-research | `implementation` | `works/phases/active/P32/slices/P32.S5` |
 | [ ] `P32.S6` | `todo` | Part A writing from the dossier, critic and revision, report, book section and suggestion; plugin 0.6.0 and README | `implementation` | `works/phases/active/P32/slices/P32.S6` |
 | [ ] `P32.S7` | `todo` | Rehearsal 1: old vs new single document on a general and a codebase subject; fix the skill | `qa` | `works/phases/active/P32/slices/P32.S7` |
 | [ ] `P32.S8` | `todo` | Bootstrap package: route fields, three explain references, executor carve-out, critic removal | `implementation` | `works/phases/active/P32/slices/P32.S8` |
