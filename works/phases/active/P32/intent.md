@@ -15,6 +15,15 @@
 
 > and everything is english as default. make only korean version when asked.
 
+Answers during the run (verbatim), to OQ1 (keep `no-research`?) and to "should `/knowledge:explain <subject> book`
+create the explain phase and run it to the end?":
+
+> 1. yes, 2. more like suggest phsae for the creating phase, and running it is like normal one.
+
+Confirmation of the restated understanding (verbatim):
+
+> your right
+
 ## Confirmed Intent (refined + clarified)
 
 Explaining a topic should rest on **thorough research by agents**, not on one writer's quick look. Research
@@ -50,6 +59,16 @@ What follows from it:
 - **English by default, everywhere**: a single document, every chapter of a book, and the research notes are
   written in English whatever language the request is written in. A Korean version is made **only when the
   operator asks for one**; a book asks for no translation unless the operator names one.
+- **A book starts from a suggestion; running it stays normal.** When the operator asks `/knowledge:explain` for a
+  book, or the subject is plainly too big for one document, it **proposes** the explain phase: a name, an
+  objective and every `## Explain` field filled in (subject, reader, depth, must-cover, leave-out, trusted
+  sources, project, private, English). On the operator's yes it creates the phase through the workflow's
+  explain route, with the same confirmation as today, and **stops**. The operator runs the phase the normal way
+  (`/do-whole-phase`); explain never runs it. Outside a workflow workspace it says a book needs one and offers
+  a single document instead.
+- **`no-research` stays** as an explicit opt-out only the operator chooses (a repo-only chapter with no "Best
+  practices & next steps"), never chosen by the agent; the report labels such a run. A run whose web research
+  *fails* still stops loudly.
 - The research, verifier and critic agents ship **in the knowledge plugin**, beside the writing rules they serve,
   so the bootstrap workspace stops carrying its own copy of the critic.
 
@@ -68,6 +87,8 @@ slices (P42) have merged; a cross-vendor verifier (deferred, D67).
 - Q: Is the research published with the book? — A: as recommended: the dossier stays with the drafts, each chapter publishes its own sources, and a book may end with a "Sources and further reading" chapter.
 - Q: Which model verifies? — A: as recommended, a different model from the researcher (Sonnet checks Opus). Not a cross-vendor check: deferred to later (D67).
 - Q: Which language? — A: English by default for everything; a Korean version only when asked. (Today's skill defaults to the language the request is written in.)
+- Q (OQ1, from P32.S1): Keep `no-research`? — A: yes, as an explicit opt-out only the operator chooses; failed research still stops.
+- Q: Should `/knowledge:explain <subject> book` create the explain phase and run it to the end? — A: no; it suggests the phase, creates it on the operator's yes through the normal route, and the operator runs it as a normal phase. Outside a workflow workspace it offers a single document instead.
 
 ## Notes
 
