@@ -3,14 +3,14 @@
   "phase_id": "P32",
   "name": "research method: sources, the claim ledger, verification and the critic",
   "kind": "research",
-  "status": "todo",
+  "status": "done",
   "order": 20,
   "depends_on": [
     "P32.S1"
   ],
   "created_at": "2026-10-22T22:14:25+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-22T22:50:28+09:00",
+  "completed_at": "2026-10-22T23:25:14+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "research evidence: 34 sources opened; dossier/ledger schema, source ranking and independence, verifier, disagreements, critic ledger+coverage, evidence gate, integrated pipeline in topics/research-evidence.md",
   "validation": {
     "required": [],
     "last_run": null,
