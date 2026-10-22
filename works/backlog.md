@@ -6,16 +6,16 @@
 ## Pointer
 
 - Current phase: `P32`
-- Current slice: `P32.DECOMP2`
-- Next slice: `P32.REVIEW`
+- Current slice: `P32.S4`
+- Next slice: `P32.S5`
 - Waiting on operator: `none`
-- Open deferred jobs: `48`
+- Open deferred jobs: `49`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P32` | planned | `P32.DECOMP2` | 4/6 | - | working tree |
+| `default` | `P32` | planned | `P32.S4` | 5/13 | - | working tree |
 
 ## Active Phases
 
@@ -32,7 +32,7 @@
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
 | [x] `P31` | `done` | `pass` | Explain phase route | `none` | `works/phases/active/P31` |
-| [ ] `P32` | `planned` | `pending` | Thorough research and critic in the explain pipeline | `P32.DECOMP2` | `works/phases/active/P32` |
+| [ ] `P32` | `planned` | `pending` | Thorough research and critic in the explain pipeline | `P32.S4` | `works/phases/active/P32` |
 
 ## Phase P21: Web document deletion
 
@@ -212,5 +212,12 @@
 | [x] `P32.S1` | `done` | research method: how research teams are planned, run and stopped | `research` | `works/phases/active/P32/slices/P32.S1` |
 | [x] `P32.S2` | `done` | research method: sources, the claim ledger, verification and the critic | `research` | `works/phases/active/P32/slices/P32.S2` |
 | [x] `P32.S3` | `done` | where the research team runs: hosts, the plugin and the book package | `research` | `works/phases/active/P32/slices/P32.S3` |
-| [ ] `P32.DECOMP2` | `todo` | cut the build from the research | `decomposition` | `works/phases/active/P32/slices/P32.DECOMP2` |
+| [x] `P32.DECOMP2` | `done` | cut the build from the research | `decomposition` | `works/phases/active/P32/slices/P32.DECOMP2` |
+| [ ] `P32.S4` | `todo` | Part B and the five plugin agents: briefs, ladder, verifier, critic, converter; AGENTS parity check | `implementation` | `works/phases/active/P32/slices/P32.S4` |
+| [ ] `P32.S5` | `todo` | Part A research stage: core card, preflight, waves, dossier and resume, gap rounds, evidence gate, quick and no-research | `implementation` | `works/phases/active/P32/slices/P32.S5` |
+| [ ] `P32.S6` | `todo` | Part A writing from the dossier, critic and revision, report, book section and suggestion; plugin 0.6.0 and README | `implementation` | `works/phases/active/P32/slices/P32.S6` |
+| [ ] `P32.S7` | `todo` | Rehearsal 1: old vs new single document on a general and a codebase subject; fix the skill | `qa` | `works/phases/active/P32/slices/P32.S7` |
+| [ ] `P32.S8` | `todo` | Bootstrap package: route fields, three explain references, executor carve-out, critic removal | `implementation` | `works/phases/active/P32/slices/P32.S8` |
+| [ ] `P32.S9` | `todo` | Rehearsal 2: a tiny book through the package, research to one chapter, nothing published | `qa` | `works/phases/active/P32/slices/P32.S9` |
+| [ ] `P32.S10` | `todo` | Handoff for the bootstrap: what to apply, the order around P42, the minimums | `docs` | `works/phases/active/P32/slices/P32.S10` |
 | [ ] `P32.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P32/slices/P32.REVIEW` |

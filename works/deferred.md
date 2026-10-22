@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `48`
+- Open: `49`
 - Promoted: `5`
 - Dropped: `14`
 
@@ -58,6 +58,7 @@
 | `D65` | `deferred` | CLI line numbers are body-relative for files with a --- header | P31.REVIEW | Someone fixes a headered file by the printed line numbers | `works/deferred/open/D65` |
 | `D66` | `deferred` | A missing FILE exits 1 under knowledge check | P31.REVIEW | An agent loops on fix the listed lines | `works/deferred/open/D66` |
 | `D67` | `deferred` | Cross-vendor verifier for explain research and critique | P32 intake | P32 has shipped, and the operator asks for it, or the Claude verifier or critic is seen missing errors a different vendor's model would catch | `works/deferred/open/D67` |
+| `D68` | `deferred` | Landing SKILL.md rejected by claude.ai skill upload (argument-hint) | P32.S3 | When claude.ai upload of the landing SKILL.md matters, or the next change to the three-copy parity rule | `works/deferred/open/D68` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
 | `D8` | `deferred` | usage_events retention/cleanup job | P11.DECOMP | usage_events growth becomes material / before onboarding high-volume non-#1 tenants | `works/deferred/open/D8` |
 

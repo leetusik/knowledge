@@ -3,14 +3,14 @@
   "phase_id": "P32",
   "name": "cut the build from the research",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 40,
   "depends_on": [
     "P32.S3"
   ],
   "created_at": "2026-10-22T22:14:25+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-23T00:34:35+09:00",
+  "completed_at": "2026-10-23T00:46:21+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut S4 Part B + 5 agents + AGENTS check, S5 research stage, S6 writing/critic/book section/suggestion/0.6.0 (high), S7 rehearsal 1 (qa high), S8 bootstrap package (high), S9 rehearsal 2 (qa high), S10 handoff (docs low); ~$165-245 left",
   "validation": {
     "required": [],
     "last_run": null,
