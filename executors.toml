@@ -46,3 +46,10 @@
 #[codex.high]
 #model = "gpt-5.5"
 #effort = "xhigh"
+
+# P32 (2026-10-22): quality over efficiency for the explain research phase -- research and high rows at xhigh.
+[claude.research]
+effort = "xhigh"
+
+[claude.high]
+effort = "xhigh"

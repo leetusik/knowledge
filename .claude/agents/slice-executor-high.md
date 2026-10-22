@@ -3,7 +3,7 @@ name: slice-executor-high
 description: Executes exactly one already-planned slice in an isolated context; returns a structured verdict. Never commits and never transitions slice/phase status. Top tier for decomposition, research, the phase review, slices rated risk high for a named trigger, and every second attempt after the mid tier; the escalation ceiling.
 tools: Read, Edit, Write, Glob, Grep, Bash, WebSearch, WebFetch, Agent
 model: opus
-effort: high
+effort: xhigh
 permissionMode: bypassPermissions
 ---
 

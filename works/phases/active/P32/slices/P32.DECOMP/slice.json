@@ -3,12 +3,12 @@
   "phase_id": "P32",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-22T22:03:27+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-22T22:10:55+09:00",
+  "completed_at": "2026-10-22T22:16:31+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "cut research first: S1 orchestration, S2 evidence, S3 hosts and delivery, then DECOMP2 at the gate",
   "validation": {
     "required": [],
     "last_run": null,
