@@ -64,7 +64,7 @@ The two changes ship together, as one release (`README.md` gives the order). The
 
 ## 3. `payload/claude/skills/do-next-slice/SKILL.md`
 
-- **Find:** L36, `- the phase review (\`kind: review\`) → \`reference/review.md\` (the review, the acceptance gate, recording the verdict, the doc debt);`
+- **Find:** L37, `- the phase review (\`kind: review\`) → \`reference/review.md\` (the review, the acceptance gate, recording the verdict, the doc debt);`
 - **Becomes:** insert after it:
 
 ```markdown

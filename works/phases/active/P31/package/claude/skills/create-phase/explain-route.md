@@ -4,7 +4,7 @@ Explaining one thing once stays the knowledge plugin's one-shot skill: `/knowled
 
 1. **Ask the `## Explain` fields at step 2.** Suggest a value for each, with your reason; the operator confirms or overrides:
    - **subject**: a phase id (`P30`), a slice id (`P30.S4`) or a free topic;
-   - **mode**: `codebase` (the subject is this repo's code or its work records) or `general` (no repo behind it; the web and the operator's material are the evidence);
+   - **mode**: `codebase` (the subject is this repo's code or its work records) or `general` (no repo behind it; the web and the operator's material are the evidence). This is the book's mode. It is not the skill's §1 mode (change, topic or general), which the outline sets for each chapter;
    - **book**: its slug and title, placed by the skill's §1 rules. A phase or slice subject gets that phase's own book, `p<N>` titled `P<N>: <phase name>`, as §1 names it for a slice; §1's `phases` book holds one chapter per phase, which is the one-shot's job. Anything else is a named book, of kind `codebase` or `subject`;
    - **lang**: the language the chapters are written in, plus any translations wanted. A translation names the published original's version (§5), so translations follow the accepted book: the review lists them as a deferred job for the orchestrator to file;
    - **reader**: who it is for and what they already know. The outline, every chapter and the critic write for this reader;

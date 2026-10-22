@@ -38,7 +38,15 @@ What differs is the work it reviews, which is a book rather than product code, a
    - **The credential** is the operator's org key, the one `/knowledge:setup` wrote and §2 resolves. **Never** use the master token or a tenant #1 key: those publish public by definition. If you are not sure which one you hold, return `needs_operator` before the first publish.
    - **The project** is the one in `## Explain`, which is private. A new name is created private on its first publish.
    - **Each chapter** is published with its `## Publish` command from step 4, `check` swapped for `save` and `--json` added to read the response; nothing else changes. Its `book/assets/<key>/` files are re-attached; the command already names them (§4.7, §5). Record each response's `url`, `rel_path` and `version` in a `## Published` table in `result.md`.
-   - **After the first chapter, prove it is private.** Fetch its `url`, and `GET <KB_API_BASE_URL>/api/documents/by-path/<rel_path>`, with **no** credential and no cookie. Both must miss (404). If either one reads, stop publishing and return `needs_operator`: the project is public, and the operator fixes its visibility. Never publish the rest into it.
+   - **After the first chapter, prove it is private.** Use the book's anonymous, visibility-gated address. `/api/*` won't do: it answers 401 to any request without a key, private or public, so a 401 is **no evidence**.
+     - **The control, with the org key:** `GET <KB_API_BASE_URL>/api/books/<project>/<book>` must answer 200. That proves the book exists under exactly these names. Anything else means the names are wrong, so the probe would prove nothing: return `needs_operator`.
+     - **The org:** take it from the first chapter's `url`. If the `url` is `<site>/@<org>/…`, use `<org>`. If it is `<site>/documents/<id>`, the org has claimed no slug: use its tenant id if the operator gave it, or else probe `GET <KB_API_BASE_URL>/app/documents/<id>` (the response's `id`) instead, which reads the same way. A `url` of the form `<site>/<project>/<date>-<slug>/` means a server without orgs. There, every miss on the route is a 404, so return `needs_operator`.
+     - **The probe, with no credential and no cookie:** `GET <KB_API_BASE_URL>/app/orgs/<org>/<project>/books/<book>`.
+       - **404:** private. Carry on.
+       - **200:** the project is **public**. Stop publishing and return `needs_operator`; the operator decides its visibility. Never publish the rest into it.
+       - **Anything else** (a 401, a 5xx, a transport failure) is no evidence: return `needs_operator`.
+     - **Only for a `/@…` `url`,** also fetch the `url` itself anonymously, as a second probe. It must miss too, and a read is the same `needs_operator`. Never fetch a `/documents/<id>` `url`: that is a console page, and its sign-in redirect proves nothing.
+     - **An org key is not a member** on `/app/*`. It reads a private book as a 404 there, like anyone else, so never send it on the probe; the member read is step 6's signed-in profile.
    - **A transport failure** is verified before any retry, per §5.1. Never re-send blind.
    - **A `chapter:` link warning** for a sibling not yet published is expected mid-run; step 6 confirms the link lands.
 6. **Reads the book in the real reader.**
