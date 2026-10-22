@@ -80,8 +80,9 @@ route-table row (the orchestrator picks its model per call). The `do-next-slice`
 - **Knowledge plugin 0.5.0 or later**, set up once with `/knowledge:setup` (it writes the org-level key the
   review publishes with).
 - **`knowledge` CLI 0.2.0 or later** (`knowledge check`).
-- **A knowledge server with `POST /api/documents/check`**, deployed by the knowledge operator (open question
-  OQ1 in the knowledge repo; it is not the bootstrap's to do). Until then `knowledge check` exits 2 with
+- **A knowledge server with `POST /api/documents/check`**: **live on https://knowledge.hi2vi.com since
+  2026-10-22** (Production Deploy run 39717847318, commit `2acfa92`). A self-hosted server older than that
+  makes `knowledge check` exit 2 with
   `has no /api/documents/check`, the chapter's check is skipped with a report line, and the publish's own
   422 stays the backstop. Exit 2 for "cannot reach" or "key rejected" is **not** a skip.
 - A private project in the operator's org, and a filled `## Operator Runtime` with an agent browser account

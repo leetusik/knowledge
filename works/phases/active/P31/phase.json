@@ -2,23 +2,23 @@
   "id": "P31",
   "name": "Explain phase route",
   "objective": "Prepare, in this repo, everything the workflow needs to run explaining as a phase: (1) knowledge check — a CLI command and server endpoint that validates a chapter against the publish rules without publishing; (2) a ready-to-apply package for the bootstrap: the create-phase explain route, the DECOMP reference (research, book outline, an outline gate the operator signs), the per-chapter slice procedure (draft, validate, critic, one revision), an explain-critic agent, and the REVIEW reference (whole-book read, render in the reader, publish every chapter at once, private) plus the acceptance gate; (3) an updated handoff-explain.md. The bootstrap repo itself is out of scope; the operator relays the package.",
-  "status": "pending",
+  "status": "done",
   "order": 11,
   "created_at": "2026-10-21T18:54:00+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-22T12:41:11+09:00",
+  "completed_at": "2026-10-22T12:41:11+09:00",
   "review": {
-    "status": "changes_requested",
-    "reviewed_at": "2026-10-21T19:59:50+09:00",
+    "status": "pass",
+    "reviewed_at": "2026-10-22T12:41:11+09:00",
     "reviewer": "slice-executor-high",
-    "note": "round 1: explain-review privacy probe proves nothing in production (401 for any visibility); PATCHES §3 L36→L37; Doc impact missing backend.md. Fix: P31.F1."
+    "note": "round 2 pass after F1; operator accepted 2026-10-22; deployed"
   },
   "acceptance": {
     "required": true,
     "walkthrough": "(1) push + deploy so POST /api/documents/check exists on knowledge.hi2vi.com (OQ1); (2) reinstall the CLI from cli/ (uv tool install --reinstall .), knowledge --version = 0.2.0; (3) knowledge check <a real chapter> --format native --title ... --tag ... --tag ... --project <private project> -> exit 0, OK would publish, nothing new in the reader; (4) add <b>x</b> to a line -> exit 1 with line N: [raw-html]; (5) read works/phases/active/P31/package/README.md then handoff-explain.md, relay the handoff to the bootstrap agent. Decisions: OQ1 deploy; OQ10 sign Aside profile u1 into the reader as an org member before the first explain review; OQ15 the corrected privacy proof. Decided as drawn: OQ2-OQ9, OQ11-OQ14.",
     "requested_at": "2026-10-22T12:32:47+09:00",
-    "cleared_at": null,
-    "note": null
+    "cleared_at": "2026-10-22T12:41:11+09:00",
+    "note": "operator: 'you can close this phase' (2026-10-22) after pushing and deploying (run 39717847318 green on 2acfa92; /api/documents/check live: 401 anon, 422 empty body). Accepts OQ1 (deployed), OQ10, OQ15 as drawn. Handoff path relayed by the operator to the bootstrap agent."
   },
   "paths": {
     "phase_md": "phase.md",
@@ -29,5 +29,6 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  }
+  },
+  "consolidation": "pending"
 }

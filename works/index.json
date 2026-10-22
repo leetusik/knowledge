@@ -127,17 +127,18 @@
       "id": "P31",
       "name": "Explain phase route",
       "objective": "Prepare, in this repo, everything the workflow needs to run explaining as a phase: (1) knowledge check — a CLI command and server endpoint that validates a chapter against the publish rules without publishing; (2) a ready-to-apply package for the bootstrap: the create-phase explain route, the DECOMP reference (research, book outline, an outline gate the operator signs), the per-chapter slice procedure (draft, validate, critic, one revision), an explain-critic agent, and the REVIEW reference (whole-book read, render in the reader, publish every chapter at once, private) plus the acceptance gate; (3) an updated handoff-explain.md. The bootstrap repo itself is out of scope; the operator relays the package.",
-      "status": "pending",
+      "status": "done",
       "order": 11,
       "path": "works/phases/active/P31",
-      "review_status": "changes_requested",
-      "current_slice": "P31.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 9,
-      "done_slice_count": 8
+      "done_slice_count": 9,
+      "consolidation": "pending"
     }
   ],
   "deferred_open_count": 47,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-22T12:32:47+09:00"
+  "last_rebuilt_at": "2026-10-22T12:41:11+09:00"
 }
