@@ -92,7 +92,9 @@ settle a disagreement.
   written there, with absolute paths, and nothing chained to it (`;`, `&&`), wrapped around
   it (`cd`, a variable, a loop, a function) or redirected. Read files with Read; list and
   search them with Glob and Grep where your host has them, otherwise with one plain
-  `ls`, `find` or `grep -n` on absolute paths, under the same rule. Never install, build,
+  `ls`, `find` or `grep -n` on absolute paths, under the same rule. No `$` anywhere in a
+  command: it needs approval, which an unattended session denies (`grep -x` matches a whole
+  line, never `^…$`). Never install, build,
   run a page's code, or change a repository. A session that allows these forms by prefix
   allows nothing else, and denies a call it cannot match whole.
 - **You never spawn agents** and never contact another agent.

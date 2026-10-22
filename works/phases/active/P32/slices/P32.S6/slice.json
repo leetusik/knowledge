@@ -3,14 +3,14 @@
   "phase_id": "P32",
   "name": "Part A writing from the dossier, critic and revision, report, book section and suggestion; plugin 0.6.0 and README",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 70,
   "depends_on": [
     "P32.S5"
   ],
   "created_at": "2026-10-23T00:39:29+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-23T02:49:37+09:00",
+  "completed_at": "2026-10-23T03:38:43+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Part A D6-D9 (dossier-only writing + trace.md, check -> critic on other family -> confirm -> one revision -> publish, report), §9 book suggestion/whole-book research/chapter top-up, plugin 0.6.0 + README; two -p runs published to scratch ($6.93); OQ6 production token read by a test lead; skill 147.6 KB",
   "validation": {
     "required": [],
     "last_run": null,
