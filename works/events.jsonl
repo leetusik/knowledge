@@ -1324,3 +1324,6 @@
 {"ts": "2026-10-23T00:46:21+09:00", "type": "executor_dispatched", "slice": "P32.DECOMP2", "phase": "P32", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-23T00:46:21+09:00", "type": "slice_status_changed", "slice": "P32.DECOMP2", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-10-23T00:46:31+09:00", "type": "deferred_created", "deferred": "D68", "source": "P32.S3"}
+{"ts": "2026-10-23T00:46:57+09:00", "type": "slice_status_changed", "slice": "P32.S4", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-23T01:15:30+09:00", "type": "executor_dispatched", "slice": "P32.S4", "phase": "P32", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-23T01:15:30+09:00", "type": "slice_status_changed", "slice": "P32.S4", "old_status": "in_progress", "new_status": "done"}

@@ -3,14 +3,14 @@
   "phase_id": "P32",
   "name": "Part B and the five plugin agents: briefs, ladder, verifier, critic, converter; AGENTS parity check",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 50,
   "depends_on": [
     "P32.DECOMP2"
   ],
   "created_at": "2026-10-23T00:39:29+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-23T00:46:57+09:00",
+  "completed_at": "2026-10-23T01:15:30+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Part B (5 role briefs, ladder/bar, dossier formats, pagetext.py) after §8 in all three copies; 5 plugin agents as byte-identical extracts; skills_parity AGENTS check + --write-agents; skill now 109 KB (OQ5)",
   "validation": {
     "required": [],
     "last_run": null,
