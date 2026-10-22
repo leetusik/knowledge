@@ -17,22 +17,97 @@ There is one output format everywhere: **native**. You never write HTML, and the
 knowledge base never runs your code. Everything interactive (the quiz, the collapsible
 callouts, the diagrams) is declared in the chapter's text and drawn by the reader.
 
+## The run, in one card
+
+**After a compaction, before your next action:** re-read this file
+(`${CLAUDE_SKILL_DIR}/SKILL.md` in Claude Code) down to Part B, then the run's `run.md`,
+and go on from the stage it records. Only the start of a skill survives a compaction;
+`run.md` holds where the run stands. Read Part B's sections only when you fill a dispatch.
+
+**The stages** of one document. §3 is your procedure; Part B is each role's method, and
+you cite it, never restate it.
+
+| Stage | Who | Writes | Stops when |
+|---|---|---|---|
+| D0 brief | you | `brief.md`, once D0b passes | — |
+| D0b preflight | you and two probe agents | `run.md` | a probe call is denied; the web fails twice |
+| D1 plan | you | `plan.md` | — |
+| D2 wave | researchers (B1, B2) | `findings/<stem>.md` | a load-bearing angle fails twice; a search limit |
+| D3 merge | you | `library.md`, `ledger.md`, `outline.md` | an entry count falls (fix it first) |
+| D3v, D3s | verifiers (B4); you | `verify/r<n>-b<k>.md`; statuses | a batch fails twice |
+| D4 gap round | gap reviewer (B3), then D2–D3s | `gaps/r<n>.md` | complete, stalled, 3 rounds or the ceiling |
+| D5, D5s | verifiers, with counter-evidence; you | `verify/final-b<k>.md`; disagreements; `gaps/final.md` | a batch fails twice |
+| D5g evidence gate | you | its result in `run.md` | below the gate: stop before writing |
+| D6–D9 | you (the critic at D8) | the outline, the draft, the trace; publish; report | §4–§8 |
+
+**The run** (§1's RUN; the report's first line names it):
+
+- **`full`**, the default: a research team in waves, verified on another model, up to 3
+  gap rounds, counter-evidence on the main claims, the evidence gate, the critic.
+- **`quick`**: you research alone into the same dossier, then one verifier batch on the
+  load-bearing claims. No gap rounds, no counter-evidence, no critic; the gate still holds.
+- **`no-research`**: only when the operator asked for it; never your choice. No web and no
+  team: the repository, or the user's own material, only (§3.9).
+- **`resume [<run-id>]`**: continue a stopped run from its `run.md` (§3.3).
+
+**The dossier**, `<DOSSIER>` (§2), holds every file of the run, the drafts included. It is
+never deleted or published, and every report prints its path. **`run.md`** is the run's
+state (§3.3): the mode block, the stage, each wave's dispatched, returned and failed agents,
+the models that really ran, the entry counts, the stop reason and the gate. Update it at
+every stage boundary and every agent return, before your next action.
+
+**The stop rules.** Fail loudly, never quietly: a stop says why in its first line, keeps the
+dossier, names its path and says how to resume.
+
+- Ask the user nothing during the run. Never choose `quick` or `no-research` yourself.
+- **`FAILED: permissions`**: a probe call, or later a role's call, was denied. Print the
+  rules (§3.2); the preflight writes nothing else.
+- **`FAILED: web research unavailable — no chapter written`**: a search or a fetch failed
+  twice at the preflight.
+- **`failed: search-limit`** from any role, or a limit notice on your own search: stop at
+  once; the run resumes after the limit refills or is raised. A search that did not run is
+  `not searched`, never `not found`.
+- A load-bearing angle, a verifier batch or a gap review failing twice: stop, resumable.
+- **`STOPPED: evidence gate`** (D5g): stop before writing, with the failing items, their
+  best sources, the queries run and two ways to resume.
+- Loop safety is the only bound: at most 3 gap rounds, the tier's dispatch ceiling, one
+  re-dispatch per failed agent, one re-verification per claim. Overflow is queued, never
+  dropped; evidence is never truncated; research never ends silently on an error.
+- **Never skip or shorten a stage** to save time, tokens or money. A budget, usage or turn
+  limit that would cut one short stops the run at the last stage boundary, resumable, and
+  `run.md` says so.
+- **English**, whatever the request's language, unless the operator names another (§1).
+
 ## 1. Resolve the topic, the mode and the placement
 
-**Arguments** = the skill arguments: $ARGUMENTS. First, strip any of these **trailing
-standalone words** (they compose — any combination, any order) and remember each:
+**Arguments** = the skill arguments: $ARGUMENTS.
+
+**Resume.** When the arguments are `resume` alone, or `resume` followed by a run id
+(`<YYYYMMDD-HHMM>-<slug>`) and optionally a note (`trust <a source or site>`,
+`drop <a must-cover item>`), this is a resume: run §2, then follow §3.3's resume. The
+topic, mode, placement and language come from the run's own files, not from these
+arguments. Any other use of the word `resume` is part of a topic.
+
+Otherwise, strip any of these **trailing standalone words** (they compose — any
+combination, any order) and remember each:
 
 - `here` → PROJECT_COPY=yes (also write a copy into the current project, step 7).
-- `research` → force the "Best practices & next steps" web-research section **ON** (skip
-  the judgment gate in step 3; still degrade gracefully offline).
-- `no-research` → force that section **OFF** (run no web research this time).
+- `quick` → RUN=`quick`: you research alone, with one verifier batch and no gap rounds,
+  counter-evidence or critic (§3.9).
+- `no-research` → RUN=`no-research`: no web research and no research team; a repo-only
+  chapter with no "Best practices & next steps" (§3.9). **Only the operator chooses it**,
+  with this word or in their own words. You never pick it: not for a small subject, and
+  not when the web fails (a failed preflight stops the run). The report labels the run.
+- `research` → nothing: research is the default. The word is accepted for old habits.
 - `book=<slug>` → BOOK: publish this as a chapter of that book (lowercase-kebab slug).
 - `lang=<xx>` → LANG: the chapter's language as a lowercase two- or three-letter code
-  (`en`, `ko`). Without it, use the language the user is writing in (default `en`).
+  (`en`, `ko`). Without it, LANG is **`en`**: the chapter, the dossier and the report are
+  in English whatever language the request is written in. Another language only when the
+  operator names one (`lang=ko`, or "in Korean" in their own words).
 
-Strip every trailing flag word before using the rest as the topic. `research` and
-`no-research` are mutually exclusive; if both appear, the last one wins. If neither
-appears, the section is **default-on through the judgment gate** (step 3).
+Strip every trailing flag word before using the rest as the topic. `quick` and
+`no-research` are mutually exclusive; if both appear, the last one wins. With neither,
+RUN is `full`: the research team, the verifier, the gap rounds and the critic.
 
 **What remains after stripping is the TOPIC / change-ref.** Decide the MODE from it:
 
@@ -79,11 +154,12 @@ Do **not** invent a book the user did not ask for and the rules above do not nam
 ## 2. Resolve the knowledge base configuration
 
 The knowledge base is no longer hardcoded to one machine — resolve it from config.
-**Run this one command** and read its `KEY=VALUE` output; do not reason about the
-resolution rules by hand:
+**Run this one command**, as a Bash call of its own (nothing chained to it with `;`, `&&`
+or `|`: one unapproved part makes the whole call need approval), and read its
+`KEY=VALUE` output; do not reason about the resolution rules by hand:
 
     python3 -c '
-    import json, os
+    import json, os, time
     home = os.path.expanduser("~")
     def env(k):
         v = os.environ.get(k)
@@ -129,6 +205,9 @@ resolution rules by hand:
     print("KB_API_TOKEN=" + token)
     print("KB_SITE_BASE_URL=" + site_base)
     print("KB_LOCAL_FALLBACK=" + ("yes" if local_fallback else "no"))
+    state = os.environ.get("XDG_STATE_HOME") or os.path.join(home, ".local", "state")
+    print("KB_EXPLAIN_STATE=" + os.path.join(state, "knowledge-kb", "explain"))
+    print("KB_NOW=" + time.strftime("%Y%m%d-%H%M"))
     '
 
 Read the output:
@@ -138,12 +217,14 @@ Read the output:
   `KB_API_TOKEN` env vars). Write no files anywhere, and do not scaffold anything.
 - `KB_STATUS=error` → **STOP** and report the `KB_ERROR` line (the config file exists
   but is unreadable); do not fall back to another source.
-- `KB_STATUS=configured` → remember all five values for the steps below:
+- `KB_STATUS=configured` → remember all seven values for the steps below:
   - `KB_API_BASE_URL` — the document API base (used in steps 3 and 5).
   - `KB_API_TOKEN` — a bearer token, or empty (empty = no token; used in step 5).
   - `KB_ROOT` — the local KB checkout, or empty for a remote-only config.
   - `KB_SITE_BASE_URL` — the local MkDocs viewer base (used in step 8).
   - `KB_LOCAL_FALLBACK` — `yes` or `no`; kept for the report in step 6.
+  - `KB_EXPLAIN_STATE` — where runs keep their dossiers (below).
+  - `KB_NOW` — the local time, for the run's id.
 
 What the command resolves, for reference (per-key, highest priority first):
 
@@ -160,29 +241,45 @@ What the command resolves, for reference (per-key, highest priority first):
    `/knowledge:setup` working.)
 4. **Nothing** → unconfigured (the STOP above).
 
-## 3. Research (read-only)
+**The run's dossier.** Every run keeps its files in one folder, `<DOSSIER>` =
+`<KB_EXPLAIN_STATE>/<run-id>/`, where `<run-id>` is `<KB_NOW>-<slug>` (`<slug>`: the topic
+in lowercase-kebab, at most 40 characters). It sits beside the KB config and outside every
+repository. The page converter lives in `<TOOLS>` = `<KB_EXPLAIN_STATE>/tools/`, shared by
+every run. If D0b cannot write there, both move under `<cwd>/.knowledge-explain/` (not to
+be committed), and the report says so. **The drafts live in the dossier too:** `<tmp>` in
+§4–§7 is `<DOSSIER>`, never `/tmp`, which a reboot clears. Nothing in a dossier is
+deleted, published or committed.
 
-The research roles' briefs and the page converter are in **Part B**, at the end.
+## 3. Research
 
-Ground **every** claim in reality — never invent paths, commands, config snippets,
-behavior, figures, dates or quotations; quote them from real files and real pages. Reuse
-conclusions already established in this conversation rather than re-deriving them.
-Audience: novice, unless the user says otherwise.
+Research is a stage of its own, finished before any writing starts (the card above). This
+section is your procedure as the lead; each role's method is in **Part B**, at the end,
+and you cite it, never restate it. Ground **every** claim in reality: never invent paths,
+commands, config snippets, behaviour, figures, dates or quotations; they come from real
+files and real pages, through the dossier. What this conversation already established is
+a lead for the plan, never evidence by itself. Ask the user nothing from here to the
+report: decide, record the decision in `run.md`, and go on. Your own Bash keeps B6's rule:
+the forms this skill gives, one to a call; write the dossier's files with Write and Edit
+(Write makes the folders: no `mkdir`, no shell redirection), and read them as B6 says.
 
-**Repo research — by mode:**
+### 3.1 D0: the brief, and the prior version
 
-- **Change mode:** read the actual change, not your memory of it. Use `git diff`,
-  `git log`, and `git show` (e.g. `git show <ref>`, `git diff <base>..<head>`,
-  `git log --stat`) to get the real diff and the surrounding history, then read the
-  changed files and the code around them. Every statement about what changed is grounded
-  in the real diff and real files. For a phase or slice, also read its plan and result
-  notes if the repo keeps them.
-- **Topic mode:** read the real code, configs, compose files, and scripts that make the
-  topic work here — walk the actual implementation.
-- **General mode:** there is no repo research. The evidence is the web research below,
-  files or images the user gave you, and what the conversation established.
+Compose the brief now and keep it in context; write it to `<DOSSIER>/brief.md` only once
+D0b passes:
 
-**Knowledge-base research — is this an update to an existing chapter or document?**
+    # Brief: <run-id>
+    - subject: <the topic> · mode: change | topic | general · run: full | quick | no-research
+    - reader: <who; a novice unless the request says otherwise> · purpose: <what they can do afterwards>
+    - must-cover: <the items the request names> | none · leave-out: <items> | none
+    - trusted sources: <names or sites> | none · lang: <LANG> · placement: loose | <book>/<key>
+    - prior: none | <PRIOR_REL_PATH> v<PRIOR_VERSION> · open: <each dimension the request leaves unstated>
+
+Then look for an **unfinished run** of the same subject: a `run.md` under
+`<KB_EXPLAIN_STATE>` whose `state:` is not `done`. If there is one, say so in one line
+("An unfinished run <run-id> exists for this subject; this is a new run.
+`/knowledge:explain resume <run-id>` continues the old one."), and go on.
+
+**The prior version: is this an update to an existing chapter or document?**
 
 The KB versions documents **in place**: re-explaining something publishes the **next
 version of the same document**, not a second post. Derive `project` and `slug`/key
@@ -245,45 +342,341 @@ and version. If the quiz item or option ids differ from the source version's, th
 refuses it (422 `translation-quiz-ids`); heading and block id differences come back as
 warnings.
 
-**Web research — the "Best practices & next steps" section (default-on):**
+A translation runs no research stage: it skips D0b–D5g, keeps its draft in `<DOSSIER>`,
+and goes from here to §4.
 
-This is the one part that reaches *beyond* the codebase: how the implementation compares
-to prevailing external practice — and, in general mode, it is the substance of the
-chapter. Decide whether to run it:
+### 3.2 D0b: the preflight
 
-1. **Forced?** If `no-research` was given (step 1), skip it — go to step 4 with no
-   best-practices section. If `research` was given, run it (skip the judgment gate below)
-   but still honor the offline degradation in point 4.
-2. **Judgment gate (the default path).** Run web research **unless** the subject has no
-   meaningful external comparison surface: skip it for purely-internal material
-   (repo-private glue, personal naming conventions, one-off wiring nobody else has an
-   opinion on) and for trivial fixes (a typo, a version bump, a one-line guard). **In
-   general mode always run it.** When in doubt on a substantive subject, run it.
-3. **Run it (WebSearch / WebFetch).** Search for how this class of problem is solved in
-   general — the relevant patterns, standards, well-known libraries, documented
-   trade-offs — and **open the pages you cite** (WebFetch) so every claim rests on a page
-   you actually read. Gather enough to say: where the implementation **aligns** with
-   prevailing practice, where it **deliberately diverges** (and why that can be
-   legitimate here), and **2–4 concrete next steps**.
-4. **Degrade gracefully — never hang, never loop, never fail the save.** If WebSearch /
-   WebFetch are unavailable, or the first couple of attempts error or time out, **stop
-   trying**: skip the section, remember the outcome as `skipped-offline`, and move on to
-   step 4. This skill runs unattended at automated phase reviews — the offline path must
-   always fall through to a successful save. Do not retry in a loop. (In general mode,
-   write only what the conversation and the user's own material support; if you have no
-   source you opened, publish no sources block rather than an invented one.)
+The preflight proves, before anything of the run is written, that this session can run the
+whole stage. **Permissions belong to the session, not to this skill:** the `allowed-tools`
+grant ends at your next turn, and an agent's notification starts one, so every later call,
+yours and every agent's, runs on the session's own posture: auto mode (interactive Claude
+Code's default), bypass, or allow rules.
 
-Remember the outcome for the report (step 8): **included**, **skipped-by-judgment**
-(purely-internal / trivial), or **skipped-offline** (tools unavailable or errored). A
-failed research step **never** blocks the save.
+1. **Pick the path,** once, for the whole run (B0):
+   - **plugin**: your agent types include the `knowledge:` roles (`knowledge:web-researcher`,
+     `knowledge:verifier`, …);
+   - **generic**: you can spawn subagents, but not those;
+   - **sequential**: you cannot spawn subagents.
+2. **The tools folder.** Write the converter (B12): the `pagetext` extract without its two
+   fence lines, copied by this command, never retyped (`<this file>` is the path you read
+   this skill from, on Claude Code the base directory it named when it loaded the skill
+   plus `/SKILL.md`; never `ls` it, which a session may refuse outside its working folders):
+
+       python3 -c 'import os,sys; L=open(sys.argv[1]).read().split("\n"); i=L.index("<!-- part-b:begin pagetext -->"); j=L.index("<!-- part-b:end pagetext -->"); os.makedirs(os.path.dirname(sys.argv[2]), exist_ok=True); open(sys.argv[2], "w").write("\n".join(L[i+2:j-1]) + "\n"); print("ok")' <this file> <TOOLS>/pagetext.py
+
+   It is also the write probe: if it fails for a reason other than a denied permission (a
+   read-only or sandboxed path), use `<cwd>/.knowledge-explain/` as the root for `<TOOLS>`
+   and `<DOSSIER>` instead. Run `which pdftotext` as its own call; without it, PDFs fall back to WebFetch
+   (B11).
+3. **The two-agent probe** (plugin and generic paths), each agent a general subagent on a
+   cheap model named on the call (`haiku` on Claude Code):
+   - **A**, in the background: "Reply with the single word `ok`." End your turn and wait
+     for its notification, so that the probe runs after one, as every wave will.
+   - **B**, after A's notification: exactly these calls, every one of them even when an
+     earlier one failed, each reported on its own line as `ok`, `denied` or
+     `error: <message>`, and nothing else:
+     1. WebSearch for 3–5 words of the subject;
+     2. WebFetch of the first result's URL (`https://example.com/` if the search gave none);
+     3. `curl -sS --max-time 30 -L --create-dirs -A "Mozilla/5.0 (compatible; knowledge-explain)" -o <TOOLS>/probe/page.html -w '%{http_code} %{content_type}\n' '<the same URL>'`
+     4. `python3 -I <TOOLS>/pagetext.py <TOOLS>/probe/page.html <TOOLS>/probe/page.txt`
+     5. Write `<TOOLS>/probe/write.md`, one line: `probe <run-id>`;
+     6. Read the first 5 lines of `<TOOLS>/probe/page.txt`.
+
+   On the sequential path, make the same six calls yourself.
+4. **Judge it:**
+   - **A `denied` call**, or a spawn refused for permissions → **stop** with the block
+     below. Write nothing else: no dossier, no brief.
+   - **A search or a fetch that errors** → retry it once. Failing twice → **stop**:
+     `FAILED: web research unavailable — no chapter written`, and nothing written. A
+     search-limit notice → **stop**: `FAILED: search-limit — run this again once the limit
+     refills or is raised (CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION)`.
+   - **A `curl` or converter error alone** (a site that refuses scripts) → try one other
+     result once; if it fails too, go on, recording `quote-match: approximate` sources (B11).
+   - **All `ok`** → write `<DOSSIER>/brief.md` and `<DOSSIER>/run.md` (§3.3, with the
+     path, the probe's results and the models) with Write, which creates the folder.
+
+The stop block, with the real absolute paths filled in. `<ROOT>` is `<KB_EXPLAIN_STATE>`
+(or the cwd fallback), never a folder above it; the rules' extra leading `/` makes `//…`,
+which Claude Code reads as the filesystem root:
+
+    FAILED: permissions — this session denied: <the calls>. Nothing of the run was written.
+    The research agents run on the session's permissions, not on this skill's. Use auto
+    mode (interactive Claude Code's default) or bypass, or allow these (settings.json
+    "permissions.allow"; under `claude -p`, the same strings after --allowedTools), then
+    run the same request again:
+      "WebSearch", "WebFetch",
+      "Bash(curl -sS --max-time 30 *)", "Bash(curl -sS --max-time 5 *)",
+      "Bash(python3 -I <TOOLS>/pagetext.py *)", "Bash(pdftotext *)",
+      "Bash(git show *)", "Bash(git log *)", "Bash(git grep *)", "Bash(git blame *)",
+      "Bash(git diff *)", "Bash(git status *)", "Bash(shasum -a 256 *)", "Bash(mktemp -d *)",
+      "Bash(knowledge --base-url *)",
+      "Read(/<ROOT>/**)", "Edit(/<ROOT>/**)"
+    On another host, allow the same commands and paths in its own terms.
+
+A role that returns `failed: permissions` later in the run stops it with the same block.
+
+### 3.3 `run.md`, and resuming a run
+
+`run.md` is the run's state. Update it at every stage boundary and every agent return,
+before your next action, so that a compaction, a crash or a usage limit loses nothing:
+
+    # Run: <run-id>
+    - subject: <subject> · run: full | quick | no-research · tier: <n> · lang: <LANG>
+    - stage: D<k> <name> · state: running | stopped: <reason> | done
+    - dossier: <absolute path> · tools: <absolute path> · skill: <absolute path of this file>
+    ## Mode
+    mode: parallel | sequential      agents: plugin | generic | lead      wave: <n>
+    verifier: <model> | same model (degraded) | lead (degraded)
+    critic: <model> | same model (degraded) | none (quick)
+    quote-match: exact | approximate (<k> sources)      caps: agent | prompt-only
+    searches: <used>; limit hit: no | yes (stopped, resumable)
+    ## Preflight
+    - path: plugin | generic | sequential · probe: <call: ok, …> · pdftotext: yes | no
+    ## Log
+    - D2 r1: dispatched <stem> (<agent id>), … · returned <stem> (<status>), … · failed … · queued …
+    - D3 r1: sources <n> · claims <n> (last merge: <n> · <n>)
+    - D3v r1: <batch id> (<n> claims), … · returned …
+    - D4 r1: <the gaps verdict> → round 2 | stop: complete | stalled | capped: rounds | capped: ceiling
+    - D5g: must-cover <a>/<b> · load-bearing questions <x>/<y> answered or contested → pass | stop
+    ## Models
+    - <stem or batch id>: <the model line it returned>[ · fallback: <the notice>]
+    ## Resume
+    - <date>: <what the operator asked, and what you did>
+
+`wave` is the wave size (§3.5); `caps: agent` when the agents' own turn limits apply (the
+plugin path), `prompt-only` when only the dispatch's budget does; `searches` counts the
+queries the findings and verify files list. A verifier that reports the researchers' model
+makes `verifier: same model (degraded)`; the sequential path makes it `lead (degraded)`.
+An agent's "switched to" notice is recorded as a fallback.
+
+**Resume** (`/knowledge:explain resume [<run-id>] [trust <source> | drop <item>]`):
+
+1. **Find the dossier:** `<KB_EXPLAIN_STATE>/<run-id>/` (or the cwd fallback); without an
+   id, the newest `run.md` there whose `state:` is not `done`. None → say so and stop.
+2. **Read `run.md`**, then `brief.md` and `plan.md`; the run carries on with their
+   subject, mode, placement and language.
+3. **Run D0b again**, the probe included: this is a new session, and its permissions may
+   differ. Nothing in the dossier is rewritten.
+4. **Go on from the recorded stage.** In an unfinished wave or batch, dispatch again only
+   the agents whose output file is missing; merge the findings and verify files the
+   indexes do not list yet; a question left `not searched` goes back to its angle.
+5. **The note:** `trust <a source or site>` joins the brief's trusted sources and buys one
+   more round, beyond the cap, on the items the gate failed; `drop <item>` takes it out of
+   must-cover, in `brief.md`. Then D5–D5g again.
+6. **Record** the resume in `run.md` under `## Resume`.
+
+### 3.4 D1: the plan
+
+`plan.md` is written once; later you only add questions and append to its query log:
+
+    # Plan: <run-id>
+    - tier: <n> (breadth <…> · nesting <…> · exploration <…>) · wave 1: <n> · per round: ≤ <n>
+      · budget: <target> / <cap> tool calls · ceiling: <n>
+    ## Scouting
+    ## Questions
+    - Q1 · load-bearing: yes | no (<why>) · angle: <angle-id> · from: ask | must-cover | expert | gap G-…
+    ## Outline skeleton
+    ## Angles
+    - <angle-id> (<name>; web | code): owns <…> · not yours: <…> · questions: Q1, … | dropped (<why>)
+    ## Query log
+
+1. **Scouting,** at most 5 tool calls: 1–3 short broad searches, and the tables of contents
+   of 1–3 existing treatments; in repo modes also the diff, `git log --stat` and the file list.
+2. **Questions,** 8–20: the explicit asks, every must-cover item, and 3–5 things an expert
+   would expect a chapter for this reader to cover. Mark each load-bearing or not.
+3. **An outline skeleton** in §4.2's order, with the questions each section answers.
+4. **The tier:** the highest of three axes. Breadth: one domain (1), 2–5 subtopics (2), more
+   than 5 or disjoint domains (3). Nesting: one-step inference (1), 2–3 dependent
+   sub-questions (2), 4 or more (3). Exploration: fully specified (1), 1–2 unspecified
+   factors (2), 3 or more (3).
+
+   | Tier | Wave 1 | Per gap round | Budget per web researcher: target / hard cap | Ceiling |
+   |---|---|---|---|---|
+   | 1 focused | 3 | ≤ 2 | 8–12 / 20 tool calls | 12 |
+   | 2 standard | 5–6 | ≤ 3 | 10–20 / 30 | 18 |
+   | 3 broad | 7–10 | ≤ 4 | 15–25 / 40 | 25 |
+
+   A code researcher gets double the budget. The ceiling counts researcher and gap-reviewer
+   dispatches, re-dispatches included, but not verifier batches. Caps and ceilings are loop
+   safety, not targets.
+5. **Angles, each with an owner.** Every question has exactly one owning angle. An angle
+   with no questions is dropped, with a one-line reason. An angle's `not yours` is what the
+   others own. For any subject:
+   - **foundations**: definitions, the core mechanism, prerequisites (today's tools are
+     current practice; origins are history);
+   - **current practice**: how it is done today, the main tools and their documented
+     behaviour, versions (measurements are evidence; deployments are real cases);
+   - **evidence and numbers**: measurements, benchmarks, studies, adoption figures, dated
+     (anecdotes are real cases; judgments of merit are criticism);
+   - **history**: origins, why it arose, milestones, superseded approaches;
+   - **criticism and failure modes**: limits, critiques, incidents, when not to use it;
+   - **real cases**: deployments, case studies, worked examples with real numbers.
+
+   A codebase subject (change or topic mode) adds three:
+   - **code in real order** (a code researcher, no web): the path through this repository,
+     in execution order for a flow and dependencies first for a structure;
+   - **history behind it** (a code researcher): `git log` and `git blame`, commit messages,
+     design, phase and slice notes: why it is this way (the field's history is history);
+   - **how others solve it** (a web researcher): comparable implementations and the
+     standard patterns this code follows or departs from (definitions are foundations).
+
+   Merge angles to fit the tier. Tier 1: {foundations + history}, {current practice + real
+   cases}, {evidence + criticism}; a codebase: {code in real order + history behind it},
+   {foundations + how others solve it}, {criticism + evidence + real cases}. Tier 2: one
+   researcher per angle (history joins foundations when thin; a codebase merges current
+   practice into how others solve it, and evidence with real cases). Tier 3: one per
+   angle, the heaviest split by sub-area.
+6. **The query log,** empty until D3.
+
+### 3.5 D2: a wave
+
+1. **Fill each researcher's dispatch** from its role section (B1 web, B2 code): the stem
+   `r<n>-<angle-id>`, absolute dossier and tools paths, its questions with their
+   load-bearing marks, `not yours`, `known already` (the ledger's ids on those questions),
+   `queries already run` (the query log), the brief's trusted sources and leave-out, and
+   the tier's budget. A code researcher gets the repository and `commit`: the full sha of
+   `HEAD`, or `WORKTREE` for uncommitted work.
+2. **Send the wave in one message,** every agent in the background: at most **10** on
+   Claude Code, **6** elsewhere. The rest are queued, never dropped; they go out as soon as
+   this wave has returned, before the merge. A spawn refused for a concurrency limit is
+   queued the same way, never retried in a loop. How each call goes out (B0):
+   - **plugin:** `knowledge:web-researcher` or `knowledge:code-researcher`; the prompt is
+     only the filled "Your dispatch" block, and no model is named;
+   - **generic:** each role's brief written once to `<DOSSIER>/briefs/<name>.md`, then a
+     general subagent on `opus`, prompted "Read `<DOSSIER>/briefs/<name>.md` and follow it.
+     Your dispatch:" and the block;
+   - **sequential:** one role at a time, played by you from its brief, writing the same file.
+3. **Record** every dispatch in `run.md`, then every return as it arrives: its status and
+   its `model:` line. Merge only when every agent of the wave and its queue has returned
+   `complete`, `partial` or `failed`.
+4. **Failures:**
+   - `failed: search-limit` → stop the run now; the other returns are kept.
+   - `failed: permissions` → stop with §3.2's block.
+   - any other `failed`, or a return with nothing parseable → dispatch it once more, with
+     the failure named in `known already`. A second failure on a load-bearing angle stops
+     the run (resumable); on another angle, record the gap and go on.
+   - `partial` → merge what it found; its open questions stay thin.
+
+### 3.6 D3: the merge, then D3v and D3s
+
+**D3, the merge** (you alone; a findings file is never edited):
+
+1. Read each new findings file by its entries: find `### S-` and `### C-` (Grep, or
+   `grep -n`), then Read the ranges you need.
+2. **`library.md`**: one line per source (B9). A source whose canonical URL is listed
+   already keeps the first id; the new id goes on that line's `merged:`.
+3. **`ledger.md`**: one line per claim (B9), status `candidate`; a claim with the same
+   meaning as a listed one is merged the same way. A conflict a researcher recorded with
+   both passages becomes a `D-<seq>` entry under `## Disagreements`, `status: open`.
+   Never settle one.
+4. **`outline.md`**: the plan's skeleton, each section with its questions, each question
+   with its state (B8: as its findings file reports it, until D3s sets it) and its claim
+   ids. Every index lists ids in full, never as ranges:
+
+       ## Background
+       - Q3 · load-bearing · answered · C-r1-foundations-02, C-r1-foundations-05
+       - Q4 · load-bearing · thin · C-r1-evidence-01 (candidate)
+
+5. **The query log:** append every query the new findings files list.
+6. **The checklist,** before you go on: every id is unique; every index line points at an
+   entry that exists in the file it names; every `merged:` id exists; and the source and
+   claim counts, recorded in `run.md`, are not below the last merge's. A count that fell is
+   your error: fix the indexes first.
+
+**D3v, verify the round.** Batch this round's new or changed load-bearing claims, grouped
+by source, about 15 claims to a batch, and send the batches as a wave
+(`knowledge:verifier`, B4; generic: a subagent on `sonnet`): batch ids `r<n>-b<k>`, output
+`verify/r<n>-b<k>.md`, `counter-evidence ids: none`. A batch that fails twice stops the run
+(resumable). On the sequential path you verify from the entries alone, in a separate pass.
+
+**D3s, apply** (you): each claim's status from its record, by B8. `supported` only when
+the record says `supported` and the bar is met; `partial` keeps only its narrower claim,
+written on its ledger line; `contradicted` takes that source out of its support;
+`passage-not-found`, `not-addressed` and `unreachable` leave it `unsupported` unless its
+other support meets the bar; `needs-rewrite` leaves it `candidate`. Then set each
+question's state in `outline.md` and `ledger.md`. A claim that failed is an evidence gap
+for the next review, inside the cap; a claim given new support is re-verified once (B4's
+`re-verify`), never twice.
+
+### 3.7 D4: gap rounds
+
+After each D3s, dispatch the gap reviewer (`knowledge:gap-reviewer`, B3; generic: a
+subagent on `opus`) with `after round: <n>`, `scope: run` and the earlier gaps file.
+
+- **Another round runs** only when `gaps/r<n>.md` holds a load-bearing gap, fewer than 3
+  gap rounds have run, and the ceiling has room. Each load-bearing gap becomes a new
+  load-bearing question in `plan.md` (the next `Q` id, `from: gap G-…`), owned by the gap's
+  angle; a `new:` angle joins the plan with its boundaries. Group them by angle into at
+  most the tier's per-round number of researchers, and run D2–D3s again. A gap that is not
+  load-bearing is recorded, not researched.
+- **Research stops** at the first of: `complete` (no load-bearing gap); `stalled` (a round
+  closed none); `capped: rounds` (3 gap rounds); `capped: ceiling`. Record the reason and
+  the round count in `run.md`.
+- A gap review that fails twice stops the run (resumable).
+
+### 3.8 D5, D5s and D5g: final verification, and the evidence gate
+
+**D5, the final verification.** Mark the **main claims** on their ledger lines (`· main`):
+the load-bearing claims that are evaluative, comparative, consensus or "best practice";
+numbers and statistics; superlatives; resting on one source; a vendor's claim about
+itself used beyond the attributed form; the claims the quiz will test; flagged
+exceptional. Batch every claim the outline maps that is still `candidate`, plus every main
+claim marked `· main`, with output `verify/final-b<k>.md` and counter-evidence ids `v<k>`
+(one per batch), and send the batches as a wave. A main claim's counter-evidence search is
+not a re-verification. A batch that fails twice stops the run.
+
+**D5s, apply and record** (you): statuses as at D3s. A counter-source at rung 1 or 2 that
+directly disagrees becomes a `D-<seq>` entry, and its claim `contested`. One that changes
+the scope (a later version, another population) becomes a `D-…` entry with
+`nature: version/time` or `scope/conditions` and `status: resolved-by-scope`, when the
+sources themselves show both scopes. A rung-3 counter-page is only a lead. Never settle a
+disagreement. Then write **`gaps/final.md`**: every load-bearing question that is neither
+`answered` nor `contested`, and every load-bearing gap still open, each with how the
+chapter will treat it:
+
+    # Final gaps: <run-id> · stop: <reason> · gap rounds: <n>
+    - <Q or G id> · <the question> · state: thin | not found | not searched · best source: <id> | none
+      · disposition: stated ("<what the chapter will say openly>") | dropped (<the section, adjusted>)
+
+**D5g, the evidence gate** (you, from `brief.md`, `outline.md` and `ledger.md`). It passes
+when **every must-cover item** is `answered` or `contested`, and **at least two-thirds of
+the load-bearing questions** are. Record the counts and the result in `run.md`. Below it, a
+single document **stops before writing**. The report's first line is `STOPPED: evidence
+gate`; then each failing item or question with its best sources and the queries run, the
+dossier's path, and the two ways on: `/knowledge:explain resume <run-id> trust <a source
+or site>`, or `… drop <the item>`. Past the gate, a load-bearing claim below the bar stays
+`unsupported`, and the chapter may carry it only hedged and attributed, or not at all (B8).
+
+### 3.9 `quick` and `no-research`
+
+**`quick`.** D0, D0b and D1 as above: the questions and the angles, with no tier and no
+team. Then research alone, angle by angle, by the web and code researchers' sections (B1,
+B2), into the same findings files (`r1-<angle-id>`): a target of 20 and a hard cap of 40
+tool calls in all. Check your coverage once against the plan's questions, with at most one
+follow-up burst of 10 calls. Then D3, and **one verifier batch** on the load-bearing claims
+(a verifier agent where you can dispatch one; otherwise `verifier: lead (degraded)`). Then
+D5s without counter-evidence, `gaps/final.md`, and D5g: the gate holds in `quick` too.
+`run.md` and the report say `quick`, and what it skipped.
+
+**`no-research`** (the operator's choice only). D0, then no web probe, no plan, no team and
+no ledger: you read the repository yourself, by mode. **Change mode:** the real change,
+not your memory of it (`git diff <base>..<head>`, `git log --stat`, `git show <ref>`), then
+the changed files and the code around them, and a phase's or slice's plan and result notes
+if the repository keeps them. **Topic mode:** the real code, configs, compose files and
+scripts that make the topic work here. **General mode:** only what the user gave you and
+what the conversation established. Write `brief.md` and `run.md` (`run: no-research`) to
+`<DOSSIER>` at once (§2's fallback if it cannot be written); the drafts follow there. The
+chapter has no "Best practices & next steps" section and no sources block unless the user
+gave you pages, and the report's first line says `no-research`.
 
 ## 4. Write the chapter — native Markdown
 
 Author the whole chapter as one Markdown file, then publish it in step 5. The file is the
 **body only**: **no `---` header** (the server writes the header from the fields you send in
 step 5) and **no `# H1`** (the title is a field, and the reader draws it). It starts at
-the first paragraph or `##` heading. Write it to `<tmp>/body.md`, where `<tmp>` is
-`/tmp/explain-<date>-<slug>/` — so the body and title never pass through shell arguments.
+the first paragraph or `##` heading. Write it to `<tmp>/body.md`, where `<tmp>` is the
+run's dossier, `<DOSSIER>` (§2) — so the body and title never pass through shell arguments.
 
 The grammar below is the one the server enforces. It is **CommonMark + GFM** (tables with
 alignment, `~~strikethrough~~`, autolinks) plus exactly three extensions:
@@ -1419,10 +1812,14 @@ dispatcher, not a human-facing summary:
   pages in the folder it names, with Bash. Never edit anything else, above all another
   agent's file, the lead's files (`brief.md`, `plan.md`, `outline.md`, `run.md`,
   `library.md`, `ledger.md`) or a draft. Nothing is published, committed or sent anywhere.
-- **Bash runs only the command forms your brief gives:** `curl`, the converter and
-  `pdftotext`, read-only `git`, the excerpt hash, and `mktemp -d`. Never install, build,
+- **Bash runs only the command forms your brief gives, one to a call:** `curl`, the
+  converter and `pdftotext`, read-only `git`, the excerpt hash, and `mktemp -d`, each as
+  written there, with absolute paths, and nothing chained to it (`;`, `&&`), wrapped around
+  it (`cd`, a variable, a loop, a function) or redirected. Read files with Read; list and
+  search them with Glob and Grep where your host has them, otherwise with one plain
+  `ls`, `find` or `grep -n` on absolute paths, under the same rule. Never install, build,
   run a page's code, or change a repository. A session that allows these forms by prefix
-  allows nothing else.
+  allows nothing else, and denies a call it cannot match whole.
 - **You never spawn agents** and never contact another agent.
 - **English.** Write in English. Quote a source in its own language, with an English gloss
   after a non-English passage.
@@ -1433,8 +1830,8 @@ dispatcher, not a human-facing summary:
     or two different broad queries in a row return no results at all. Stop searching,
     write your file with what you have, and mark each question you could not search
     `not searched`.
-  - `failed: permissions`: a tool call is denied. Do not retry it or route around it with
-    another tool; write what you have and name the denied call.
+  - `failed: permissions`: a call your brief gives, in its given form, is denied. Do not
+    retry it or route around it with another tool; write what you have and name the call.
   - `failed: tools`: every fetch fails, or the repository cannot be read.
   - `partial`: your hard cap or your turns ran out with questions open; name them.
 
@@ -1731,8 +2128,8 @@ it. `--check` checks every passage of every `quote-match: exact` source in the f
 `<pages>/<source id>.txt`.
 
 **When exact text fails** (a status other than 200, a text that lacks the content because
-script builds the page, no `pdftotext`, no converter, or a denied command): read the page
-with WebFetch, and record `read-via: webfetch · quote-match: approximate`. WebFetch shows
+script builds the page, no `pdftotext`, or a converter error; a denied command is B6's
+`failed: permissions`): read the page with WebFetch, and record `read-via: webfetch · quote-match: approximate`. WebFetch shows
 at most about 125 characters of a quote and may rephrase, so keep such a passage short, and
 expect it to be checked by substance.
 

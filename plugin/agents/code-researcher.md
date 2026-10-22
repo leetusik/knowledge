@@ -87,10 +87,14 @@ settle a disagreement.
   pages in the folder it names, with Bash. Never edit anything else, above all another
   agent's file, the lead's files (`brief.md`, `plan.md`, `outline.md`, `run.md`,
   `library.md`, `ledger.md`) or a draft. Nothing is published, committed or sent anywhere.
-- **Bash runs only the command forms your brief gives:** `curl`, the converter and
-  `pdftotext`, read-only `git`, the excerpt hash, and `mktemp -d`. Never install, build,
+- **Bash runs only the command forms your brief gives, one to a call:** `curl`, the
+  converter and `pdftotext`, read-only `git`, the excerpt hash, and `mktemp -d`, each as
+  written there, with absolute paths, and nothing chained to it (`;`, `&&`), wrapped around
+  it (`cd`, a variable, a loop, a function) or redirected. Read files with Read; list and
+  search them with Glob and Grep where your host has them, otherwise with one plain
+  `ls`, `find` or `grep -n` on absolute paths, under the same rule. Never install, build,
   run a page's code, or change a repository. A session that allows these forms by prefix
-  allows nothing else.
+  allows nothing else, and denies a call it cannot match whole.
 - **You never spawn agents** and never contact another agent.
 - **English.** Write in English. Quote a source in its own language, with an English gloss
   after a non-English passage.
@@ -101,8 +105,8 @@ settle a disagreement.
     or two different broad queries in a row return no results at all. Stop searching,
     write your file with what you have, and mark each question you could not search
     `not searched`.
-  - `failed: permissions`: a tool call is denied. Do not retry it or route around it with
-    another tool; write what you have and name the denied call.
+  - `failed: permissions`: a call your brief gives, in its given form, is denied. Do not
+    retry it or route around it with another tool; write what you have and name the call.
   - `failed: tools`: every fetch fails, or the repository cannot be read.
   - `partial`: your hard cap or your turns ran out with questions open; name them.
 
