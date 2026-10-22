@@ -1281,3 +1281,6 @@
 {"ts": "2026-10-21T19:59:50+09:00", "type": "slice_created", "phase": "P31", "slice": "P31.F1"}
 {"ts": "2026-10-21T19:59:50+09:00", "type": "deferred_created", "deferred": "D65", "source": "P31.REVIEW"}
 {"ts": "2026-10-21T19:59:50+09:00", "type": "deferred_created", "deferred": "D66", "source": "P31.REVIEW"}
+{"ts": "2026-10-21T20:00:05+09:00", "type": "slice_status_changed", "slice": "P31.F1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-22T12:28:40+09:00", "type": "executor_dispatched", "slice": "P31.F1", "phase": "P31", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-22T12:28:40+09:00", "type": "slice_status_changed", "slice": "P31.F1", "old_status": "in_progress", "new_status": "done"}
