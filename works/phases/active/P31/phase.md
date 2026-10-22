@@ -76,29 +76,17 @@ _Questions only the operator can answer, one entry each: `- **OQ<n> (<slice>):**
 _Gotchas and constraints the next slices need, each tagged `**(from <slice>, for <slice>)**`. A slice that consumes a note removes it; the detail stays in that slice's `result.md`. This file is an index read and written one section at a time (`phase-section <P>`); keep it under 40 KB._
 
 - **(from P31.DECOMP, for all)** The bootstrap (`/Users/sugang/projects/personal/bootstrap_agentic_workspace.sh`) is **read-only**: read it, never edit it, never run its installer against this repo. HEAD is `f207775` (workspace v62), unchanged at S6. D22: never run prettier repo-wide. Write tests only for very core behaviour, and keep them tiny.
-- **(from P31.S6, for REVIEW)** What the gate shows the operator: (1) `knowledge check` on a real chapter, which needs the server deployed (OQ1), so against a local or scratch API unless the operator deploys first; (2) the package at `package/` (README, PATCHES, the four new files); (3) `handoff-explain.md` (119 lines, an index into P30's handoff and the package; pins bootstrap HEAD `f207775`). Route OQ1 and OQ10 (agent profile signed into the reader, still untested) into the walkthrough; OQ2-OQ9 and OQ11-OQ14 record unattended choices, list them as "decided as drawn". No doc-impact notes were raised by S6.
-- **(from P31.F1, for REVIEW)** Re-review: the three round-1 findings are fixed. The detail is in `slices/P31.F1/result.md`.
-  - `explain-review.md` step 5 has a new probe, live-proven on a tenant-mode scratch stack: the anonymous book route answered 404 private and 200 public.
-  - The S4 Decisions line is corrected. OQ15 is appended as OQ10's correction, decided as drawn. OQ10's sign-in half still goes to the walkthrough.
-  - PATCHES §3 is now L37.
-  - `backend.md` is in Doc impact.
-  - Optional nit taken: an `explain-route.md` mode clause. It adds about 120 B to the create-phase core, so PATCHES 1c's "about 18.5 KB" still holds.
-  - Not taken: `handoff-explain.md` already says "an anonymous 404", which still reads true.
 
 ## Now
 
-- **P31.F1 done** (fix, high). Detail is in `slices/P31.F1/result.md`.
-  - **Finding 1:** `package/.../explain-review.md` step 5 now proves privacy in four parts:
-    - an org-key control, `GET /api/books/<project>/<book>`, which must answer 200;
-    - an anonymous `GET /app/orgs/<org>/<project>/books/<book>`, where 404 is private, 200 is public (`needs_operator`), and anything else is no evidence (`needs_operator`);
-    - for a slug-less org, `/app/documents/<id>`;
-    - the `/@…` `url` as a second probe only.
-  - **The live proof,** on a tenant-mode scratch stack (scratch Postgres DB, now dropped): private 404 and public 200, for both the slug and the tenant-id form. The old by-path probe answered 401 on both.
-  - **Notebook:** the Decisions line is corrected in place, and OQ15 is appended as OQ10's correction.
-  - **Finding 2:** PATCHES §3 is now L37, re-grepped at `f207775`.
-  - **Finding 3:** the `backend.md` Doc impact line is appended.
-- **Next: P31.REVIEW round 2.** It re-reviews the three findings, then runs the gate.
-- **Open:** the qa `## Regression Checklist` line and the walkthrough wait for the re-review's pass. Both are drafted in REVIEW's `result.md`.
-  - OQ1 (deploy) and OQ10's sign-in half go to the walkthrough.
-  - OQ2–OQ9 and OQ11–OQ15 are decided as drawn.
-  - Production's `/app/*` behind `KB_API_BASE_URL` was not probed. Production is never touched.
+- **P31.REVIEW round 2: pass** (detail in `slices/P31.REVIEW/result.md`, round 2 at the top).
+  - All three round-1 findings are fixed. The new privacy probe was re-run on a fresh tenant-mode scratch DB: private 404, public 200, and 404/200 on the `/app/documents/<id>` fallback. The old probe answered 401 on both.
+  - All validation is green, and the bootstrap is untouched (`f207775`).
+  - The qa gate line is written as **qa v0020** (`## Regression Checklist`: the `knowledge check` dry run). `## Operator Runtime` is unchanged.
+- **Next:** the orchestrator opens the acceptance gate with the review's walkthrough. The steps: deploy, CLI 0.2.0, check a valid and a broken chapter, read the package and the handoff, then relay it.
+- **Open at the gate:**
+  - OQ1 (deploy now?);
+  - OQ10 (sign the agent profile `u1` into the reader as an org member);
+  - OQ15 (accept the corrected privacy proof).
+  - OQ2–OQ9 and OQ11–OQ14 are decided as drawn. D65 and D66 are filed.
+- **Docs debt:** the `## Doc impact` list (architecture, api, operations, backend) waits for a docs phase.

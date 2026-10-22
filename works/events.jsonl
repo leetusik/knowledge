@@ -1284,3 +1284,7 @@
 {"ts": "2026-10-21T20:00:05+09:00", "type": "slice_status_changed", "slice": "P31.F1", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-22T12:28:40+09:00", "type": "executor_dispatched", "slice": "P31.F1", "phase": "P31", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-22T12:28:40+09:00", "type": "slice_status_changed", "slice": "P31.F1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-22T12:31:03+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0020_p31.review_round_2_regression_checklist_gains_the_knowledge_check_dry-run_line_valid_chapter_exits_0_and_writes_nothing_invalid_exits_1_with_the_line_list", "source": "P31.REVIEW"}
+{"ts": "2026-10-22T12:32:47+09:00", "type": "executor_dispatched", "slice": "P31.REVIEW", "phase": "P31", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": "round 2: pass; qa v0020"}
+{"ts": "2026-10-22T12:32:47+09:00", "type": "phase_status_changed", "phase": "P31", "old_status": "in_progress", "new_status": "pending"}
+{"ts": "2026-10-22T12:32:47+09:00", "type": "acceptance_opened", "phase": "P31"}

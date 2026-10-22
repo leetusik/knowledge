@@ -1218,7 +1218,7 @@
       ]
     },
     "qa": {
-      "latest": "v0019_p30.review_round_3_regression_checklist_gains_f6_s_chapter-navigation_line_next_opens_the_next_chapter_at_its_top_not_finished_and_f5_s_reader-chrome_line",
+      "latest": "v0020_p31.review_round_2_regression_checklist_gains_the_knowledge_check_dry-run_line_valid_chapter_exits_0_and_writes_nothing_invalid_exits_1_with_the_line_list",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1376,6 +1376,15 @@
           "source": "P30.REVIEW",
           "summary": "P30.REVIEW round 3: Regression Checklist gains F6's chapter-navigation line (Next opens the next chapter at its top, not Finished) and F5's reader-chrome line",
           "previous": "v0018_p30_gate_append_the_reader_book_review_legacy_and_print_checks_update_three_p28_lines_the_learning_reader_superseded"
+        },
+        {
+          "id": "v0020_p31.review_round_2_regression_checklist_gains_the_knowledge_check_dry-run_line_valid_chapter_exits_0_and_writes_nothing_invalid_exits_1_with_the_line_list",
+          "path": "docs/versions/qa/v0020_p31.review_round_2_regression_checklist_gains_the_knowledge_check_dry-run_line_valid_chapter_exits_0_and_writes_nothing_invalid_exits_1_with_the_line_list.md",
+          "created_at": "2026-10-22T12:31:03+09:00",
+          "commit": "3c9983aec083f56b17f4ffbd547befda76df61a2",
+          "source": "P31.REVIEW",
+          "summary": "P31.REVIEW round 2: Regression Checklist gains the knowledge check dry-run line (valid chapter exits 0 and writes nothing; invalid exits 1 with the line list)",
+          "previous": "v0019_p30.review_round_3_regression_checklist_gains_f6_s_chapter-navigation_line_next_opens_the_next_chapter_at_its_top_not_finished_and_f5_s_reader-chrome_line"
         }
       ]
     },
@@ -1554,5 +1563,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-10-21T18:02:34+09:00"
+  "last_rebuilt_at": "2026-10-22T12:31:11+09:00"
 }

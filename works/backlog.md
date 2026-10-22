@@ -6,16 +6,16 @@
 ## Pointer
 
 - Current phase: `P31`
-- Current slice: `P31.REVIEW`
+- Current slice: `none`
 - Next slice: `none`
-- Waiting on operator: `none`
+- Waiting on operator: `P31`
 - Open deferred jobs: `47`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P31` | in_progress | `P31.REVIEW` | 8/9 | - | working tree |
+| `default` | `P31` | pending | `none` | 8/9 | - | working tree |
 
 ## Active Phases
 
@@ -31,7 +31,7 @@
 | [x] `P28` | `done` | `pass` | Console visual redesign — apply | `none` | `works/phases/active/P28` |
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
-| [ ] `P31` | `in_progress` | `changes_requested` | Explain phase route | `P31.REVIEW` | `works/phases/active/P31` |
+| [~] `P31` | `pending` | `changes_requested` | Explain phase route | `P31.REVIEW` | `works/phases/active/P31` |
 
 ## Phase P21: Web document deletion
 
