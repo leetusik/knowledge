@@ -24,6 +24,10 @@ Confirmation of the restated understanding (verbatim):
 
 > your right
 
+Answer to OQ5 (the skill's size, ≈ 125–145 KB instead of ≈ 85–90 KB), verbatim:
+
+> accept
+
 ## Confirmed Intent (refined + clarified)
 
 Explaining a topic should rest on **thorough research by agents**, not on one writer's quick look. Research
@@ -90,6 +94,7 @@ slices (P42) have merged; a cross-vendor verifier (deferred, D67).
 - Q (OQ1, from P32.S1): Keep `no-research`? — A: yes, as an explicit opt-out only the operator chooses; failed research still stops.
 - Q: Should `/knowledge:explain <subject> book` create the explain phase and run it to the end? — A: no; it suggests the phase, creates it on the operator's yes through the normal route, and the operator runs it as a normal phase. Outside a workflow workspace it offers a single document instead.
 - Q (OQ2–OQ4, from P32.S3; answered by approving P32.DECOMP2's plan, 2026-10-23): who dispatches a book's research in the bootstrap? — A: a narrow carve-out in `slice-executor.md` (the explain `DECOMP` executor and each chapter executor may dispatch the knowledge plugin's research agents). Is the operator's yes to the book proposal `create-phase`'s confirmation? — A: yes. The WebSearch session cap? — A: the plugin README and the book package tell the operator to raise it (`CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`); the skill never changes settings and turns a capped search into a loud, resumable stop. The same approval accepted the full rehearsals (higher cost) and the skill growing to about 85–90 KB.
+- Q (OQ5, from P32.S4): the skill will be about 125–145 KB, not 85–90 KB — accept, or move Part B out of the single file? — A: "accept": the skill stays one file; Part A cites Part B, never restates it. Moving Part B out belongs with the later skill-shrink work.
 
 ## Notes
 
