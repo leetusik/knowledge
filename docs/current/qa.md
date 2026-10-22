@@ -1,11 +1,11 @@
 ---
 doc_id: qa
-version: v0019
-created_at: 2026-10-21T18:02:24+09:00
-commit: 96506542f8064e1eeeb98a9e59f04701de2cf9bd
-source: P30.REVIEW
-summary: P30.REVIEW round 3: Regression Checklist gains F6's chapter-navigation line (Next opens the next chapter at its top, not Finished) and F5's reader-chrome line
-previous: v0018_p30_gate_append_the_reader_book_review_legacy_and_print_checks_update_three_p28_lines_the_learning_reader_superseded
+version: v0020
+created_at: 2026-10-22T12:31:03+09:00
+commit: 3c9983aec083f56b17f4ffbd547befda76df61a2
+source: P31.REVIEW
+summary: P31.REVIEW round 2: Regression Checklist gains the knowledge check dry-run line (valid chapter exits 0 and writes nothing; invalid exits 1 with the line list)
+previous: v0019_p30.review_round_3_regression_checklist_gains_f6_s_chapter-navigation_line_next_opens_the_next_chapter_at_its_top_not_finished_and_f5_s_reader-chrome_line
 ---
 
 # QA
@@ -320,6 +320,9 @@ apply there; use *In-app graph label focus (P22)* instead._
       with the pill); signed in, that chapter's saved position is `started` at
       0%, never `finished`; a `#section`, `?note=`, the sign-in return and a
       reload keep their landing (P30)
+- [ ] CLI/API publish dry run: `knowledge check` on a valid chapter exits 0
+      and writes nothing (no file, row or commit); on an invalid one it exits
+      1 with the `line N: [code]` list (P31)
 
 ## Verifying the Guard Itself (negative-test pattern)
 

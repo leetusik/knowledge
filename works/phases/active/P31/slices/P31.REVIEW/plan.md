@@ -1,5 +1,27 @@
 # P31.REVIEW — Review "Explain phase route"
 
+## Re-review (round 2, after P31.F1)
+
+Round 1 returned `changes_requested` with three findings; **P31.F1** fixed them (`slices/P31.F1/result.md`).
+This round is **focused**:
+1. Validate everything together again (the same commands as below).
+2. Check each finding is fixed:
+   - `explain-review.md` step 5: the org-key control plus the anonymous `/app/orgs/...` book probe, matching
+     the code in `server/books_api.py`. F1's live table is plausible. Re-run the probe on a fresh scratch
+     Postgres DB if cheap (create it and drop it; never `:8766` or `:3030`; never production).
+   - PATCHES §3 L37 at `f207775`.
+   - The `backend.md` Doc impact line.
+   - OQ15 is appended, and OQ10 is untouched.
+3. Skim F1's other additions for new problems: the `/app/documents/<id>` fallback, the legacy-url
+   `needs_operator`, the org-key warning, the `mode` clause.
+4. **On pass:**
+   - write the qa gate line as a new version (round 1's draft is in `result.md`);
+   - return the walkthrough (round 1's draft, updated);
+   - route OQ1, OQ10 and OQ15 into it, with the rest decided as drawn.
+
+Put round 2 above round 1 in `result.md`, with its verdict block first. No state commands, no commit.
+
+
 ## Scope (the boundary)
 
 `python3 scripts/workflow.py phase-scope P31` reports `aedea7a..ad9d6ed`: 8 commits and 16 product files.
