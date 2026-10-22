@@ -1293,3 +1293,5 @@
 {"ts": "2026-10-22T12:41:11+09:00", "type": "slice_status_changed", "slice": "P31.REVIEW", "old_status": "changes_requested", "new_status": "done"}
 {"ts": "2026-10-22T12:41:11+09:00", "type": "phase_reviewed", "phase": "P31", "verdict": "pass", "reviewer": "slice-executor-high"}
 {"ts": "2026-10-22T12:41:11+09:00", "type": "phase_consolidation_owed", "phase": "P31", "notes": 4}
+{"ts": "2026-10-22T22:03:27+09:00", "type": "phase_created", "phase": "P32"}
+{"ts": "2026-10-22T22:04:02+09:00", "type": "deferred_created", "deferred": "D67", "source": "P32 intake"}

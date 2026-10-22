@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `47`
+- Open: `48`
 - Promoted: `5`
 - Dropped: `14`
 
@@ -57,6 +57,7 @@
 | `D64` | `deferred` | Pages with their own CSS keep the previous page's scroll position on a client navigation | P30.F6 | The next book-page or library slice, or a decision to try experimental.appNewScrollHandler app-wide | `works/deferred/open/D64` |
 | `D65` | `deferred` | CLI line numbers are body-relative for files with a --- header | P31.REVIEW | Someone fixes a headered file by the printed line numbers | `works/deferred/open/D65` |
 | `D66` | `deferred` | A missing FILE exits 1 under knowledge check | P31.REVIEW | An agent loops on fix the listed lines | `works/deferred/open/D66` |
+| `D67` | `deferred` | Cross-vendor verifier for explain research and critique | P32 intake | P32 has shipped, and the operator asks for it, or the Claude verifier or critic is seen missing errors a different vendor's model would catch | `works/deferred/open/D67` |
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
 | `D8` | `deferred` | usage_events retention/cleanup job | P11.DECOMP | usage_events growth becomes material / before onboarding high-volume non-#1 tenants | `works/deferred/open/D8` |
 

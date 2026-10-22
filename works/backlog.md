@@ -5,17 +5,17 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P32`
+- Current slice: `P32.DECOMP`
+- Next slice: `P32.REVIEW`
 - Waiting on operator: `none`
-- Open deferred jobs: `47`
+- Open deferred jobs: `48`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | - | idle | - | - | - | working tree |
+| `default` | `P32` | planned | `P32.DECOMP` | 0/2 | - | working tree |
 
 ## Active Phases
 
@@ -32,6 +32,7 @@
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
 | [x] `P31` | `done` | `pass` | Explain phase route | `none` | `works/phases/active/P31` |
+| [ ] `P32` | `planned` | `pending` | Thorough research and critic in the explain pipeline | `P32.DECOMP` | `works/phases/active/P32` |
 
 ## Phase P21: Web document deletion
 
@@ -202,3 +203,10 @@
 | [x] `P31.S6` | `done` | handoff note: retire old explain and apply the package | `docs` | `works/phases/active/P31/slices/P31.S6` |
 | [x] `P31.F1` | `done` | Fix the explain review's privacy probe and two package nits | `fix` | `works/phases/active/P31/slices/P31.F1` |
 | [x] `P31.REVIEW` | `done` | phase review | `review` | `works/phases/active/P31/slices/P31.REVIEW` |
+
+## Phase P32: Thorough research and critic in the explain pipeline
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P32.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P32/slices/P32.DECOMP` |
+| [ ] `P32.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P32/slices/P32.REVIEW` |
