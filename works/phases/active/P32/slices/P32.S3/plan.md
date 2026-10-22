@@ -97,3 +97,22 @@ tested and which are inferred. A source that will not load after two tries goes 
 - The product diff is empty (`git diff --stat -- web/ server/ cli/ plugin/ .agents/ scripts/`); the bootstrap's
   `git status --short` is empty.
 - `validate` passes.
+
+## Dispatch
+
+slice=P32.S3
+phase=P32
+kind=research
+risk=high
+attempt=1
+route=research
+reason=kind research
+tier=high
+subagent_type=slice-executor-high
+model=opus
+pass_model=yes
+effort=xhigh
+pass_effort=yes
+attribution=Claude Opus 5.5
+explore_model=haiku
+explore_effort=high

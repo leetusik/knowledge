@@ -144,13 +144,13 @@
       "order": 12,
       "path": "works/phases/active/P32",
       "review_status": "pending",
-      "current_slice": "P32.S3",
+      "current_slice": "P32.DECOMP2",
       "slice_count": 6,
-      "done_slice_count": 3
+      "done_slice_count": 4
     }
   ],
   "deferred_open_count": 48,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-22T23:25:14+09:00"
+  "last_rebuilt_at": "2026-10-23T00:06:21+09:00"
 }

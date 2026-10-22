@@ -1310,3 +1310,6 @@
 {"ts": "2026-10-22T22:50:28+09:00", "type": "slice_status_changed", "slice": "P32.S2", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-22T23:25:14+09:00", "type": "executor_dispatched", "slice": "P32.S2", "phase": "P32", "kind": "research", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-22T23:25:14+09:00", "type": "slice_status_changed", "slice": "P32.S2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-22T23:26:04+09:00", "type": "slice_status_changed", "slice": "P32.S3", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-23T00:06:21+09:00", "type": "executor_dispatched", "slice": "P32.S3", "phase": "P32", "kind": "research", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-23T00:06:21+09:00", "type": "slice_status_changed", "slice": "P32.S3", "old_status": "in_progress", "new_status": "done"}

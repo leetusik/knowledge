@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P32`
-- Current slice: `P32.S3`
-- Next slice: `P32.DECOMP2`
+- Current slice: `P32.DECOMP2`
+- Next slice: `P32.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `48`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P32` | planned | `P32.S3` | 3/6 | - | working tree |
+| `default` | `P32` | planned | `P32.DECOMP2` | 4/6 | - | working tree |
 
 ## Active Phases
 
@@ -32,7 +32,7 @@
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
 | [x] `P31` | `done` | `pass` | Explain phase route | `none` | `works/phases/active/P31` |
-| [ ] `P32` | `planned` | `pending` | Thorough research and critic in the explain pipeline | `P32.S3` | `works/phases/active/P32` |
+| [ ] `P32` | `planned` | `pending` | Thorough research and critic in the explain pipeline | `P32.DECOMP2` | `works/phases/active/P32` |
 
 ## Phase P21: Web document deletion
 
@@ -211,6 +211,6 @@
 | [x] `P32.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P32/slices/P32.DECOMP` |
 | [x] `P32.S1` | `done` | research method: how research teams are planned, run and stopped | `research` | `works/phases/active/P32/slices/P32.S1` |
 | [x] `P32.S2` | `done` | research method: sources, the claim ledger, verification and the critic | `research` | `works/phases/active/P32/slices/P32.S2` |
-| [ ] `P32.S3` | `todo` | where the research team runs: hosts, the plugin and the book package | `research` | `works/phases/active/P32/slices/P32.S3` |
+| [x] `P32.S3` | `done` | where the research team runs: hosts, the plugin and the book package | `research` | `works/phases/active/P32/slices/P32.S3` |
 | [ ] `P32.DECOMP2` | `todo` | cut the build from the research | `decomposition` | `works/phases/active/P32/slices/P32.DECOMP2` |
 | [ ] `P32.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P32/slices/P32.REVIEW` |
