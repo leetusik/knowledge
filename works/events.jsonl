@@ -1374,3 +1374,6 @@
 {"ts": "2026-10-24T00:31:36+09:00", "type": "slice_status_changed", "slice": "P32.F2", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-10-24T00:56:52+09:00", "type": "executor_dispatched", "slice": "P32.F2", "phase": "P32", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": "second revision (d71): probe form retry, dossier line in the publish step; headline held in every run; two misses named (Sonnet skips the dossier line; headless verifier stopped at 10 idle min)"}
 {"ts": "2026-10-24T00:56:52+09:00", "type": "slice_status_changed", "slice": "P32.F2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-24T00:57:43+09:00", "type": "slice_status_changed", "slice": "P32.F3", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-24T01:00:31+09:00", "type": "executor_dispatched", "slice": "P32.F3", "phase": "P32", "kind": "fix", "risk": "low", "attempt": 1, "verdict": "done", "note": "landing line count 775 -> 2,608 in lede and pane.meta; scratch production build (webpack), curl + headless Chrome; Aside daemon down"}
+{"ts": "2026-10-24T01:00:31+09:00", "type": "slice_status_changed", "slice": "P32.F3", "old_status": "in_progress", "new_status": "done"}

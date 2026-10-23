@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P32`
-- Current slice: `P32.F3`
-- Next slice: `P32.REVIEW`
+- Current slice: `P32.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `52`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P32` | in_progress | `P32.F3` | 14/16 | - | working tree |
+| `default` | `P32` | in_progress | `P32.REVIEW` | 15/16 | - | working tree |
 
 ## Active Phases
 
@@ -32,7 +32,7 @@
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
 | [x] `P31` | `done` | `pass` | Explain phase route | `none` | `works/phases/active/P31` |
-| [ ] `P32` | `in_progress` | `changes_requested` | Thorough research and critic in the explain pipeline | `P32.F3` | `works/phases/active/P32` |
+| [ ] `P32` | `in_progress` | `changes_requested` | Thorough research and critic in the explain pipeline | `P32.REVIEW` | `works/phases/active/P32` |
 
 ## Phase P21: Web document deletion
 
@@ -222,5 +222,5 @@
 | [x] `P32.S9` | `done` | Rehearsal 2: a tiny book through the package, research to one chapter, nothing published | `qa` | `works/phases/active/P32/slices/P32.S9` |
 | [x] `P32.S10` | `done` | Handoff for the bootstrap: what to apply, the order around P42, the minimums | `docs` | `works/phases/active/P32/slices/P32.S10` |
 | [x] `P32.F2` | `done` | Quick keeps the research team's shape on any lead: explicit quick card, dossier-completeness check, search count | `fix` | `works/phases/active/P32/slices/P32.F2` |
-| [ ] `P32.F3` | `todo` | Landing: the skill pane's line count matches the served SKILL.md | `fix` | `works/phases/active/P32/slices/P32.F3` |
+| [x] `P32.F3` | `done` | Landing: the skill pane's line count matches the served SKILL.md | `fix` | `works/phases/active/P32/slices/P32.F3` |
 | [ ] `P32.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P32/slices/P32.REVIEW` |
