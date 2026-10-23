@@ -1,0 +1,28 @@
+# Library: 20261023-0350-post-api-documents-write-path
+
+- S-r1-code-validate-01 · findings/r1-code-validate.md · repo knowledge @9978d84 · code · merged: S-r1-code-write-01, S-r1-history-01, S-r1-history2-01 · supports: C-r1-code-validate-*, C-r1-code-write-*, C-r1-history-*, C-r1-history2-12, -13, -14, -15
+- S-r1-history2-02 · findings/r1-history2.md · repo knowledge @ac29872 (parent of b769236) · code · supports: C-r1-history2-02, -03, -04
+- S-r1-history2-03 · findings/r1-history2.md · commit b769236 (P24.S1) message + diff · code · supports: C-r1-history2-01, -05, -06, -07, -08, -16
+- S-r1-history2-04 · findings/r1-history2.md · commit 207f2ff (P2.S3) message · code · supports: C-r1-history2-09
+- S-r1-history2-05 · findings/r1-history2.md · commit 0cfb703 (P8.S1) message · code · supports: C-r1-history2-10
+- S-r1-history2-06 · findings/r1-history2.md · commit 0138f72 (P4.S6) title · code · supports: C-r1-history2-11, -12
+- S-r1-history2-07 · findings/r1-history2.md · commit a36df74 (P23) · code · supports: C-r1-history2-16
+- S-r1-history2-08 · findings/r1-history2.md · commit abfa307 (P30.S2) · code · supports: C-r1-history2-17
+- S-r1-history2-09 · findings/r1-history2.md · commit 373522d (P30.S5) · code · supports: C-r1-history2-17
+- S-r1-history2-10 · findings/r1-history2.md · commit 7c27519 (P31.S1) · code · supports: C-r1-history2-18
+- S-r1-practice-01 · findings/r1-practice.md · fastapi.tiangolo.com/async/ · official docs · supports: C-r1-practice-01, -02
+- S-r1-practice-02 · findings/r1-practice.md · fastapi.tiangolo.com/tutorial/background-tasks/ · official docs · merged: S-r1-criticism-05 · supports: C-r1-practice-04, -05, -09
+- S-r1-practice-03 · findings/r1-practice.md · starlette.dev/background/ · official docs · merged: S-r1-criticism-04 · supports: C-r1-practice-05, -08
+- S-r1-practice-04 · findings/r1-practice.md · starlette.dev/threadpool/ · official docs · supports: C-r1-practice-01, -03, -07
+- S-r1-practice-05 · findings/r1-practice.md · microservices.io/patterns/data/transactional-outbox.html · analysis · supports: C-r1-practice-11, -12, -13, -14
+- S-r1-practice-06 · findings/r1-practice.md · docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html · official docs (guidance) · supports: C-r1-practice-11, -13, -14
+- S-r1-practice-07 · findings/r1-practice.md · fastapi.tiangolo.com/deployment/concepts/ · official docs · supports: C-r1-practice-10
+- S-r1-practice-08 · findings/r1-practice.md · github.com/Kludex/starlette/blob/1a3a401…/starlette/responses.py · code · supports: C-r1-practice-06
+- S-r1-practice-09 · findings/r1-practice.md · learn.microsoft.com/en-us/azure/architecture/best-practices/background-jobs · official docs (guidance) · supports: C-r1-practice-15, -16
+- S-r1-criticism-01 · findings/r1-criticism.md · git-scm.com/docs/git-push · official docs · supports: C-r1-criticism-01 … -06
+- S-r1-criticism-02 · findings/r1-criticism.md · docs.python.org/3/library/subprocess.html · official docs · supports: C-r1-criticism-10, -11, -12
+- S-r1-criticism-03 · findings/r1-criticism.md · docs.python.org/3/library/threading.html · official docs · supports: C-r1-criticism-13, -14, -20, -21, -22
+- S-r1-criticism-06 · findings/r1-criticism.md · docs.python.org/3/library/concurrent.futures.html · official docs · supports: C-r1-criticism-15, -16
+- (r2) S-r2-code-write-01, S-r2-code-validate-01 · merged into S-r1-code-validate-01 (repo @9978d84); r2-code-validate's other two sources (findings/r2-code-validate.md: commits 207f2ff and 7c27519^) · supports C-r2-code-validate-11
+- (r2) S-r2-criticism-01 · merged into S-r1-criticism-01 (git-push) · S-r2-criticism-02 git-rev-list · S-r2-criticism-03 git-status · S-r2-criticism-04 Python queue · S-r2-criticism-05 Python signal · S-r2-criticism-06 Python atexit · all findings/r2-criticism.md, official docs · supports C-r2-criticism-01 … -11
+- S-r1-criticism-08 · findings/r1-criticism.md · git-scm.com/docs/git-rebase · official docs · supports: C-r1-criticism-07, -08, -09

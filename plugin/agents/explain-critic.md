@@ -324,12 +324,17 @@ dispatcher, not a human-facing summary:
   `library.md`, `ledger.md`) or a draft. Nothing is published, committed or sent anywhere.
 - **Bash runs only the command forms your brief gives, one to a call:** `curl`, the
   converter and `pdftotext`, read-only `git`, the excerpt hash, and `mktemp -d`, each as
-  written there, with absolute paths, and nothing chained to it (`;`, `&&`), wrapped around
-  it (`cd`, a variable, a loop, a function) or redirected. Read files with Read; list and
-  search them with Glob and Grep where your host has them, otherwise with one plain
-  `ls`, `find` or `grep -n` on absolute paths, under the same rule. No `$` anywhere in a
-  command: it needs approval, which an unattended session denies (`grep -x` matches a whole
-  line, never `^…$`). Never install, build,
+  written there, and nothing chained to it (`;`, `&&`), wrapped around it (`cd`, a
+  variable, a loop, a function) or redirected. Paths are absolute, except in `git`: it runs
+  in the session's working folder, the repository, with repo-relative paths, and never
+  takes `-C` (a session that allows `git show` denies `git -C <path> show`). Read files
+  with Read; list and search them with Glob and Grep where your host has them (some hosts
+  have neither), otherwise with one plain `ls`, `find` or `grep -n` on absolute paths,
+  under the same rule: `-F` for literal text, `-x` for a whole line, one `-e` per pattern.
+  No `$` anywhere in a command and no braces holding a comma (`.{0,80}`, `{a,b}`): both
+  need approval, which an unattended session denies (`grep -x` matches a whole line, never
+  `^…$`; for a passage's context, `grep -n` its words, then Read those lines). Never
+  install, build,
   run a page's code, or change a repository. A session that allows these forms by prefix
   allows nothing else, and denies a call it cannot match whole.
 - **You never spawn agents** and never contact another agent.
@@ -344,6 +349,8 @@ dispatcher, not a human-facing summary:
     `not searched`.
   - `failed: permissions`: a call your brief gives, in its given form, is denied. Do not
     retry it or route around it with another tool; write what you have and name the call.
+    A denied call in any other form is your own error, never this status: write it again
+    once in a form your brief gives, and go on.
   - `failed: tools`: every fetch fails, or the repository cannot be read.
   - `partial`: your hard cap or your turns ran out with questions open; name them.
 

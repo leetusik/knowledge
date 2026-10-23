@@ -3,14 +3,14 @@
   "phase_id": "P32",
   "name": "Rehearsal 1: old vs new single document on a general and a codebase subject; fix the skill",
   "kind": "qa",
-  "status": "pending",
+  "status": "done",
   "order": 80,
   "depends_on": [
     "P32.S6"
   ],
   "created_at": "2026-10-23T00:39:30+09:00",
   "started_at": "2026-10-23T03:39:13+09:00",
-  "completed_at": null,
+  "completed_at": "2026-10-23T09:16:21+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Rehearsal 1 closed on C (operator, OQ7): new wins Comprehensiveness and Insight, old wins Helpfulness and Readability in both orders; five skill fixes (d53); G moves to F1",
   "validation": {
     "required": [],
     "last_run": null,
@@ -30,10 +30,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "decision",
-    "on_words": "approve the ~$7 → S7 resumes from result.md 'To finish' (G from D8, G's two judges, the confirming run); 'close on C' → S7 finishes on subject C alone, then S8",
-    "since": "2026-10-23T05:43:48+09:00"
   }
 }

@@ -1,0 +1,56 @@
+# Library: 20261023-0350-free-threaded-cpython
+(one line per source: id · file · canonical · kind · claims (prefix C-r1- omitted: f=foundations, p=practice, e=evidence, k=criticism, c=cases) · merged)
+
+- S-r1-foundations-01 · findings/r1-foundations.md · peps.python.org/pep-0703/ · spec · f01 f02 f03 f06 f09 f10 f11 f12 f13 f14 f15 f16 f17 f19 f20 f21 f22 f23 f24 f26 f27 f29 f30 f38 f43
+- S-r1-foundations-02 · findings/r1-foundations.md · peps.python.org/pep-0779/ · spec · f25 f31 f33 f34 f41 e05 e06 e07 p01 · merged: S-r1-evidence-03, S-r1-practice-01
+- S-r1-foundations-03 · findings/r1-foundations.md · discuss.python.org/t/a-steering-council-notice-about-pep-703-making-the-global-interpreter-lock-optional-in-cpython/30474 · other (SC statement) · f31 f32 f44
+- S-r1-foundations-04 · findings/r1-foundations.md · docs.python.org/3/howto/free-threading-python.html · official docs (3.15.1) · f02 f05 f06 f07 f08 f13 f15 f16 f17 f18 f19 f20 f22 f25 f29 p10 p13 p14 p15 k01 k02 k10 k22 k23 k24 k25 k26 · merged: S-r1-practice-02, S-r1-criticism-01
+- S-r1-foundations-05 · findings/r1-foundations.md · docs.python.org/3/whatsnew/3.13.html · official docs · f03 f04 f05 f06 f07 f10 f33
+- S-r1-foundations-06 · findings/r1-foundations.md · docs.python.org/3/whatsnew/3.14.html · official docs · f28 f36 f39 f40 e03 p02 p03 p04 p22 p23 · merged: S-r1-evidence-04, S-r1-practice-06
+- S-r1-foundations-07 · findings/r1-foundations.md · discuss.python.org/t/pep-779-criteria-for-supported-status-for-free-threaded-python/84319/123 · other (SC acceptance) · f35 f37 f40 f42
+- S-r1-practice-03 · findings/r1-practice.md · docs.python.org/3/howto/free-threading-extensions.html · official docs · p16 p17 p18 p19 p20 p21
+- S-r1-practice-04 · findings/r1-practice.md · py-free-threading.github.io/installing-cpython/ · official docs (community guide, Quansight) · p08 p09 p12
+- S-r1-practice-05 · findings/r1-practice.md · docs.python.org/3.15/whatsnew/3.15.html · official docs · p05 p06 p19 C-r2-evidence-06 C-r2-evidence-19 C-r2-criticism-10 C-r2-criticism-11 C-r2-criticism-12 C-r2-criticism-13 · merged: S-r2-evidence-02, S-r2-criticism-05
+- S-r1-practice-07 · findings/r1-practice.md · py-free-threading.github.io/running-gil-disabled/ · official docs (community guide) · p15 p16
+- S-r1-practice-08 · findings/r1-practice.md · docs.astral.sh/uv/concepts/python-versions/ · official docs (uv) · p11
+- S-r1-evidence-01 · findings/r1-evidence.md · docs.python.org/3.14/howto/free-threading-python.html · official docs (3.14) · e04 e08 e09
+- S-r1-evidence-02 · findings/r1-evidence.md · docs.python.org/3.13/howto/free-threading-python.html · official docs (3.13) · e01 e02 k10 k22 k30 k31 · merged: S-r1-criticism-11
+- S-r1-evidence-05 · findings/r1-evidence.md · hugovk.github.io/free-threaded-wheels/ · aggregator (tracker) · e10
+- S-r1-evidence-06 · findings/r1-evidence.md · py-free-threading.github.io/tracking/ · aggregator (tracker) · e13 e14
+- S-r1-evidence-07 · findings/r1-evidence.md · hugovk.github.io/free-threaded-wheels/results.json · dataset (quote-match approximate) · e11 e12
+- S-r1-evidence-08 · findings/r1-evidence.md · lwn.net/Articles/985041/ · analysis (LWN 2024) · e15 e16 e17
+- S-r1-criticism-02 · findings/r1-criticism.md · py-free-threading.github.io/porting/ · official docs (community guide) · k11 k13 k14 k15 k16 k20 k21 C-r2-practice-20 C-r2-practice-21 · merged: S-r2-practice-04
+- S-r1-criticism-03 · findings/r1-criticism.md · py-free-threading.github.io/testing/ · official docs (community guide) · k34 k35 k36 k37 k39 k41
+- S-r1-criticism-04 · findings/r1-criticism.md · docs.python.org/3/library/threadsafety.html · official docs · k03 k04 k05 k06 k07 k08 k09
+- S-r1-criticism-05 · findings/r1-criticism.md · py-free-threading.github.io/thread_sanitizer/ · official docs (community guide) · k33 k42
+- S-r1-criticism-06 · findings/r1-criticism.md · py-free-threading.github.io/debugging/ · official docs (community guide) · k22 k40 k43
+- S-r1-criticism-07 · findings/r1-criticism.md · github.com/Quansight-Labs/pytest-run-parallel · code/docs · k38
+- S-r1-criticism-08 · findings/r1-criticism.md · discuss.python.org/t/slower-performance-with-disable-gil-on-threaded-nearest-neighbor-benchmark-10m-points/95365 · forum · k28
+- S-r1-criticism-09 · findings/r1-criticism.md · lwn.net/Articles/1078367/ · analysis (LWN 2026) · k13 k17 k27 k29 k32 k44 c13 c23 c24 C-r2-evidence-03 C-r2-evidence-04 C-r2-evidence-05 C-r2-evidence-08 C-r2-evidence-12 C-r2-evidence-13 C-r2-evidence-14 C-r2-evidence-15 C-r2-evidence-16 · merged: S-r1-cases-04, S-r2-evidence-05
+- S-r1-criticism-10 · findings/r1-criticism.md · docs.python.org/3/faq/library.html · official docs · k12
+- S-r1-cases-01 · findings/r1-cases.md · github.com/emmett-framework/granian/blob/master/README.md · official docs (project README) · c01 c02 c03 c04 c05
+- S-r1-cases-02 · findings/r1-cases.md · fosdem.org/2026/events/attachments/ABJMWD-the_gil_and_api_performance_past_present_and_free-threaded_future/slides/266979/the_gil_a_fw7etsx.pdf · other (conference slides) · c06 c07 c08
+- S-r1-cases-03 · findings/r1-cases.md · docs.python.org/3/library/concurrent.interpreters.html · official docs · c14 c15 c16 c17 c18 c21
+- S-r1-cases-05 · findings/r1-cases.md · sites.ecmwf.int/docs/tensogram/main/guide/free-threaded-python.html · official docs (project) · c09 c10 c11 c12
+- S-r1-cases-06 · findings/r1-cases.md · docs.python.org/3/library/concurrent.futures.html · official docs · c18 c19 c20 c22
+## Round 2 (D3 r2; claim ids in full)
+- S-r2-evidence-01 · findings/r2-evidence.md · docs.python.org/3.15/howto/free-threading-python.html · official docs (3.15, updated 22 Oct 2026) · C-r2-evidence-01 C-r2-evidence-07 C-r2-evidence-17 C-r2-evidence-18
+- S-r2-evidence-03 · findings/r2-evidence.md · docs.python.org/3/glossary.html · official docs · C-r2-evidence-09
+- S-r2-evidence-04 · findings/r2-evidence.md · docs.python.org/3/library/threading.html · official docs · C-r2-evidence-10 C-r2-evidence-11
+- S-r2-practice-01 · findings/r2-practice.md · peps.python.org/pep-0803/ · spec (Final, 30 Mar 2026) · C-r2-practice-12 C-r2-practice-13 C-r2-practice-14 C-r2-practice-15 C-r2-practice-16 C-r2-practice-17 C-r2-practice-19
+- S-r2-practice-02 · findings/r2-practice.md · docs.python.org/3/library/asyncio-dev.html · official docs · C-r2-practice-02 C-r2-practice-06 C-r2-practice-09 C-r2-practice-10
+- S-r2-practice-03 · findings/r2-practice.md · docs.python.org/3/library/asyncio-task.html · official docs · C-r2-practice-04
+- S-r2-practice-06 · findings/r2-practice.md · docs.python.org/3/library/asyncio-threading.html · official docs · C-r2-practice-01 C-r2-practice-02 C-r2-practice-03 C-r2-practice-05 C-r2-practice-07 C-r2-practice-08 C-r2-practice-11
+- S-r2-practice-07 · findings/r2-practice.md · py-free-threading.github.io/porting-extensions/ · official docs (community guide; shares an author with PEP 803) · C-r2-practice-18
+- S-r2-criticism-01 · findings/r2-criticism.md · archive.fosdem.org/2026/schedule/event/ABJMWD-the_gil_and_api_performance_past_present_and_free-threaded_future/ · other (event page) · C-r2-criticism-06
+- S-r2-criticism-02 · findings/r2-criticism.md · video.fosdem.org/2026/ua2220/ABJMWD-the_gil_and_api_performance_past_present_and_free-threaded_future.vtt · other (talk transcript, auto-generated) · C-r2-criticism-01 C-r2-criticism-02 C-r2-criticism-03 C-r2-criticism-04 C-r2-criticism-05 C-r2-criticism-07 C-r2-criticism-08 C-r2-criticism-09
+## Round 3 (D3 r3; claim ids in full)
+- merged into earlier ids (new passages in findings/r3-practice.md): S-r3-practice-02 → S-r2-evidence-03 (glossary; C-r3-practice-15); S-r3-practice-03 → S-r1-foundations-04 (HOWTO; C-r3-practice-08, C-r3-practice-15); S-r3-practice-04 → S-r1-practice-07 (guide, running with the GIL disabled); S-r3-practice-10 → S-r1-practice-08 (uv Python versions)
+- S-r3-practice-01 · findings/r3-practice.md · docs.python.org/3.15/c-api/stable.html · official docs · C-r3-practice-03 C-r3-practice-04 C-r3-practice-05 C-r3-practice-06
+- S-r3-practice-05 · findings/r3-practice.md · docs.python.org/3/using/cmdline.html · official docs · C-r3-practice-09 C-r3-practice-15
+- S-r3-practice-06 · findings/r3-practice.md · py-free-threading.github.io/dependencies/ · official docs (community guide) · C-r3-practice-14
+- S-r3-practice-07 · findings/r3-practice.md · github.com/python/cpython/blob/88b0f7da77b44631e2750a8eae6277e54a7ac3cd/Python/import.c · code (no excerpt hash; checked by content) · C-r3-practice-07 C-r3-practice-10
+- S-r3-practice-08 · findings/r3-practice.md · py-free-threading.github.io/faq/ · official docs (community guide) · C-r3-practice-10 C-r3-practice-11 C-r3-practice-12
+- S-r3-practice-09 · findings/r3-practice.md · pip.pypa.io/en/stable/cli/pip_install/ · official docs (pip) · C-r3-practice-13
+- S-r3-practice-11 · findings/r3-practice.md · docs.astral.sh/uv/reference/troubleshooting/build-failures/ · official docs (uv) · C-r3-practice-02
+- S-r3-practice-12 · findings/r3-practice.md · pip.pypa.io/en/stable/user_guide/ · official docs (pip) · C-r3-practice-01

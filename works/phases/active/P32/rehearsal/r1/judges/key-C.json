@@ -1,0 +1,18 @@
+{
+ "o1": {
+  "chapter-1": "old",
+  "chapter-2": "new"
+ },
+ "o2": {
+  "chapter-1": "new",
+  "chapter-2": "old"
+ },
+ "rel": {
+  "old": "knowledge/2026-10-23-publishing-a-document-the-write-path-from-validation-to-git-push.md",
+  "new": "knowledge/2026-10-23-post-api-documents-write-path.md"
+ },
+ "words": {
+  "old": 4118,
+  "new": 4065
+ }
+}

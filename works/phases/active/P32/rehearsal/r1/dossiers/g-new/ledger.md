@@ -1,0 +1,318 @@
+# Ledger: 20261023-0350-free-threaded-cpython
+(one line per claim · question · load-bearing · status · verified · merged)
+(D3s r1 applied 2026-10-23 from verify/r1-b1 … r1-b5; non-load-bearing claims stay candidate until D5)
+
+## Claims
+- C-r1-foundations-01 · Q1 · load-bearing · status supported · verified verify/r1-b1.md#V-C-r1-foundations-01-1 · bar met (rung 1)
+- C-r1-foundations-02 · Q1 · load-bearing · status supported · verified verify/r1-b1.md#V-C-r1-foundations-02-1 · bar met (rung 1)
+- C-r1-foundations-03 · Q1 · load-bearing · status supported · verified verify/r1-b1.md#V-C-r1-foundations-03-1 · bar met (rung 1)
+- C-r1-foundations-04 · Q1 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-foundations-04-1 · bar met (rung 1)
+- C-r1-foundations-05 · Q1 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-foundations-05-1 · bar met (rung 1)
+- C-r1-foundations-06 · Q1 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-foundations-06-1 · bar met (rung 1) · merged: C-r1-practice-16
+- C-r1-foundations-07 · Q1 · load-bearing · status supported · main · verified verify/r1-b2.md#V-C-r1-foundations-07-1 · bar met (rung 1) · merged: C-r1-practice-13, C-r1-practice-14
+- C-r1-foundations-08 · Q1 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-foundations-08-1 · bar met (rung 1) · merged: C-r1-criticism-01, C-r1-criticism-02
+- C-r1-foundations-09 · Q1, Q4 · load-bearing · status partial · verified verify/r1-b1.md#V-C-r1-foundations-09-1 · bar met (attributed form only) · narrower: "According to PEP 703, the GIL does not necessarily ensure that concurrent operations are atomic or correct (though some operations, such as list(set), are effectively atomic under it), and the per-object locks that replace it provide weaker protections than the GIL, aiming for similar protections with mutual exclusion limited to individual objects."
+- C-r1-foundations-10 · Q1 · load-bearing · status supported · verified verify/r1-b1.md#V-C-r1-foundations-10-1 · bar met (rung 1)
+- C-r1-foundations-11 · Q4 · load-bearing · status supported · verified verify/r1-b1.md#V-C-r1-foundations-11-1 · bar met (rung 1)
+- C-r1-foundations-12 · Q4 · load-bearing · status supported · main · verified verify/r1-b1.md#V-C-r1-foundations-12-1 · bar met (rung 1)
+- C-r1-foundations-13 · Q4 · load-bearing · status supported · verified verify/r1-b1.md#V-C-r1-foundations-13-1 · bar met (rung 1)
+- C-r1-foundations-14 · Q4 · not load-bearing · status candidate
+- C-r1-foundations-15 · Q4 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-foundations-15-1 · bar met (rung 1)
+- C-r1-foundations-16 · Q4 · not load-bearing · status candidate
+- C-r1-foundations-17 · Q4 · load-bearing · status supported · verified verify/r1-b1.md#V-C-r1-foundations-17-1 · bar met (rung 1)
+- C-r1-foundations-18 · Q4 · not load-bearing · status candidate
+- C-r1-foundations-19 · Q4 · not load-bearing · status candidate
+- C-r1-foundations-20 · Q4 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-foundations-20-1 · bar met (rung 1)
+- C-r1-foundations-21 · Q4 · not load-bearing · status candidate
+- C-r1-foundations-22 · Q4 · load-bearing · status supported · verified verify/r1-b1.md#V-C-r1-foundations-22-1 · bar met (rung 1)
+- C-r1-foundations-23 · Q4 · load-bearing · status supported · verified verify/r1-b1.md#V-C-r1-foundations-23-1 · bar met (rung 1)
+- C-r1-foundations-24 · Q4 · load-bearing · status supported · verified verify/r1-b1.md#V-C-r1-foundations-24-1 · bar met (rung 1)
+- C-r1-foundations-25 · Q4 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-foundations-25-1 · bar met (rung 1)
+- C-r1-foundations-26 · Q4 · not load-bearing · status candidate
+- C-r1-foundations-27 · Q4 · load-bearing · status supported · verified verify/r1-b1.md#V-C-r1-foundations-27-1 · bar met (rung 1)
+- C-r1-foundations-28 · Q4, Q2 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-foundations-28-1 · bar met (rung 1)
+- C-r1-foundations-29 · Q4 · not load-bearing · status candidate
+- C-r1-foundations-30 · Q2 · load-bearing · status supported · verified verify/r1-b1.md#V-C-r1-foundations-30-1 · bar met (rung 1)
+- C-r1-foundations-31 · Q2 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-foundations-31-1 · bar met (rung 1) · merged: C-r1-practice-01
+- C-r1-foundations-32 · Q2 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-foundations-32-1 · bar met (rung 1)
+- C-r1-foundations-33 · Q2 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-foundations-33-1 · bar met (rung 1)
+- C-r1-foundations-34 · Q2 · load-bearing · status partial · verified verify/r1-b2.md#V-C-r1-foundations-34-1 · bar met (narrower, rung 1) · narrower: "PEP 779 (Thomas Wouters, Matt Page, Sam Gross; created 13 March 2025) proposed, as criteria for phase II, a hard performance target of 15% slowdown and a memory-use target of 20% (geometric mean, as measured by pyperformance); the Steering Council accepted it with its own guard rails (see C-r1-foundations-35)."
+- C-r1-foundations-35 · Q2, Q16 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-foundations-35-1 · bar met (rung 1)
+- C-r1-foundations-36 · Q2, Q3 · load-bearing · status supported · main · verified verify/r1-b2.md#V-C-r1-foundations-36-1 · bar met (rung 1) · D-03 · merged: C-r1-practice-02
+- C-r1-foundations-37 · Q2, Q3 · not load-bearing · status candidate · merged: C-r1-practice-04
+- C-r1-foundations-38 · Q2 · not load-bearing · status candidate
+- C-r1-foundations-39 · Q1 · not load-bearing · status candidate
+- C-r1-foundations-40 · Q16, Q3 · not load-bearing · status candidate · merged: C-r1-practice-03
+- C-r1-foundations-41 · Q16 · not load-bearing · status candidate
+- C-r1-foundations-42 · Q16 · not load-bearing · status candidate
+- C-r1-foundations-43 · Q16 · not load-bearing · status candidate
+- C-r1-foundations-44 · Q16 · not load-bearing · status candidate
+- C-r1-practice-05 · Q3 · load-bearing · status supported · main · verified verify/r1-b3.md#V-C-r1-practice-05-1 · bar met (rung 1; release notes + PEP 790, same owner, self-statement of a date)
+- C-r1-practice-06 · Q3, Q6 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-practice-06-1 · bar met (rung 1)
+- C-r1-practice-07 · Q6 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-practice-07-1 · bar met (rung 1)
+- C-r1-practice-08 · Q6 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-practice-08-1 · bar met (attributed to the guide) · D-03
+- C-r1-practice-09 · Q6 · not load-bearing · status candidate
+- C-r1-practice-10 · Q6 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-practice-10-1 · bar met for the attributed form only (one community guide; CPython Windows docs corroborate the python3.13t.exe naming)
+- C-r1-practice-11 · Q6 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-practice-11-1 · bar met (rung 1)
+- C-r1-practice-12 · Q6 · load-bearing · status partial · verified verify/r1-b3.md#V-C-r1-practice-12-1 · bar met (narrower, attributed to the guide) · narrower: "The Python Free-Threading Guide lists commands to get a free-threaded interpreter including `uv venv --python 3.14t`, `mamba create -n nogil -c conda-forge python-freethreading`, `brew install python-freethreading` and Fedora's `python3.14-freethreading` package, says the manylinux container images have python3.14t available, and suggests pyenv for building CPython from source (`pyenv install --debug --keep 3.14`) without showing a free-threading option."
+- C-r1-practice-15 · Q6, Q7 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-practice-15-1 · bar met (rung 1 + guide)
+- C-r1-practice-17 · Q7 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-practice-17-1 · bar met (rung 1)
+- C-r1-practice-18 · Q7 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-practice-18-1 · bar met (rung 1)
+- C-r1-practice-19 · Q7 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-practice-19-1 · bar met (rung 1, the 3.15 release notes) · D-02
+- C-r1-practice-20 · Q7 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-practice-20-1 · bar met (rung 1; the HOWTO page is partly stale for 3.15) · D-02
+- C-r1-practice-21 · Q7 · not load-bearing · status candidate
+- C-r1-practice-22 · Q10 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-practice-22-1 · bar met for the attributed form ("scaling linearly" is the project's description, no measurement)
+- C-r1-practice-23 · Q10 · not load-bearing · status candidate
+- C-r1-evidence-01 · Q5 · load-bearing · status supported · main · verified verify/r1-b4.md#V-C-r1-evidence-01-1 · bar met (rung 1; write "largest single cause", not "mostly")
+- C-r1-evidence-02 · Q5 · not load-bearing · status candidate
+- C-r1-evidence-03 · Q5 · load-bearing · status supported · main · verified verify/r1-b4.md#V-C-r1-evidence-03-1 · bar met (rung 1, attribute to What's New 3.14) · D-01
+- C-r1-evidence-04 · Q5 · load-bearing · status supported · main · verified verify/r1-b4.md#V-C-r1-evidence-04-1 · bar met (rung 1, attribute to the 3.14 HOWTO) · D-01
+- C-r1-evidence-05 · Q5 · load-bearing · status supported · main · verified verify/r1-b4.md#V-C-r1-evidence-05-1 · bar met (rung 1, PEP 779 self-reported, March 2025; "proposed") · D-01
+- C-r1-evidence-06 · Q5 · load-bearing · status supported · main · verified verify/r1-b4.md#V-C-r1-evidence-06-1 · bar met (rung 1, PEP 779, March 2025)
+- C-r1-evidence-07 · Q5 · not load-bearing · status candidate
+- C-r1-evidence-08 · Q5, Q12 · not load-bearing · status candidate
+- C-r1-evidence-09 · Q5 · not load-bearing · status candidate
+- C-r1-evidence-10 · Q8 · load-bearing · status supported · verified verify/r1-b4.md#V-C-r1-evidence-10-1 · bar met (rung 1)
+- C-r1-evidence-11 · Q8 · load-bearing · status supported · main · verified verify/r1-b4.md#V-C-r1-evidence-11-1 · bar met (219 of 360, last update 22 Oct 2026; flag = a free-threaded wheel exists, not "works")
+- C-r1-evidence-12 · Q8 · load-bearing · status supported · verified verify/r1-b4.md#V-C-r1-evidence-12-1 · bar met (protobuf is "pure-py"; psycopg-binary is the tracked name)
+- C-r1-evidence-13 · Q8 · load-bearing · status supported · verified verify/r1-b4.md#V-C-r1-evidence-13-1 · bar met (some versions may be projected, per the page note)
+- C-r1-evidence-14 · Q8 · not load-bearing · status candidate
+- C-r1-evidence-15 · Q5, Q11 · load-bearing · status supported · main · verified verify/r1-b4.md#V-C-r1-evidence-15-1 · bar met (rung 2, LWN; a 3.13 beta 1 micro-benchmark from 2024, dated)
+- C-r1-evidence-16 · Q11 · load-bearing · status partial · verified verify/r1-b4.md#V-C-r1-evidence-16-1 · bar met (narrower, attributed) · narrower: "Anthony Shaw (PyCon US 2024, as reported by LWN) said that multiprocessing has the largest start-up time among threads, coroutines, multiprocessing and subinterpreters; LWN describes his demo of passing work to other 'cores' as akin to the data serialization (for example via pickle) needed to parcel out a task to multiple cores."
+- C-r1-evidence-17 · Q11 · load-bearing · status partial · verified verify/r1-b4.md#V-C-r1-evidence-17-1 · bar met (narrower, attributed; an evaluation, never in the chapter's voice) · narrower: "In his PyCon US 2024 conclusion, as reported by LWN, Anthony Shaw said free-threading will be a better choice than subinterpreters for CPU-heavy tasks that can be easily segmented and need only a 'quick data exchange between them'."
+- C-r1-criticism-03 · Q9 · load-bearing · status supported · main · verified verify/r1-b5.md#V-C-r1-criticism-03-1 · bar met (rung 1)
+- C-r1-criticism-04 · Q9 · load-bearing · status supported · main · verified verify/r1-b5.md#V-C-r1-criticism-04-1 · bar met (rung 1)
+- C-r1-criticism-05 · Q9 · load-bearing · status supported · main · verified verify/r1-b5.md#V-C-r1-criticism-05-1 · bar met (rung 1)
+- C-r1-criticism-06 · Q9 · load-bearing · status supported · main · verified verify/r1-b5.md#V-C-r1-criticism-06-1 · bar met (rung 1)
+- C-r1-criticism-07 · Q9 · not load-bearing · status candidate
+- C-r1-criticism-08 · Q9 · not load-bearing · status candidate
+- C-r1-criticism-09 · Q9 · not load-bearing · status candidate
+- C-r1-criticism-10 · Q9, Q12 · load-bearing · status supported · verified verify/r1-b5.md#V-C-r1-criticism-10-1 · bar met (scoped to the 3.13 HOWTO) · D-04 (resolved-by-scope)
+- C-r1-criticism-11 · Q9 · load-bearing · status supported · verified verify/r1-b5.md#V-C-r1-criticism-11-1 · bar met for the attributed form (one owner: the porting guide)
+- C-r1-criticism-12 · Q9 · load-bearing · status supported · verified verify/r1-b5.md#V-C-r1-criticism-12-1 · bar met (rung 1)
+- C-r1-criticism-13 · Q9 · load-bearing · status supported · verified verify/r1-b5.md#V-C-r1-criticism-13-1 · bar met (porting guide + LWN reporting Wouters, different owners; moderate independence)
+- C-r1-criticism-14 · Q9 · not load-bearing · status candidate
+- C-r1-criticism-15 · Q9 · load-bearing · status supported · verified verify/r1-b5.md#V-C-r1-criticism-15-1 · bar met for the attributed form ("most common source" is the guide's judgment)
+- C-r1-criticism-16 · Q9 · not load-bearing · status candidate
+- C-r1-criticism-17 · Q9 · not load-bearing · status candidate
+- C-r1-criticism-18 · Q9 · not load-bearing · status candidate
+- C-r1-criticism-19 · Q9 · not load-bearing · status candidate
+- C-r1-criticism-20 · Q12 · load-bearing · status supported · verified verify/r1-b5.md#V-C-r1-criticism-20-1 · bar met (rung 1)
+- C-r1-criticism-21 · Q9 · not load-bearing · status candidate
+- C-r1-criticism-22 · Q12 · load-bearing · status supported · verified verify/r1-b5.md#V-C-r1-criticism-22-1 · bar met (the sys._current_frames() wording is 3.13 only) · D-05
+- C-r1-criticism-23 · Q12 · load-bearing · status supported · verified verify/r1-b5.md#V-C-r1-criticism-23-1 · bar met (rung 1)
+- C-r1-criticism-24 · Q12 · load-bearing · status supported · verified verify/r1-b5.md#V-C-r1-criticism-24-1 · bar met (rung 1)
+- C-r1-criticism-25 · Q12 · not load-bearing · status candidate
+- C-r1-criticism-26 · Q12 · not load-bearing · status candidate
+- C-r1-criticism-27 · Q12 · load-bearing · status supported · verified verify/r1-b5.md#V-C-r1-criticism-27-1 · bar met for the attributed form (only the first sentence is a direct quote; Wouters works on the feature at Meta)
+- C-r1-criticism-28 · Q12 · not load-bearing · status candidate
+- C-r1-criticism-29 · Q12 · not load-bearing · status candidate
+- C-r1-criticism-30 · Q12 · not load-bearing · status candidate
+- C-r1-criticism-31 · Q12 · not load-bearing · status candidate
+- C-r1-criticism-32 · Q12 · not load-bearing · status candidate
+- C-r1-criticism-33 · Q12, Q15 · not load-bearing · status candidate
+- C-r1-criticism-34 · Q15 · not load-bearing · status candidate
+- C-r1-criticism-35 · Q15 · not load-bearing · status candidate
+- C-r1-criticism-36 · Q15 · not load-bearing · status candidate
+- C-r1-criticism-37 · Q15 · not load-bearing · status candidate
+- C-r1-criticism-38 · Q15 · not load-bearing · status candidate
+- C-r1-criticism-39 · Q15 · not load-bearing · status candidate
+- C-r1-criticism-40 · Q15 · not load-bearing · status candidate
+- C-r1-criticism-41 · Q15 · not load-bearing · status candidate
+- C-r1-criticism-42 · Q15 · not load-bearing · status candidate
+- C-r1-criticism-43 · Q15 · not load-bearing · status candidate
+- C-r1-criticism-44 · Q15 · not load-bearing · status candidate
+- C-r1-cases-01 · Q13 · load-bearing · status supported · main · verified verify/r1-b3.md#V-C-r1-cases-01-1 · bar met for the attributed form (the Granian README, vendor about itself)
+- C-r1-cases-02 · Q13 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-cases-02-1 · bar met for the attributed form (vendor about itself)
+- C-r1-cases-03 · Q13 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-cases-03-1 · bar met for the attributed form (vendor about itself)
+- C-r1-cases-04 · Q13 · not load-bearing · status candidate
+- C-r1-cases-05 · Q13 · load-bearing · status supported · verified verify/r1-b3.md#V-C-r1-cases-05-1 · bar met for the attributed form (vendor about itself)
+- C-r1-cases-06 · Q13 · load-bearing · status supported · verified verify/r1-b4.md#V-C-r1-cases-06-1 · bar met (the speaker's own slides, FOSDEM 2026)
+- C-r1-cases-07 · Q13 · load-bearing · status candidate · verified verify/r1-b4.md#V-C-r1-cases-07-1 (needs-rewrite: "2.5x at 32 threads" has no baseline; exceptional, one source, bar below) · not used: replaced at D3s r2 by C-r2-criticism-03, C-r2-criticism-04
+- C-r1-cases-08 · Q13 · not load-bearing · status candidate
+- C-r1-cases-09 · Q14 · not load-bearing · status candidate
+- C-r1-cases-10 · Q14 · not load-bearing · status candidate
+- C-r1-cases-11 · Q14 · not load-bearing · status candidate
+- C-r1-cases-12 · Q14 · not load-bearing · status candidate
+- C-r1-cases-13 · Q14 · not load-bearing · status candidate
+- C-r1-cases-14 · Q17 · not load-bearing · status candidate
+- C-r1-cases-15 · Q17 · not load-bearing · status candidate
+- C-r1-cases-16 · Q17 · not load-bearing · status candidate
+- C-r1-cases-17 · Q17 · not load-bearing · status candidate
+- C-r1-cases-18 · Q17 · not load-bearing · status candidate
+- C-r1-cases-19 · Q17 · not load-bearing · status candidate
+- C-r1-cases-20 · Q17 · not load-bearing · status candidate
+- C-r1-cases-21 · Q17 · not load-bearing · status candidate
+- C-r1-cases-22 · Q17 · not load-bearing · status candidate
+- C-r1-cases-23 · Q17 · not load-bearing · status candidate
+- C-r1-cases-24 · Q17, Q13 · not load-bearing · status candidate
+### Round 2 (D3 r2 merge; D3s r2 applied from verify/r2-b1, r2-b2; non-load-bearing claims stay candidate until D5)
+- C-r2-evidence-01 · Q21, Q5 · load-bearing · status supported · main · verified verify/r2-b1.md#V-C-r2-evidence-01-1 · bar met (rung 1; the page prints no measurement date) · D-01
+- C-r2-evidence-03 · Q21, Q5 · load-bearing · status supported · main · verified verify/r2-b1.md#V-C-r2-evidence-03-1 · bar met (rung 2, attributed to Wouters) · D-01
+- C-r2-evidence-04 · Q21 · not load-bearing · status candidate · D-08
+- C-r2-evidence-05 · Q21 · not load-bearing · status candidate
+- C-r2-evidence-06 · Q21, Q3 · not load-bearing · status candidate
+- C-r2-evidence-07 · Q18, Q7 · load-bearing · status supported · verified verify/r2-b1.md#V-C-r2-evidence-07-1 · bar met (rung 1)
+- C-r2-evidence-08 · Q18 · not load-bearing · status candidate
+- C-r2-evidence-09 · Q19 · load-bearing · status supported · verified verify/r2-b1.md#V-C-r2-evidence-09-1 · bar met (rung 1)
+- C-r2-evidence-10 · Q19, Q18 · load-bearing · status supported · verified verify/r2-b1.md#V-C-r2-evidence-10-1 · bar met (rung 1)
+- C-r2-evidence-11 · Q18 · not load-bearing · status candidate
+- C-r2-evidence-12 · Q18, Q11 · load-bearing · status supported · verified verify/r2-b1.md#V-C-r2-evidence-12-1 · bar met for the attributed form (Wouters)
+- C-r2-evidence-13 · Q18, Q11 · load-bearing · status partial · verified verify/r2-b1.md#V-C-r2-evidence-13-1 · bar met (narrower, attributed) · narrower: "Wouters (LWN, June 2026) said that where the alternatives (rewriting in C or Rust, multiple processes, subinterpreters, asyncio) do not provide the performance needed, multi-threaded solutions without the GIL can offer higher throughput, lower memory use and lower latency."
+- C-r2-evidence-14 · Q18, Q12 · load-bearing · status supported · verified verify/r2-b1.md#V-C-r2-evidence-14-1 · bar met for the attributed form (Wouters)
+- C-r2-evidence-15 · Q19 · not load-bearing · status candidate
+- C-r2-evidence-16 · Q19 · not load-bearing · status candidate
+- C-r2-evidence-17 · Q18 · not load-bearing · status candidate
+- C-r2-evidence-18 · Q18, Q5 · not load-bearing · status candidate
+- C-r2-evidence-19 · Q18 · not load-bearing · status candidate
+- C-r2-practice-01 · Q22, Q10 · load-bearing · status supported · verified verify/r2-b2.md#V-C-r2-practice-01-1 · bar met (rung 1; CPython about its own asyncio, attributed)
+- C-r2-practice-02 · Q22, Q10 · load-bearing · status supported · main · verified verify/r2-b2.md#V-C-r2-practice-02-1 · bar met (rung 1)
+- C-r2-practice-03 · Q22, Q10 · load-bearing · status supported · verified verify/r2-b2.md#V-C-r2-practice-03-1 · bar met (rung 1)
+- C-r2-practice-04 · Q22 · load-bearing · status supported · verified verify/r2-b2.md#V-C-r2-practice-04-1 · bar met (rung 1)
+- C-r2-practice-05 · Q22 · load-bearing · status supported · verified verify/r2-b2.md#V-C-r2-practice-05-1 · bar met (rung 1; the page says "thread or process pool"; no measured speedup)
+- C-r2-practice-06 · Q22 · not load-bearing · status candidate
+- C-r2-practice-07 · Q22 · load-bearing · status supported · verified verify/r2-b2.md#V-C-r2-practice-07-1 · bar met (rung 1)
+- C-r2-practice-08 · Q22 · load-bearing · status supported · verified verify/r2-b2.md#V-C-r2-practice-08-1 · bar met (rung 1)
+- C-r2-practice-09 · Q22 · load-bearing · status supported · verified verify/r2-b2.md#V-C-r2-practice-09-1 · bar met (rung 1; scope: objects vs the implementation) · D-07 resolved-by-scope
+- C-r2-practice-10 · Q22 · not load-bearing · status candidate
+- C-r2-practice-11 · Q22 · not load-bearing · status candidate
+- C-r2-practice-12 · Q23, Q7 · load-bearing · status supported · main · verified verify/r2-b2.md#V-C-r2-practice-12-1 · bar met (rung 1) · D-02
+- C-r2-practice-13 · Q23, Q7 · load-bearing · status supported · main · verified verify/r2-b2.md#V-C-r2-practice-13-1 · bar met for the attributed form (PEP 803; the current docs, same owner, agree) · flags exceptional
+- C-r2-practice-14 · Q23, Q7 · load-bearing · status supported · verified verify/r2-b2.md#V-C-r2-practice-14-1 · bar met (rung 1)
+- C-r2-practice-15 · Q23 · load-bearing · status supported · verified verify/r2-b2.md#V-C-r2-practice-15-1 · bar met (rung 1; keep the PEP's hedge that the check "may be removed")
+- C-r2-practice-16 · Q23, Q7 · load-bearing · status supported · main · verified verify/r2-b2.md#V-C-r2-practice-16-1 · bar met (rung 1; "(otherwise equal)" dropped, minor) · D-02
+- C-r2-practice-17 · Q23, Q7 · load-bearing · status supported · verified verify/r2-b2.md#V-C-r2-practice-17-1 · bar met (rung 1)
+- C-r2-practice-18 · Q23, Q7 · load-bearing · status supported · verified verify/r2-b2.md#V-C-r2-practice-18-1 · bar met for the attributed form (guide not independent of PEP 803) · D-02
+- C-r2-practice-19 · Q23 · not load-bearing · status candidate
+- C-r2-practice-20 · Q23 · not load-bearing · status candidate
+- C-r2-practice-21 · Q22 · not load-bearing · status candidate
+- C-r2-criticism-01 · Q20, Q13 · load-bearing · status supported · verified verify/r2-b1.md#V-C-r2-criticism-01-1 · bar met (the speaker's own transcript, machine-generated)
+- C-r2-criticism-02 · Q20, Q13 · load-bearing · status partial · verified verify/r2-b1.md#V-C-r2-criticism-02-1 · bar met (narrower, attributed to the speaker) · narrower: "In his FOSDEM 2026 talk, Ruben Hias showed Gunicorn gthread and Granian on the GIL build rising roughly linearly and then saturating (Granian going a bit further, as it does some network I/O in Rust), and an ASGI framework capping at the same point; he attributes the saturation to the GIL."
+- C-r2-criticism-03 · Q20, Q13 · load-bearing · status supported · main · verified verify/r2-b1.md#V-C-r2-criticism-03-1 · bar met for the attributed form only (one speaker, unreplicated) · flags exceptional
+- C-r2-criticism-04 · Q20, Q13 · load-bearing · status supported · verified verify/r2-b1.md#V-C-r2-criticism-04-1 · bar met (absence checked across the whole transcript)
+- C-r2-criticism-05 · Q20 · not load-bearing · status candidate
+- C-r2-criticism-06 · Q20 · not load-bearing · status candidate
+- C-r2-criticism-07 · Q20, Q24 · not load-bearing · status candidate
+- C-r2-criticism-08 · Q20, Q24 · not load-bearing · status candidate · D-06
+- C-r2-criticism-09 · Q20 · not load-bearing · status candidate
+- C-r2-criticism-10 · Q24, Q3 · load-bearing · status supported · main · verified verify/r2-b1.md#V-C-r2-criticism-10-1 · bar met (rung 1)
+- C-r2-criticism-11 · Q24 · load-bearing · status supported · verified verify/r2-b1.md#V-C-r2-criticism-11-1 · bar met (rung 1)
+- C-r2-criticism-12 · Q24 · not load-bearing · status candidate
+- C-r2-criticism-13 · Q24 · load-bearing · status supported · verified verify/r2-b1.md#V-C-r2-criticism-13-1 · bar met (rung 1; an absence in the JIT section, which says nothing either way)
+### Round 3 (D3 r3 merge; D3s r3 applied from verify/r3-b1; non-load-bearing claims stay candidate until D5)
+- C-r3-practice-01 · Q25 · load-bearing · status supported · verified verify/r3-b1.md#V-C-r3-practice-01-1 · bar met (rung 1)
+- C-r3-practice-02 · Q25 · load-bearing · status supported · verified verify/r3-b1.md#V-C-r3-practice-02-1 · bar met (rung 1)
+- C-r3-practice-03 · Q25, Q23 · load-bearing · status supported · verified verify/r3-b1.md#V-C-r3-practice-03-1 · bar met (rung 1; about extension filenames "on some platforms", never cite it for installer behaviour)
+- C-r3-practice-04 · Q25, Q23 · load-bearing · status supported · verified verify/r3-b1.md#V-C-r3-practice-04-1 · bar met (rung 1) · D-02
+- C-r3-practice-05 · Q25 · not load-bearing · status candidate
+- C-r3-practice-06 · Q25 · not load-bearing · status candidate
+- C-r3-practice-07 · Q25, Q7 · load-bearing · status supported · main · verified verify/r3-b1.md#V-C-r3-practice-07-1 · bar met (rung 1, code at 88b0f7d, checked by content)
+- C-r3-practice-08 · Q25, Q7 · load-bearing · status supported · verified verify/r3-b1.md#V-C-r3-practice-08-1 · bar met (rung 1)
+- C-r3-practice-09 · Q25, Q6 · load-bearing · status supported · verified verify/r3-b1.md#V-C-r3-practice-09-1 · bar met (rung 1)
+- C-r3-practice-10 · Q25 · load-bearing · status supported · verified verify/r3-b1.md#V-C-r3-practice-10-1 · bar met for the attributed form (the community guide; CPython's warning says "at your own risk")
+- C-r3-practice-11 · Q25 · not load-bearing · status candidate
+- C-r3-practice-12 · Q25 · load-bearing · status partial · verified verify/r3-b1.md#V-C-r3-practice-12-1 · bar met (narrower, attributed) · narrower: "The Python Free-Threading Guide's FAQ (updated 2026-09-25), in a section about Python 3.13, reports that `pip install jupyter` can fail on a free-threaded build without a compilation environment because some dependencies, such as PyYAML, did not ship free-threaded binaries and need compiling from source; the guide's dependencies page says PyYAML 6.0.3+ supports free-threaded Python from 3.14t." · D-10 resolved-by-scope
+- C-r3-practice-13 · Q25 · not load-bearing · status candidate
+- C-r3-practice-14 · Q25 · not load-bearing · status candidate · D-10
+- C-r3-practice-15 · Q25, Q6 · load-bearing · status contested · verified verify/r3-b1.md#V-C-r3-practice-15-1 (both passages verbatim, both 3.15.1 docs; the HOWTO never says "disabled by default") · D-09
+## Question states (D3s r3)
+- Q25 contested (D-09; everything else on it supported or partial) · load-bearing: 21/21 answered or contested (Q1–Q13, Q18–Q25)
+### D5s (final verification, verify/final-b1 … final-b6; these lines supersede each claim's status above)
+- C-r1-foundations-37 · status supported · verified verify/final-b1.md#V-C-r1-foundations-37-1
+- C-r1-foundations-38 · status partial · verified verify/final-b1.md#V-C-r1-foundations-38-1 · narrower: "PEP 703 lists earlier GIL-removal efforts, including Greg Stein's 1996 patch against Python 1.4 and Larry Hastings's Gilectomy, and points to two reference repositories, nogil-3.12 (based on Python 3.12.0a4) and nogil (based on Python 3.9.10)."
+- C-r1-foundations-40, C-r1-foundations-41, C-r1-foundations-43, C-r1-foundations-44 · status supported · verified verify/final-b1.md (one record each)
+- C-r2-evidence-04, C-r2-evidence-05, C-r2-evidence-06, C-r2-evidence-15, C-r2-evidence-16 · status supported · verified verify/final-b1.md (-05, -16 attributed to Wouters as reported by LWN)
+- C-r2-criticism-12 · status supported · verified verify/final-b1.md#V-C-r2-criticism-12-1
+- C-r2-practice-06, C-r2-practice-10, C-r2-practice-11 · status supported · verified verify/final-b1.md (-11: only what the docs point to)
+- C-r2-evidence-08, C-r2-evidence-11, C-r2-evidence-17, C-r2-evidence-18, C-r2-evidence-19 · status supported · verified verify/final-b2.md (-19 narrow: the pool reports a dead worker's PID and exit code)
+- C-r2-practice-19 · status supported · verified verify/final-b2.md#V-C-r2-practice-19-1
+- C-r2-practice-20, C-r2-practice-21 · status supported · verified verify/final-b2.md (attributed to the community guide; -21's default confirmed in the cmdline docs)
+- C-r2-criticism-05 · status partial · verified verify/final-b2.md#V-C-r2-criticism-05-1 · narrower: "Ruben Hias says in the FOSDEM 2026 talk that, for his mixed I/O-and-CPU benchmark, he drew on unnamed research suggesting most production applications split between 70-30 and 90-10 between I/O waiting time and CPU work."
+- C-r2-criticism-06 · status supported · verified verify/final-b2.md#V-C-r2-criticism-06-1
+- C-r2-criticism-07 · status supported · verified verify/final-b2.md#V-C-r2-criticism-07-1 (attributed and hedged: "I think")
+- C-r2-criticism-08 · status supported (as Hias's remark only) · verified verify/final-b2.md#V-C-r2-criticism-08-1 · D-06
+- C-r2-criticism-09 · status partial · verified verify/final-b2.md#V-C-r2-criticism-09-1 · narrower: "Hias reports that in his FOSDEM 2026 benchmark a WSGI server with Gevent enabled reached 93% of a full ASGI implementation's performance (metric and thread count not stated clearly in the machine transcript)."
+- C-r3-practice-05, C-r3-practice-06 · status supported · verified verify/final-b2.md
+- C-r3-practice-11, C-r3-practice-13, C-r3-practice-14 · status supported · verified verify/final-b3.md (-14 attributed to the guide)
+- C-r1-criticism-35, C-r1-criticism-37, C-r1-criticism-38, C-r1-criticism-40 · status supported · verified verify/final-b3.md (guide claims attributed)
+- C-r1-cases-10, C-r1-cases-11, C-r1-cases-13 · status supported · verified verify/final-b3.md (vendor-about-itself, attributed; -13 hedged "suspects")
+- C-r1-cases-15, C-r1-cases-16, C-r1-cases-18, C-r1-cases-22 · status supported · verified verify/final-b3.md
+- C-r1-cases-20 · status partial · verified verify/final-b3.md#V-C-r1-cases-20-1 · narrower: "The Python documentation says the tradeoff of InterpreterPoolExecutor is that writing concurrent code for multiple interpreters can take extra effort, because it forces deliberate handling of how interpreters interact and what data is shared; it also says mutable data cannot be shared between interpreters, so each interpreter needs its own copy and changes between copies must be synchronized manually, and names avoiding thread pain points such as race conditions as a benefit."
+- main, final-b4: C-r1-evidence-01, C-r1-evidence-03, C-r1-evidence-04, C-r1-evidence-11, C-r1-evidence-15, C-r2-evidence-01, C-r2-evidence-03 · status supported · counter: none-found (verify/final-b4.md) · D-01 stands
+- C-r1-evidence-05 · main · status partial · verified verify/final-b4.md · counter: S-v4-04 (C-v4-01) · narrower: "PEP 779 reported the penalty was currently around 10% (about 3% on macOS) and proposed 15% as a hard performance target for phase II; the Steering Council's acceptance stated the official target as within 10% degradation, with slowdowns of up to 15% to be discussed with the Steering Council in advance."
+- C-r1-evidence-06 · main · status partial · verified verify/final-b4.md · counter: S-v4-04 (C-v4-01) · narrower: "PEP 779 reported about 15-20% higher memory use (geometric mean on pyperformance) and proposed a 20% target for phase II; the Steering Council's acceptance says memory increases must stay below 15%, with a hard limit of 20%."
+- C-v4-01 · Q5, Q2 · load-bearing · status supported (verifier's counter-claim from S-v4-04, the SC acceptance post, verify/final-b4.md) · refines C-r1-evidence-05, -06, C-r1-foundations-34
+- main, final-b5: C-r1-foundations-36, C-r1-foundations-07, C-r1-practice-05, C-r2-criticism-10, C-r2-practice-12, C-r2-practice-13, C-r2-practice-16, C-r3-practice-07 · status supported · counter: none-found, except S-v5-08 (C-v5-01: the 3.15.1 extension HOWTO's stale stable-ABI sentence, about abi3) → D-02, already resolved-by-scope · C-r2-practice-13 now has a same-owner second source (stable docs, dynload_shlib.c): attributed form only
+- main, final-b6: C-r1-criticism-03, C-r1-criticism-04, C-r1-criticism-05, C-r1-criticism-06, C-r1-foundations-12 ("proposes"), C-r2-practice-02, C-r1-cases-01 · status supported · counter: none-found (verify/final-b6.md)
+- C-r2-criticism-03 · main · status supported for the attributed form only; bar below for the chapter's own voice (exceptional, one source) · counter: none-found; a rung-3 lead (Medium, 3.15.0rc2) found free-threaded Granian slowest of six ASGI configurations, not opened
+
+## Question states (D3s r1)
+- Q1 answered · Q2 answered · Q3 contested (D-03) · Q4 answered · Q5 contested (D-01) · Q6 answered · Q7 contested (D-02) · Q8 answered · Q9 answered · Q10 answered (attributed only) · Q11 thin (only partial, attributed 2024 claims) · Q12 contested (D-05) · Q13 thin (C-r1-cases-07 needs-rewrite; the rest is vendor-attributed)
+- not load-bearing (states from the findings until D5): Q14 thin · Q15 answered · Q16 thin · Q17 answered
+## Question states (D3s r2)
+- Q11 answered (partial and attributed: C-r1-evidence-15, -16, -17, C-r2-evidence-12, -13) · Q13 answered (attributed: the Granian README; one speaker, C-r2-criticism-01 to -04; C-r1-cases-07 not used) · Q18 answered (rung 1 on GIL re-enabling; attributed views on processes and contention) · Q19 answered · Q20 answered (attributed, one speaker; no independent measurement) · Q21 contested (D-01) · Q22 answered (D-07 resolved-by-scope) · Q23 contested (D-02) · Q24 answered
+- load-bearing: 20/20 answered or contested (Q1–Q13, Q18–Q24)
+
+## Disagreements
+### D-01
+- claims: C-r1-evidence-03 (side A), C-r1-evidence-04 (side B), C-r1-evidence-05 (side C)
+- side A: S-r1-foundations-06 (What's New 3.14) "roughly 5-10%" single-thread penalty (rung 1)
+- side B: S-r1-evidence-01 (3.14 HOWTO as served now) about 1% macOS aarch64 to 8% x86-64 Linux (rung 1)
+- side C: S-r1-foundations-02 (PEP 779, 2025) around 10%, about 3% on macOS (rung 1)
+- nature: version/time · prominence: all three are the project's own figures, likely measured at different times
+- would settle it: a dated pyperformance comparison for the current release
+- status: open
+### D-02
+- claims: C-r1-practice-19
+- side A: S-r1-practice-05 (What's New 3.15) abi3t stable ABI exists from 3.15 (rung 1)
+- side B: S-r1-practice-03 (C-extension HOWTO, 3.15.1) free-threaded build "does not currently support the Limited C API or the stable ABI" (rung 1)
+- nature: version/time · prominence: release notes are newer; HOWTO wording may lag (verifier r1-b3: the HOWTO sentence looks stale, true for 3.13–3.14)
+- would settle it: PEP 803 status and the 3.15 C-API docs
+- status: open
+### D-03
+- claims: C-r1-foundations-36, C-r1-practice-08
+- side A: S-r1-foundations-06 (What's New 3.14) "no longer experimental" (rung 1)
+- side B: S-r1-practice-04 (install guide) installers "have experimental support", macOS option labelled "[experimental]" (community guide)
+- nature: version/time · status: open
+### D-04
+- claims: C-r1-criticism-10
+- side A: S-r1-evidence-02 (3.13 HOWTO) shared iterator could crash the interpreter
+- side B: S-r1-foundations-04 (3.15.1 HOWTO) duplicate or missing elements only
+- nature: version/time · status: resolved-by-scope (both editions opened, each scoped to its version)
+### D-05
+- claims: C-r1-criticism-22
+- side A: S-r1-criticism-06 (debugging guide) Python-level access "guaranteed not to produce any major interpreter crash"
+- side B: S-r1-foundations-04 (3.15.1 HOWTO) cross-thread frame.f_locals access "may crash the interpreter"
+- nature: scope/conditions · status: open
+### D-01 (extended at D3 r2)
+- side B also: S-r2-evidence-01/P1 (3.15 HOWTO, updated 22 Oct 2026, no measurement date) about 1% macOS aarch64 to 8% x86-64 Linux (C-r2-evidence-01)
+- side D: S-r1-criticism-09 (LWN June 2026, reporting Wouters) 3.14 "0-10%", usually about 5% on Linux with GCC (C-r2-evidence-03, rung 2)
+### D-02 (extended at D3 r2)
+- side A also: S-r2-practice-01/P1 (PEP 803 "Final", Python-Version 3.15, resolved 30 Mar 2026) (C-r2-practice-12, -16); S-r2-practice-07/P2 (guide, not independent of PEP 803) "CPython 3.15 adds a separate Stable ABI named abi3t" (C-r2-practice-18)
+- would settle it: the 3.15 C-API "Stable Application Binary Interfaces" page — opened at D3 r3 (S-r3-practice-01; C-r3-practice-04: abi3t new in 3.15, "compatible with free-threaded builds")
+- status (D3s r3, per gaps/r3.md G-r3-03): resolved-by-scope — 3.13t and 3.14t have no stable ABI; abi3t exists from 3.15; the HOWTO sentence is stale for 3.15
+### D-06
+- claims: C-r2-criticism-08 (side A), C-r1-criticism-11, C-r1-criticism-05 (side B)
+- side A: S-r2-criticism-02/P10 (FOSDEM 2026 speaker) "as long as you're writing pure Python you shouldn't need to care about this" (rung 1 for the speaker's view only)
+- side B: S-r1-criticism-02/P1 (porting guide) the interpreter "does not protect you from introducing thread safety issues due to race conditions"; S-r1-criticism-04/P5 (CPython thread-safety docs) multi-access operations "are never atomic" (rung 1)
+- nature: factual · prominence: the official docs and the guide take side B · would settle it: n/a (side A is one speaker's informal remark) · status: open
+### D-07
+- claims: C-r2-practice-09
+- side A: S-r2-practice-02/P2 (asyncio-dev) "Almost all asyncio objects are not thread safe" (rung 1)
+- side B: S-r2-practice-06/P2 (asyncio-threading) "the implementation of asyncio is safe to use in a multi-threaded environment" (rung 1)
+- nature: scope/conditions (internal implementation vs sharing objects across threads, which S-r2-practice-06/P6–P8 still forbid) · the 3.15.1 docs show both scopes (verify/r2-b2.md, C-r2-practice-09) · status: resolved-by-scope
+### D-08
+- claims: C-r2-evidence-04 (side A), C-r1-evidence-01 (side B)
+- side A: S-r1-criticism-09 (LWN 2026, Wouters) 3.13 had a "20-40%" single-thread slowdown (rung 2)
+- side B: S-r1-evidence-02/P1 (3.13 HOWTO) "In 3.13, this overhead is about 40% on the pyperformance suite" (rung 1)
+- nature: methodological (a range across workloads vs a suite figure) · status: open
+### D-09
+- claims: C-r3-practice-15 (raised by gaps/r2.md G-r2-01)
+- side A: S-r3-practice-02/P2 (glossary "global interpreter lock" entry, merged into S-r2-evidence-03) "code must be run with -X gil=0 or after setting the PYTHON_GIL=0 environment variable" (rung 1)
+- side B: S-r3-practice-03/P1, P2 (3.15.1 HOWTO, merged into S-r1-foundations-04) a build "where the global interpreter lock (GIL) is disabled", which supports "optionally running with the GIL enabled at runtime" (rung 1); S-r3-practice-05/P1 (cmdline) gil=0 "forces" the GIL off
+- nature: version/time (a stale glossary passage is likely) · would settle it: the glossary entry's history, or the cmdline docs for PYTHON_GIL · status: open
+### D-10
+- claims: C-r3-practice-12 (side A), C-r3-practice-14 (side B)
+- side A: S-r3-practice-08/P3 (guide FAQ) PyYAML and similar dependencies "do not ship free-threaded binaries", so `pip install jupyter` fails without a compiler (rung 1 for the guide)
+- side B: S-r3-practice-06 (guide, dependencies page) "PyYAML 6.0.3+ supports free-threaded Python starting with Python 3.14t+" (rung 1 for the guide)
+- nature: version/time · the FAQ section is written about 3.13, the dependencies page about 3.14t+ (verify/r3-b1.md, C-r3-practice-12; PyPI lists cp314t wheels for PyYAML 6.0.3) · status: resolved-by-scope

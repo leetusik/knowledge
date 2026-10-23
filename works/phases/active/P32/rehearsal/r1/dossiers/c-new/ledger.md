@@ -1,0 +1,201 @@
+# Ledger: 20261023-0350-post-api-documents-write-path
+(status after D3 r1: all candidate; lb = load-bearing)
+
+## Claims
+### code-validate (findings/r1-code-validate.md)
+- C-r1-code-validate-01 · Q1 · lb · candidate
+- C-r1-code-validate-02 · Q1, Q2 · lb · candidate
+- C-r1-code-validate-03 · Q1, Q2 · lb · candidate
+- C-r1-code-validate-04 · Q1 · not lb · candidate
+- C-r1-code-validate-05 · Q1 · lb · candidate
+- C-r1-code-validate-06 · Q2 · lb · candidate
+- C-r1-code-validate-07 · Q1 · lb · candidate
+- C-r1-code-validate-08 · Q1, Q3 · lb · candidate
+- C-r1-code-validate-09 · Q1, Q2 · lb · candidate
+- C-r1-code-validate-10 · Q1 · not lb · candidate
+- C-r1-code-validate-11 · Q1 · lb · candidate
+- C-r1-code-validate-12 · Q1, Q2 · lb · candidate
+- C-r1-code-validate-13 · Q2 · lb · candidate
+- C-r1-code-validate-14 · Q1 · lb · candidate
+- C-r1-code-validate-15 · Q1, Q2 · lb · candidate
+- C-r1-code-validate-16 · Q1 · lb · candidate
+- C-r1-code-validate-17 · Q1, Q2 · lb · candidate
+- C-r1-code-validate-18 · Q1, Q2 · lb · candidate
+- C-r1-code-validate-19 · Q1, Q2 · lb · candidate
+- C-r1-code-validate-20 · Q1, Q2 · lb · candidate
+- C-r1-code-validate-21 · Q1 · not lb · candidate
+- C-r1-code-validate-22 · Q1, Q2 · lb · candidate
+- C-r1-code-validate-23 · Q1 · lb · candidate
+- C-r1-code-validate-24 · Q1 · not lb · candidate
+- C-r1-code-validate-25 · Q2, Q3 · lb · candidate
+- C-r1-code-validate-26 · Q3 · lb · candidate
+- C-r1-code-validate-27 · Q2, Q3 · lb · candidate
+- C-r1-code-validate-28 · Q2, Q3 · not lb · candidate
+- C-r1-code-validate-29 · Q2 · not lb · candidate
+- C-r1-code-validate-30 · Q1, Q2 · lb · candidate
+- C-r1-code-validate-31 · Q2 · lb · candidate
+### code-write (findings/r1-code-write.md)
+- C-r1-code-write-01 · Q4, Q7, Q9 · lb · candidate · merged: C-r1-history-03
+- C-r1-code-write-02 · Q4 · lb · candidate
+- C-r1-code-write-03 · Q4 · lb · candidate
+- C-r1-code-write-04 · Q4 · not lb · candidate
+- C-r1-code-write-05 · Q4 · lb · candidate
+- C-r1-code-write-06 · Q4 · lb · candidate
+- C-r1-code-write-07 · Q4, Q8 · lb · candidate
+- C-r1-code-write-08 · Q4, Q7 · lb · candidate
+- C-r1-code-write-09 · Q4 · lb · candidate
+- C-r1-code-write-10 · Q4 · lb · candidate
+- C-r1-code-write-11 · Q4, Q7 · not lb · candidate
+- C-r1-code-write-12 · Q5 · lb · candidate
+- C-r1-code-write-13 · Q5, Q6 · lb · candidate
+- C-r1-code-write-14 · Q5 · lb · candidate
+- C-r1-code-write-15 · Q5 · lb · candidate
+- C-r1-code-write-16 · Q5, Q6, Q9 · lb · candidate · merged: C-r1-history-06
+- C-r1-code-write-17 · Q5, Q8 · lb · candidate
+- C-r1-code-write-18 · Q6, Q7, Q8 · lb · candidate
+- C-r1-code-write-19 · Q6, Q7, Q9 · lb · candidate · merged: C-r1-history-10
+- C-r1-code-write-20 · Q6, Q7 · lb · candidate
+- C-r1-code-write-21 · Q6 · lb · candidate
+- C-r1-code-write-22 · Q6 · lb · candidate
+- C-r1-code-write-23 · Q6, Q8 · lb · candidate
+- C-r1-code-write-24 · Q7 · not lb · candidate
+- C-r1-code-write-25 · Q6 · lb · candidate
+- C-r1-code-write-26 · Q7 · lb · candidate
+- C-r1-code-write-27 · Q7 · lb · candidate
+- C-r1-code-write-28 · Q6, Q7 · not lb · candidate
+- C-r1-code-write-29 · Q8 · lb · candidate
+- C-r1-code-write-30 · Q8, Q7 · lb · candidate
+- C-r1-code-write-31 · Q8 · lb · candidate
+- C-r1-code-write-32 · Q8 · lb · candidate
+- C-r1-code-write-33 · Q7 · not lb · candidate
+### history (findings/r1-history.md)
+- C-r1-history-01 · Q9 · lb · candidate
+- C-r1-history-02 · Q9 · lb · candidate
+- C-r1-history-04 · Q9 · lb · candidate
+- C-r1-history-05 · Q9, Q10 · lb · candidate
+- C-r1-history-07 · Q9 · lb · candidate
+- C-r1-history-08 · Q9, Q10 · lb · candidate
+- C-r1-history-09 · Q9 · lb · candidate
+- C-r1-history-11 · Q9 · not lb · candidate
+- C-r1-history-12 · Q9 · lb · candidate
+- C-r1-history-13 · Q10 · lb · candidate
+- C-r1-history-14 · Q10 · lb · candidate
+- C-r1-history-15 · Q10 · lb · candidate
+- C-r1-history-16 · Q10 · not lb · candidate
+- C-r1-history-17 · Q10 · not lb · candidate
+- C-r1-history-18 · Q10 · not lb · candidate
+- C-r1-history-19 · Q10, Q9 · not lb · candidate
+- C-r1-history-20 · Q11 · not lb · candidate
+- C-r1-history-21 · Q11 · not lb · candidate
+- C-r1-history-22 · Q11 · not lb · candidate
+- C-r1-history-23 · Q11 · not lb · candidate
+- C-r1-history-24 · Q11 · not lb · candidate
+### history2 (findings/r1-history2.md)
+- C-r1-history2-01 · Q10 · lb · candidate
+- C-r1-history2-02 · Q10 · lb · candidate
+- C-r1-history2-03 · Q10 · lb · candidate
+- C-r1-history2-04 · Q10 · lb · candidate
+- C-r1-history2-05 · Q10, Q9 · lb · candidate
+- C-r1-history2-06 · Q10 · lb · candidate
+- C-r1-history2-07 · Q10 · not lb · candidate
+- C-r1-history2-08 · Q10 · not lb · candidate
+- C-r1-history2-09 · Q9, Q11 · lb · candidate
+- C-r1-history2-10 · Q10, Q11 · lb · candidate
+- C-r1-history2-11 · Q11 · not lb · candidate
+- C-r1-history2-12 · Q9, Q10 · lb · candidate
+- C-r1-history2-13 · Q9 · lb · candidate
+- C-r1-history2-14 · Q9 · not lb · candidate
+- C-r1-history2-15 · Q9 · not lb · candidate
+- C-r1-history2-16 · Q11 · not lb · candidate
+- C-r1-history2-17 · Q11 · not lb · candidate
+- C-r1-history2-18 · Q11 · not lb · candidate
+### practice (findings/r1-practice.md)
+- C-r1-practice-01 · Q12 · lb · candidate
+- C-r1-practice-02 · Q12 · not lb · candidate
+- C-r1-practice-03 · Q12 · lb · candidate
+- C-r1-practice-04 · Q12 · lb · candidate
+- C-r1-practice-05 · Q12, Q14 · lb · candidate · merged: C-r1-criticism-17
+- C-r1-practice-06 · Q12 · lb · candidate
+- C-r1-practice-07 · Q12 · not lb · candidate
+- C-r1-practice-08 · Q12, Q14 · lb · candidate · merged: C-r1-criticism-18
+- C-r1-practice-09 · Q12 · lb · candidate · merged: C-r1-criticism-19
+- C-r1-practice-10 · Q12 · lb · candidate
+- C-r1-practice-11 · Q13 · not lb · candidate
+- C-r1-practice-12 · Q13 · not lb · candidate
+- C-r1-practice-13 · Q13 · not lb · candidate
+- C-r1-practice-14 · Q13 · not lb · candidate
+- C-r1-practice-15 · Q13 · not lb · candidate
+- C-r1-practice-16 · Q13 · not lb · candidate
+### criticism (findings/r1-criticism.md)
+- C-r1-criticism-01 · Q14 · lb · candidate
+- C-r1-criticism-02 · Q14 · lb · candidate
+- C-r1-criticism-03 · Q14 · lb · candidate
+- C-r1-criticism-04 · Q14 · not lb · candidate
+- C-r1-criticism-05 · Q14 · not lb · candidate
+- C-r1-criticism-06 · Q14 · not lb · candidate
+- C-r1-criticism-07 · Q14 · lb · candidate
+- C-r1-criticism-08 · Q14 · lb · candidate
+- C-r1-criticism-09 · Q14 · not lb · candidate
+- C-r1-criticism-10 · Q14 · lb · candidate
+- C-r1-criticism-11 · Q14 · not lb (demoted at D3s r1: gitops uses subprocess.run, not Popen.communicate; G-r1-05) · candidate
+- C-r1-criticism-12 · Q14 · not lb · candidate
+- C-r1-criticism-13 · Q14 · lb · candidate
+- C-r1-criticism-14 · Q14 · not lb · candidate
+- C-r1-criticism-15 · Q14 · lb · candidate
+- C-r1-criticism-16 · Q14 · not lb · candidate
+- C-r1-criticism-20 · Q14 · not lb · candidate
+- C-r1-criticism-21 · Q14 · not lb · candidate
+- C-r1-criticism-22 · Q14 · not lb · candidate
+
+### round 2 (findings/r2-code-write.md, r2-code-validate.md, r2-criticism.md) — all candidate
+- C-r2-code-write-01, -02, -03, -04 · Q16 · lb · C-r2-code-write-05, -06 · Q16 · not lb
+- C-r2-code-write-07, -08, -10, -11, -12 · Q17 · lb · C-r2-code-write-09 · Q17, Q19 · not lb
+- C-r2-code-write-13, -14, -15, -16 · Q19 · lb · C-r2-code-write-17, -18 · Q19 · not lb
+- C-r2-code-validate-01 … -08, -10, -11 · Q18 · lb · C-r2-code-validate-09 · Q18 · not lb
+- C-r2-criticism-01, -02, -04, -05, -07, -08, -09 · Q17 · lb · C-r2-criticism-03, -06, -10, -11 · Q17 · not lb
+- source merges: S-r2-code-write-01, S-r2-code-validate-01 → S-r1-code-validate-01 (same repo @9978d84); S-r2-criticism-01 → S-r1-criticism-01 (git-push; re-fetched under a new id)
+
+## Status after D3s r1 (overrides the per-line `candidate` above; every listed lb claim was verified)
+- supported (bar met, rung 1): C-r1-code-validate-01, -02, -03, -05, -06, -07, -08, -09, -12, -13, -14, -15, -18, -19, -20, -25, -26, -27, -30 (verify/r1-b1.md, r1-b2.md) · C-r1-code-write-01, -02, -05, -06, -07, -08, -09, -12, -13, -14, -15, -17, -18, -19, -20, -21, -22, -25, -27 (attributed form), -29, -30, -31, -32 (verify/r1-b3.md, r1-b4.md) · C-r1-history-01, -02, -04, -05 (attributed; scope per -12), -07, -08, -09, -12, -13, -14, -15 (verify/r1-b5.md) · C-r1-history2-01, -02, -03, -04, -05, -06 (delete path: push move only), -09, -10, -12 (repo sets no timeout; SDK default unchecked), -13 (verify/r1-b6.md) · C-r1-practice-01, -03, -04, -05, -06, -08, -09 (attributed), -10 · C-r1-criticism-01, -02 (only: a rejected ref was not sent), -03, -07, -08, -10, -13, -15 (verify/r1-b7.md)
+- partial (use only the narrower claim in the verify record):
+  - C-r1-code-validate-11 · verify/r1-b1.md · also raises on any book/chapter field validator failure (slug, key, kind, subject, title, position, source, lang)
+  - C-r1-code-validate-16 · verify/r1-b1.md · lookups tenant-filtered in tenant mode, unscoped in legacy mode; a miss is not an error from the resolver, but later 409 checks still apply
+  - C-r1-code-validate-17 · verify/r1-b2.md · the write takes the target's rel_path/date/slug, except html→native where rel then moves to `<stem>.md`
+  - C-r1-code-validate-22 · verify/r1-b2.md · ref/asset errors only after a successful parse; parse skipped for an oversized body; translation quiz-id errors only with translated_from
+  - C-r1-code-validate-23 · verify/r1-b2.md · sorted list of the violations collected up to the stage that failed (the parser stops early after NUL, size, header, nesting checks)
+  - C-r1-code-validate-31 · verify/r1-b2.md · the registry `projects` row is the only registry or document write before the handler; `get_conn` also opens/initializes the SQLite file (idempotent schema setup)
+  - C-r1-code-write-03 · verify/r1-b3.md · archive only when a file exists on disk; version row upserted only when archive_path and superseded are both set
+  - C-r1-code-write-10 · verify/r1-b3.md · real order: [manifest settle] → [rekey on migration] → archive + version row → store assets → file write → landing + Recent (public) → upsert_document → manifest write + replace_book → git add/commit
+  - C-r1-code-write-16 · verify/r1-b3.md · every gitops call via `_run` is bounded by KB_GIT_TIMEOUT_S (default 60) and raises GitError on timeout or non-zero exit; `rebase --abort` calls subprocess.run directly with the same timeout and swallows its own failure
+  - C-r1-code-write-23 · verify/r1-b4.md · the worker prints `[kb-api] publish: push <rel> FAILED: <error>` to stdout, the traceback to stderr, stores `push <rel>: <error>` as last_error(); the caller is not told
+  - C-r1-code-write-26 · verify/r1-b4.md · the handler body's work is local (file, DB commit, git commit inside WRITE_LOCK) and push + embed are queue appends; in tenant mode async dependencies and the metering middleware still await Postgres (see C-r1-history-12)
+- still candidate (not lb; verify at D5 if the outline maps them): the rest
+
+## Status after D3s r2 (verify/r2-b1.md, verify/r2-b2.md)
+- supported: C-r2-code-write-01 (no document write before the lock; tenant-mode registry get-or-create still precedes), -02, -03, -07, -08, -10, -11, -14, -15 (bar below as a project statement: the researcher's derivation from code — use only as the chapter's own reading of the code, hedged "the code permits") · C-r2-code-validate-01, -02, -03, -04, -06, -07, -08, -10, -11 (-07, -08 are code traces, not observed: "the code permits") · C-r2-criticism-01, -02, -04, -05, -08, -09
+- partial:
+  - C-r2-code-write-04 · narrower: architecture.md L176 and the P24.S1 result say writers and the publish worker are serialized on WRITE_LOCK; no doc states how long a write may wait behind a bounded, in-flight push
+  - C-r2-code-write-12 · narrower: failures reach the container log (FAILED line on stdout, traceback on stderr) and the `rev-list --count origin/main..HEAD` check; /healthz has no publish state; last_error() is referenced only in publish.py
+  - C-r2-code-write-13 · narrower: no try/finally or rollback in the locked section, two handlers (defensive 409, GitError); committed DB steps and file writes stay; an uncommitted rekey is discarded when get_conn closes
+  - C-r2-code-write-16 · narrower: reindex rebuilds the DB from disk and never runs git; docs do not address an exception partway; leftovers can ride into a later commit (docs/index.md is staged by every write; `git commit -m` with no pathspec commits whatever is staged)
+  - C-r2-code-validate-05 · narrower: apart from the integer primary key, the only uniqueness constraint is UNIQUE(tenant_id, rel_path), and upsert_document updates in place on conflict
+  - C-r2-criticism-07 · narrower: with --branch, porcelain v2 reports `# branch.ab +<ahead> -<behind>`
+- D-02 note: the docs say both — L37 "everything the caller waits for is local disk + SQLite" and L176 writers and the worker "are still serialized" on the lock.
+
+## Disagreements
+### D-01
+- claims: C-r1-code-validate-08 (side A: code), C-r1-history2-14 / the docs (side B)
+- side A: S-r1-code-validate-01 — server/main.py@9978d84: `_check_document(body, ctx, conn)` runs first, then `with WRITE_LOCK:`; the `_check_document` docstring says "no lock" (rung 1, code)
+- side B: S-r1-code-validate-01 — docs/current/architecture.md L28 says steps 1–5, validation included, run "under one in-process write lock"; docs/current/operations.md L242 says validation runs "inside the write lock" (rung 1 for what the doc says; doc versions predate P31.S1)
+- nature: version/time (the docs predate P31.S1's move of validation into `_check_document`, before the lock)
+- prominence: the code is the thing itself for behaviour
+- would settle it: a docs phase versioning architecture.md / operations.md after P31
+- status: resolved-by-scope
+### D-02
+- claims: C-r2-code-write-01 (side A: code), C-r2-code-write-04 (side B: docs)
+- side A: S-r1-code-validate-01 — server/main.py@9978d84: `_push_task` holds WRITE_LOCK around gitops.push; a new publish blocks at `with WRITE_LOCK:` (rung 1, code)
+- side B: S-r1-code-validate-01 — docs/current/architecture.md L37: "Everything the caller waits for is local disk + SQLite" (rung 1 for what the doc says)
+- nature: factual (the doc's statement vs the code's behaviour under contention)
+- prominence: the code is the thing itself for behaviour; the docs acknowledge the indirect wait only for a hung, unbounded git (C-r2-code-write-04)
+- would settle it: a docs phase correcting architecture.md L37
+- status: open

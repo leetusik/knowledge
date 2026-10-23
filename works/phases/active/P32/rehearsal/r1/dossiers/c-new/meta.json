@@ -1,0 +1,11 @@
+{
+  "title": "POST /api/documents: the write path from validation to commit and push",
+  "project": "knowledge",
+  "format": "native",
+  "summary": "How a publish travels through server/main.py: validation without the lock, the local write and scoped git commit under WRITE_LOCK, and the push queued to a background worker, and where the promise that the 201 never waits on the network stops.",
+  "lang": "en",
+  "slug": "post-api-documents-write-path",
+  "tags": ["write-path", "fastapi", "git", "concurrency", "knowledge-api"],
+  "source_repo": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s7/runs/new-c/knowledge",
+  "co_authored_by": "Claude Opus 5.5 <noreply@anthropic.com>"
+}

@@ -1337,3 +1337,5 @@
 {"ts": "2026-10-23T03:39:13+09:00", "type": "slice_status_changed", "slice": "P32.S7", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-23T05:43:44+09:00", "type": "executor_dispatched", "slice": "P32.S7", "phase": "P32", "kind": "qa", "risk": "high", "attempt": 1, "verdict": "needs_operator", "note": "$80 cap reached at $78.71; C judged, G stopped at D8; OQ7"}
 {"ts": "2026-10-23T05:43:48+09:00", "type": "slice_status_changed", "slice": "P32.S7", "old_status": "in_progress", "new_status": "pending", "stop_kind": "decision"}
+{"ts": "2026-10-23T09:16:16+09:00", "type": "slice_status_changed", "slice": "P32.S7", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-10-23T09:16:21+09:00", "type": "slice_status_changed", "slice": "P32.S7", "old_status": "in_progress", "new_status": "done"}

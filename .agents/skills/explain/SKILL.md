@@ -289,7 +289,8 @@ D0b passes:
     - prior: none | <PRIOR_REL_PATH> v<PRIOR_VERSION> · open: <each dimension the request leaves unstated>
 
 Then look for an **unfinished run** of the same subject: a `run.md` under
-`<KB_EXPLAIN_STATE>` whose `state:` is not `done`. If there is one, say so in one line
+`<KB_EXPLAIN_STATE>` whose `state:` is not `done` (Glob `<KB_EXPLAIN_STATE>/*/run.md`; with no
+Glob, `find <KB_EXPLAIN_STATE> -maxdepth 2 -name run.md`, never a folder above it). If there is one, say so in one line
 ("An unfinished run <run-id> exists for this subject; this is a new run.
 `/knowledge:explain resume <run-id>` continues the old one."), and go on.
 
@@ -430,7 +431,10 @@ reads as the filesystem root. They cover the publish too (§5: the CLI, or the c
       "Read(/<ROOT>/**)", "Edit(/<ROOT>/**)", "Read(/<SKILL_DIR>/**)"
     On another host, allow the same commands and paths in its own terms.
 
-A role that returns `failed: permissions` later in the run stops it with the same block.
+A role that returns `failed: permissions` later in the run stops it with the same block,
+when the call it names is in a form its brief gives. A call it wrote in another form (a
+`git -C`, a `$`, a brace) is its own error, not the session's: dispatch it once more with
+the call named, like any other failure (§3.5).
 
 ### 3.3 `run.md`, and resuming a run
 
@@ -553,8 +557,9 @@ Then hold the plan to §9.1's size test: a plan plainly over one document is a b
    `r<n>-<angle-id>`, absolute dossier and tools paths, its questions with their
    load-bearing marks, `not yours`, `known already` (the ledger's ids on those questions),
    `queries already run` (the query log), the brief's trusted sources and leave-out, and
-   the tier's budget. A code researcher gets the repository and `commit`: the full sha of
-   `HEAD`, or `WORKTREE` for uncommitted work.
+   the tier's budget. A code researcher gets the repository, which is the session's working folder (its
+   `git` runs there, never with `-C`), and `commit`: the full sha of `HEAD` written
+   `<sha> (HEAD)`, or `WORKTREE` for uncommitted work.
 2. **Send the wave in one message,** every agent in the background: at most **10** on
    Claude Code, **6** elsewhere. The rest are queued, never dropped; they go out as soon as
    this wave has returned, before the merge. A spawn refused for a concurrency limit is
@@ -570,7 +575,8 @@ Then hold the plan to §9.1's size test: a plan plainly over one document is a b
    `complete`, `partial` or `failed`.
 4. **Failures:**
    - `failed: search-limit` → stop the run now; the other returns are kept.
-   - `failed: permissions` → stop with §3.2's block.
+   - `failed: permissions` on a call in its brief's form → stop with §3.2's block; on a
+     call outside them, it is the role's error: treat it as the next line says.
    - any other `failed`, or a return with nothing parseable → dispatch it once more, with
      the failure named in `known already`. A second failure on a load-bearing angle stops
      the run (resumable); on another angle, record the gap and go on.
@@ -674,7 +680,9 @@ team. Then research alone, angle by angle, by the web and code researchers' sect
 B2), into the same findings files (`r1-<angle-id>`): a target of 20 and a hard cap of 40
 tool calls in all. Check your coverage once against the plan's questions, with at most one
 follow-up burst of 10 calls. Then D3, and **one verifier batch** on the load-bearing claims
-(a verifier agent where you can dispatch one; otherwise `verifier: lead (degraded)`). Then
+(a verifier agent where you can dispatch one, on a model other than yours, since here you
+are the researcher: `knowledge:verifier` as it is when you run on Opus, with `model: opus`
+otherwise; generic: a subagent on that model; with none, `verifier: lead (degraded)`). Then
 D5s without counter-evidence, `gaps/final.md`, and D5g: the gate holds in `quick` too.
 `run.md` and the report say `quick`, and what it skipped.
 
@@ -1407,8 +1415,8 @@ says is worth more than five that point near it.
 
 **How you work:**
 
-1. Before searching, look up every id in `known already` (`Grep` the dossier's `findings/`
-   for `### <id>`). Do not find them again; extend or contradict them only.
+1. Before searching, look up every id in `known already` (the line `### <id>` in the
+   dossier's `findings/`, found as B6 says). Do not find them again; extend or contradict them only.
 2. Search wide, then deep (B10). Prefer the trusted sources; they still take the rung the
    ladder gives them (B7).
 3. Open every page you use as exact text, saved in `<dossier>/pages/` (B11). Read it by
@@ -1458,7 +1466,7 @@ the repository points to goes under `## Unused leads`, for a web researcher.
 
     run: <run-id> · round: <n> · angle: <angle-id> (<angle name>) · id-stem: <stem>
     dossier: <absolute path> · output: findings/<stem>.md
-    repo: <absolute path> · commit: <full sha> | WORKTREE
+    repo: <absolute path> · commit: <full sha> (HEAD) | <full sha> | WORKTREE
     entry: <where to start: a flow's entry point, a structure's root, a commit range, a note>
     objective: <one sentence: what to find out, and for whom>
     reader and purpose: <who reads the chapter; what they must be able to do after it>
@@ -1474,9 +1482,9 @@ the repository points to goes under `## Unused leads`, for a web researcher.
 1. **Trace in real order** from `entry`: execution order for a flow, dependencies first
    for a structure. Read the code, not the names: confirm each behaviour in the source,
    never from a function's name, a comment or a docstring alone.
-2. **Read at the commit.** When `commit` is the checked-out `HEAD` and
-   `git status --porcelain -- <path>` prints nothing, read the file itself: its line
-   numbers are the commit's. Otherwise read `git show <commit>:<path>`, and find line
+2. **Read at the commit.** When `commit` says `(HEAD)` (the dispatch tells you; never
+   look it up) and `git status --porcelain -- <path>` prints nothing, read the file
+   itself: its line numbers are the commit's. Otherwise read `git show <commit>:<path>`, and find line
    numbers with `git grep -n '<pattern>' <commit> -- <path>`. With `WORKTREE`, read the
    files as they are and cite `@WORKTREE`.
 3. **The history behind it:** `git log --follow -- <path>`, `git log -S '<string>'`,
@@ -1495,7 +1503,9 @@ the repository points to goes under `## Unused leads`, for a web researcher.
    questions are answered or you have spent three quarters of your hard cap, whichever
    comes first. If you go on, rewrite it whole before you return.
 
-**Boundaries.** Bash runs read-only `git` and the excerpt hash only: never `checkout`,
+**Boundaries.** Bash runs read-only `git` and the excerpt hash only, in the session's
+working folder (the repository) with repo-relative paths, never with `-C` or a `cd`;
+never `checkout`,
 `switch`, `reset`, `stash`, `commit`, `add`, `clean`, a build, a test run or an install.
 Research only your questions, stay out of `leave out`, and never write chapter prose or
 settle a disagreement.
@@ -1550,7 +1560,8 @@ A gap is **load-bearing** when, left open, the chapter would be wrong, would mis
 must-cover item, or would leave its reader unable to do what the purpose says. Anything
 else is not, however interesting.
 
-**Write `gaps/r<n>.md`**, once:
+**Write `gaps/r<n>.md`**, once, by your 20th tool call at the latest (a file written from
+what you have read beats none):
 
     # Gaps: <run-id> · after round <n> · scope: run | chapter <k>
     - reviewer: <model> · verdict: no load-bearing gaps | <k> load-bearing gaps
@@ -1586,8 +1597,9 @@ claim gets a strict label from what its source itself says.
     claims:
       <claim id> (<file that holds it>)[ · main][ · re-verify with <source id>/P<m> (<file>)]
 
-**Read only this.** For each claim, its entry in the file named (`Grep` for
-`### <claim id>`, then `Read` to the next `### `): the claim, kind, scope, load-bearing
+**Read only this.** For each claim, its entry in the file named (find the line
+`### <claim id>` with Grep, or with no Grep tool `grep -n -x -F -e '### <id>' -e '### <id>'
+<absolute file>`, one call per file; then `Read` from that line to the next `### `): the claim, kind, scope, load-bearing
 flag and support lines; skip its `confidence` line. For each source a support line names,
 its entry the same way: identity, time, version, read-via, quote-match and archive, and the
 passage the claim cites. Never read the rest of a findings file, a researcher's return,
@@ -1990,12 +2002,17 @@ dispatcher, not a human-facing summary:
   `library.md`, `ledger.md`) or a draft. Nothing is published, committed or sent anywhere.
 - **Bash runs only the command forms your brief gives, one to a call:** `curl`, the
   converter and `pdftotext`, read-only `git`, the excerpt hash, and `mktemp -d`, each as
-  written there, with absolute paths, and nothing chained to it (`;`, `&&`), wrapped around
-  it (`cd`, a variable, a loop, a function) or redirected. Read files with Read; list and
-  search them with Glob and Grep where your host has them, otherwise with one plain
-  `ls`, `find` or `grep -n` on absolute paths, under the same rule. No `$` anywhere in a
-  command: it needs approval, which an unattended session denies (`grep -x` matches a whole
-  line, never `^…$`). Never install, build,
+  written there, and nothing chained to it (`;`, `&&`), wrapped around it (`cd`, a
+  variable, a loop, a function) or redirected. Paths are absolute, except in `git`: it runs
+  in the session's working folder, the repository, with repo-relative paths, and never
+  takes `-C` (a session that allows `git show` denies `git -C <path> show`). Read files
+  with Read; list and search them with Glob and Grep where your host has them (some hosts
+  have neither), otherwise with one plain `ls`, `find` or `grep -n` on absolute paths,
+  under the same rule: `-F` for literal text, `-x` for a whole line, one `-e` per pattern.
+  No `$` anywhere in a command and no braces holding a comma (`.{0,80}`, `{a,b}`): both
+  need approval, which an unattended session denies (`grep -x` matches a whole line, never
+  `^…$`; for a passage's context, `grep -n` its words, then Read those lines). Never
+  install, build,
   run a page's code, or change a repository. A session that allows these forms by prefix
   allows nothing else, and denies a call it cannot match whole.
 - **You never spawn agents** and never contact another agent.
@@ -2010,6 +2027,8 @@ dispatcher, not a human-facing summary:
     `not searched`.
   - `failed: permissions`: a call your brief gives, in its given form, is denied. Do not
     retry it or route around it with another tool; write what you have and name the call.
+    A denied call in any other form is your own error, never this status: write it again
+    once in a form your brief gives, and go on.
   - `failed: tools`: every fetch fails, or the repository cannot be read.
   - `partial`: your hard cap or your turns ran out with questions open; name them.
 
