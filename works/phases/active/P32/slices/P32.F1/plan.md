@@ -134,6 +134,28 @@ judge records and key, the scorecard, `spend.md`, and the new dossiers' `outline
   subjects, both orders, beside rehearsal 1's C result), the spend, the rule changes, and the skill's size.
 - No commit, no push, no state command.
 
+## Continuation (OQ8 answered, Decisions d61)
+
+The operator: "I don't care about the token spending for now." Spend is not the bound for now.
+
+- **The two glide-ilab transcripts** (`~/.claude/projects/-Users-sugang-projects-KRPD-glide-glide-ilab/ac92989b….jsonl`,
+  `e1d150e2….jsonl`) join the known hits: five in all. They predate P32. Any other new hit still stops the slice.
+- **The cap is now $75** for F1's `claude -p` runs in total, the $40.59 already spent included. It is a stop
+  for loop safety, not a budget. Keep `spend.md` current.
+- **The order** (the steps are in the Notes entry "(from P32.F1, for P32.F1's continuation, on OQ8's yes)"):
+  1. C v2's two judges.
+  2. G under rules v2 (D6–D9, from the same dossier reset as `reset-g.md`), then its two judges. Run it
+     whatever C v2 shows.
+  3. The confirming run, with the `quick` flag set apart so the lead cannot misread it, plus `resume` with no
+     run id.
+- **If v2 still loses Readability on either subject in either order**, make no further rule revision. Report
+  it, with what the judges blamed. The next lever, a firm length limit, trades depth, and that is the
+  operator's call. **If v2 wins or ties Readability on both**, keep v2 as the rules, check that Helpfulness,
+  Comprehensiveness and Insight still hold, and return `done`.
+- **`phase.md` is at 40,025 B**, against a 40,960 B budget. Before adding anything, move long `## Decisions`
+  material (d57–d61) into `topics/build-decisions.md`, leaving one line each, and remove the consumed
+  continuation note.
+
 ## Dispatch
 
 slice=P32.F1
