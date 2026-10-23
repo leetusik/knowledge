@@ -1,0 +1,11 @@
+{
+  "id": "D73",
+  "title": "explain: verifier batches and waves in the foreground under claude -p",
+  "status": "deferred",
+  "source": "P32.REVIEW",
+  "reason": "under claude -p a background verifier batch is stopped 10 idle minutes after the lead's last turn (P32.F2 f2a3); the critic is already foreground for this reason (§4.10)",
+  "trigger": "a headless run whose batch runs past 10 minutes, or a harness that runs the skill headless",
+  "created_at": "2026-10-24T01:33:58+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

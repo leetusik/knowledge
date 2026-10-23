@@ -1,0 +1,32 @@
+{
+  "id": "P32.F4",
+  "phase_id": "P32",
+  "name": "explain waits only by ending its turn, never re-runs itself; the verifier-defect clause matches B4",
+  "kind": "fix",
+  "status": "todo",
+  "order": 117,
+  "depends_on": [],
+  "created_at": "2026-10-24T01:33:51+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": null,
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "id": "D74",
+  "title": "Landing: derive the skill pane's line count from the served SKILL.md",
+  "status": "deferred",
+  "source": "P32.REVIEW",
+  "reason": "the literal in content.ts (lede, pane.meta) goes stale at every SKILL.md edit; feature-skill.tsx already reads the served file (P32.F3, P32.REVIEW round 2)",
+  "trigger": "the next SKILL.md edit that changes its line count after P32",
+  "created_at": "2026-10-24T01:33:58+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

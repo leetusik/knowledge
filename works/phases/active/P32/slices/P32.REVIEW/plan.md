@@ -1,5 +1,66 @@
 # P32.REVIEW — Review "Thorough research and critic in the explain pipeline"
 
+## Re-review (round 2, after P32.F2 and P32.F3)
+
+Round 1 returned `changes_requested` with three findings. P32.F2 fixed findings 1 and 3, in two revisions (d70,
+d71, the operator's "(a)"); P32.F3 fixed finding 2. See each slice's `result.md`.
+
+This round is **focused**: re-run only what F2 and F3 changed, plus the guards. Run b and round 1's other checks
+stand.
+
+1. **Validate again:**
+   - `skills_parity.py`, `plugin_parity.py` and `claude plugin validate plugin`;
+   - `python3 scripts/workflow.py validate`;
+   - the skill's size: 155,790 B. Say whether it is a finding.
+2. **Finding 1 (F2): check the text.** Read F2's edits by section: the card, §1, §3.2, D0b, §3.3, §3.9, §4.9,
+   §8, §9.1 and B6. Look for two things:
+   - does `quick` now plainly keep the agents, the files and the map;
+   - does any new sentence contradict another part of the skill.
+3. **Finding 1 (F2): check the running product.** Make one live Sonnet-lead `quick` run yourself, under round 1's
+   isolation:
+   - your harness copy, and a fresh scratch port of your own;
+   - scratch `XDG_*` and `KB_*`, checked with §2's resolver;
+   - `--setting-sources project` and the deny rules;
+   - `watchdog2.py`, and no permission-skipping flag.
+
+   Use a small general subject not used before. The headline must hold: `path: plugin`, the verifier on another
+   model, `plan.md`, `outline.md` with `## Reader's task`, and `trace.md`.
+
+   F2 already found two misses: the dossier line and the `searches:` total, and the background verifier
+   stopped after 10 idle minutes under `claude -p`. If they recur, they are routed, not findings.
+
+   Spend and safety:
+   - **Cap $10**, kept in `rehearsal/review/spend.md`, appended below round 1.
+   - Leak scan after the run. The six known hits are listed in the plan below.
+   - Never use `:8766`, `:3030`, `:8777`, `:8797` or production. Stop only your own PIDs.
+4. **Finding 2 (F3): check the landing.**
+   - `grep` that both strings in `web/src/content/marketing/content.ts` match `wc -l web/public/SKILL.md`.
+   - If Aside is reachable (`aside repl --account u1`, never `u0`), view the pane on a scratch production build.
+     Use the same method as F3: a scratch copy of `web/`, `next build --webpack`, and `next start` on your own
+     port. Never build in `web/`; never touch `:3030`.
+   - If Aside is not reachable, look at F3's screenshot and its curl evidence, and name the instrument.
+   - F3 listed other `FEATURE_SKILL` lines as candidates; judge them as observations.
+5. **Finding 3 (F2): check `## Doc impact`.** It should now carry finding 3's AGENTS line, plus F2's product.md
+   and architecture.md lines, the last one superseding the D9 part.
+6. **On pass:**
+   - **Write the qa `## Regression Checklist` gate-section version.** Round 1's three proposed lines are in
+     `result.md`; update them for F2. Use `doc-new-version --doc qa --summary "..." --source P32.REVIEW`, edit
+     only the returned `edit_path`, then `rebuild-docs`.
+   - **Return the walkthrough.** Round 1's draft, updated, under the stop rules: about 2k characters, at most
+     about 5 decisions, and one "decided as drawn" list.
+     - OQ6 and OQ9 go in as one decision: rotate the token.
+     - The two F2 misses and F3's tick candidates go in "decided as drawn" as deferred jobs or observations.
+   - **List the deferred-job candidates** for the orchestrator to file:
+     - a mechanical dossier and search-total line;
+     - headless verifier batches and waves sent in the foreground;
+     - anything else you find.
+
+     D69–D71 are already filed (minted ids, CLI plumbing and skill shrink, server draft state).
+
+Put round 2 above round 1 in `result.md`, its verdict block first. No state command, no commit, and no source
+edits; the qa gate-section version is the one exception. Remove the re-review note from `phase.md`, and rewrite
+`## Now`.
+
 ## Goal
 
 Review P32 as a whole against `intent.md`, with the acceptance gate **required**: validate everything together,

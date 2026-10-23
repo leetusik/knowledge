@@ -34,3 +34,29 @@ scratch folder and `~/.claude/projects`) found only the six known files; this fo
 Kept here: `a/` (run.md, brief.md, ledger.md, report.md, chapter.md: run a wrote no plan, outline, library, trace or
 verify file) and `b/` (run.md, brief.md, outline.md, report.md, chapter.md, verify-r1-b1.md). No `pages/`. No critique:
 `quick` skips the critic by design.
+
+## Round 2 (after P32.F2 and P32.F3)
+
+Cap: **$10** for round 2, the same rule (each run's last `result` event's `total_cost_usd`, or the watchdog's
+estimate when a run is stopped, whichever is higher). One run planned.
+
+Isolation: F2's harness (itself this review's round-1 copy), copied to `scratchpad/review2/` with its paths and token
+changed (token `rv2-token`); scratch `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `KB_ROOT`, `KB_API_BASE_URL`,
+`KB_API_TOKEN`, checked with the skill's §2 resolver before the run (`ok`: the scratch API, the scratch token);
+`--setting-sources project`; `--permission-mode manual --permission-prompts none`; the deny rules on
+`//Users/sugang/.config/knowledge-kb/**`; `--plugin-dir plugin`; `--no-session-persistence`; Claude Code 2.1.309;
+`watchdog2.py` at $6; no `--max-budget-usd`; no permission-skipping flag; a fresh scratch stack on **:8871** (legacy
+mode, no Gemini key, no push). One change from F2's runs: `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`, so that a
+background verifier batch is not stopped at 10 idle minutes (F2's f2a3), the way an interactive session waits.
+
+| # | Run | Lead | Cost | Running total |
+|---|---|---|---|---|
+| 3 | rv2a (`quick`, a French press, for a first-time user; published v1 to :8871 at 01:15; a self-scheduled wakeup then re-sent the request at 01:24 and the lead began an unasked second run, stopped by me at 01:26 before it published; `r2/evidence.md`) | sonnet | **3.71** (watchdog estimate at the stop; the first run's last `result` event: 2.09) | **3.71** |
+
+**Round 2 total: $3.71 of $10.** The watchdog did not fire. The leak scan after the run (`leakcheck/scan.py` over
+`scratchpad/review2/` and `~/.claude/projects`) found only the six known files. The scratch stack (PID 65620, :8871)
+and the run (PID 65755) were stopped, my own PIDs only; the port is free.
+
+Kept in `r2/`: `run.md`, `brief.md`, `plan.md`, `outline.md`, `trace.md`, `report.md`, `gaps-final.md`,
+`verify-r1-b1.md`, `verify-r1-b2.md`, `chapter.md` (the published source), `files.txt`, `evidence.md`, and
+`rerun/` (the unasked second run's `run.md` and `brief.md`). No `pages/`.

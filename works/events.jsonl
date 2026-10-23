@@ -1377,3 +1377,11 @@
 {"ts": "2026-10-24T00:57:43+09:00", "type": "slice_status_changed", "slice": "P32.F3", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-24T01:00:31+09:00", "type": "executor_dispatched", "slice": "P32.F3", "phase": "P32", "kind": "fix", "risk": "low", "attempt": 1, "verdict": "done", "note": "landing line count 775 -> 2,608 in lede and pane.meta; scratch production build (webpack), curl + headless Chrome; Aside daemon down"}
 {"ts": "2026-10-24T01:00:31+09:00", "type": "slice_status_changed", "slice": "P32.F3", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-24T01:01:03+09:00", "type": "slice_status_changed", "slice": "P32.REVIEW", "old_status": "changes_requested", "new_status": "in_progress"}
+{"ts": "2026-10-24T01:33:51+09:00", "type": "executor_dispatched", "slice": "P32.REVIEW", "phase": "P32", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": "round 2 review_verdict changes_requested: a self-scheduled wakeup re-ran the finished skill; F2's §4.9 sentence contradicts B4"}
+{"ts": "2026-10-24T01:33:51+09:00", "type": "slice_status_changed", "slice": "P32.REVIEW", "old_status": "in_progress", "new_status": "changes_requested"}
+{"ts": "2026-10-24T01:33:51+09:00", "type": "phase_reviewed", "phase": "P32", "verdict": "changes_requested", "reviewer": "slice-executor-high"}
+{"ts": "2026-10-24T01:33:51+09:00", "type": "slice_created", "phase": "P32", "slice": "P32.F4"}
+{"ts": "2026-10-24T01:33:58+09:00", "type": "deferred_created", "deferred": "D72", "source": "P32.REVIEW"}
+{"ts": "2026-10-24T01:33:58+09:00", "type": "deferred_created", "deferred": "D73", "source": "P32.REVIEW"}
+{"ts": "2026-10-24T01:33:58+09:00", "type": "deferred_created", "deferred": "D74", "source": "P32.REVIEW"}

@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `52`
+- Open: `55`
 - Promoted: `5`
 - Dropped: `14`
 
@@ -63,6 +63,9 @@
 | `D7` | `deferred` | Off-box backup/snapshot for on-box-only tenant content (tenants/<uuid>/) | P10.REVIEW | Before any non-#1 tenant carries real data at scale (i.e., before onboarding real active non-operator tenants). | `works/deferred/open/D7` |
 | `D70` | `deferred` | explain: move the publish plumbing into the CLI and shrink the skill | P32.REVIEW | the next publish-step change, or the skill passing about 160 KB | `works/deferred/open/D70` |
 | `D71` | `deferred` | Server-side draft state for books and chapters | P32.REVIEW | the operator asks, or a book run needs drafts on the server | `works/deferred/open/D71` |
+| `D72` | `deferred` | explain: a mechanical dossier and search-total line | P32.REVIEW | the next §4.9/B12 change, or a report that hides a skipped stage | `works/deferred/open/D72` |
+| `D73` | `deferred` | explain: verifier batches and waves in the foreground under claude -p | P32.REVIEW | a headless run whose batch runs past 10 minutes, or a harness that runs the skill headless | `works/deferred/open/D73` |
+| `D74` | `deferred` | Landing: derive the skill pane's line count from the served SKILL.md | P32.REVIEW | the next SKILL.md edit that changes its line count after P32 | `works/deferred/open/D74` |
 | `D8` | `deferred` | usage_events retention/cleanup job | P11.DECOMP | usage_events growth becomes material / before onboarding high-volume non-#1 tenants | `works/deferred/open/D8` |
 
 ## Promoted

@@ -9,9 +9,9 @@
   "completed_at": null,
   "review": {
     "status": "changes_requested",
-    "reviewed_at": "2026-10-23T16:17:38+09:00",
+    "reviewed_at": "2026-10-24T01:33:51+09:00",
     "reviewer": "slice-executor-high",
-    "note": "1) a Sonnet-lead quick run skipped probe agents, plan, outline, trace and the other-model verifier (-> F2, high); 2) landing says 775-line skill, served SKILL.md is 2,585 lines (-> F3, low); 3) Doc impact misses skills_parity's AGENTS check for qa/operations (folded into F2)"
+    "note": "round 2: F2 and F3 hold; 1) a Sonnet quick lead's own ScheduleWakeup re-sent the run after done and started an unasked v2 run (-> F4, high); 2) F2's §4.9 verifier-defect sentence contradicts B4 in full on a Sonnet lead (-> F4)"
   },
   "acceptance": {
     "required": true,
