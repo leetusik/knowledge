@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P32`
-- Current slice: `P32.S10`
-- Next slice: `P32.REVIEW`
+- Current slice: `P32.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `49`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P32` | planned | `P32.S10` | 12/14 | - | working tree |
+| `default` | `P32` | planned | `P32.REVIEW` | 13/14 | - | working tree |
 
 ## Active Phases
 
@@ -32,7 +32,7 @@
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
 | [x] `P31` | `done` | `pass` | Explain phase route | `none` | `works/phases/active/P31` |
-| [ ] `P32` | `planned` | `pending` | Thorough research and critic in the explain pipeline | `P32.S10` | `works/phases/active/P32` |
+| [ ] `P32` | `planned` | `pending` | Thorough research and critic in the explain pipeline | `P32.REVIEW` | `works/phases/active/P32` |
 
 ## Phase P21: Web document deletion
 
@@ -220,5 +220,5 @@
 | [x] `P32.F1` | `done` | Make the new chapter helpful and easy to read: writing shaped by the reader's task | `fix` | `works/phases/active/P32/slices/P32.F1` |
 | [x] `P32.S8` | `done` | Bootstrap package: route fields, three explain references, executor carve-out, critic removal | `implementation` | `works/phases/active/P32/slices/P32.S8` |
 | [x] `P32.S9` | `done` | Rehearsal 2: a tiny book through the package, research to one chapter, nothing published | `qa` | `works/phases/active/P32/slices/P32.S9` |
-| [ ] `P32.S10` | `todo` | Handoff for the bootstrap: what to apply, the order around P42, the minimums | `docs` | `works/phases/active/P32/slices/P32.S10` |
+| [x] `P32.S10` | `done` | Handoff for the bootstrap: what to apply, the order around P42, the minimums | `docs` | `works/phases/active/P32/slices/P32.S10` |
 | [ ] `P32.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P32/slices/P32.REVIEW` |
