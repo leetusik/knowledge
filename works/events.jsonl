@@ -1371,3 +1371,4 @@
 {"ts": "2026-10-23T16:18:35+09:00", "type": "slice_status_changed", "slice": "P32.F2", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-23T16:58:16+09:00", "type": "executor_dispatched", "slice": "P32.F2", "phase": "P32", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "needs_operator", "note": "quick text fixed (path plugin 4/4, verifier on Opus), but each live case missed twice: probe B's mkdir&&curl form, Sonnet bookkeeping (searches, D9 ls); OQ12"}
 {"ts": "2026-10-23T16:58:16+09:00", "type": "slice_status_changed", "slice": "P32.F2", "old_status": "in_progress", "new_status": "pending", "stop_kind": "decision"}
+{"ts": "2026-10-24T00:31:36+09:00", "type": "slice_status_changed", "slice": "P32.F2", "old_status": "pending", "new_status": "in_progress"}

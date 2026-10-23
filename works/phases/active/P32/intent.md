@@ -47,6 +47,11 @@ Answer to OQ11 (accept rehearsal 2 as it ran, stopped at its cap before chapter 
 
 > accept
 
+Answer to OQ12 ((a) resume P32.F2 for one more bounded revision and one rerun per case, ≈ $5, or (b) accept F2 as
+it stands), verbatim:
+
+> /do-whole-phase with a
+
 ## Confirmed Intent (refined + clarified)
 
 Explaining a topic should rest on **thorough research by agents**, not on one writer's quick look. Research
@@ -121,6 +126,7 @@ slices (P42) have merged; a cross-vendor verifier (deferred, D67).
 - Q (OQ8, from P32.F1): rehearsal 1b stopped on two old glide-ilab transcripts holding the token, at $40.59 of $45, with Readability still lost; raise the cap to ≈ $62 or close F1? — A: "I don't care about the token spending for now": spend is not the bound for now, so F1 finishes the readability check (C v2's judges, G under v2, the confirming run) under a loop-safety cap of $75.
 - Q (OQ10, from P32.F1): rules v2 win Helpfulness, Comprehensiveness and Insight on both subjects but still lose Readability, on length (≈ 43% longer); accept, or make the word budget binding? — A: "accept": the extra length is the cost of winning the other three. The operator's own read of C's pair at the walkthrough remains the check on readability.
 - Q (OQ11, from P32.S9): rehearsal 2 passed its $100 cap (≈ $101.4) after chapter 1's critique, before its revision and the commit; accept it as it ran, or ≈ $10 more to finish? — A: "accept": the revision and the commit-time freeze check are left to the first real book.
+- Q (OQ12, from P32.F2): F2's `quick` fix held for the headline (the plugin path and the other-model verifier on every Sonnet run), but each live case missed twice on smaller things (a probe's denied command form; Sonnet skipping the search count and the dossier check); resume F2 once more, or accept it? — A: "(a)": one more bounded revision and one rerun per case, ≈ $5 within F2's $20 cap, the skill's growth limit ≈ 2 KB.
 
 ## Notes
 

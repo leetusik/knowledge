@@ -1,0 +1,2 @@
+./tools/pagetext.py
+./tools/probe/write.md

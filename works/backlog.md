@@ -8,7 +8,7 @@
 - Current phase: `P32`
 - Current slice: `P32.F2`
 - Next slice: `P32.F3`
-- Waiting on operator: `P32.F2`
+- Waiting on operator: `none`
 - Open deferred jobs: `52`
 
 ## Streams
@@ -221,6 +221,6 @@
 | [x] `P32.S8` | `done` | Bootstrap package: route fields, three explain references, executor carve-out, critic removal | `implementation` | `works/phases/active/P32/slices/P32.S8` |
 | [x] `P32.S9` | `done` | Rehearsal 2: a tiny book through the package, research to one chapter, nothing published | `qa` | `works/phases/active/P32/slices/P32.S9` |
 | [x] `P32.S10` | `done` | Handoff for the bootstrap: what to apply, the order around P42, the minimums | `docs` | `works/phases/active/P32/slices/P32.S10` |
-| [~] `P32.F2` | `pending` | Quick keeps the research team's shape on any lead: explicit quick card, dossier-completeness check, search count | `fix` | `works/phases/active/P32/slices/P32.F2` |
+| [ ] `P32.F2` | `in_progress` | Quick keeps the research team's shape on any lead: explicit quick card, dossier-completeness check, search count | `fix` | `works/phases/active/P32/slices/P32.F2` |
 | [ ] `P32.F3` | `todo` | Landing: the skill pane's line count matches the served SKILL.md | `fix` | `works/phases/active/P32/slices/P32.F3` |
 | [ ] `P32.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P32/slices/P32.REVIEW` |

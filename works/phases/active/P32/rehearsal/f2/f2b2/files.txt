@@ -1,0 +1,14 @@
+./body.md
+./brief.md
+./findings/r1-practice.md
+./gaps/final.md
+./ledger.md
+./library.md
+./outline.md
+./plan.md
+./report.md
+./run.md
+./trace.md
+./verify/r1-b1.md
+./verify/r1-b2.md
+pages/: 19 files (not kept)

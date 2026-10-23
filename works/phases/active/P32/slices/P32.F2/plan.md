@@ -176,3 +176,24 @@ pass_effort=yes
 attribution=Claude Opus 5.5
 explore_model=haiku
 explore_effort=high
+
+## Continuation (OQ12 answered: (a), Decisions d71)
+
+The operator: "/do-whole-phase with a". One more bounded revision, then one rerun per case.
+
+- **The revision** (all three copies; `--write-agents` only if Part B changes):
+  - **D0b:** a probe's own command form (for example `mkdir -p … && curl`) that the allow rules deny is the
+    probe's error, not a permissions stop: the lead sends that probe once more, with the exact form §3.2
+    prints. A second denial is `FAILED: permissions` as today.
+  - **The dossier check and the search total move into the publish step** that every lead runs (right before
+    `knowledge check`), written as one report line (the files present or named as skipped, and `searches:`
+    as the run's total). Keep D9's mention as a pointer, not a second procedure.
+- **Size:** net growth for the whole slice ≈ 2 KB or less (the skill was 153,933 B before F2).
+- **Reruns:** one per case on a Sonnet lead, under the same isolation: run a's prompt word for word, and the
+  sourdough prompt. Each must show what the plan's *Verify live* lists, plus the report line with a `searches:`
+  count that matches the transcript. Spend stays within the $20 cap ($7.21 spent).
+- **A miss after this** is reported as it is: the verdict is `done` with the miss named in `result.md` and
+  `## Now` if the headline (path, verifier on another model, `plan.md`, `outline.md` with `## Reader's task`,
+  `trace.md`) held; `needs_operator` only if the headline failed.
+- Update `result.md` (a `## Continuation` section, the verdict block rewritten first), `phase.md`'s
+  re-review note, `## Doc impact` if the lines change, and `## Now`.
