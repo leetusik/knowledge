@@ -1,0 +1,18 @@
+{
+ "o1-v2": {
+  "chapter-1": "old",
+  "chapter-2": "new"
+ },
+ "o2-v2": {
+  "chapter-1": "new",
+  "chapter-2": "old"
+ },
+ "rel": {
+  "old": "rehearsal/r1/chapters/c-old.md",
+  "new": "knowledge/2026-10-23-post-api-documents-write-path.md"
+ },
+ "words": {
+  "old": 4118,
+  "new": 5881
+ }
+}

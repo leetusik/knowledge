@@ -3,14 +3,14 @@
   "phase_id": "P32",
   "name": "Make the new chapter helpful and easy to read: writing shaped by the reader's task",
   "kind": "fix",
-  "status": "pending",
+  "status": "done",
   "order": 85,
   "depends_on": [
     "P32.S7"
   ],
   "created_at": "2026-10-23T09:16:34+09:00",
   "started_at": "2026-10-23T09:17:22+09:00",
-  "completed_at": null,
+  "completed_at": "2026-10-23T11:40:08+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -20,7 +20,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Writing reshaped around the reader's task; rules v2 win Helpfulness, Comprehensiveness and Insight on C and G, old keeps Readability on length (accepted, OQ10)",
   "validation": {
     "required": [],
     "last_run": null,
@@ -30,10 +30,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "decision",
-    "on_words": "'accept' → F1 closes on rules v2 and S8 starts; 'cap the length' → F1 makes D6's word budget binding and reruns both subjects with judges (≈ $22)",
-    "since": "2026-10-23T11:37:38+09:00"
   }
 }

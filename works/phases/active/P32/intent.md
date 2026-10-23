@@ -37,6 +37,11 @@ Answer to OQ8 (finish rehearsal 1b's readability check, a cap of ≈ $62, or clo
 
 > I don't care about the token spending for now. what's the number you saying 40.59 and 62?
 
+Answer to OQ10 (accept rules v2, with Readability still lost on length, or make the word budget binding),
+verbatim:
+
+> accept. it's kinda cost for winning the other 3 isn't it
+
 ## Confirmed Intent (refined + clarified)
 
 Explaining a topic should rest on **thorough research by agents**, not on one writer's quick look. Research
@@ -109,6 +114,7 @@ slices (P42) have merged; a cross-vendor verifier (deferred, D67).
 - Q (OQ5, from P32.S4): the skill will be about 125–145 KB, not 85–90 KB — accept, or move Part B out of the single file? — A: "accept": the skill stays one file; Part A cites Part B, never restates it. Moving Part B out belongs with the later skill-shrink work.
 - Q (OQ7, from P32.S7; rehearsal 1 found the new chapter more comprehensive but less helpful and less readable): spend ≈ $7 to finish G, or close on C? — A: "make it new one also helpful and reading easy"; by approving the plan that followed (2026-10-23): S7 closes on C, a fix slice (P32.F1) reshapes the writing around the reader's task and rewrites C and G from their dossiers, judged blind against the old chapters, with a $45 cap; the phase's cost estimate rises to ≈ $350–380.
 - Q (OQ8, from P32.F1): rehearsal 1b stopped on two old glide-ilab transcripts holding the token, at $40.59 of $45, with Readability still lost; raise the cap to ≈ $62 or close F1? — A: "I don't care about the token spending for now": spend is not the bound for now, so F1 finishes the readability check (C v2's judges, G under v2, the confirming run) under a loop-safety cap of $75.
+- Q (OQ10, from P32.F1): rules v2 win Helpfulness, Comprehensiveness and Insight on both subjects but still lose Readability, on length (≈ 43% longer); accept, or make the word budget binding? — A: "accept": the extra length is the cost of winning the other three. The operator's own read of C's pair at the walkthrough remains the check on readability.
 
 ## Notes
 

@@ -40,7 +40,7 @@ you cite it, never restate it.
 | D4 gap round | gap reviewer (B3), then D2–D3s | `gaps/r<n>.md` | complete, stalled, 3 rounds or the ceiling |
 | D5, D5s | verifiers, with counter-evidence; you | `verify/final-b<k>.md`; disagreements; `gaps/final.md` | a batch fails twice |
 | D5g evidence gate | you | its result in `run.md` | below the gate: stop before writing |
-| D6 final outline (§3.10) | you | `outline.md`, final | — |
+| D6 the reader's path (§3.10) | you | `outline.md`, final | — |
 | D7 write (§4) | you, alone | `body.md`, `trace.md` | — (a writer gap is stated or dropped) |
 | D8 check, critic, revise, publish (§4.9–§5) | you; the critic (B5) | `critique.md`; the revised draft; the KB | the check or a refusal twice; the critic fails twice; a must-fix left open |
 | D9 report (§8) | you | `report.md`; `run.md` `state: done` | — |
@@ -166,8 +166,7 @@ series or a multi-part guide (`book=<slug>`, one chapter in a book, does not cou
 
 ## 2. Resolve the knowledge base configuration
 
-The knowledge base is no longer hardcoded to one machine — resolve it from config.
-**Run this one command**, as a Bash call of its own (nothing chained to it with `;`, `&&`
+Resolve the knowledge base from config. **Run this one command**, as a Bash call of its own (nothing chained to it with `;`, `&&`
 or `|`: one unapproved part makes the whole call need approval), **exactly as written**,
 and read its `KEY=VALUE` output; do not reason about the resolution rules by hand. It is
 the only reader of the configuration: never open a `config.json` yourself (the run's
@@ -242,20 +241,9 @@ Read the output:
   - `KB_EXPLAIN_STATE` — where runs keep their dossiers (below).
   - `KB_NOW` — the local time, for the run's id.
 
-What the command resolves, for reference (per-key, highest priority first):
-
-1. **Env overrides** — `KB_ROOT`, `KB_API_BASE_URL`, `KB_API_TOKEN`, each overriding
-   just its own key.
-2. **Config file** — `$XDG_CONFIG_HOME/knowledge-kb/config.json` (default
-   `~/.config/knowledge-kb/config.json`), written by `/knowledge:setup`, with keys
-   `kb_root`, `api.base_url`, `api.token`, `site.base_url`. Omitted keys default to
-   `api.base_url` → `http://localhost:8766`, `site.base_url` → `http://localhost:8765`,
-   token → none; `kb_root` may legitimately be absent (a remote-only config).
-3. **Legacy convention** — if `~/projects/personal/knowledge/mkdocs.yml` exists, use
-   `kb_root=~/projects/personal/knowledge`, `api.base_url=http://localhost:8766`,
-   `site.base_url=http://localhost:8765`, no token. (Keeps machines that predate
-   `/knowledge:setup` working.)
-4. **Nothing** → unconfigured (the STOP above).
+For reference, per key: the env var wins, then the config file `/knowledge:setup` writes
+(`kb_root`, `api.base_url`, `api.token`, `site.base_url`; `kb_root` may be absent), then the
+legacy `~/projects/personal/knowledge/mkdocs.yml` convention; nothing → unconfigured.
 
 **The run's dossier.** Every run keeps its files in one folder, `<DOSSIER>` =
 `<KB_EXPLAIN_STATE>/<run-id>/`, where `<run-id>` is `<KB_NOW>-<slug>` (`<slug>`: the topic
@@ -699,39 +687,86 @@ what the conversation established. Write `brief.md` and `run.md` (`run: no-resea
 chapter has no "Best practices & next steps" section and no sources block unless the user
 gave you pages, and the report's first line says `no-research`.
 
-### 3.10 D6: the final outline
+### 3.10 D6: the final outline, the reader's path
 
-Past the gate, rewrite `outline.md` once as the map you write from: §4.2's sections in
-order (only those the subject earns), each with its questions and states, its claim ids
-with their ledger statuses (B8), its code ranges, its declared gaps from `gaps/final.md`
-with their dispositions as written there, and the diagrams it plans and the claims each
-one draws. A `partial` claim carries its narrower wording; a disagreement its `D-` id.
+Past the gate, rewrite `outline.md` once as the map you write from. **The chapter follows
+the reader's task; the research supports it, never leads it.**
 
-    ## Intuition {#intuition}
+1. **`## Reader's task`** first: from the brief's `purpose`, the 2–4 things the reader must
+   be able to do afterwards, each with the **deliverable** they will use to do it, chosen to
+   fit: a checklist ("Before you change X"), a decision table ("try it if… / wait if…"),
+   the commands to run, the test that guards the behaviour.
+2. **The path:** §4.2's sections, the middle ones in the order the reader meets the work
+   (code: the order it runs; a general subject: the decision or the steps as the reader
+   takes them). Each task gets the section that delivers it, ending in its deliverable;
+   each heading carries a one-line purpose, its tasks and a word budget: the fewest words
+   that deliver them (a single document mostly 3,000–5,000 in all).
+3. **Each finding goes in the step it changes** (a race in the step that has it, and in the
+   checklist line that guards it), never in a section of caveats. A claim earns the main
+   line by changing what the reader does or understands there; secondary depth (another
+   number, history, an edge the task never meets) goes in a collapsed callout.
+4. **`## Not used`:** each claim that serves no task and no must-cover point, with a
+   one-line reason; it stays out of the chapter. Every must-cover point, load-bearing
+   question and `stated` gap lands on the path; brevity never drops one.
+
+Under each heading: its questions and states, its claim ids with their ledger statuses
+(B8), its code ranges, its declared gaps from `gaps/final.md` with their dispositions as
+written there, its callouts, and the diagrams it plans with the claims each draws. A
+`partial` claim carries its narrower wording; a disagreement its `D-` id.
+
+    ## Reader's task
+    - T1 trace a publish in the code → the step-by-step walk, each step's code
+    - T2 change it safely → checklist "Before you change the write path" + its test
+    ## Code {#code} · T1, T2 · the handler, in the order it runs
     - Q2 answered · Q5 thin → G-r2-01 stated
     - C-r1-found-02 supported · C-r1-evidence-01 partial ("<the narrower claim>") · D-01
     - code: <path>:L<a>-L<b>@<sha> · diagram flow-1: C-r1-code-07, C-r1-code-08
+    - callout (collapsed): C-r2-found-04 · deliverable T2: C-r1-code-09, C-r2-found-03
     ## Quiz
     - q1 tests <the understanding>: C-r1-found-02
+    ## Not used
+    - C-r1-history-07: version history no task needs
 
 **The quiz**, about 5 targets, tests only `supported` claims: never a `partial` beyond its
 narrower claim, a `contested` or `unsupported` one, or a disagreement. "Best practices & next
 steps" is in the map on every run but `no-research`. Record `D6: sections <n> · claims <n>
-· quiz <n>` in `run.md`. A `no-research` map names code ranges, or the user's material, in
-place of claim ids.
+· not used <n> · quiz <n>` in `run.md`, its mode block brought up to date. A `no-research`
+map names code ranges, or the user's material, in place of claim ids.
 
 ## 4. Write the chapter — native Markdown
 
-Author the whole chapter as one Markdown file, then publish it in step 5. The file is the
-**body only**: **no `---` header** (the server writes the header from the fields you send in
-step 5) and **no `# H1`** (the title is a field, and the reader draws it). It starts at
-the first paragraph or `##` heading. Write it to `<tmp>/body.md`, where `<tmp>` is the
-run's dossier, `<DOSSIER>` (§2) — so the body and title never pass through shell arguments.
+Author the whole chapter as one Markdown file, `<tmp>/body.md` (§2; never through shell
+arguments), then publish it in step 5. It is the **body only**: **no `---` header** (the
+server writes it from step 5's fields) and **no `# H1`** (the title is a field); it starts
+at the first paragraph or `##` heading.
 
-**D7: write from the dossier, alone, section by section**, in the final outline's order:
-load only that section's claim entries and passages (`grep -n` the ids, Read those ranges)
-and its code ranges at their commit, write it, and append its lines to
-`<DOSSIER>/trace.md` (B9) before the next. The rules:
+**D7: write from the dossier, alone, in three passes:**
+
+1. **The skeleton:** `body.md` as the outline's path: every heading with its id and, under
+   it, its one-line purpose and deliverable, so the whole path stands before any section.
+2. **Each section in order**, replacing its purpose line: load only its claim entries and
+   passages (`grep -n` the ids, Read those ranges) and its code ranges at their commit,
+   write it, and append its lines to `<DOSSIER>/trace.md` (B9) before the next.
+3. **The reader pass:** read the whole draft as the brief's reader doing each task in
+   `## Reader's task`, fix what slows them (the prose rules, transitions, repetition),
+   adding no fact, and cut each section to its budget; the trace follows every move.
+
+**The prose rules**, few enough to check each paragraph against:
+
+- **One idea a paragraph**, about 100 words at most; a longer one holds two ideas, or depth
+  that belongs in a callout.
+- **Show, then tell:** the code, the commands or a short example first, then its meaning.
+- **A finding opens with one bold sentence** saying what it means for the reader; the
+  evidence follows.
+- **Teach, don't report:** a fact in your own voice ("the GIL is released for I/O", not
+  "the glossary says…"); a source named in the sentence only where B8 needs the attributed
+  form or it changes the reader's trust. One citation per source a paragraph, at the
+  sentence's end; a code location once, in its block's title.
+- **Secondary depth** (another number, history, edge evidence) goes in a collapsed callout
+  (`> [!NOTE]- <title>`), so the main line reads fast.
+- **Shorter wins:** the research's volume is never a reason to write more.
+
+**The evidence rules:**
 
 - **No fact without a source:** every checkable sentence (B9's list, quiz keys, `explain`s,
   diagram facts and table cells included) maps in the trace to a claim id or a code range
@@ -744,7 +779,6 @@ and its code ranges at their commit, write it, and append its lines to
 - **A writer gap** (a claim a section needs that the ledger lacks): in `full`, while the gap
   rounds and the ceiling have room, one targeted top-up (D2–D3s, counted against both);
   otherwise leave it out or state it as open, and add it to `gaps/final.md` and `run.md`.
-- Last, one coherence pass over the whole draft (transitions, no repetition), adding no fact.
 
 The grammar below is the one the server enforces. It is **CommonMark + GFM** (tables with
 alignment, `~~strikethrough~~`, autolinks) plus exactly three extensions:
@@ -776,9 +810,9 @@ at publish with a line-numbered list — never silently repaired — so write to
 
 ### 4.2 Recommended outline
 
-The old fixed five-section page is now the **recommended outline** — a starting shape,
-not a form to fill. Use the sections the subject earns, in this order, as `##` headings
-with ids (the reader builds the table of contents from `##` and `###`; **never write one**):
+A starting shape, not a form to fill. Use the sections the subject earns, in this order, as
+`##` headings with ids (the reader builds the table of contents from `##` and `###`;
+**never write one**):
 
 1. **Background** — change mode: the system as it was before this change, plus context;
    topic mode: what this is and why it exists here; general mode: what the subject is and
@@ -790,15 +824,17 @@ with ids (the reader builds the table of contents from `##` and `###`; **never w
 3. **Code** — change mode walks the diff, grouped and ordered logically; topic mode walks
    the real implementation here (fenced code with a `title="path"`). In **general mode**
    this section is **Worked examples** instead: real numbers, real cases, step by step.
+   Its subsections, and any section a task needs ("Should you use it today?"), follow
+   the reader's path (§3.10), each task's section ending in its deliverable.
 4. **Best practices & next steps** — on every run but `no-research` (§4.5), where it is
    absent and the report says so.
 5. **Quiz** — a `quiz` block of about 5 items (§4.5). Always last before the sources.
 6. **Sources** — the `sources` block (§4.6): the pages you opened. Required in general
    mode; in repo modes, whenever any section cites a page.
 
-Tone: the clarity and flow of Martin Kleppmann — an essay with smooth transitions between
-sections, not a bullet dump; define each piece of jargon on first use; engaging and
-novice-friendly by default. **No length cap** — as long as the teaching needs.
+Tone: the clarity and flow of Martin Kleppmann — prose with smooth transitions, not a
+bullet dump (a deliverable's checklist or table excepted); jargon defined on first use;
+engaging and novice-friendly by default; §4's prose rules; §3.10's word budgets.
 
 ### 4.3 Ids
 
@@ -807,10 +843,8 @@ novice-friendly by default. **No length cap** — as long as the teaching needs.
   every typed block (`` ```diagram #request-flow ``), every code block you want to link or
   annotate (`` ```python title="app.py" #app-main ``), every quiz item and option, every
   source item. Use short, meaningful, stable slugs.
-- Ids are what the reader's links, saved quiz results, highlights and notes attach to, so
-  **a re-explain keeps the id of everything that survives**, and a translation copies all
-  of them. If you do omit one, the server assigns it (`getting-started`, `s-3`, `diagram-2`)
-  and tells you in `assigned_ids` — but then it is the server's choice, not yours.
+- **A re-explain keeps the id of everything that survives** (§3.1), and a translation
+  copies all of them. An id you omit is the server's choice (`assigned_ids`), not yours.
 - Callouts, paragraphs, lists, tables have no id; a link to one points at its section.
 - Scoped ids (a quiz option within its item, a diagram node within its diagram, an SVG
   element within its SVG) need only be unique inside their parent.
@@ -1020,8 +1054,7 @@ and the body refers to the **name**: `![alt](asset:arch)` or a figure's `src: ar
 Read the body once, against the rules: no `#`/`#####` headings, no raw HTML, every `#id` link
 resolves, every quiz `answer` names an option, every `asset:` name is attached, no
 number-like or colon-bearing YAML string left unquoted, every sources `url` is
-`http(s)`, nothing cited that you did not open. The server tells you every violation, with
-its line, if you miss one — but a clean first publish is better than two.
+`http(s)`, nothing cited that you did not open.
 
 ### 4.9 Check
 
@@ -1037,9 +1070,10 @@ Offline (§6): no check is possible; say so.
 
 `quick` goes straight to §5; `full` and `no-research` get the critic first.
 
-1. **Dispatch it** (B5) on a model of the family other than yours, named on the call (you
-   on Opus: `sonnet`; otherwise `opus`): plugin, `knowledge:explain-critic` with this block
-   as the prompt; generic, B0's brief file.
+1. **Dispatch it** (B5) in the foreground, and wait (a headless session stops a background
+   agent after ten idle minutes), on a model of the family other than yours, named on the
+   call (you on Opus: `sonnet`; otherwise `opus`): plugin, `knowledge:explain-critic` with
+   this block as the prompt; generic, B0's brief file.
 
        mode: critique · kind: document
        draft: <DOSSIER>/body.md · critique: <DOSSIER>/critique.md · dossier: <DOSSIER>
@@ -1049,8 +1083,9 @@ Offline (§6): no check is possible; say so.
    The scratch folder sits in the dossier, where §3.2's rules reach (a `mktemp -d` one is
    outside them). A host that cannot pick another model adds `same-model: accepted`
    (`critic: same model (degraded)`); on the sequential path you play it (`lead
-   (degraded)`). Record its return and `model:` line. `blocked` for the model: correct it,
-   dispatch once more. Any failure twice → `STOPPED: critic`.
+   (degraded)`). Record its return, and its `model:` line as the mode block's `critic:`.
+   `blocked` for the model: correct it, dispatch once more. Any failure twice → `STOPPED:
+   critic`.
 2. **Answer it** from its verdict block, then the findings by id, one line each under
    `## Critique` in `run.md`: `C01 · fixed | disputed | declined · <how, or why>`. Fix every
    must-fix or remove its sentence, and the should-fixes you agree with. No new evidence: a
@@ -1162,12 +1197,12 @@ an HTTP error:
   failures: a `ref-unresolved` is a `chapter:`/`doc:` link to something not there yet, a
   `translation-ids` an id that differs from the source.
 - **409** — a document already exists at that path (or, for a stem, another document owns
-  it). This is the plain-create collision. The detail carries `rel_path`, `existing_title`
-  and, when a real KB document is behind it, its `version`. It is the "same topic again"
-  case, so the primary retry is a **new version**: report the `existing_title` and
-  `rel_path` and ASK the user before retrying (with nobody to ask, `FAILED: publish`); on a
-  yes, add `new_version` and the detail's `rel_path` and re-publish. `"overwrite": true`
-  also archives the replaced body; use it only when the user wants to replace, not supersede.
+  it). The detail carries `rel_path`, `existing_title` and, when a real KB document is
+  behind it, its `version`. It is the "same topic again" case, so the primary retry is a
+  **new version**: report the `existing_title` and `rel_path` and ASK the user before
+  retrying (with nobody to ask, `FAILED: publish`); on a yes, add `new_version` and the
+  detail's `rel_path` and re-publish. `"overwrite": true` also archives the replaced body;
+  use it only when the user wants to replace, not supersede.
 - **422** — a convention violation or an invalid chapter. The detail is **one list that
   names every violation** with its `line` (a line of the body you sent; `0` is the header
   or the whole document), a `code` and a message. Fix **every** listed problem in
@@ -1245,8 +1280,9 @@ stopped run reports the same way, its first line the stop (the card). In order:
 
 1. `PUBLISHED (<full | quick | no-research>) — <title>`, the `url` and the version (`v1`, or
    the `previous_version` it superseded, whose body is kept).
-2. **The mode block** from `run.md`, then each degraded mode on a line: a role played by
-   the same model or by you, `quote-match: approximate`, the cwd fallback, a skipped check.
+2. **The mode block** from `run.md`, brought up to date (`critic:`, `searches`), then each
+   degraded mode on a line: a role played by the same model or by you, `quote-match:
+   approximate`, the cwd fallback, a skipped check.
 3. **The research:** tier, researchers, rounds and the stop reason; claims by status; the
    counter-evidence found; each disagreement (`D-` id, one line); the gate's counts. `quick`
    names what it skipped; `no-research` says it was the operator's choice, with no web
@@ -1357,8 +1393,10 @@ The chapter executor, for chapter `<k>` (its position), key `<key>`, state in `r
    `gaps/final-ch<k>.md`.
 4. **Its gate:** D5g over its must-cover items and load-bearing questions, frozen ledger and
    overlay together. Below it: stop before writing, with the failing items.
-5. **D6–D7:** its map in `outline-ch<k>.md`, the draft where the workspace says
-   (`book/<key>.md`) with `trace-<key>.md`, then §4.8–§4.9.
+5. **D6–D7** by §3.10 and §4 (the reader's path, the three passes, the prose rules), its
+   reader's tasks from the chapter's outline entry and the book's reader: its map in
+   `outline-ch<k>.md`, the draft where the workspace says (`book/<key>.md`) with
+   `trace-<key>.md`, then §4.8–§4.9.
 6. **D8:** the critic (`kind: chapter`) writes `book/critique/<key>.md`; answer it once (§4.10
    steps 2–3, no confirm pass: the phase review decides a dispute). Nothing is published.
 
@@ -1691,13 +1729,14 @@ sources checked only by substance or unreachable.
 You are the explain critic: the second pair of eyes on one drafted chapter (a single
 document, or one chapter of a book) in an isolated context. The writer, the lead of the
 explain run, researched the subject into a dossier, wrote the draft from it, and ran
-`knowledge check` on it. You read the draft as its stated reader would, hold every claim to
-the evidence and to the ledger, check that it covers what its research plan calls for, and
-write down what is wrong, how sure you are, and what you saw that proves it. **You get one
-pass**, so make it the whole look: the writer answers your findings once, in one revision.
-A finding it disputes goes to one confirm pass (a single document, below) or to the phase
-review (a book), which decides. **The writer writes, you judge, the confirm pass or the
-review decides a dispute.** You change nothing you judge.
+`knowledge check` on it. You read the draft as its stated reader would, doing the tasks
+they came for, hold every claim to the evidence and to the ledger, check that it covers
+what its research plan calls for, and write down what is wrong, how sure you are, and what
+you saw that proves it. **You get one pass**, so make it the whole look: the writer answers
+your findings once, in one revision. A finding it disputes goes to one confirm pass (a
+single document, below) or to the phase review (a book), which decides. **The writer
+writes, you judge, the confirm pass or the review decides a dispute.** You change nothing
+you judge.
 
 **Your model.** You always run on a model different from the one that wrote the draft: a
 fresh-eyes check is weaker on the same model, which shares the writer's blind spots. Your
@@ -1742,7 +1781,8 @@ and `Read` only their ranges.
 2. **The outline:** `book/outline.md`, or the dossier's final `outline.md`: the stated
    reader, the learning order, this chapter's entry (what it covers, its questions and
    claim ids, which ideas need a diagram, what its quiz tests, the gaps it states) and its
-   prerequisites.
+   prerequisites; and **`## Reader's task`**, the reader's tasks with each one's
+   deliverable (a chapter's is in `outline-ch<k>.md`).
 3. **The draft**, whole: this is the work you judge.
 4. **What the research owes the reader:** the plan's questions with their load-bearing
    marks (the dossier's `plan.md`; a chapter owns the questions its outline entry names),
@@ -1840,6 +1880,12 @@ chapter or an earlier one introduces it is a finding; so is re-teaching at lengt
 earlier chapter covers instead of linking it (`chapter:` links to unpublished siblings are
 expected warnings, not defects).
 
+**The reader:** as the stated reader, do each task in `## Reader's task` (none: the spec's
+purpose) from the chapter alone. A task it does not serve, or its deliverable missing:
+`must-fix`. A paragraph holding two ideas or past about 100 words, a step buried in prose,
+a caveat that interrupts the main line, a fact reported as who-said-what, a section past
+its budget: `should-fix`, saying where the reader trips (the skill's §4 prose rules).
+
 **Clarity:** for the outline's stated reader, per the skill's §4.2 tone: jargon defined on
 first use, transitions that carry the argument, the core idea reachable without the code.
 An ambiguous sentence is a clarity finding.
@@ -1853,23 +1899,23 @@ to the right source id for the wrong claim, an image without real alt text.
 **Severity:**
 - **`must-fix`**: the chapter is wrong or breaks a rule. A false, invented or unverifiable
   fact; a citation that does not resolve or does not support its claim; a claim the skill
-  requires to be cited (§4.5) with no citation; the `ledger` and `coverage` must-fixes
-  above; a diagram that is wrong or contradicts the text; a quiz key that is wrong or has
-  two defensible answers, or an `explain` that teaches the wrong thing; a §4.1 hard-rule
-  violation; an idea used before it is introduced, here or in an earlier chapter;
-  something the outline says this chapter covers or tests that is missing.
+  requires to be cited (§4.5) with no citation; the `ledger`, `coverage` and `reader`
+  must-fixes above; a diagram that is wrong or contradicts the text; a quiz key that is
+  wrong or has two defensible answers, or an `explain` that teaches the wrong thing; a
+  §4.1 hard-rule violation; an idea used before it is introduced, here or in an earlier
+  chapter; something the outline says this chapter covers or tests that is missing.
 - **`should-fix`**: the chapter is right but weaker than it should be. An unlabelled
   diagram, or one not worth its place; a quiz item that tests recall, or a distractor
   nobody would pick; undefined jargon; a section order that makes the idea harder to
   follow; re-teaching an earlier chapter instead of linking it; an uncited
-  non-load-bearing claim; the `ledger` and `coverage` should-fixes above.
+  non-load-bearing claim; the `ledger`, `coverage` and `reader` should-fixes above.
 - **`note`**: advisory, never blocks: a matter of taste, or an improvement the outline did
   not ask for. Judge taste against the outline's reader and the skill's §4.2 tone, never
   your own preferences; when neither speaks, say what a choice trades off, not which way
   you would go.
 
 **Category:** `facts`, `citations`, `ledger`, `coverage`, `diagrams`, `quiz`, `order`,
-`clarity` or `rules`.
+`reader`, `clarity` or `rules`.
 
 **Confidence:** `high`, `medium` or `low` on every finding and on the verdict. `high` only
 for a fact you checked in this pass against a file or a passage you opened; a clarity or
@@ -1898,7 +1944,7 @@ the review reads both, with the writer's answers.
     - draft: <path>
     - verdict: pass | revise
     - confidence: high | medium | low
-    - must_fix: <count> (facts N, citations N, ledger N, coverage N, diagrams N, quiz N, order N, clarity N, rules N)
+    - must_fix: <count> (facts N, citations N, ledger N, coverage N, diagrams N, quiz N, order N, reader N, clarity N, rules N)
     - should_fix: <count>
     - notes: <count>
     - critic_model: <the model you ran on> · writer_model: <the writer's>
