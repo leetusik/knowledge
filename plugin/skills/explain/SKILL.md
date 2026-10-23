@@ -356,7 +356,10 @@ The preflight proves, before anything of the run is written, that this session c
 whole stage. **Permissions belong to the session, not to this skill:** the `allowed-tools`
 grant ends at your next turn, and an agent's notification starts one, so every later call,
 yours and every agent's, runs on the session's own posture: auto mode (interactive Claude
-Code's default), bypass, or allow rules.
+Code's default), bypass, or allow rules. A lead that read this file by path instead of
+loading it as a skill (a workspace's book executor, §9.2–§9.3) never had the grant: its own
+calls run on the session's posture from the first, §2's resolver included, and the stop
+block below adds the lines it needs.
 
 1. **Pick the path,** once, for the whole run (B0):
    - **plugin**: your agent types include the `knowledge:` roles (`knowledge:web-researcher`,
@@ -378,6 +381,9 @@ Code's default), bypass, or allow rules.
    cheap model named on the call (`haiku` on Claude Code):
    - **A**, in the background: "Reply with the single word `ok`." End your turn and wait
      for its notification, so that the probe runs after one, as every wave will.
+     **A lead that is itself a subagent** (a workspace's book executor is one) never gets
+     that notification: ending its turn hands control back to whoever dispatched it. It
+     sends A in the foreground instead, and every wave too (§3.5).
    - **B**, after A's notification: exactly these calls, every one of them even when an
      earlier one failed, each reported on its own line as `ok`, `denied` or
      `error: <message>`, and nothing else:
@@ -403,7 +409,8 @@ Code's default), bypass, or allow rules.
 
 The stop block, with the real absolute paths filled in. `<ROOT>` is `<KB_EXPLAIN_STATE>`
 (or the cwd fallback), never a folder above it, and `<SKILL_DIR>` the folder holding this
-file (the critic reads it); the rules' extra leading `/` makes `//…`, which Claude Code
+file (the critic reads it), `<BOOK>` a book's `book/` folder (§9.2; drop those two lines
+otherwise); the rules' extra leading `/` makes `//…`, which Claude Code
 reads as the filesystem root. They cover the publish too (§5: the CLI, or the converter's
 `--payload` and `curl`):
 
@@ -419,6 +426,10 @@ reads as the filesystem root. They cover the publish too (§5: the CLI, or the c
       "Bash(git diff *)", "Bash(git status *)", "Bash(shasum -a 256 *)", "Bash(mktemp -d *)",
       "Bash(knowledge --base-url *)", "Bash(knowledge --version)",
       "Read(/<ROOT>/**)", "Edit(/<ROOT>/**)", "Read(/<SKILL_DIR>/**)"
+    A lead that read this skill by path (a workspace's book executor) also needs
+    "Bash(python3 -c *)" (it lets any inline Python run; auto mode needs none of this),
+    "Bash(which pdftotext)", "Bash(find <ROOT> -maxdepth 2 -name run.md)", and for the
+    book's folder "Read(/<BOOK>/**)", "Edit(/<BOOK>/**)".
     On another host, allow the same commands and paths in its own terms.
 
 A role that returns `failed: permissions` later in the run stops it with the same block,
@@ -550,8 +561,9 @@ Then hold the plan to §9.1's size test: a plan plainly over one document is a b
    the tier's budget. A code researcher gets the repository, which is the session's working folder (its
    `git` runs there, never with `-C`), and `commit`: the full sha of `HEAD` written
    `<sha> (HEAD)`, or `WORKTREE` for uncommitted work.
-2. **Send the wave in one message,** every agent in the background: at most **10** on
-   Claude Code, **6** elsewhere. The rest are queued, never dropped; they go out as soon as
+2. **Send the wave in one message,** every agent in the background (a lead that is itself
+   a subagent, §3.2: in the foreground, still in one message, so that they run at once and
+   the message returns when the last has): at most **10** on Claude Code, **6** elsewhere. The rest are queued, never dropped; they go out as soon as
    this wave has returned, before the merge. A spawn refused for a concurrency limit is
    queued the same way, never retried in a loop. How each call goes out (B0):
    - **plugin:** `knowledge:web-researcher` or `knowledge:code-researcher`; the prompt is
@@ -674,7 +686,8 @@ follow-up burst of 10 calls. Then D3, and **one verifier batch** on the load-bea
 are the researcher: `knowledge:verifier` as it is when you run on Opus, with `model: opus`
 otherwise; generic: a subagent on that model; with none, `verifier: lead (degraded)`). Then
 D5s without counter-evidence, `gaps/final.md`, and D5g: the gate holds in `quick` too.
-`run.md` and the report say `quick`, and what it skipped.
+D6 (§3.10, the reader's path) and D7 run as in a full run: `quick` cuts the research, never
+the map. `run.md` and the report say `quick`, and what it skipped.
 
 **`no-research`** (the operator's choice only). D0, then no web probe, no plan, no team and
 no ledger: you read the repository yourself, by mode. **Change mode:** the real change,
@@ -1347,7 +1360,9 @@ document; §8 reports the suggestion.
 A workspace's explain phase runs §3–§4 with these differences. Its `DECOMP` executor leads
 the whole-book research and writes the outline; each chapter executor leads its top-up and
 draft. Both dispatch the research agents as a lead does (§3.5); the orchestrator dispatches
-the critic, and the phase review publishes. **The dossier** is the phase's `book/research/`,
+the critic, and the phase review publishes. Both are subagents that read this file by path:
+probe A and every wave go in the foreground, and their own calls run on the session's
+rules (§3.2, its block's lines for such a lead). **The dossier** is the phase's `book/research/`,
 committed with each slice except `pages/` (write `pages/.gitignore`, `*` then
 `!.gitignore`, first). Run id `<KB_NOW>-<book slug>`; `run.md` resumes as §3.3.
 
@@ -1761,7 +1776,9 @@ A single document's critique is `<dossier>/critique.md`. A chapter's is
 `book/critique/<key>.md`, and its dossier is `book/research/`: the book's frozen
 `library.md` and `ledger.md`, the chapter's overlays `library-ch<k>.md` and
 `ledger-ch<k>.md`, and its trace `trace-<key>.md`. With no scratch folder, make one with
-`mktemp -d`; fetched pages go in `<scratch>/pages/` (B11's `<pages>`).
+`mktemp -d`; fetched pages go in `<scratch>/pages/` (B11's `<pages>`). Your dispatch has no
+`tools:` line: B11's `<tools>` is the `tools:` folder the run's state names on its `dossier:`
+line (`<dossier>/run.md`; a chapter's `run-ch<k>.md`), where the lead wrote `pagetext.py`.
 
 **Efficiency** (your context is re-read on every turn): read each file once and only the
 ranges you need; never print whole files you do not need whole; find headings with `Grep`
@@ -2342,7 +2359,7 @@ for itself, routine arithmetic on ledgered numbers, and quiz distractors.
 
 A passage is copied from the page's own text, so that a checker can find it again,
 character for character. Use these command forms exactly; a session that allows them by
-prefix allows nothing else. `<tools>` is your dispatch's `tools:` folder, `<pages>` the
+prefix allows nothing else, a longer `--max-time` included. `<tools>` is your dispatch's `tools:` folder, `<pages>` the
 folder your role section names for fetched pages, and `<id>` the source id.
 
 **A web page:**
@@ -2372,7 +2389,7 @@ page, or `NOT FOUND`:
 it. `--check` checks every passage of every `quote-match: exact` source in the file against
 `<pages>/<source id>.txt`.
 
-**When exact text fails** (a status other than 200, a text that lacks the content because
+**When exact text fails** (a status other than 200 or a time-out, a text that lacks the content because
 script builds the page, no `pdftotext`, or a converter error; a denied command is B6's
 `failed: permissions`): read the page with WebFetch, and record `read-via: webfetch · quote-match: approximate`. WebFetch shows
 at most about 125 characters of a quote and may rephrase, so keep such a passage short, and

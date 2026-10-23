@@ -13,7 +13,9 @@ Every "Find" below occurs **exactly once** in its file at `1f4aa7d`, and also at
 counts). Since `86ec6fa`: the engine and its smoke tests (minted ids, `P-7kq2`; minute-named doc
 versions), the release process (`changelog.d/` fragments stamped by `build.py --release`, section 8 and 9)
 and some skill prose (minted ids) changed, and `1f4aa7d` released it all as v73; the three explain references, the create-phase route and every
-anchor did not. If `main` has moved, re-run the counts before editing (`git show HEAD:<file> | grep -c -F
+anchor did not. P32.S9 re-ran the counts at `97e1c38`, the v74 release (a read leaves the tree clean): every
+anchor still 1, and of the files sections 2 to 6a name only `installer/main.py` changed (`WORKSPACE_VERSION = 74`;
+`tests/retrofit_smoke.sh` gained Test 10h, away from 7's anchors). If `main` has moved, re-run the counts before editing (`git show HEAD:<file> | grep -c -F
 '<find>'`, each must print `1`), and compare the blob ids sections 2 to 6a name (`git rev-parse
 HEAD:<file>`): a changed blob means someone edited that file since, so diff it against the pin before
 applying (`git diff 1f4aa7d HEAD -- <file>`), and for sections 2 and 3, which replace a whole file, carry
@@ -175,7 +177,7 @@ The plugin's `knowledge:explain-critic` (Sonnet by frontmatter, `maxTurns: 120`,
     '.claude/agents/explain-critic.md': (73, ('f82cbdcb86cf9d37356ed6378ccbc5f3b3a83b2ccd90233eba647496bb98cf65', '7a59c619824460c8532da58fb25943bafd23c3a78b4259977567e779d3a84aff', '2c66e29d087b3ce4990323c9ce3c6d290a7bd38334f9760ef253c15ede6deb58', '118e9d3b8478b14f237e0216631cfa213c11e0cb12184bdc0fd6a110d60acd53')),  # 8fa6476 (v66-v73), d0759a4 (v65)
 ```
 
-- **The numbers:** the version is **the last release that ships the file**: `main`'s `WORKSPACE_VERSION` just before your `--release` stamps the next one. It is `73` at the pin (`1f4aa7d`, the v73 release); if another release lands first, write its number (the text is the same, so the hashes stand). It is only the label `--update` prints, and 7a's test reads any number. Two texts shipped, so four hashes, each pair the at-root text and its `nested_rewrite()` with no renames (only its two `works/` paths change: the text a nested host holds once any renames are undone):
+- **The numbers:** the version is **the last release that ships the file**: `main`'s `WORKSPACE_VERSION` just before your `--release` stamps the next one. It is `73` at the pin (`1f4aa7d`, the v73 release) and `74` at `97e1c38` (v74 shipped the same text); if another release lands first, write its number (the text is the same, so the hashes stand). It is only the label `--update` prints, and 7a's test reads any number. Two texts shipped, so four hashes, each pair the at-root text and its `nested_rewrite()` with no renames (only its two `works/` paths change: the text a nested host holds once any renames are undone):
   - `f82cbdcb…` and `7a59c619…`: the text v66–v73 shipped, `git show 1f4aa7d:payload/claude/agents/explain-critic.md` (blob `474adc9`, unchanged since `8fa6476`). The nested hash was cross-checked against this repo's own nested install, whose `.claude/agents/explain-critic.md` hashes to it;
   - `2c66e29d…` and `118e9d3b…`: the text v65 shipped, `git show d0759a4:payload/claude/agents/explain-critic.md` (blob `a9f5545`), so a host still on v65 is classified by content too. The nested rewrite's patterns are the same at `d0759a4` and `1f4aa7d`.
 

@@ -43,10 +43,13 @@ only what the loop adds.
    `span: 1`). It runs §9.3 items 1–5, its state in `run-ch<k>.md`:
    - **D0b** again (§3.2), the preflight's probe agents included: this is a new session;
    - **the gap check, the top-up and the chapter's gate** (§9.3 items 2–4). New evidence goes into the
-     overlays, never the frozen files. **Every prompt it sends an agent starts with the line `slice: <id>`**,
-     then the dispatch block the skill gives, so `dispatch-summary` attributes the nested span. The
+     overlays, never the frozen files. **Every prompt it sends an agent starts with the line `slice: <id> (a
+     label for the workspace's meter, not a task)`**, then the dispatch block the skill gives, so
+     `dispatch-summary` attributes the nested span and a general agent does not take the line for a task. The
      optional **`sources` chapter** skips them: it lists the book's `library.md` and every chapter's
-     overlay, adds no evidence, and dispatches no agent;
+     overlay, adds no evidence, and dispatches no agent. The executor is a subagent, so a background
+     agent's completion never reaches it: the probe agent A and every wave go in the foreground, a wave's
+     calls in one message (§3.2, §3.5);
    - **the chapter's outline and draft** (§9.3 item 5, by §3.10 and §4): `outline-ch<k>.md` opens with
      `## Reader's task`, the reader tasks of the chapter's outline entry with their deliverables, then the
      reader's path with its word budgets and `## Not used`. D7 writes `book/<key>.md` in §4's three passes,

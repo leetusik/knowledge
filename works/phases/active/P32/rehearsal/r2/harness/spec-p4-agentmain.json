@@ -1,0 +1,23 @@
+{
+ "name": "p4-agentmain",
+ "plugin": "/Users/sugang/projects/personal/knowledge/plugin",
+ "kb_root": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/stack/kb",
+ "api": "http://127.0.0.1:8841",
+ "model": "haiku",
+ "agent": "probe-lead",
+ "cwd": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/probe-ws",
+ "load_plugin": false,
+ "rules": false,
+ "persist": false,
+ "extra_allow": [
+  "Read(//private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/probe-ws/**)",
+  "Edit(//private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/probe-out/allowed/**)",
+  "Read(//private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/probe-out/**)"
+ ],
+ "extra_deny": [
+  "Read(//private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/decoy/**)",
+  "Edit(//private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/decoy/**)",
+  "Bash(*decoy*)"
+ ],
+ "prompt": "This is a probe. Make only the four calls of your step 1, with actor name main-agent, report them, and stop: do not do steps 2 or 3."
+}

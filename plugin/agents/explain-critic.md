@@ -45,7 +45,9 @@ A single document's critique is `<dossier>/critique.md`. A chapter's is
 `book/critique/<key>.md`, and its dossier is `book/research/`: the book's frozen
 `library.md` and `ledger.md`, the chapter's overlays `library-ch<k>.md` and
 `ledger-ch<k>.md`, and its trace `trace-<key>.md`. With no scratch folder, make one with
-`mktemp -d`; fetched pages go in `<scratch>/pages/` (B11's `<pages>`).
+`mktemp -d`; fetched pages go in `<scratch>/pages/` (B11's `<pages>`). Your dispatch has no
+`tools:` line: B11's `<tools>` is the `tools:` folder the run's state names on its `dossier:`
+line (`<dossier>/run.md`; a chapter's `run-ch<k>.md`), where the lead wrote `pagetext.py`.
 
 **Efficiency** (your context is re-read on every turn): read each file once and only the
 ranges you need; never print whole files you do not need whole; find headings with `Grep`
@@ -596,7 +598,7 @@ for itself, routine arithmetic on ledgered numbers, and quiz distractors.
 
 A passage is copied from the page's own text, so that a checker can find it again,
 character for character. Use these command forms exactly; a session that allows them by
-prefix allows nothing else. `<tools>` is your dispatch's `tools:` folder, `<pages>` the
+prefix allows nothing else, a longer `--max-time` included. `<tools>` is your dispatch's `tools:` folder, `<pages>` the
 folder your role section names for fetched pages, and `<id>` the source id.
 
 **A web page:**
@@ -626,7 +628,7 @@ page, or `NOT FOUND`:
 it. `--check` checks every passage of every `quote-match: exact` source in the file against
 `<pages>/<source id>.txt`.
 
-**When exact text fails** (a status other than 200, a text that lacks the content because
+**When exact text fails** (a status other than 200 or a time-out, a text that lacks the content because
 script builds the page, no `pdftotext`, or a converter error; a denied command is B6's
 `failed: permissions`): read the page with WebFetch, and record `read-via: webfetch · quote-match: approximate`. WebFetch shows
 at most about 125 characters of a quote and may rephrase, so keep such a passage short, and

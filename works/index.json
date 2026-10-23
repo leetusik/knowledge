@@ -144,13 +144,13 @@
       "order": 12,
       "path": "works/phases/active/P32",
       "review_status": "pending",
-      "current_slice": "P32.S9",
+      "current_slice": "P32.S10",
       "slice_count": 14,
-      "done_slice_count": 11
+      "done_slice_count": 12
     }
   ],
   "deferred_open_count": 49,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-23T15:37:38+09:00"
+  "last_rebuilt_at": "2026-10-23T15:49:12+09:00"
 }

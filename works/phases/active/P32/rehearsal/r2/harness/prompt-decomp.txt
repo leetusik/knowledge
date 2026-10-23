@@ -1,0 +1,5 @@
+slice: P90.DECOMP
+slice folder: works/phases/active/P90/slices/P90.DECOMP
+repo root: /private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/ws
+
+Execute this slice: read its plan.md and carry it out, then return your structured verdict.

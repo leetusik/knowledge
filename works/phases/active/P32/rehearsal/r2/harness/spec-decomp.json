@@ -1,0 +1,22 @@
+{
+ "name": "decomp",
+ "plugin": "/Users/sugang/projects/personal/knowledge/plugin",
+ "kb_root": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/stack/kb",
+ "api": "http://127.0.0.1:8841",
+ "model": "opus",
+ "effort": "xhigh",
+ "agent": "slice-executor",
+ "cwd": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/ws",
+ "persist": false,
+ "searches": 400,
+ "state": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/state",
+ "config": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/config",
+ "extra_allow": [
+  "Read(//private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/ws/**)",
+  "Edit(//private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/ws/works/**)",
+  "Bash(python3 -c *)",
+  "Bash(which pdftotext)",
+  "Bash(find /private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/state/knowledge-kb/explain -maxdepth 2 -name run.md)"
+ ],
+ "prompt": "slice: P90.DECOMP\nslice folder: works/phases/active/P90/slices/P90.DECOMP\nrepo root: /private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/ws\n\nExecute this slice: read its plan.md and carry it out, then return your structured verdict."
+}

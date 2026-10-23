@@ -1,0 +1,25 @@
+{
+ "name": "chapter",
+ "plugin": "/Users/sugang/projects/personal/knowledge/plugin",
+ "kb_root": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/stack/kb",
+ "api": "http://127.0.0.1:8841",
+ "model": "opus",
+ "effort": "high",
+ "cwd": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/ws",
+ "persist": true,
+ "searches": 400,
+ "state": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/state",
+ "config": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/config",
+ "extra_allow": [
+  "Read(//private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/ws/**)",
+  "Edit(//private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/ws/works/**)",
+  "Bash(python3 -c *)",
+  "Bash(which pdftotext)",
+  "Bash(find /private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/state/knowledge-kb/explain -maxdepth 2 -name run.md)",
+  "Bash(git add *)",
+  "Bash(git commit *)",
+  "Bash(git check-ignore *)",
+  "Bash(git ls-files *)"
+ ],
+ "prompt": "You are this workspace's orchestrator (read CLAUDE.md first), running phase P90 under do-whole-phase. The\noutline gate is open: P90.DECOMP is done and committed, and P90.S1 is `pending` on the operator's words. The\noperator has just answered the gate, literally: \"accept\".\n\nDo this, by `.claude/skills/do-whole-phase/reference/explain-decomposition.md` (*On the operator's return*,\n*Each chapter's `plan.md`, later*) and `.claude/skills/do-whole-phase/reference/explain-chapter.md`, with\n`reference/dispatch.md` and `reference/verdicts.md` for everything they do not say:\n\n1. **Record the signature:** P90.S1 to `in_progress` (an engine command: log it, as CLAUDE.md says), and the\n   `## Decisions` line in `phase.md`.\n2. **Plan P90.S1** (chapter 1, `how-wal-works`): create `works/phases/active/P90/slices/P90.S1/` with a\n   `slice.json` like DECOMP's (kind implementation, risk high, status in_progress) and write its `plan.md` per\n   explain-chapter.md, *What `plan.md` names*, every field drawn from `book/outline.md`. End the plan with this\n   `## Dispatch` section, which is what the engine's `executor-route P90.S1` prints:\n\n       ## Dispatch\n\n       slice=P90.S1\n       phase=P90\n       kind=implementation\n       risk=high\n       attempt=1\n       route=high\n       reason=risk high (open design: the executor leads the chapter's research run)\n       subagent_type=slice-executor\n       model=opus\n       pass_model=yes\n       effort=xhigh\n       pass_effort=yes\n       attribution=Claude Opus 5.5\n       explore_model=haiku\n       explore_effort=xhigh\n\n3. **The chapter's three spans**, by explain-chapter.md. One difference from its text, for this harness only:\n   this is a headless `claude -p` session, so **dispatch every span in the foreground** (`run_in_background:\n   false`) and wait for it there: a headless main thread that ends its turn ends the run. Span 1 and span 3 go\n   to `slice-executor` with `model: opus` and `effort: xhigh` named on the call; span 2 is the critic, on the\n   model explain-chapter.md's *The critic's model* picks, named on the call. Every span's prompt starts with\n   the line `slice: P90.S1`. Resume span 3 with SendMessage (load it with ToolSearch `select:SendMessage` if it\n   is deferred); if that fails, re-dispatch it from disk on the same route.\n4. **On span 3's `done`:** `finish-slice` and `record-dispatch` (logged), the freeze check, then one commit,\n   by explain-chapter.md's *Records, limits and the commit*.\n5. **Stop after P90.S1.** Do not plan or run P90.S2. Your final message is a short report: each span's verdict\n   line (status, and `critic_ready` or `critique:`), the critic's verdict and its counts by severity, the freeze\n   check's output, and the commit's hash.\n\nIf any span returns something that stops the run (`reference/verdicts.md`), stop there, commit nothing, and\nreport what it returned."
+}

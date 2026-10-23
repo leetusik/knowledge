@@ -1,0 +1,27 @@
+{
+ "name": "gate",
+ "plugin": "/Users/sugang/projects/personal/knowledge/plugin",
+ "kb_root": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/stack/kb",
+ "api": "http://127.0.0.1:8841",
+ "model": "opus",
+ "effort": "high",
+ "cwd": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/ws",
+ "persist": false,
+ "load_plugin": false,
+ "rules": false,
+ "searches": 0,
+ "state": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/state",
+ "config": "/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/config",
+ "extra_allow": [
+  "Read(//private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/ws/**)",
+  "Edit(//private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/c2016e8a-14bf-4ba0-89b3-a899f1c9c55e/scratchpad/s9/ws/works/**)",
+  "Bash(git add *)",
+  "Bash(git commit *)",
+  "Bash(git status *)",
+  "Bash(git log *)",
+  "Bash(git diff *)",
+  "Bash(git check-ignore *)",
+  "Bash(git ls-files *)"
+ ],
+ "prompt": "You are this workspace's orchestrator (read CLAUDE.md first), running phase P90 under do-whole-phase. The\nexecutor of P90.DECOMP has just returned; its result is `works/phases/active/P90/slices/P90.DECOMP/result.md`\n(read its verdict block first).\n\nIf it returned `done`, do what `.claude/skills/do-whole-phase/reference/explain-decomposition.md`, *The outline\ngate*, says, in order:\n1. `finish-slice P90.DECOMP` with a one-line outcome from its summary, then the gate's two engine commands, then\n   `validate`: there is no engine, so append each to `works/phases/active/P90/engine-log.md` as CLAUDE.md says,\n   and update `phase.md`'s generated `## Slices` table by hand to match (DECOMP done, the chapter slices it cut,\n   the first one `pending`).\n2. One commit carrying the phase folder `works/phases/active/P90/` (the dossier rides in it). Before committing,\n   check with `git status --short --ignored works/phases/active/P90/book/research/pages` that nothing under\n   `pages/` but its `.gitignore` will be committed. The message follows CLAUDE.md's convention.\n3. Your report to the operator, by that file's step 3, as your final message, with the files linked by their\n   paths from the workspace root. Then STOP: the chapters run only on the operator's answer.\n\nIf it returned anything else, do not commit: say what it returned and what the operator must do, and stop."
+}

@@ -42,6 +42,11 @@ verbatim:
 
 > accept. it's kinda cost for winning the other 3 isn't it
 
+Answer to OQ11 (accept rehearsal 2 as it ran, stopped at its cap before chapter 1's revision and commit, or spend
+≈ $10 more to finish them), verbatim:
+
+> accept
+
 ## Confirmed Intent (refined + clarified)
 
 Explaining a topic should rest on **thorough research by agents**, not on one writer's quick look. Research
@@ -115,6 +120,7 @@ slices (P42) have merged; a cross-vendor verifier (deferred, D67).
 - Q (OQ7, from P32.S7; rehearsal 1 found the new chapter more comprehensive but less helpful and less readable): spend ≈ $7 to finish G, or close on C? — A: "make it new one also helpful and reading easy"; by approving the plan that followed (2026-10-23): S7 closes on C, a fix slice (P32.F1) reshapes the writing around the reader's task and rewrites C and G from their dossiers, judged blind against the old chapters, with a $45 cap; the phase's cost estimate rises to ≈ $350–380.
 - Q (OQ8, from P32.F1): rehearsal 1b stopped on two old glide-ilab transcripts holding the token, at $40.59 of $45, with Readability still lost; raise the cap to ≈ $62 or close F1? — A: "I don't care about the token spending for now": spend is not the bound for now, so F1 finishes the readability check (C v2's judges, G under v2, the confirming run) under a loop-safety cap of $75.
 - Q (OQ10, from P32.F1): rules v2 win Helpfulness, Comprehensiveness and Insight on both subjects but still lose Readability, on length (≈ 43% longer); accept, or make the word budget binding? — A: "accept": the extra length is the cost of winning the other three. The operator's own read of C's pair at the walkthrough remains the check on readability.
+- Q (OQ11, from P32.S9): rehearsal 2 passed its $100 cap (≈ $101.4) after chapter 1's critique, before its revision and the commit; accept it as it ran, or ≈ $10 more to finish? — A: "accept": the revision and the commit-time freeze check are left to the first real book.
 
 ## Notes
 

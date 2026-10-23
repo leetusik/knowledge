@@ -370,7 +370,7 @@ for itself, routine arithmetic on ledgered numbers, and quiz distractors.
 
 A passage is copied from the page's own text, so that a checker can find it again,
 character for character. Use these command forms exactly; a session that allows them by
-prefix allows nothing else. `<tools>` is your dispatch's `tools:` folder, `<pages>` the
+prefix allows nothing else, a longer `--max-time` included. `<tools>` is your dispatch's `tools:` folder, `<pages>` the
 folder your role section names for fetched pages, and `<id>` the source id.
 
 **A web page:**
@@ -400,7 +400,7 @@ page, or `NOT FOUND`:
 it. `--check` checks every passage of every `quote-match: exact` source in the file against
 `<pages>/<source id>.txt`.
 
-**When exact text fails** (a status other than 200, a text that lacks the content because
+**When exact text fails** (a status other than 200 or a time-out, a text that lacks the content because
 script builds the page, no `pdftotext`, or a converter error; a denied command is B6's
 `failed: permissions`): read the page with WebFetch, and record `read-via: webfetch · quote-match: approximate`. WebFetch shows
 at most about 125 characters of a quote and may rephrase, so keep such a passage short, and

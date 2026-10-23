@@ -1,0 +1,17 @@
+You are this workspace's orchestrator (read CLAUDE.md first), running phase P90 under do-whole-phase. The
+executor of P90.DECOMP has just returned; its result is `works/phases/active/P90/slices/P90.DECOMP/result.md`
+(read its verdict block first).
+
+If it returned `done`, do what `.claude/skills/do-whole-phase/reference/explain-decomposition.md`, *The outline
+gate*, says, in order:
+1. `finish-slice P90.DECOMP` with a one-line outcome from its summary, then the gate's two engine commands, then
+   `validate`: there is no engine, so append each to `works/phases/active/P90/engine-log.md` as CLAUDE.md says,
+   and update `phase.md`'s generated `## Slices` table by hand to match (DECOMP done, the chapter slices it cut,
+   the first one `pending`).
+2. One commit carrying the phase folder `works/phases/active/P90/` (the dossier rides in it). Before committing,
+   check with `git status --short --ignored works/phases/active/P90/book/research/pages` that nothing under
+   `pages/` but its `.gitignore` will be committed. The message follows CLAUDE.md's convention.
+3. Your report to the operator, by that file's step 3, as your final message, with the files linked by their
+   paths from the workspace root. Then STOP: the chapters run only on the operator's answer.
+
+If it returned anything else, do not commit: say what it returned and what the operator must do, and stop.
