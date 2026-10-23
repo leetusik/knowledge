@@ -349,3 +349,41 @@ The operator: "I don't care about the token spending for now".
   what the judges blamed: the next lever, a firm length limit, trades depth and is the operator's call. If v2 wins
   or ties Readability on both subjects and Helpfulness, Comprehensiveness and Insight still hold, v2 stays the rules
   and F1 returns `done`.
+
+## d63 · The bootstrap package (S8; `package/`)
+
+- **Pin.** Text-anchored at bootstrap `main` = `1f4aa7d`, the workspace v73 release. `main` moved four times while
+  S8 worked (`86ec6fa` → `22529b4` → `a484241` → `8789a2f` → `1f4aa7d`); every anchor is found exactly once at all
+  five, and the patched files' blobs are unchanged since `86ec6fa` except `slice-executor.md` (`c3f459c` →
+  `74df07a` at `8789a2f`: an example id and a doc-version sentence; both anchors held). Counts: S8's `result.md`.
+- **Files.** `README.md`, `PATCHES.md` (sections 0–10), two whole references (`explain-decomposition.md`,
+  `explain-chapter.md`) and create-phase's route text (`explain-route.md`, inserted by 1c, never shipped).
+  `explain-review.md` and `slice-executor.md` are patched in place. No contract or engine edit.
+- **The critic runs in the background.** The workspace dispatches every span in the background
+  (`reference/verdicts.md`; the smoke suite pins the absence of `run_in_background: false`), so the orchestrator
+  dispatches `knowledge:explain-critic` that way. The skill's §4.10 foreground rule (d58) is its lead's under
+  `claude -p`, where a background critic died after 600 s idle; `explain-chapter.md` says so. This departs from
+  S8's plan, which carried F1's foreground rule over.
+- **The release is a fragment.** Since v73 the bootstrap never hand-edits `WORKSPACE_VERSION` or a numbered
+  `CHANGELOG.md` section: the package writes `changelog.d/explain-research-pipeline.md` (summary line, bullets,
+  `**Migration notes.**`) and lands it with `build.py --release`. Supersedes d37's "a CHANGELOG entry, the next free
+  version".
+- **The bootstrap's `explain-critic` retires by content.** The payload file is `git mv`'d to
+  `tests/fixtures/v73/explain-critic.md` (the smoke suite never reads git history; v66's test plants
+  `tests/fixtures/v65/` the same way). `RETIRED_FILES` gains `(73, four hashes)`: the v66–v73 text and the v65
+  text, each at-root and after `nested_rewrite()` with no renames, so `--update` lists a host's unchanged copy
+  as stale (`/update-workspace` step 9 deletes it) and keeps an edited one. The version is the last release
+  that ships the file (main's `WORKSPACE_VERSION` just before `--release`).
+- **Chapters stay sequential.** `wave.md`: an explain phase declares nothing, so no wave runs chapters; the
+  carve-out (OQ2) is one research lead at a time, and the search cap is shared sequentially by the `DECOMP` and
+  every chapter in a session.
+- **Minted ids.** The bootstrap's minted phase ids (`P-7kq2`) have no position `N` for the plugin's §1 book
+  slug: the route suggests `p-7kq2` and the operator confirms it; teaching §1 minted ids is a plugin change, for
+  S10's handoff.
+- **Minimums.** Plugin 0.6.0; bootstrap v73 (`1f4aa7d`) or later (the anchors hold from `86ec6fa`, the release
+  steps need v73's fragments). The package tells the operator to raise `CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`
+  and never sets it (OQ4).
+- **Verified without touching the bootstrap.** Anchor counts and blob ids from `git show`/`ls-tree`; the text
+  patches applied in memory to `git show 1f4aa7d:` and the smoke suite's existing and new prose pins checked
+  against the result. The build, `--check`, the smoke suite and a fresh install were not run (the bootstrap is
+  read-only, and the rules forbid running its installer).
