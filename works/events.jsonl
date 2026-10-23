@@ -1388,3 +1388,11 @@
 {"ts": "2026-10-24T01:34:38+09:00", "type": "slice_status_changed", "slice": "P32.F4", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-24T02:54:44+09:00", "type": "executor_dispatched", "slice": "P32.F4", "phase": "P32", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": "wait rule, repeat guard, §4.9 clause, tidies 4-6; six Sonnet runs pass ($7.01 of $12)"}
 {"ts": "2026-10-24T02:54:44+09:00", "type": "slice_status_changed", "slice": "P32.F4", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-24T02:55:09+09:00", "type": "slice_status_changed", "slice": "P32.REVIEW", "old_status": "changes_requested", "new_status": "in_progress"}
+{"ts": "2026-10-24T03:28:14+09:00", "type": "executor_dispatched", "slice": "P32.REVIEW", "phase": "P32", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": "round 3 review_verdict changes_requested: F4 holds; quick's verifier model is not enforced on a non-Opus lead (f4c)"}
+{"ts": "2026-10-24T03:28:14+09:00", "type": "slice_status_changed", "slice": "P32.REVIEW", "old_status": "in_progress", "new_status": "changes_requested"}
+{"ts": "2026-10-24T03:28:14+09:00", "type": "phase_reviewed", "phase": "P32", "verdict": "changes_requested", "reviewer": "slice-executor-high"}
+{"ts": "2026-10-24T03:28:14+09:00", "type": "slice_created", "phase": "P32", "slice": "P32.F5"}
+{"ts": "2026-10-24T03:28:14+09:00", "type": "deferred_created", "deferred": "D75", "source": "P32.REVIEW"}
+{"ts": "2026-10-24T03:28:45+09:00", "type": "slice_status_changed", "slice": "P32.F5", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-24T03:28:45+09:00", "type": "slice_status_changed", "slice": "P32.F5", "old_status": "in_progress", "new_status": "pending", "stop_kind": "decision"}

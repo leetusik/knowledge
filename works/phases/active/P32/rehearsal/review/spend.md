@@ -60,3 +60,39 @@ and the run (PID 65755) were stopped, my own PIDs only; the port is free.
 Kept in `r2/`: `run.md`, `brief.md`, `plan.md`, `outline.md`, `trace.md`, `report.md`, `gaps-final.md`,
 `verify-r1-b1.md`, `verify-r1-b2.md`, `chapter.md` (the published source), `files.txt`, `evidence.md`, and
 `rerun/` (the unasked second run's `run.md` and `brief.md`). No `pages/`.
+
+## Round 3 (after P32.F4)
+
+Cap: **$8** for round 3. The rule is the same: each run's last `result` event's `total_cost_usd`, or the
+watchdog's estimate, whichever is higher. A resumed session's `total_cost_usd` is cumulative, so it counts only its
+own share. One run and one resume were planned.
+
+Isolation: round 2's harness, used as it is in `scratchpad/review2/` (token `rv2-token`). Only these changed: two new
+specs, a fresh stack `stack3` with its own `KB_ROOT`, and a fresh port, **:8923**. The scratch `XDG_CONFIG_HOME`,
+`XDG_STATE_HOME`, `KB_ROOT`, `KB_API_BASE_URL` and `KB_API_TOKEN` were checked with the skill's §2 resolver before
+each session. Both checks were `ok`: the scratch API and the scratch token. The rest:
+
+- `--setting-sources project`;
+- `--permission-mode manual --permission-prompts none`;
+- the deny rules on `//Users/sugang/.config/knowledge-kb/**`;
+- `--plugin-dir plugin`;
+- Claude Code 2.1.309;
+- `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`;
+- `watchdog2.py` (rv3a at $6, rv3b at $2);
+- no `--max-budget-usd`, and no permission-skipping flag;
+- legacy mode, no Gemini key, no push.
+
+The session was persisted (no `--no-session-persistence`), so that rv3b could `--resume` it.
+
+| # | Run | Lead | Cost | Running total |
+|---|---|---|---|---|
+| 4 | rv3a (`quick`, a pressure cooker, for a first-time user). It published v1 to :8923 at 03:07 and had `state: done` at 03:07:22. The process ended at 03:07:42. It was held 15 minutes: 0 lead wakeups, crons or monitors, one run id, the document at v1. See `r3/evidence.md` | sonnet | **2.06** (watchdog estimate; the last `result` event: 1.99) | **2.06** |
+| 5 | rv3b (rv3a's session resumed with the same words). 1 turn, 9 s, no tool call. It printed the report line and URL and stopped; the document stayed at v1 | sonnet | **0.26** (cumulative 2.25 less rv3a's 1.99) | **2.32** |
+
+**Round 3 total: $2.32 of $8.** No watchdog fired. The leak scan ran three times, as a baseline, after rv3a and after
+rv3b, over `scratchpad/review2/` and `~/.claude/projects`. Each time it found only the six known files. My own PIDs
+are all stopped: the scratch stack (PID 79100, :8923), rv3a (79175) and rv3b (80365). The port is free.
+
+Kept in `r3/`: `run.md`, `brief.md`, `plan.md`, `outline.md`, `trace.md`, `report.md`, `ledger.md`,
+`gaps-final.md`, `verify-r1-b1.md`, `body.md` (the published source), `files.txt`, `resume-rv3b.txt` and
+`evidence.md`. No `pages/`.

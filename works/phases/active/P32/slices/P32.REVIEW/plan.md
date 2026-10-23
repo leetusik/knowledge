@@ -1,5 +1,59 @@
 # P32.REVIEW — Review "Thorough research and critic in the explain pipeline"
 
+## Re-review (round 3, after P32.F4)
+
+Round 2 returned `changes_requested` with two findings, and P32.F4 fixed both. See `slices/P32.F4/result.md`
+and `rehearsal/f4/evidence.md`. This round is **focused**: re-run only what F4 changed, plus the guards.
+Rounds 1–2 stand otherwise.
+
+0. **First, `phase.md` is over budget (41,231 B of 40,960 B).** Move the long `## Decisions` entries, oldest
+   first, into `topics/build-decisions.md`. Leave one line each, with its id and a pointer. Never drop a
+   decision. Use `phase-section --replace` on `## Decisions` only. Get it under about 38 KB before you add
+   anything.
+1. **Validate again:**
+   - `skills_parity.py`, `plugin_parity.py` and `claude plugin validate plugin`;
+   - `python3 scripts/workflow.py validate`;
+   - the size: 156,887 B, 2,622 lines;
+   - the landing's two strings equal `wc -l web/public/SKILL.md`.
+2. **F4's text.** Read the card's stop rules, §3.2 step 3, §3.5 step 2, §4.9, §5, B2 and B6, and the README's
+   `quick` line. Check two things:
+   - the wait rule and the repeat guard are each stated once, and cited elsewhere;
+   - nothing contradicts §5's deliberate re-explain, d65's foreground rule for a subagent lead, or §9.1.
+3. **The running product.** Make one live Sonnet-lead `quick` run yourself, on round 2's harness copy, under
+   the same isolation (`CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`; never a permission-skipping flag), on a new
+   small subject:
+   - hold it 15 minutes after `done`: no lead `ScheduleWakeup`, `CronCreate` or `Monitor` call, one run id,
+     the document at v1;
+   - then resume the session with the same words: the done run's report line and URL, and a stop;
+   - F2's headline must hold: `path: plugin`, the verifier on a model other than the lead's, `plan.md`,
+     `outline.md` with `## Reader's task`, and `trace.md`.
+
+   **Cap: $8**, appended to `rehearsal/review/spend.md`. Run the leak scan after the run (the six known hits).
+   Never use `:8766`, `:3030`, `:8777`, `:8797` or production. Stop only your own PIDs.
+4. **Judge F4's observations.** Say for each whether it is a finding or a routed observation, and why:
+   - **f4c sent `knowledge:verifier` without `model: opus`, so a Sonnet lead was verified by Sonnet.** f2b2 did
+     the same once and caught it. This touches the headline "verified on another model", so weigh it with
+     care. If it is a finding, say what mechanical fix would make it hold whatever the lead writes (for
+     example the agent's frontmatter, or a second verifier agent pinned to Opus), and propose a fix slice.
+   - **f4c wrote no `report.md`** and left `state: running` after it published.
+   - **The plan is written after the research.**
+   - **f4d searched while probe A was running.**
+5. **On pass:**
+   - **Write the qa `## Regression Checklist` gate-section version.** Round 2's four lines are in `result.md`;
+     update them for F4, adding a no-wakeup line. Use `doc-new-version --doc qa --summary "..." --source
+     P32.REVIEW`, edit only the returned `edit_path`, then `rebuild-docs`.
+   - **Return the walkthrough.** Round 2's draft, updated, under the stop rules: about 2k characters, at most
+     about 5 decisions, and one "decided as drawn" list.
+     - OQ6 and OQ9 go in as one decision: rotate the token.
+     - Mention that three scratch sessions F4 kept for its resumes sit in `~/.claude/projects/` (names ending
+       `-f4a-work`, `-f4c-work`, `-f4e-work`). They hold only a scratch token, and the operator may delete
+       them.
+   - **List the deferred-job candidates** for the orchestrator to file. D69–D74 are filed.
+
+Put round 3 above round 2 in `result.md`, its verdict block first. No state command, no commit, and no source
+edits; the qa gate-section version is the one exception. Remove the round-3 note from `phase.md`, and rewrite
+`## Now`.
+
 ## Re-review (round 2, after P32.F2 and P32.F3)
 
 Round 1 returned `changes_requested` with three findings. P32.F2 fixed findings 1 and 3, in two revisions (d70,

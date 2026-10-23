@@ -224,6 +224,12 @@ A decision superseded later is replaced in both places. Links are relative to th
 
 **Rehearsal harness (S7):** `claude -p` runs never carry a `--max-budget-usd` near the real cost, because the lead reads it and stops itself (`STOPPED: budget`, new-g session 2); a watchdog estimating cost from the streamed per-message usage (dedupe by message id, list prices; within ≈ 1% of `total_cost_usd`) SIGTERMs the session instead, and a killed session's cost is that estimate (its last `result` event lags). An unattended background agent's denial carries reason `asyncAgent`. The old arm ran under the new skill's printed rules (its `/tmp` edits were denied and it worked around them): a confound that favours neither arm's chapter.
 
+## d56 · OQ7: reader-first, fix slice F1 (operator, 2026-10-23)
+
+_Moved verbatim from `phase.md` at P32.REVIEW round 3 (the notebook over budget)._
+
+**d56 OQ7 (operator, 2026-10-23):** "make it new one also helpful and reading easy". S7 closes on C; fix slice P32.F1 (before S8) shapes D6–D7 around the brief's reader task (task deliverables, readable-prose rules, a reader pass) and adds the critic's `reader` category, then rewrites C and G from their dossiers, judged blind against the old chapters (target: new wins or ties Helpfulness and Readability, keeps Comprehensiveness and Insight); `claude -p` cap $45; the phase estimate rises to ≈ $350–380.
+
 ## d57 · Reader-first writing (F1; §3.10, §4, §4.2, §9.3)
 
 **D6, §3.10, "the reader's path".** `outline.md` opens with `## Reader's task`:
@@ -350,6 +356,12 @@ The operator: "I don't care about the token spending for now".
   or ties Readability on both subjects and Helpfulness, Comprehensiveness and Insight still hold, v2 stays the rules
   and F1 returns `done`.
 
+## d62 · OQ10: rules v2 stand (operator, 2026-10-23)
+
+_Moved verbatim from `phase.md` at P32.REVIEW round 3 (the notebook over budget)._
+
+**d62 OQ10 (operator, 2026-10-23):** "accept. it's kinda cost for winning the other 3 isn't it": rules v2 stand; the D6 word budget stays a guide, not binding; the length is the cost of the Helpfulness, Comprehensiveness and Insight wins. F1 closes; OQ9 goes to the walkthrough with OQ6.
+
 ## d63 · The bootstrap package (S8; `package/`)
 
 - **Pin.** Text-anchored at bootstrap `main` = `1f4aa7d`, the workspace v73 release. `main` moved four times while
@@ -448,6 +460,12 @@ was not run (the bootstrap is read-only).
   found once; only `installer/main.py` (`WORKSPACE_VERSION = 74`) and `tests/retrofit_smoke.sh` (Test 10h) changed
   among the patched files. The package stays pinned to `1f4aa7d`; `RETIRED_FILES`' version is 74 at `97e1c38`.
 
+## d69 · OQ11 → accept (operator, 2026-10-23)
+
+_Moved verbatim from `phase.md` at P32.REVIEW round 3 (the notebook over budget)._
+
+**d69 OQ11 → accept (operator, 2026-10-23):** rehearsal 2 stands as it ran; chapter revision and the commit-time freeze check are left to the first real book. No executor tries `--allow-dangerously-skip-permissions` again (S9 probe p3, refused by the classifier, never ran).
+
 ## d70 · `quick` keeps the agents and the map; the dossier line before publishing (F2; card, §1, §3.2, §3.3, §3.9, §4.9, §8, §9.1, B6)
 
 - **Cause of run a's `path: sequential`** (P32.REVIEW finding 1): a well-supported suspect, not located; the
@@ -495,6 +513,12 @@ was not run (the bootstrap is read-only).
   verifier 600 s later ("Background tasks still running 10m after the last turn"), so the run ended at D3v,
   resumable. The critic is foreground for this reason (§4.10); waves and verifier batches under a headless
   session have no such rule. Both are reported, not fixed (d71 allowed one revision).
+
+## d71 · OQ12 → (a) (operator, 2026-10-24)
+
+_Moved verbatim from `phase.md` at P32.REVIEW round 3 (the notebook over budget)._
+
+**d71 OQ12 → (a) (operator, 2026-10-24, "/do-whole-phase with a"):** F2 resumes for one more bounded revision (D0b: a probe's own command form is the probe's error, probe sent once more; the dossier check and the search total move into the publish step, one report line) and one rerun per case, ≈ $5 within the $20 cap; the growth limit ≈ 2 KB.
 
 ## d72 · The wait rule and the repeat guard; §4.9's verifier clause (F4; card, §3.2, §3.5, §4.9, B2, README)
 

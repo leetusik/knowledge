@@ -1,0 +1,14 @@
+# rv3a: 20261024-0259-pressure-cooker (mtime, bytes, path; pages/ not kept)
+03:00:29    582 ./brief.md
+03:02:44  12087 ./findings/r1-all.md
+03:03:02    805 ./plan.md
+03:03:04    624 ./library.md
+03:05:32  17360 ./verify/r1-b1.md
+03:06:01   1605 ./ledger.md
+03:06:04    472 ./gaps/final.md
+03:06:08    991 ./outline.md
+03:06:50    759 ./trace.md
+03:07:05   7302 ./body.md
+03:07:20   1372 ./report.md
+03:07:21   1036 ./run.md
+pages/: 16 files (not kept)

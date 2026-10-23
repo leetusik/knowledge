@@ -1,5 +1,258 @@
 # P32.REVIEW result: the phase review
 
+## Round 3 (after P32.F4)
+
+- **status:** done
+- **tier:** high
+- **model:** opus
+- **effort:** xhigh
+- **review_verdict:** changes_requested. One finding, one proposed fix slice:
+  1. **The skill does not enforce `quick`'s verifier model.** On a non-Opus lead, nothing mechanical keeps `quick`'s verifier off the lead's model. The text also lets a same-model return stand as "degraded" instead of being sent again. f4c published a Sonnet document verified by Sonnet, and its report said only "weaker". Fix: **P32.F5** (`fix`, risk `high`). The verifier gets the critic's same-model guard.
+- **summary:**
+  - **F4 holds, in the text and live.**
+    - The wait rule and the repeat guard are each stated once, in the card. §3.2 step 3, §3.5 step 2 and the card's "ask nothing" bullet cite them.
+    - Nothing contradicts §5's deliberate re-explain, d65's foreground rule for a subagent lead, or §9.1.
+  - **My Sonnet `quick` run** (rv3a, a pressure cooker):
+    - 0 lead `ScheduleWakeup`, `CronCreate` or `Monitor` calls;
+    - one run id, and the document at v1 through a 15-minute hold after `done`.
+  - **F2's headline held:** `path: plugin`; `knowledge:verifier` on Opus; `plan.md`; `outline.md` with `## Reader's task`; `trace.md`.
+  - **The same words, resumed** (rv3b): the report line and URL, then a stop. One turn, no tool call.
+  - **Of F4's four observations, one is a finding** (the verifier model). The other three are routed:
+    - the unclosed run and the late plan go to D72;
+    - the early search stays an observation.
+  - **Step 0:** `phase.md` went from 41,225 B to 32,752 B. Every `## Decisions` line is now a one-line summary. All 72 decisions are in full in `topics/build-decisions.md`; d56, d62, d69 and d71 were moved there verbatim.
+- **files_changed:**
+  - `works/phases/active/P32/slices/P32.REVIEW/result.md`: this round, above round 2.
+  - `works/phases/active/P32/phase.md`, via `phase-section`: `## Decisions` (step 0), `## Notes for later slices` and `## Now`.
+  - `works/phases/active/P32/topics/build-decisions.md`: d56, d62, d69 and d71 added verbatim, each in id order.
+  - `works/phases/active/P32/rehearsal/review/spend.md`: round 3 appended.
+  - `works/phases/active/P32/rehearsal/review/r3/`:
+    - the run's files: `run.md`, `brief.md`, `plan.md`, `outline.md`, `trace.md`, `report.md`, `ledger.md`, `gaps-final.md`, `verify-r1-b1.md`, `body.md`;
+    - `files.txt`, `resume-rv3b.txt` and `evidence.md`.
+- **validation:**
+  - `python3 scripts/skills_parity.py`: PASS. The three copies are in body parity, the web copy is byte-identical, and the five agents match Part B.
+  - `python3 scripts/plugin_parity.py`: PASS.
+  - `claude plugin validate plugin`: passed, with one warning (ICON_MISSING).
+  - `python3 scripts/workflow.py validate`: passed. Its only warnings were there before: the P22/P26 kinds, the consolidation P28/P30/P31 owe, stale docs, and oversized doc sections.
+  - Size: 156,887 B in the plugin and web copies, 156,261 B in `.agents`. `wc -l`: 2,622 for the plugin and web copies.
+  - The landing: `content.ts` line 251 (`lede`, "a 2,622-line skill") and line 261 (`pane.meta`, "2,622 lines") both equal `wc -l web/public/SKILL.md`.
+  - `phase-scope P32`: `fc5ff68..e80ef98`, 29 commits, still the same 14 product files.
+  - Live: rv3a passed 12 of 14 under F2's `check.py`. The two failures are F2's routed misses (D72). The wait rule showed 0, 0 and 0 over the 15-minute hold, with one run id and v1. rv3b, the repeat, passed.
+  - Spend: **$2.32 of $8**: rv3a $2.06 (the watchdog estimate), rv3b $0.26.
+  - Leak scan: baseline, after rv3a and after rv3b. Each found only the six known files. `rehearsal/review/` has 0 hits.
+  - My own PIDs are all stopped: stack 79100 (:8923, now free), rv3a 79175 and rv3b 80365.
+  - Not used: Aside. I ran no command in the bootstrap repo and never touched :8766, :3030, :8777, :8797 or production.
+- **deviations:**
+  1. **Harness copy.** I ran round 2's harness in place (`scratchpad/review2/`, token `rv2-token`) rather than a fresh copy. Only the specs, the stack's name and `KB_ROOT` (`stack3/`) and the port (:8923) were new. I copied F4's `monitor.py` and `count.py` beside it.
+  2. **Session persisted.** rv3a ran without `--no-session-persistence`, so that rv3b could `--resume` it, as F4 did. Its folder under `~/.claude/projects/` carries only the scratch token (see the draft walkthrough).
+  3. **Pass-only steps not taken.** The qa `## Regression Checklist` version and the walkthrough are pass-only, so neither was written. Their round-4 drafts are below.
+- **doc_versions:** none — deferred to a docs phase. On `changes_requested` the gate section is not written. `## Operator Runtime` needs no version, because the runtime did not change.
+- **explain:** not written — run /explain for this phase
+- **walkthrough:** none, because the verdict is `changes_requested`. The draft for round 4 is below.
+- **deferred-job candidates:** two new ones and one carried over (*Deferred-job candidates*). D69–D74 are filed.
+
+### Finding
+
+#### 1. Nothing enforces `quick`'s verifier model on a non-Opus lead → P32.F5
+
+**What happened** (f4c, `rehearsal/f4/evidence.md`):
+
+- The Sonnet lead sent `knowledge:verifier` without `model: opus`, and it ran on `claude-sonnet-5-5`, the lead's own model. In `quick` the lead is the researcher, so the claims were checked by the model that found them.
+- The report said "it ran on the same model as me, so this check is weaker". It did not call this a defect, though §4.9 says it is one. `run.md` stayed at `verifier: pending`. The document was published.
+
+**How often.** Ten Sonnet `quick` runs on the plugin path reached D3v: f2a, f2b, f2b2, f2a3, f2b3, rv2a, f4a, f4c, f4e and rv3a.
+
+- Eight sent the verifier with `model: opus` the first time.
+- **f2b2 missed and caught it.** It read the `model:` line, re-ran the batch on Opus, and its ledger cites that batch.
+- **f4c missed and published.**
+
+**Why it is a finding, not a routed observation:**
+
+- **It is the headline.** The intent asks that "a different model re-opens the sources". The operator's own clarification is "a different model from the researcher". F2's `quick` keeps "the verifier agent on another model": the product.md `## Doc impact` line, the README's `quick` line, and the qa line drafted below.
+- **It is quiet.** When the guarantee fails, the reader gets a document verified by the model that wrote its claims, and the report calls it only "weaker". The intent's "loud when it fails" is broken in that case.
+- **The text has a gap of its own.**
+  - §3.3 says "a verifier that reports the researchers' model makes `verifier: same model (degraded)`". That lets a lead record the miss and go on.
+  - Nothing says to send the batch again on the other model, as §4.10 says for the critic ("`blocked` for the model: correct it, dispatch once more").
+  - f2b2 did the right thing on its own; f4c followed the text as it reads.
+- **The phase already guards the critic mechanically** (d33, B5): the critic gets `writer_model:` and refuses to run on that model unless `same-model: accepted`. The verifier is the only role whose model separation rests on the lead remembering a parameter. Only `quick` exposes this: in `full` the agents' frontmatter (researchers on Opus, the verifier on Sonnet) gives the separation by itself.
+- **This differs from round 2's routed misses.** The search total and the dossier line are bookkeeping, and the reader's document is the same either way. This one changes how the document's claims were checked.
+- **It is cheapest now.** Plugin 0.6.0 is unreleased.
+
+**The mechanical fix,** which holds whatever the lead writes on the call:
+
+- **(a) B4's dispatch** gains `researchers_model: <id>[ · same-model: accepted]`. Before any check, the verifier compares its own model id (the one B6 makes it return first) with that id. If they match, it returns `status: blocked: same model as the researchers`; a missing `researchers_model:` is the same block. The exception is `same-model: accepted`, sent only by a host that cannot name a model. This is B5's pattern, word for word where possible. `verifier.md` is regenerated with `skills_parity.py --write-agents`.
+- **(b) The dispatch sites** fill the field:
+  - §3.6 D3v and §3.8 D5 give the researchers' `model:` lines;
+  - §3.9 gives the lead's own id;
+  - §9.2–§9.3 inherit both.
+
+  A `blocked` for the model means: correct `model:` on the call and dispatch once more, as §4.10 step 1 does. §3.3's `same model (degraded)` is left only to the `same-model: accepted` case.
+- Why not the other levers:
+  - **The frontmatter** (`model: opus`) would break `full`, where the researchers are on Opus.
+  - **A second agent pinned to Opus** (`knowledge:verifier-opus`) still leaves the lead to pick the right name. That is the same slip f4c made.
+  - **The guard** makes a wrong dispatch a loud `blocked`, which the lead must answer before it can go on.
+
+**Proposed fix slice: P32.F5, kind `fix`, risk `high`.**
+
+- Named trigger: a wide blast radius. B4 is a shared role contract, dispatched from D3v, D5, `quick` and the book's top-ups, and regenerated into an agent. The change also carries a headline guarantee.
+- The text it repairs is S7's and F2's, both `tier: high`.
+- Scope, in all three copies plus `plugin/agents/verifier.md`:
+  - (a) and (b) above;
+  - optionally, the card's wait bullet scoped to "a background agent", so that §4.10's foreground critic reads as consistent with it (the observation below);
+  - if `wc -l` moves, the two strings in `content.ts` (F3's widened scope; D74 is not done).
+- Growth: about 0.5 KB, keeping under D70's ≈ 160 KB trigger.
+- Validation:
+  - both guards and `claude plugin validate plugin`;
+  - **a direct probe:** a Sonnet `claude -p` session dispatches `knowledge:verifier` on 2–3 of rv3a's claims (`rehearsal/review/r3/`), first with `researchers_model: claude-sonnet-5-5` and no `model:` (expect `blocked`), then with `model: opus` (expect a verify file from `claude-opus-5-5`);
+  - one Sonnet `quick` run, with F2's headline and F4's hold;
+  - a leak scan after each;
+  - ≈ $5–8, under this harness.
+
+### F4's text (check 2)
+
+| Where | What it says | Stated once, cited elsewhere? | Contradiction? |
+|---|---|---|---|
+| The card's stop rules (l. 87–96) | The wait rule: "wait only by ending your turn … no `ScheduleWakeup`, no `CronCreate`, no monitor, no sleep or poll loop"; a subagent lead "waits in the foreground (§3.2)". The repeat guard: same words as a finished run (report given or `state: done`) start nothing; interactive asks once (a v2 or nothing), headless prints the report line and stops; a re-explain needs new words or that yes | Yes. Each is stated only here. `grep` finds `ScheduleWakeup`/`CronCreate` nowhere else, and "repeat" only in the card's "ask nothing" bullet (l. 68: "a repeat's question (below)") | None with §9.1: "Interactive (§9.1's test)" reuses §9.1's test of `AskUserQuestion` being among the tools |
+| §3.2 step 3 (l. 395–400) | "End your turn and wait for its notification (the card's wait rule)"; a subagent lead sends A in the foreground | Cites it | None with d65: the subagent lead's foreground rule is kept, in the card, in §3.2, in §3.5 and in §9.2 (l. 1400) |
+| §3.5 step 2 (l. 585–588) | "every agent in the background, then end your turn and wait (the card's wait rule; a lead that is itself a subagent, §3.2: in the foreground, still in one message …)" | Cites it | None |
+| §4.9 (l. 1101–1107) | "a verifier played by you, or on the researchers' model (in `quick`, yours) … is a defect" | — | None. It agrees with B4, D3v, §3.3 and §3.9, and round 2's finding 2 is fixed. But see the finding: §3.3 lets the same case stand as "degraded" |
+| §5 (l. 1189, 1247–1253) | A loose document's re-explain uses `--new-version`; a 409 asks the user, and "with nobody to ask, `FAILED: publish`" | The card's "ask nothing" bullet names "§5's 409" beside the repeat's question | None. A deliberate re-explain in new words runs "as any other (§3.1's prior)", as f4d showed |
+| §4.10 step 1 (l. 1121) | The critic is dispatched "in the foreground, and wait" | — | **Observation, not a contradiction.** The card's bullet reads "Wait only by ending your turn" with no "background", and §4.10 waits on a foreground call. The prohibitions are what matter, and a foreground call has no notification to wait for. One word ("Wait for a background agent only …") would close it; it is offered to F5 |
+| B2 (l. 1612) | The return ends `queries: <the greps and git queries that mattered>` | — | None. B6's `searches: <n>` (l. 2095) is now every role's only `searches:` line, and `code-researcher.md` is regenerated (parity PASS). Round 2's candidate 4 is done |
+| B6 (l. 2091–2095) | "The lead checks it, because a verifier and a critic must run on a model other than the work they check" | — | None. It names the check but gives no action when it fails, which feeds the finding |
+| README (l. 44–47) | `quick` "keeps the probe agents, the plan, the findings and the reader's outline in the same dossier, and one batch by the verifier agent on another model" | — | None. Round 2's candidate 6 is done |
+| §3.2's folder clause (l. 451–456) | A role's denied call stops the run in its brief's form, on a path the block names (including a code researcher's `git` in the working folder). Another form is the role's error, another path the dispatch's | — | None. Round 2's candidate 5 is done |
+
+Line 93 of the card runs past the file's ~90-column wrap. That is cosmetic, and the same in all three copies.
+
+### The running product (check 3)
+
+**The run:** rv3a, a Sonnet lead, `quick`, "how a pressure cooker cooks food faster and how to use one safely (reader: someone using a stovetop or electric pressure cooker for the first time)", in an empty scratch folder. This is a new subject. The isolation is round 2's (`rehearsal/review/spend.md`, round 3). Evidence: `rehearsal/review/r3/evidence.md`.
+
+- **The wait rule (F4 a):** the lead ended its turn at each wait (4 result events). It made 0 `ScheduleWakeup`, `CronCreate` or `Monitor` calls, and so did the agents.
+  - `state: done` came at 03:07:22, and the process ended 20 s later.
+  - Nothing happened in the next 15 minutes: one run id, and the stack held one document at `version: 1`.
+- **The repeat guard (F4 b):** rv3b resumed the session with the same words. It ran one turn in 9 s, with no tool call, and printed:
+  - `PUBLISHED (quick) — How a pressure cooker cooks faster, and how to use one safely`, the URL and `· v1`;
+  - "This request is word for word the one the run above already finished. I haven't started a new run …", with the hint that a v2 needs new words.
+
+  The document stayed at v1. This is the headless branch, exactly; unlike f4f, it asked no question.
+- **F2's headline** (`check.py`, 12 of 14):
+  - `path: plugin`;
+  - the two haiku probes;
+  - `knowledge:verifier` sent with `model: opus`, which ran on `claude-opus-5-5` (14 claims: 10 supported, 3 partial, 1 needs-rewrite);
+  - `plan.md`, `findings/r1-all.md`, `library.md`, `verify/r1-b1.md`, `gaps/final.md` and `trace.md`;
+  - `outline.md` opening `## Reader's task`, with two tasks and their deliverables, absent from the published source;
+  - the publish went to :8923 only.
+- **The two failures are F2's routed misses (D72):** `run.md` reads `searches: 3`, against 4 in the transcript; and `run.md` has no dossier line, though the report says "dossier complete" in prose.
+- **Again, all routed:**
+  - `plan.md` was written 18 s after the findings file. That makes 3 of 3 recent Sonnet runs.
+  - `run.md`'s mode block was never updated: `verifier: pending …` and an empty `## Log`. This run did close with `state: done` and `report.md`, unlike f4c.
+
+### F4's observations, judged (check 4)
+
+1. **f4c's verifier on the lead's model:** a **finding** (above).
+2. **f4c wrote no `report.md`, and left `run.md` at `state: running` (`stage: D2 research`) after it published:** **routed** to D72's family, as a new candidate (below).
+   - It is bookkeeping. The user saw the printed report, and the document is right.
+   - The repeat guard no longer depends on `state: done` (F4 widened its trigger).
+   - It has one real edge. §3.3's `resume` with no id picks "the newest `run.md` … whose `state:` is not `done`", so a later bare `resume` could pick this published run and carry on from D2. That needs a deliberate `resume` by the user, and rv3a closed its run properly.
+   - So it is a deferred job, not a finding: close the run mechanically at publish, so `resume` never picks a published run.
+3. **The plan is written after the research:** **routed to D72.** Round 2's candidate 1, filed as D72, already proposes flagging a `plan.md` newer than the findings it plans, or under §3.4's 8 questions.
+   - It is now 3 of 3 recent Sonnet `quick` runs (rv2a, f4a, rv3a).
+   - The file and its questions exist, and `full`'s waves cannot start without the plan's angles. So "research planned first" holds structurally where the intent asks for it by default, and in `quick` it holds in form.
+   - Not a finding.
+4. **f4d searched while probe A ran:** **an observation**, with no job.
+   - It happened once, in a deliberate v2 (a resumed session).
+   - The probe's purpose (finding a denied call before research) is not defeated, because the lead's own search would surface a denial itself.
+   - The ordering is the same Sonnet-ordering family as 3.
+
+f4f's question in prose under `-p` is an observation too. It ran nothing and the process ended; rv3b used the headless form exactly.
+
+### Gate stages 3–5
+
+- **The first-time walk** (stage 3), as a reader:
+  - rv3a's chapter is 1,147 words. It opens on why the cooker is faster, gives a "Before you lock the lid" and "When the cooking time ends" checklist, 4 quiz items and 3 sources. It attributes its one thin figure (121 °C, from one physics site).
+  - The resumed session's reply is clear, and tells the user how to ask for a v2.
+  - Two things read wrong:
+    - `run.md` still says `verifier: pending`, though the report says Opus (routed, D72);
+    - f4c's "weaker" verification (the finding).
+- **The checklist** (stage 4): the boundary is still the same 14 files.
+  - Inside, 1: `python3 scripts/workflow.py validate`, re-run here, passes.
+  - Outside, 27. The diff behind this is `phase-scope P32`: no `server/`, `cli/` or `web/src/` file except `content.ts`, which feeds only the marketing landing, and that has no line.
+- **Operator questions** (stage 5):
+  - OQ6 and OQ9 stay open, for the walkthrough as one decision: rotate the token.
+  - OQ1–OQ5, OQ7, OQ8, OQ10, OQ11 and OQ12 are resolved, and each collapsed line counts as routed.
+  - This round raises no new question.
+- **`## Doc impact`:** F4's two lines are there: product.md (the wait rule and the repeat guard) and architecture.md (B2's `queries:`, the denied-call rule). F5 will owe one architecture.md line, for the verifier's guard.
+- **The notebook against the logs:** F4's d72 is in `## Decisions` and in full in `topics/build-decisions.md`. Step 0 dropped no decision: all 72 have a line, and all 72 have a full entry.
+
+### The qa lines for round 4's pass
+
+```
+- [ ] `python3 scripts/skills_parity.py` and `python3 scripts/plugin_parity.py` PASS: the three explain-skill
+      copies in body parity (the web copy byte-identical) and the five `plugin/agents/*.md` bodies equal to
+      Part B (P32)
+- [ ] A `quick` single document under `claude -p` (scratch `XDG_*`/`KB_*`, a scratch stack,
+      `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`), on an Opus and on a Sonnet lead: `run.md` shows `path: plugin`;
+      the dossier holds `plan.md`, `findings/`, `library.md`, a `verify/` file whose `verifier:` model differs
+      from the lead's, `gaps/final.md`, `outline.md` opening `## Reader's task` (absent from the published
+      chapter) and `trace.md` (P32)
+- [ ] The same session, held 15 minutes after `state: done`: the lead made no `ScheduleWakeup`, `CronCreate` or
+      `Monitor` call, one run id exists and the document stays at v1; resumed with the same words, it prints
+      that run's report line and URL and starts no run (P32)
+- [ ] `/knowledge:explain <a subject> book` under `claude -p` in a folder that is not a workflow workspace:
+      one document with every stage of its run kept, and the report carries the book suggestion; no phase or
+      book is created (P32)
+- [ ] The landing's skill pane: the line count in `web/src/content/marketing/content.ts` (`lede`, `pane.meta`)
+      equals `wc -l web/public/SKILL.md` (P32)
+```
+
+After F5, the second line may also name the guard: "`knowledge:verifier` sent without `model:` on the lead's model returns `blocked` and is re-sent".
+
+### Draft walkthrough (for round 4, after P32.F5)
+
+> **P32: explain researches first, verifies on another model, writes for the reader.** "accept" signs everything here.
+>
+> 1. **Release plugin 0.6.0.** Push `main` (`plugin/**`, version 0.6.0) and deploy the web, so `/SKILL.md` and the landing's line count ship together. Nothing has been pushed or deployed. Your word.
+> 2. **Rotate the KB API token** (OQ6 + OQ9). Recommended:
+>    - it sits in six old transcripts (two glide-ilab, one glide, one changple5, one knowledge subagent, one bootstrap);
+>    - scrubbing them is unreliable, and rotating kills every copy;
+>    - mint a new ingest key at knowledge.hi2vi.com, put it in `~/.config/knowledge-kb/config.json`, and revoke the old one.
+> 3. **Run it once yourself, interactively,** on a small private subject:
+>    - `/knowledge:explain <subject> quick`; leave it open 15 minutes (no second run), then send the same words again: it should ask once, a v2 or nothing;
+>    - `/knowledge:explain <a big subject> book` outside a workspace, to see §9.1's ask.
+> 4. **Read one rehearsal pair** (OQ10): `rehearsal/r1/chapters/c-old.md` against `rehearsal/r1b/chapters/c-new-v2.md`.
+> 5. **After the release, relay** `works/phases/active/P32/handoff.md` to the bootstrap.
+>
+> Decided as drawn:
+>
+> - The skill is ≈ 157 KB, about 12 KB over OQ5's ≈ 145 KB. The shrink is D70.
+> - Sonnet leaves `run.md`'s bookkeeping unwritten (the search total, the dossier line, sometimes `state: done`) and writes its `quick` plan after the research. The files exist. A mechanical line is D72.
+> - Under `claude -p`, a background batch is stopped at 10 idle minutes. This is D73; interactive runs wait.
+> - Scratch session folders sit in `~/.claude/projects/`: names ending `-f4a-work`, `-f4c-work`, `-f4e-work` and `-review2-runs-rv3a-work` (plus an empty `-rv2a-work`). They hold only scratch tokens; delete them at will.
+> - The landing's ticks and lede stay as written. `executors.toml`'s xhigh rows stay (d03). `create-phase` gives a book's cost in words.
+
+### Deferred-job candidates (for the orchestrator to file)
+
+D69–D74 are filed.
+
+1. **explain: close the run mechanically at publish.**
+   - What: a tool the lead already runs at publish sets `run.md`'s `state:` (to `done`, or a `published` mark that §3.3's bare `resume` skips) and writes `report.md` from the printed report. For example, `pagetext.py` beside its `--payload`. The alternative is to widen D72's scope to cover it.
+   - Reason: f4c published and printed its report but left `state: running` at `stage: D2 research` with no `report.md`. A later bare `resume` would pick that run and carry on from D2. f2b2 also published with `run.md` still at D2, and fixed it only when a later notification woke it.
+   - Trigger: D72's job, or a `resume` that picks an already-published run.
+2. **explain book: the outline gate's report runs about 3.7k characters, against the ≈ 2k stop rule** (round 1's candidate 2 and round 2's candidate 7, not yet filed).
+   - Trigger: the next bootstrap update that touches `explain-decomposition.md`.
+3. **explain: the card's wait bullet scoped to background agents**, only if F5 does not take it.
+   - Trigger: the next card edit.
+
+The plan written after the research is routed to D72, which already proposes that check. f4d's early search and f4f's prose question need no job.
+
+### Observations (not findings)
+
+- **Skill size.** 156,887 B, against OQ5's accepted ≈ 125–145 KB, so about 12 KB (8%) over. F4 added 1,097 B, within its +1,536 limit. F5 adds about 0.5 KB, under D70's ≈ 160 KB trigger. Not a finding: the growth was operator-directed and is tracked (D70).
+- **The wait rule and §4.10's foreground critic.** The bullet lacks the word "background". The prohibitions hold, and a foreground call has no notification to wait for. This is offered to F5 as a tidy, or candidate 3.
+- **rv3a's research was thin but sound.** It used 3 sources: a university physics page, a university extension handout and a maker's manual. The gate passed: must-cover 2/2, load-bearing 3/3. The one single-source figure is attributed. This is defensible for `quick`.
+
 ## Round 2 (after P32.F2 and P32.F3)
 
 - **status:** done

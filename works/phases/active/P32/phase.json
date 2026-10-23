@@ -9,9 +9,9 @@
   "completed_at": null,
   "review": {
     "status": "changes_requested",
-    "reviewed_at": "2026-10-24T01:33:51+09:00",
+    "reviewed_at": "2026-10-24T03:28:14+09:00",
     "reviewer": "slice-executor-high",
-    "note": "round 2: F2 and F3 hold; 1) a Sonnet quick lead's own ScheduleWakeup re-sent the run after done and started an unasked v2 run (-> F4, high); 2) F2's §4.9 verifier-defect sentence contradicts B4 in full on a Sonnet lead (-> F4)"
+    "note": "round 3: F4 holds (no wakeups, one run id, same-words resume stops); 1) nothing enforces quick's verifier on a model other than the researchers' — f4c's Sonnet lead was verified by Sonnet and published, reported only as weaker (-> F5, high)"
   },
   "acceptance": {
     "required": true,
