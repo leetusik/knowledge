@@ -1359,3 +1359,12 @@
 {"ts": "2026-10-23T15:50:03+09:00", "type": "slice_status_changed", "slice": "P32.S10", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-23T15:53:03+09:00", "type": "executor_dispatched", "slice": "P32.S10", "phase": "P32", "kind": "docs", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-23T15:53:03+09:00", "type": "slice_status_changed", "slice": "P32.S10", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-23T15:54:29+09:00", "type": "slice_status_changed", "slice": "P32.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-23T16:17:38+09:00", "type": "executor_dispatched", "slice": "P32.REVIEW", "phase": "P32", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": "review_verdict changes_requested: Sonnet quick skipped the plugin path; landing line count stale; Doc impact incomplete"}
+{"ts": "2026-10-23T16:17:38+09:00", "type": "slice_status_changed", "slice": "P32.REVIEW", "old_status": "in_progress", "new_status": "changes_requested"}
+{"ts": "2026-10-23T16:17:38+09:00", "type": "phase_reviewed", "phase": "P32", "verdict": "changes_requested", "reviewer": "slice-executor-high"}
+{"ts": "2026-10-23T16:17:38+09:00", "type": "slice_created", "phase": "P32", "slice": "P32.F2"}
+{"ts": "2026-10-23T16:17:38+09:00", "type": "slice_created", "phase": "P32", "slice": "P32.F3"}
+{"ts": "2026-10-23T16:17:46+09:00", "type": "deferred_created", "deferred": "D69", "source": "P32.REVIEW"}
+{"ts": "2026-10-23T16:17:46+09:00", "type": "deferred_created", "deferred": "D70", "source": "P32.REVIEW"}
+{"ts": "2026-10-23T16:17:46+09:00", "type": "deferred_created", "deferred": "D71", "source": "P32.REVIEW"}

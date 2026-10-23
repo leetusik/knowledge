@@ -1,8 +1,8 @@
 {
   "current_phase": "P32",
-  "current_slice": "P32.REVIEW",
-  "next_slice": null,
+  "current_slice": "P32.F2",
+  "next_slice": "P32.F3",
   "waiting_on_operator": null,
   "mode": "phase",
-  "updated_at": "2026-10-23T15:53:03+09:00"
+  "updated_at": "2026-10-23T16:17:46+09:00"
 }

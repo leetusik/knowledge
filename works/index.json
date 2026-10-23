@@ -140,17 +140,17 @@
       "id": "P32",
       "name": "Thorough research and critic in the explain pipeline",
       "objective": "make research a separate multi-agent stage (plan, parallel researchers, claim ledger, independent verification, gap rounds) that every chapter is written from and checked against, for both the single document and the book; quality over efficiency",
-      "status": "planned",
+      "status": "in_progress",
       "order": 12,
       "path": "works/phases/active/P32",
-      "review_status": "pending",
-      "current_slice": "P32.REVIEW",
-      "slice_count": 14,
+      "review_status": "changes_requested",
+      "current_slice": "P32.F2",
+      "slice_count": 16,
       "done_slice_count": 13
     }
   ],
-  "deferred_open_count": 49,
+  "deferred_open_count": 52,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-23T15:53:03+09:00"
+  "last_rebuilt_at": "2026-10-23T16:17:46+09:00"
 }
