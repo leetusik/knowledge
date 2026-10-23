@@ -3,12 +3,12 @@
   "phase_id": "P32",
   "name": "explain waits only by ending its turn, never re-runs itself; the verifier-defect clause matches B4",
   "kind": "fix",
-  "status": "todo",
+  "status": "done",
   "order": 117,
   "depends_on": [],
   "created_at": "2026-10-24T01:33:51+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-24T01:34:38+09:00",
+  "completed_at": "2026-10-24T02:54:44+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "wait rule (no wakeup, cron, monitor or loop) and repeat guard (same words after done: ask once, or report and stop headless); §4.9 matches B4; tidies; 0 wakeups in 3 Sonnet runs, guard held twice, a v2 in new words still runs ($7.01); landing 2,622",
   "validation": {
     "required": [],
     "last_run": null,

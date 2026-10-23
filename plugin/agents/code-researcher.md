@@ -72,7 +72,7 @@ settle a disagreement.
       Q<id>: answered | thin | not found | contested — <claim ids>
     conflicts: <claim id>: <one line> | none
     unused leads: <url or path> — <why> | none
-    searches: <the greps and git queries that mattered>
+    queries: <the greps and git queries that mattered>
 
 ### B6. Rules for every research agent
 

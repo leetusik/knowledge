@@ -65,8 +65,9 @@ every stage boundary and every agent return, before your next action.
 **The stop rules.** Fail loudly, never quietly: a stop says why in its first line, keeps the
 dossier, names its path and says how to resume.
 
-- Ask the user nothing during the run, except §9.1's book question and §5's 409, and those
-  only in an interactive session. Never choose `quick` or `no-research` yourself.
+- Ask the user nothing during the run, except a repeat's question (below), §9.1's book
+  question and §5's 409, and those only in an interactive session. Never choose `quick` or
+  `no-research` yourself.
 - **`FAILED: permissions`**: a probe call, or later a role's call, was denied. Print the
   rules (§3.2); the preflight writes nothing else.
 - **`FAILED: web research unavailable — no chapter written`**: a search or a fetch failed
@@ -83,6 +84,16 @@ dossier, names its path and says how to resume.
 - Loop safety is the only bound: at most 3 gap rounds, the tier's dispatch ceiling, one
   re-dispatch per failed agent, one re-verification per claim. Overflow is queued, never
   dropped; evidence is never truncated; research never ends silently on an error.
+- **Wait only by ending your turn:** an agent's notification starts your next one. Never
+  schedule your own resumption, not even as a fallback: no `ScheduleWakeup`, no
+  `CronCreate`, no monitor, no sleep or poll loop (a wakeup can fire after the report and
+  re-send this request). A lead that is itself a subagent waits in the foreground (§3.2).
+- **A repeat is never a new run.** A request in the same words as a run this session
+  already finished (its report given or `state: done`; a wakeup or a re-sent prompt
+  brings one) starts nothing by itself. Interactive (§9.1's test): ask once whether the user wants a
+  re-explain (a v2) or nothing. Headless (`claude -p`): print that run's first report line
+  (§8: title, URL, version), then stop. A re-explain needs the user's own new words, or
+  that yes, and then runs as any other (§3.1's prior).
 - **Never skip or shorten a stage** to save time, tokens or money. A budget, usage or turn
   limit that would cut one short stops the run at the last stage boundary, resumable, and
   `run.md` says so.
@@ -382,7 +393,8 @@ block below adds the lines it needs.
 3. **The two-agent probe** (plugin and generic paths), each agent a general subagent on a
    cheap model named on the call (`haiku` on Claude Code):
    - **A**, in the background: "Reply with the single word `ok`." End your turn and wait
-     for its notification, so that the probe runs after one, as every wave will.
+     for its notification (the card's wait rule), so that the probe runs after one, as
+     every wave will.
      **A lead that is itself a subagent** (a workspace's book executor is one) never gets
      that notification: ending its turn hands control back to whoever dispatched it. It
      sends A in the foreground instead, and every wave too (§3.5).
@@ -437,10 +449,11 @@ reads as the filesystem root. They cover the publish too (§5: the CLI, or the c
     On another host, allow the same commands and paths in its own terms.
 
 A role that returns `failed: permissions` later in the run stops it with the same block,
-when the call it names is in a form its brief gives, on `run.md`'s `dossier:` and
-`tools:` paths. A call in another form (a `git -C`, a `$`, a brace) is the role's error, and
-one on another folder your dispatch's (`tools:` is `<TOOLS>`), not the session's: dispatch
-it once more, the call named or the path corrected, like any other failure (§3.5).
+when the call it names is in a form its brief gives, on a path the block names (`run.md`'s
+`dossier:` and `tools:`, `<SKILL_DIR>`, `<BOOK>`; a code researcher's `git` runs in the
+working folder). A call in another form (a `git -C`, a `$`, a brace) is the role's error,
+and one on another path your dispatch's (`tools:` is `<TOOLS>`), not the session's:
+dispatch it once more, the call named or the path corrected, like any other failure (§3.5).
 
 ### 3.3 `run.md`, and resuming a run
 
@@ -569,9 +582,10 @@ Then hold the plan to §9.1's size test: a plan plainly over one document is a b
    the tier's budget. A code researcher gets the repository, which is the session's working folder (its
    `git` runs there, never with `-C`), and `commit`: the full sha of `HEAD` written
    `<sha> (HEAD)`, or `WORKTREE` for uncommitted work.
-2. **Send the wave in one message,** every agent in the background (a lead that is itself
-   a subagent, §3.2: in the foreground, still in one message, so that they run at once and
-   the message returns when the last has): at most **10** on Claude Code, **6** elsewhere. The rest are queued, never dropped; they go out as soon as
+2. **Send the wave in one message,** every agent in the background, then end your turn and
+   wait (the card's wait rule; a lead that is itself a subagent, §3.2: in the foreground,
+   still in one message, so that they run at once and the message returns when the last
+   has): at most **10** on Claude Code, **6** elsewhere. The rest are queued, never dropped; they go out as soon as
    this wave has returned, before the merge. A spawn refused for a concurrency limit is
    queued the same way, never retried in a loop. How each call goes out (B0):
    - **plugin:** `knowledge:web-researcher` or `knowledge:code-researcher`; the prompt is
@@ -1088,9 +1102,9 @@ number-like or colon-bearing YAML string left unquoted, every sources `url` is
 `plan.md`, findings files, `library.md`, `ledger.md`, a verify file and `gaps/final.md`.
 Rewrite the mode block's `searches:` line with the run's total (§3.3), ending `· dossier:
 complete` or `· dossier: missing <file> (<the stage skipped, why>), …`, and `verifier:`
-with the model that ran. A verifier played by you, or on your model, while
-`knowledge:verifier` was listed is a defect, stated there as one ("the verifier agent was
-available and not used"), never a limit of the run.
+with the model that ran. A verifier played by you, or on the researchers' model (in
+`quick`, yours), while `knowledge:verifier` was listed is a defect, stated there as one
+("the verifier agent was available and not used"), never a limit of the run.
 
 Then, with §5's fields settled, dry-run the exact publish: CLI `knowledge --base-url
 <KB_API_BASE_URL> check <tmp>/body.md` with the publish's flags (not `--json`), or curl `POST
@@ -1595,7 +1609,7 @@ settle a disagreement.
       Q<id>: answered | thin | not found | contested — <claim ids>
     conflicts: <claim id>: <one line> | none
     unused leads: <url or path> — <why> | none
-    searches: <the greps and git queries that mattered>
+    queries: <the greps and git queries that mattered>
 <!-- part-b:end code-researcher -->
 
 <!-- part-b:begin gap-reviewer with=rules,ladder,bar,dossier -->

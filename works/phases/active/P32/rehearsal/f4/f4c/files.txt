@@ -1,0 +1,13 @@
+# 20261024-0214-http-etags-revalidation
+./body.md
+./brief.md
+./ledger.md
+./library.md
+./outline.md
+./plan.md
+./run.md
+./trace.md
+./findings/r1-foundations.md
+./gaps/final.md
+./verify/r1-b1.md
+pages/: 12 files (not kept)

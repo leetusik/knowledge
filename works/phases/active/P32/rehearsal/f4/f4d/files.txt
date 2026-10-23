@@ -1,0 +1,4 @@
+# 20261024-0212-french-press-v2
+./brief.md
+./run.md
+pages/: 1 files (not kept)

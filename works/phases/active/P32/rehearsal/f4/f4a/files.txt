@@ -1,0 +1,14 @@
+# 20261024-0140-french-press
+./body.md
+./brief.md
+./ledger.md
+./library.md
+./outline.md
+./plan.md
+./report.md
+./run.md
+./trace.md
+./findings/r1-lead.md
+./gaps/final.md
+./verify/r1-b1.md
+pages/: 22 files (not kept)

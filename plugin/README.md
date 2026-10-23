@@ -41,8 +41,10 @@ whenever you want something explained and kept.
 - **full** (the default): research agents in waves, verified on another model, up
   to 3 gap rounds, counter-evidence on the main claims, the evidence gate, the
   critic.
-- **`quick`**: the main session researches alone into the same dossier, with one
-  verifier batch; no gap rounds, no counter-evidence, no critic. The gate holds.
+- **`quick`**: no research team: the main session researches the angles itself, but
+  keeps the probe agents, the plan, the findings and the reader's outline in the same
+  dossier, and one batch by the verifier agent on another model; no gap rounds, no
+  counter-evidence, no critic. The gate holds.
 - **`no-research`**: your explicit opt-out, never the skill's choice: no web, a
   chapter from the repository (or your own material) alone, still critic-checked,
   with no "Best practices" section. Failed web research never falls back to it: the

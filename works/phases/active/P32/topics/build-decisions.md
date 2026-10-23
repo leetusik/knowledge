@@ -495,3 +495,38 @@ was not run (the bootstrap is read-only).
   verifier 600 s later ("Background tasks still running 10m after the last turn"), so the run ended at D3v,
   resumable. The critic is foreground for this reason (§4.10); waves and verifier batches under a headless
   session have no such rule. Both are reported, not fixed (d71 allowed one revision).
+
+## d72 · The wait rule and the repeat guard; §4.9's verifier clause (F4; card, §3.2, §3.5, §4.9, B2, README)
+
+- **Cause** (P32.REVIEW round 2, finding 1): rv2a's Sonnet lead set five `ScheduleWakeup`s ("fallback wake while
+  … runs"), each with the skill's invocation as the prompt; the one still pending fired 8 minutes after `state:
+  done`, and the lead began an unasked v2 run (no D0b, another wakeup). The skill said only "end your turn and
+  wait". 2 of 9 earlier Sonnet leads had set wakeups.
+- **The wait rule** (the card's stop rules; cited from §3.2 step 3 and §3.5 step 2): wait for an agent only by
+  ending your turn, since its notification starts the next one; never schedule your own resumption, not even as a
+  fallback: no `ScheduleWakeup`, no `CronCreate`, no monitor, no sleep or poll loop. A lead that is itself a
+  subagent waits in the foreground (d65, unchanged).
+- **The repeat guard** (the card): a request in the same words as a run this session already finished (its report
+  given or `state: done`; a wakeup or a re-sent prompt brings one) starts nothing by itself. Interactive (§9.1's
+  test): ask once, a re-explain (a v2) or nothing. Headless: print that run's first report line (title, URL,
+  version), then stop. A re-explain needs the user's own new words or that yes, and then runs as any other
+  (§3.1's prior). The card's "ask nothing" rule names it beside §9.1's book question and §5's 409. The trigger
+  first read "brought to `state: done`"; f4c finished without writing `state: done`, so it was widened.
+- **§4.9:** the defect is a verifier played by the lead, or on the researchers' model (in `quick`, the lead's),
+  while `knowledge:verifier` was listed. It now agrees with B4 ("a model different from the researchers'"), D3v
+  (the agent as it is, on Sonnet, in `full`), §3.3 (`same model (degraded)` = the researchers' model) and §3.9.
+- **Tidies (round 2's candidates 4–6):** B2's return ends `queries:` (was a second `searches:`; `code-researcher`
+  regenerated), so B6's `searches: <n>` is every role's only `searches:` line. §3.2: a role's denied call stops the
+  run when it is in its brief's form on a path the block names (`dossier:`, `tools:`, `<SKILL_DIR>`, `<BOOK>`; a
+  code researcher's `git` in the working folder); on another path it is the dispatch's error. The README's
+  `quick` line says what §3.9 keeps.
+- **Size:** 155,790 → 156,887 B (+1,097 B, limit 1.5 KB); 2,608 → 2,622 lines; the landing's `lede` and
+  `pane.meta` read 2,622.
+- **Live (Sonnet leads, `claude -p`, ceiling 0, :8891; $7.01 of $12; `rehearsal/f4/`):** f4a (rv2a's prompt),
+  f4c (ETags) and f4e (Bloom filter): 0 lead `ScheduleWakeup`, `CronCreate` or `Monitor` calls, each wait an
+  ended turn, one run id, v1, the process ending with the last turn, nothing in the 15 minutes after. f4b (first
+  wording) and f4f (shipped wording), the same words resumed in that session: one turn, no tool call, the report
+  line and URL, a stop. f4d, a v2 asked in new words in the same session: read the prior v1, re-ran D0b, began
+  run `…-v2` (stopped by me there). F2's headline held in f4a and f4e (12 of 14; the two misses are D72's). f4c
+  sent the verifier without `model: opus` (it ran on Sonnet, the lead's model) and wrote no `report.md`: reported
+  as observations.
