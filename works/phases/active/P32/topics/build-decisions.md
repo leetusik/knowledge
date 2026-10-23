@@ -447,3 +447,32 @@ was not run (the bootstrap is read-only).
 - **The pin.** Bootstrap `main` moved to `97e1c38` (v74: a read leaves the tree clean). Every anchor is still
   found once; only `installer/main.py` (`WORKSPACE_VERSION = 74`) and `tests/retrofit_smoke.sh` (Test 10h) changed
   among the patched files. The package stays pinned to `1f4aa7d`; `RETIRED_FILES`' version is 74 at `97e1c38`.
+
+## d70 · `quick` keeps the agents and the map; D9 checks the dossier (F2; card, §1, §3.2, §3.3, §3.9, §8, §9.1, B6)
+
+- **Cause of run a's `path: sequential`** (P32.REVIEW finding 1): a well-supported suspect, not located; the
+  lead's thinking is redacted in the kept stream. It wrote `mode: sequential · agents: lead`, `verifier: lead
+  (degraded)` before any research, with `Task` and all five `knowledge:` agents listed. The chain in the text:
+  the card's and §1's "you research alone", §3.3's `agents: lead`, §3.9's "with none, `verifier: lead
+  (degraded)`" escape hatch, and §9.1's framing of a book request outside a workspace as a fallback document.
+  `slices/P32.F2/result.md` has the evidence.
+- **The text now:** `quick` cuts the research team, never the agents, the files or the map. "Alone" means no
+  researchers in waves; the path is D0b's rule, never the run (`plugin` whenever the `knowledge:` roles are
+  listed). §3.9 names once what `quick` keeps on every path: D0b's two probe agents, `plan.md`, the findings
+  files and `library.md`, the verifier agent's batch on another model, `gaps/final.md`, `outline.md` with
+  `## Reader's task`, `trace.md`; the card and §1 cite it. §3.3: `mode` is how the research ran (`quick`:
+  sequential), `agents` is D0b's path whatever the run.
+- **D9's dossier check** (§8, the card's D9 row): one `ls` of the dossier, `findings/`, `verify/`, `gaps/`; each
+  run kind's files listed; a missing file is a skipped stage with its reason; a verifier or critic played by the
+  lead, or on its model, while the `knowledge:` agent was listed is a defect, stated as one. Then `run.md`'s
+  mode block is brought up to date (`verifier:` the model that ran, `searches:` the total).
+- **`searches:`** is every WebSearch of the run: the lead's, the probe's one, and each role's return line
+  `searches: <n>` (B6's new second line, regenerated into the five agents).
+- **§3.2:** a role's denied call on a folder other than `run.md`'s `dossier:`/`tools:` is the dispatch's error
+  (f2a: the lead named the explain root as `tools:`), corrected and re-dispatched once, not a stop.
+- **Size:** 153,933 → 155,379 B (+1,446 B, limit 1.5 KB).
+- **Live (Sonnet lead, `quick`, $7.21 of $20):** `path: plugin` with the two probe agents in all four runs;
+  `plan.md`, findings, `library.md` and `knowledge:verifier` (ending on Opus) in the three past D0b; the whole
+  map in the two that finished (f2b, f2b2). Missed twice per case: run a's prompt stopped before publishing both times
+  (f2a: the wrong `tools:` folder; f2a2: a haiku probe's own `mkdir -p … && curl` form, which D0b has no rule
+  for), and the sourdough runs left `searches:` at the probe's count and skipped the D9 `ls`. Open as OQ12.
