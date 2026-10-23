@@ -2,42 +2,49 @@
 
 ## Verdict
 
-- **status:** needs_operator
+- **status:** done
 - **tier:** high
 - **model:** opus
 - **effort:** xhigh
-- **summary:** The skill now says `quick` keeps the agents, the files and the map, and that its path is D0b's rule, never the run kind. It also adds a one-`ls` dossier check before D9 and makes `searches:` the run's total (each role returns a `searches:` line; B6, the five agents regenerated). It grew +1,446 B and all three copies are in parity. In four Sonnet `quick` runs, run a's `path: sequential` never came back. But each live case missed twice: run a's prompt never published (a wrong `tools:` folder, then a haiku probe's own `mkdir … && curl` form), and the sourdough runs under-counted `searches:` and skipped the D9 `ls`. So by the plan's rule the slice returns `needs_operator` (OQ12).
+- **summary:** `quick` now keeps the agents, the files and the map, and its path follows D0b's rule.
+  - **First pass:** the card, §1, §3.2, §3.3, §3.9, §8, §9.1, and B6, with the five agents regenerated.
+  - **Second revision (OQ12 → (a), d71):** D0b re-sends a probe whose own command form was denied. §4.9 writes the dossier line and the `searches:` total right before `knowledge check`, and D9 only points to it.
+  - **Size:** the skill is 155,790 B (+1,857 B over 153,933 B).
+  - **Live, six Sonnet runs ($13.00 of $20):** run a's `path: sequential` never came back. The headline held wherever a run reached it, in full on the final text in f2b3.
+  - **Two misses are named, not fixed.**
+    - Sonnet never writes the dossier line or the search total.
+    - Run a's prompt never published. Its last try (f2a3) ended when `claude -p` stopped the background verifier at 10 idle minutes.
 - **files_changed:**
   - `plugin/skills/explain/SKILL.md`, `.agents/skills/explain/SKILL.md`, `web/public/SKILL.md`;
-  - `plugin/agents/{web-researcher,code-researcher,gap-reviewer,verifier,explain-critic}.md` (regenerated);
-  - `works/phases/active/P32/phase.md` (Decisions, Doc impact, Operator Questions, Notes, Now);
+  - `plugin/agents/{web-researcher,code-researcher,gap-reviewer,verifier,explain-critic}.md` (regenerated in the first pass, for B6);
+  - `works/phases/active/P32/phase.md` (Decisions d70 corrected in place, Doc impact, Notes, Now);
   - `works/phases/active/P32/topics/build-decisions.md` (d70);
-  - `works/phases/active/P32/rehearsal/f2/` (`spend.md`, `f2a/`, `f2b/`, `f2a2/`, `f2b2/`);
+  - `works/phases/active/P32/rehearsal/f2/` (`spend.md`, and `f2a/`, `f2b/`, `f2a2/`, `f2b2/`, `f2a3/`, `f2b3/`);
   - this `result.md`.
 - **validation:**
-  - `python3 scripts/skills_parity.py`: PASS (the web copy byte-identical; the 5 plugin agents match Part B);
+  - `python3 scripts/skills_parity.py`: PASS (the web copy byte-identical; the 5 agents match Part B);
   - `python3 scripts/plugin_parity.py`: PASS;
   - `claude plugin validate plugin`: passed;
   - `python3 scripts/workflow.py validate`: passed (only the existing warnings);
-  - `git diff --stat`: within `plugin/`, `.agents/skills/explain/`, `web/public/SKILL.md` and P32's folder. The other `works/*` changes were already there when the slice started (the orchestrator's);
-  - bootstrap `git status`: clean, and no command was run there;
-  - live runs: 4 of 3–4 planned (f2a, f2b, then f2a2 and f2b2 after the one revision); **each case missed twice** (below);
+  - `git diff --stat`: within `plugin/`, `.agents/skills/explain/`, `web/public/SKILL.md` and P32's folder;
+  - bootstrap: `git status` clean, and no command was run there;
+  - live runs: f2a, f2b, then f2a2 and f2b2 (first revision), then f2a3 and f2b3 (second revision, d71). Each run's checks are below;
   - leak scan after every run: the same six known files;
-  - spend $7.21 of $20.
+  - all three scratch stacks (:8863, :8864, :8865) stopped, my own PIDs only.
 - **deviations:**
-  - The revision touched Part B's B6 (each role's second return line is `searches: <n>`), so `skills_parity.py --write-agents` regenerated the five agents. Without it, the lead could not total the roles' searches (plan item (c)).
-  - The reruns used a second fresh stack on :8864, because f2b's sourdough document was already on :8863 and a rerun there would have published a v2.
-  - The optional f2c did not run: its condition, both cases passing, failed.
-  - A probe-form gap and the Sonnet bookkeeping misses surfaced live and were **not** fixed. They need a second revision, which the plan does not allow, so they are OQ12.
-- **doc_impact:** three lines appended to `phase.md` `## Doc impact`:
-  - finding 3's exact line (qa.md, operations.md: the AGENTS check);
-  - product.md: `quick` keeps the agents, the files and the map, and its path is the preflight's rule;
-  - architecture.md (*Plugin packaging*): the D9 dossier check, `searches:` as the total with B6's return line, and the wrong-folder denial as the dispatch's error.
-- **operator_need:** answer OQ12 in `phase.md`.
-  - **Recommended:** resume F2 for one more bounded revision and one rerun per case: about $5 more, the size limit raised from 1.5 KB to about 2 KB.
-    - D0b treats a probe's own command form as the probe's error and sends probe B once more.
-    - The dossier check and the search total move into the publish step that Sonnet leads do run (before `knowledge check`), as one report line.
-  - **Or** accept F2 as it stands (the headline holds) and file those two as a deferred job. The re-review's Sonnet run would then show the same misses.
+  - Part B's B6 changed in the first pass, so `--write-agents` ran; the second revision left Part B alone.
+  - Each round of runs used a fresh scratch stack (:8863, :8864, :8865), so no rerun found an earlier run's document.
+  - f2a3 is counted at its watchdog's streamed estimate ($3.87), not its last `result` event ($3.57), because the stopped verifier worked on after that event.
+  - Two findings are reported, not fixed. d71 allowed one revision.
+- **doc_impact:** four lines are in `phase.md` `## Doc impact`.
+  - First pass:
+    - finding 3's exact line (qa.md, operations.md: the AGENTS check);
+    - product.md: `quick` keeps the agents, the files and the map;
+    - architecture.md: the dossier check, `searches:` as the total, B6's return line, the wrong-folder denial.
+  - Continuation: a superseding architecture.md line. The dossier line moves to the publish step (§4.9), and a probe's own command form is the probe's error, sent once more.
+- **deferred-job candidates** (for the re-review to route):
+  1. **A mechanical dossier and search-total line.** The trigger: three Sonnet runs, on two placements of the text, never wrote it. A tool that prints the line is the remaining route.
+  2. **Headless verifier batches.** Under `claude -p`, a verifier batch or wave sent in the background is stopped 10 idle minutes after the lead's last turn (f2a3). The trigger: any headless `quick` or `full` run whose batch outlasts 10 minutes. The critic is already foreground for this reason (§4.10).
 
 ## The cause of run a's `path: sequential`
 
@@ -171,4 +178,78 @@ All edits were made one section at a time, through `phase-section`:
 - **`## Doc impact`:** three lines (above).
 - **`## Operator Questions`:** OQ12. Its first sentence was corrected in place right after the append, with a precise Edit to my own line, because the run counts were wrong.
 - **`## Notes for later slices`:** the F2 note was replaced by a note for F2's resumption, and the re-review note now says what F2 changed and which runs to look at.
+- **`## Now`:** rewritten.
+
+## Continuation (OQ12 answered (a), Decisions d71)
+
+The operator answered: "/do-whole-phase with a". That allowed one more bounded revision, then one Sonnet rerun per case.
+
+### The second revision (all three copies; Part B unchanged)
+
+- **D0b, step 4.** A call the probe wrote in another form than step 3 gives (a `mkdir … &&`, a `cd`, a `$`) is now the probe's error, not a stop. The lead sends that probe once more with the six calls as written; a second denial stops. Probe B's brief now reads "exactly these calls, as written".
+- **§4.9.** It opens with **the dossier line**, offline too; a chapter (§9.3) skips it, because its files have other names.
+  - One `ls` of the dossier, `findings/`, `verify/` and `gaps/`, against the run kind's file list.
+  - The mode block's `searches:` line is rewritten with the run's total and ends `· dossier: complete` or `· dossier: missing <file> (<the stage skipped, why>), …`.
+  - `verifier:` is set to the model that ran.
+  - An unused listed verifier is stated there as a defect.
+  - The dry-run check follows ("Then, …").
+- **§8.** The first-pass "First, a published run checks its dossier" paragraph is gone. Item 2, the mode block, says its `searches:` line carries §4.9's dossier line, and that a role played by the same model or by the lead is a defect while its `knowledge:` agent was listed.
+- **The card.** D8's row writes "the dossier line"; D9's row is back to `report.md`, `run.md` `state: done`.
+- **§3.3.** The template's `searches:` line gains `[ · dossier: complete | missing …]`. "Yours" is defined as your findings' `## Queries`, and "§4.9 adds the dossier".
+- **Size.** 155,790 B (+411 B over the first pass's 155,379 B, +1,857 B over 153,933 B; the limit is ≈ 2 KB). `.agents` is 155,164 B and `web/public` byte-identical. Both guards and `claude plugin validate plugin` pass.
+
+### The reruns
+
+These ran on a third fresh stack on :8865 (PID 54918, now stopped). The isolation was unchanged:
+
+- scratch `XDG_*` and `KB_*`, with §2's resolver printing only the scratch values;
+- `--setting-sources project`, `--permission-mode manual --permission-prompts none` and the deny rules on `//Users/sugang/.config/knowledge-kb/**`;
+- `--plugin-dir plugin` and `--no-session-persistence`;
+- `watchdog2.py` at $6, with no budget flag and no permission-skipping flag.
+
+`check.py` gained a check for the dossier line in `run.md` and the report.
+
+| Check | f2b3 (sourdough) | f2a3 (run a's prompt, word for word) |
+|---|---|---|
+| `path: plugin`, two haiku probes | pass | pass (probe B `ok` ×6) |
+| verifier on a model other than Sonnet | pass (`knowledge:verifier`, `model: opus` on the first dispatch) | pass (dispatched on Opus, ran on `claude-opus-5-5`; stopped before it wrote) |
+| `plan.md`, `findings/`, `library.md` | pass | pass (10 sources, 22 claims, `--check` all found) |
+| `verify/`, `gaps/final.md` | pass | not reached |
+| `outline.md` opens `## Reader's task`, not in the chapter | pass (the published source fetched) | not reached |
+| `trace.md` | pass | not reached |
+| the dossier line, `searches:` matching the transcript | **miss**: no `ls`, no line; `run.md` `searches: 1 (probe)` against 5 made (lead 4, probe 1), `verifier: pending` (the report names the Opus verifier) | not reached; mid-run, `run.md` read `searches: 7 lead + 1 probe = 8`, the §3.3 total form |
+| publish to the scratch stack only | pass (:8865) | nothing published |
+| outcome | **published; the bookkeeping missed again** | **ended at D3v by the headless runner**, resumable |
+
+**f2b3.** After writing `trace.md`, the lead went straight to `knowledge --version`, then `knowledge check`, a fix and `save`. The §4.9 paragraph sits directly above the command it ran, but it never ran the `ls` or rewrote the mode block. In three Sonnet runs and two placements of the same text (first D9, then the publish step), the bookkeeping did not take; prose alone does not carry it. The remaining route is mechanical: a tool the lead already runs prints the line. That is deferred-job candidate 1.
+
+**f2a3.** The lead passed D0b and researched into `findings/r1-lead.md`, `library.md` and `ledger.md`. It then sent `knowledge:verifier` with `model: opus` **in the background** (§3.5's form) and ended its turn to wait (its last event at +378 s).
+- The verifier made 75 tool calls; its last event was at +891 s.
+- At +979 s (the lead's last turn + 600 s), `claude -p` ended the session: "Background tasks still running 10m after the last turn (subagent "Verify claims batch r1-b1"); stopping them. Set CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0 to wait indefinitely."
+- No verify file, outline, trace or publish. `run.md` stays at `D3v verify · state: running`.
+- Nothing was skipped by the lead's choice. The skill already sends the critic in the foreground for this reason (§4.10 step 1); a verifier batch or wave under a headless session has no such rule. That is deferred-job candidate 2. Evidence: `rehearsal/f2/f2a3/evidence.md`.
+
+**Run a's prompt across the slice:**
+- f2a was stopped by a wrong `tools:` folder; the first revision covers it.
+- f2a2 was stopped by a haiku probe's own `mkdir … && curl`; the second revision covers it. In f2a3, probe B used the given form.
+- f2a3 was stopped by the headless 10-minute ceiling on background agents.
+
+None of the three repeated run a's `path: sequential` or skipped an agent or a file, but none reached `outline.md`. For run a's prompt the headline is therefore shown up to the verifier (D3v). The sourdough case shows it whole three times (f2b, f2b2, f2b3).
+
+**The verdict, by d71's rule.** The rule is "`done` with the miss named if the headline held; `needs_operator` only if the headline failed". No headline item failed in any run. Every item a run reached was done as the skill says, and f2b3 shows all five on the final text. So the verdict is `done`, with both misses named here, in `## Now`, and in the re-review's note.
+
+### Spend and leak scans
+
+- f2b3 cost $1.92 and f2a3 $3.87 (the watchdog's streamed estimate; its last `result` event says $3.57, but the verifier worked on after it). The continuation was $5.79, bringing the total to **$13.00 of $20** (`rehearsal/f2/spend.md`).
+- The leak scans after f2b3 and f2a3 found the same six known files. No new hit.
+- Kept files:
+  - `rehearsal/f2/f2b3/`: `run.md`, `outline.md`, `report.md`, `files.txt`;
+  - `rehearsal/f2/f2a3/`: `run.md`, `files.txt`, `evidence.md`;
+  - no `pages/`.
+
+### Notebook (continuation)
+
+- **`## Decisions`:** d70 corrected in place (§4.9's dossier line, the probe rule, the live result). Its `topics/build-decisions.md` entry gained the continuation, and its heading now reads "the dossier line before publishing".
+- **`## Doc impact`:** one superseding architecture.md line appended. The earlier lines are committed and append-only, so the new one says what it supersedes.
+- **`## Notes for later slices`:** the F2-resumption note was consumed and removed. The re-review note now says what F2 changed, which runs to read (`spend.md` first; f2b3, f2a3), and the two findings to route.
 - **`## Now`:** rewritten.

@@ -36,3 +36,14 @@ One revision after runs 1–2 (the plan allows one): §3.2 (a denied call on ano
 | 4 | f2b2 (f2b rerun, sourdough, a plain single document, **:8864**; 572 s wall; `path: plugin`, probes A and B on haiku, `plan.md`, findings, `library.md`, `verify/`, `gaps/final.md`, `outline.md` opening with `## Reader's task` (not in the chapter), `trace.md`, published to :8864 only; **missed** again: `run.md` `searches: 1 (probe)` against 5 made (lead 4, probe 1, verifier 0), no dossier `ls` before D9, and the first `knowledge:verifier` dispatch had no `model` and ran on Sonnet (r1-b1); the lead saw the model in its return and re-ran the batch on Opus (r1-b2), which the ledger cites; watchdog estimate 1.89) | sonnet | **2.04** | **7.21** |
 
 f2c (optional) did not run: its condition (f2a and f2b pass) failed. Both cases missed twice, so the slice returns `needs_operator` with **$7.21 of $20** spent. Both scratch stacks (:8863, :8864) are stopped. Leak scans after every run: the same six known files, nothing new.
+
+## Continuation (OQ12 → (a), d71)
+
+A second revision (the operator's, d71): D0b re-sends a probe whose own command form was denied; the dossier line and the search total move into §4.9, right before `knowledge check`; D9 keeps a pointer. Then one rerun per case on a third fresh stack, **:8865** (`stack3`, PID 54918, stopped), same isolation, watchdog $6 each.
+
+| # | Run | Lead | `total_cost_usd` | Running total |
+|---|---|---|---|---|
+| 5 | f2b3 (sourdough; 487 s wall; `path: plugin`, probes on haiku, `knowledge:verifier` with `model: opus` first time, `plan.md`, findings, `library.md`, `verify/`, `gaps/final.md`, `outline.md` opening with `## Reader's task` (not in the chapter), `trace.md`, published to :8865 only; **missed** the dossier line: straight from `trace.md` to `knowledge --version` and `check`, `run.md` left at `searches: 1 (probe)` (5 made) and `verifier: pending`, though the report names the Opus verifier; watchdog estimate 1.98) | sonnet | **1.92** | 9.13 |
+| 6 | f2a3 (run a's prompt; 979 s wall; probe B ok ×6, `path: plugin`, `plan.md`, findings (10 sources, 22 claims), `library.md`, `ledger.md`, `knowledge:verifier` on Opus **in the background**; the lead ended its turn to wait and `claude -p` stopped the still-running verifier 600 s later ("Background tasks still running 10m after the last turn"), so no verify file, outline, trace or publish; `run.md` resumable at D3v; counted at the watchdog's streamed estimate, because the verifier worked on after the last `result` event (3.57)) | sonnet | **3.87** | **13.00** |
+
+Total **$13.00 of $20**. Leak scans after f2b3 and f2a3: the same six known files. All three scratch stacks (:8863, :8864, :8865) are stopped.

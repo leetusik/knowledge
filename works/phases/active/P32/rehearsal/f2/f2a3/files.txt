@@ -1,0 +1,7 @@
+./brief.md
+./findings/r1-lead.md
+./ledger.md
+./library.md
+./plan.md
+./run.md
+pages/: 51 files (not kept)

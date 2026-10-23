@@ -448,7 +448,7 @@ was not run (the bootstrap is read-only).
   found once; only `installer/main.py` (`WORKSPACE_VERSION = 74`) and `tests/retrofit_smoke.sh` (Test 10h) changed
   among the patched files. The package stays pinned to `1f4aa7d`; `RETIRED_FILES`' version is 74 at `97e1c38`.
 
-## d70 · `quick` keeps the agents and the map; D9 checks the dossier (F2; card, §1, §3.2, §3.3, §3.9, §8, §9.1, B6)
+## d70 · `quick` keeps the agents and the map; the dossier line before publishing (F2; card, §1, §3.2, §3.3, §3.9, §4.9, §8, §9.1, B6)
 
 - **Cause of run a's `path: sequential`** (P32.REVIEW finding 1): a well-supported suspect, not located; the
   lead's thinking is redacted in the kept stream. It wrote `mode: sequential · agents: lead`, `verifier: lead
@@ -475,4 +475,23 @@ was not run (the bootstrap is read-only).
   `plan.md`, findings, `library.md` and `knowledge:verifier` (ending on Opus) in the three past D0b; the whole
   map in the two that finished (f2b, f2b2). Missed twice per case: run a's prompt stopped before publishing both times
   (f2a: the wrong `tools:` folder; f2a2: a haiku probe's own `mkdir -p … && curl` form, which D0b has no rule
-  for), and the sourdough runs left `searches:` at the probe's count and skipped the D9 `ls`. Open as OQ12.
+  for), and the sourdough runs left `searches:` at the probe's count and skipped the D9 `ls`. OQ12 → (a), d71.
+- **Continuation (d71), the second revision:** D0b: a probe call denied in a form other than step 3 gives
+  (a `mkdir … &&`, a `cd`, a `$`) is the probe's error; the probe is sent once more with the six calls as
+  written, a second denial stops; probe B's brief says "as written". The dossier check moves from §8 to
+  §4.9's first paragraph, right before `knowledge check` (a chapter, §9.3, skips it): one `ls`, then the
+  mode block's `searches:` line is rewritten with the run's total and ends `· dossier: complete` or
+  `· dossier: missing <file> (<the stage skipped, why>), …`, `verifier:` with the model that ran, an unused
+  listed verifier stated there as a defect. §8 item 2 points to it; the card's D8 row writes "the dossier
+  line", its D9 row is back to `report.md`. §3.3: the lead's searches are its findings' `## Queries`.
+  Size 155,790 B (+1,857 B over 153,933, limit ≈ 2 KB). Part B unchanged.
+- **Continuation live ($5.79; $13.00 of $20 in all):** f2b3 (sourdough) held the whole headline (`path:
+  plugin`, `knowledge:verifier` sent with `model: opus` the first time, `plan.md`, `outline.md` with `## Reader's
+  task`, `trace.md`, published to :8865) but again wrote no dossier line: from `trace.md` straight to
+  `knowledge check`, `run.md` left at `searches: 1 (probe)` (5 made) and `verifier: pending`. Three Sonnet runs on
+  two placements of the same text: the bookkeeping does not take from prose; a mechanical form (a tool that
+  prints the line) is the remaining route. f2a3 (run a's prompt) passed D0b, wrote `plan.md`, findings and
+  `library.md`, sent the Opus verifier in the background (§3.5) and ended its turn; `claude -p` stopped the
+  verifier 600 s later ("Background tasks still running 10m after the last turn"), so the run ended at D3v,
+  resumable. The critic is foreground for this reason (§4.10); waves and verifier batches under a headless
+  session have no such rule. Both are reported, not fixed (d71 allowed one revision).
