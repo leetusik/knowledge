@@ -387,3 +387,63 @@ The operator: "I don't care about the token spending for now".
   patches applied in memory to `git show 1f4aa7d:` and the smoke suite's existing and new prose pins checked
   against the result. The build, `--check`, the smoke suite and a fresh install were not run (the bootstrap is
   read-only, and the rules forbid running its installer).
+
+## d64 · Rehearsal 2's mechanics (S9; `rehearsal/r2/`)
+
+- **No bootstrap install.** The package's texts ran in a scratch git repo laid out as an explain phase (`P90`:
+  `intent.md` with `## Explain`, `book/`, the two references, `slice-executor.md` with PATCHES 5a–5b), with an
+  engine log in place of `workflow.py`. PATCHES 6–7 (the retirement, the smoke tests) are for the bootstrap's own
+  build and smoke to check when it applies the package.
+- **Layering.** The `DECOMP` lead ran as a `claude -p --agent slice-executor` main thread (Opus xhigh); the
+  outline gate as a `-p` orchestrator (Opus); the chapter as a `-p` orchestrator (Opus) dispatching
+  `slice-executor` (Opus xhigh) as a subagent, whose research agents ran at **depth 2**. The orchestrator played
+  the gate's operator words only through the prompt: P32.S9 signed the outline ("accept", `rehearsal/r2/gate.md`).
+- **The subject.** SQLite's WAL in two chapters for a backend developer; the `DECOMP` cut both, one ran.
+- **The spend.** $100 cap (plan decision 4). The `DECOMP` $51.07 (attempt 1, $1.46, stopped at §2), the gate
+  $0.54, the chapter ≈ $48.3 up to its critique and the first request of span 3: total ≈ $101.4. The transcript
+  watchdog's $1.5 margin did not cover the resume's cache write ($3.44), so the cap was passed by ≈ $1.4. Span 3
+  (the revision), the freeze check and the chapter commit did not run; OQ11.
+
+## d65 · A lead that is a subagent or reads the skill by path (S9; §3.2, §3.5, §9.2; package references)
+
+- **No grant.** A lead that reads `SKILL.md` as a file (the workspace's book executor) never had the skill's
+  `allowed-tools`: in manual mode its first call, §2's resolver (`python3 -c`), was denied and the first `DECOMP`
+  stopped there before it could print the block. The stop block now prints the lead's own lines
+  (`Bash(python3 -c *)`, `Bash(which pdftotext)`, §3.1's `find`, `Read`/`Edit` on the book's folder), and the
+  `DECOMP`'s plan-gate report names them before the dispatch. `Bash(python3 -c *)` lets any inline Python run, so
+  auto mode stays the better answer (README *Permissions*).
+- **No background completions.** A subagent lead never gets a background agent's completion (ending its turn
+  returns to its dispatcher). It sends probe A and every wave in the foreground, all of a wave's calls in one
+  message: they run at once (seen at depth 1 and 2) and the message returns when the last has.
+- **Frontmatter.** `slice-executor`'s `bypassPermissions` did not apply under `-p` manual mode, as a subagent or
+  as `--agent`; the session's rules held at depth 2, deny rules included.
+
+## d66 · The slice line carries a label (S9; package references, PATCHES' smoke pin)
+
+Nested prompts open `slice: <id> (a label for the workspace's meter, not a task)`. Without the words in
+brackets, a general-purpose probe took `slice: P90.DECOMP` for a task (5 tool calls, ≈ 31k tokens); with them,
+one request. The meter's `METER_SLICE_LINE_RE` still matches the labelled line (tested on the pattern), and
+PATCHES' smoke assertion (`"slice: <P>.DECOMP" in _decomp`) still holds. Every chapter span's first prompt,
+depth 1 and 2 and the critic's, matched the pattern for `P90.S1` in the transcripts; `dispatch-summary` itself
+was not run (the bootstrap is read-only).
+
+## d67 · The critic's tools, B11's time-out, §3.9's map (S9; B5, B11, §3.9)
+
+- **B5:** the dispatch has no `tools:` line, so the critic could not find `pagetext.py` (its `find` was denied);
+  B5 now says `<tools>` is the folder the run's state names on its `dossier:` line (`run.md`, `run-ch<k>.md`).
+- **B11:** the critic retried six fetches with `--max-time 60`, each denied; B11 now says a longer `--max-time` is
+  not an allowed form and a time-out is a failed exact text (WebFetch next). Regenerated into the three agents
+  that carry B11.
+- **§3.9:** `quick` runs D6 (the reader's path) and D7 as a full run does: it cuts the research, never the map.
+  Supersedes F1's "left as is" (S7's note, d61's run).
+
+## d68 · A book's cost and searches; the pin at v74 (S9)
+
+- **Cost.** The `DECOMP` (tier 3, 37 questions, 63 sources, 286 claims, 84 min) $51.07; a chapter up to its
+  critique ≈ $44.9 (top-up 11.11, executor 24.37, critic 7.43, orchestrator 1.67), ≈ $50–58 with its revision. A
+  six-chapter book ≈ $350–400, the top of the README's old $170–350 estimate. README *The cost* carries the table.
+- **Searches.** 83 for the `DECOMP`, 13 for a chapter's top-up, 0 for the critic (it fetched by `curl`): a
+  six-chapter book in one session ≈ 160 against the default 200. README *The search cap*.
+- **The pin.** Bootstrap `main` moved to `97e1c38` (v74: a read leaves the tree clean). Every anchor is still
+  found once; only `installer/main.py` (`WORKSPACE_VERSION = 74`) and `tests/retrofit_smoke.sh` (Test 10h) changed
+  among the patched files. The package stays pinned to `1f4aa7d`; `RETIRED_FILES`' version is 74 at `97e1c38`.
