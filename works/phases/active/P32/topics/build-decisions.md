@@ -223,3 +223,101 @@ A decision superseded later is replaced in both places. Links are relative to th
 ## d55 · Rehearsal harness (S7)
 
 **Rehearsal harness (S7):** `claude -p` runs never carry a `--max-budget-usd` near the real cost, because the lead reads it and stops itself (`STOPPED: budget`, new-g session 2); a watchdog estimating cost from the streamed per-message usage (dedupe by message id, list prices; within ≈ 1% of `total_cost_usd`) SIGTERMs the session instead, and a killed session's cost is that estimate (its last `result` event lags). An unattended background agent's denial carries reason `asyncAgent`. The old arm ran under the new skill's printed rules (its `/tmp` edits were denied and it worked around them): a confound that favours neither arm's chapter.
+
+## d57 · Reader-first writing (F1; §3.10, §4, §4.2, §9.3)
+
+**D6, §3.10, "the reader's path".** `outline.md` opens with `## Reader's task`:
+- 2–4 tasks, each from the brief's `purpose`;
+- each task with the deliverable the reader will use: a checklist, a decision table, the commands, or the test
+  that guards the behaviour.
+
+Then come the path and the `## Not used` list:
+- **The path:** §4.2's sections, the middle ones in the order the reader meets the work (code: the order it
+  runs; a general subject: the decision or the steps). Each task gets a section that ends in its deliverable.
+  Each heading carries a one-line purpose, its tasks and a word budget: "the fewest words that deliver them (a
+  single document mostly 3,000–5,000 in all)". The budget is v2's.
+- **Findings:** each goes in the step it changes, and in the checklist line that guards it. Secondary depth goes
+  in a collapsed callout.
+- **`## Not used`:** each claim that serves no task and no must-cover point, with a reason. Every must-cover
+  point, load-bearing question and `stated` gap still lands on the path.
+
+**D7, §4, three passes:**
+1. a skeleton of the path;
+2. each section in order, with its `trace.md` lines before the next;
+3. a reader pass. It reads as the brief's reader doing each task, fixes what slows them, adds no fact, and cuts
+   each section to its budget (v2). It replaces the old coherence pass.
+
+**The prose rules:**
+- one idea a paragraph, about 100 words at most;
+- **Show, then tell** (v2);
+- a finding opens with a bold sentence saying what it means for the reader;
+- **Teach, don't report** (v2): a fact in the chapter's own voice. A source is named in the sentence only where
+  B8 needs the attributed form or it changes the reader's trust. One citation per source a paragraph, at the
+  sentence's end. A code location once, in its block's title;
+- secondary depth in `> [!NOTE]-` callouts;
+- **Shorter wins** (v2).
+
+**The rest:**
+- §4.2 is "a starting shape, not a form to fill", and a task's own section ("Should you use it today?") follows
+  the path.
+- The tone line points at the prose rules and the budgets. There is no longer "no length cap".
+- §9.3 item 5 cites §3.10 and §4 and restates nothing.
+- §3.10 and §8 tell the lead to bring the mode block up to date.
+
+## d58 · The critic reads as the reader (F1; B5, §4.10, `plugin/agents/explain-critic.md`)
+
+**Input.** The critic gets the outline's `## Reader's task` (a chapter's is in `outline-ch<k>.md`).
+
+**The new `reader` check:** as the stated reader, do each task from the chapter alone.
+- **`must-fix`:** a task not served, or its deliverable missing.
+- **`should-fix`:** a paragraph with two ideas or past about 100 words, a step buried in prose, a caveat that
+  interrupts the main line, a fact reported as who-said-what, a section past its budget. Each says where the
+  reader trips.
+- The rubric, the category list and the file template carry `reader`.
+
+**Two host fixes from the runs:**
+- **§4.10 dispatches the critic in the foreground.** A headless session (`claude -p`) stopped a background
+  critic after 600 s idle, and the run ended at D8 (C's first session).
+- **`maxTurns` goes from 60 to 120.** The critic hit 60 on its first attempt on both subjects. Each miss costs a
+  re-dispatch, and `--no-session-persistence` cannot resume one.
+
+## d59 · Rehearsal 1b's result (F1)
+
+C and G were rewritten from their dossiers at D6 on an Opus lead, then judged blind on Sonnet in both orders
+against rehearsal 1's old chapters.
+
+**Rules v1:**
+
+| Subject | Helpfulness | Comprehensiveness | Insight | Readability |
+|---|---|---|---|---|
+| C | **new** in both orders (a flip from rehearsal 1's old) | new | new | old |
+| G | tie (old, then new) | new | new | old |
+
+- No R1/R3/R5/R7 failure on either.
+- Both subjects miss the target on Readability alone. The judges gave length (C 6,395 and G 8,561 words, against
+  4,118 and 4,803), density, and citation or line-number clutter (G 177 links against 44; C 18 inline line refs
+  against 0).
+
+**Rules v2** (budgets; teach, don't report; one citation per source a paragraph; shorter wins) and one C rerun
+from D6 gave 5,881 words, 0 line refs and 14 links. Its two judges did not run: the leak scan's new hits stopped
+the rehearsal (OQ8).
+
+`rehearsal/r1b/scorecard.md`.
+
+## d60 · Size after F1
+
+`plugin/skills/explain/SKILL.md` is **152,339 B**, **+3,059 B** over S7's 149,280.
+
+| Section | Change |
+|---|---|
+| §3.10 (D6) | +1,860 |
+| §4's D7 passes and rules | +1,169 |
+| B5 | +635 |
+| §9.3 | +154 |
+| §4.10 | +139 |
+| §4.2 | +95 |
+| §8 and the card | +51 |
+| §2's reference list (trimmed) | −707 |
+| §4.3 (trimmed) | −182 |
+| §4.8 (trimmed) | −119 |
+| §5 (trimmed) | −36 |

@@ -6,16 +6,16 @@
 ## Pointer
 
 - Current phase: `P32`
-- Current slice: `P32.S8`
-- Next slice: `P32.S9`
-- Waiting on operator: `none`
+- Current slice: `P32.F1`
+- Next slice: `P32.S8`
+- Waiting on operator: `P32.F1`
 - Open deferred jobs: `49`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P32` | planned | `P32.S8` | 9/13 | - | working tree |
+| `default` | `P32` | planned | `P32.F1` | 9/14 | - | working tree |
 
 ## Active Phases
 
@@ -32,7 +32,7 @@
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
 | [x] `P31` | `done` | `pass` | Explain phase route | `none` | `works/phases/active/P31` |
-| [ ] `P32` | `planned` | `pending` | Thorough research and critic in the explain pipeline | `P32.S8` | `works/phases/active/P32` |
+| [ ] `P32` | `planned` | `pending` | Thorough research and critic in the explain pipeline | `P32.F1` | `works/phases/active/P32` |
 
 ## Phase P21: Web document deletion
 
@@ -217,6 +217,7 @@
 | [x] `P32.S5` | `done` | Part A research stage: core card, preflight, waves, dossier and resume, gap rounds, evidence gate, quick and no-research | `implementation` | `works/phases/active/P32/slices/P32.S5` |
 | [x] `P32.S6` | `done` | Part A writing from the dossier, critic and revision, report, book section and suggestion; plugin 0.6.0 and README | `implementation` | `works/phases/active/P32/slices/P32.S6` |
 | [x] `P32.S7` | `done` | Rehearsal 1: old vs new single document on a general and a codebase subject; fix the skill | `qa` | `works/phases/active/P32/slices/P32.S7` |
+| [~] `P32.F1` | `pending` | Make the new chapter helpful and easy to read: writing shaped by the reader's task | `fix` | `works/phases/active/P32/slices/P32.F1` |
 | [ ] `P32.S8` | `todo` | Bootstrap package: route fields, three explain references, executor carve-out, critic removal | `implementation` | `works/phases/active/P32/slices/P32.S8` |
 | [ ] `P32.S9` | `todo` | Rehearsal 2: a tiny book through the package, research to one chapter, nothing published | `qa` | `works/phases/active/P32/slices/P32.S9` |
 | [ ] `P32.S10` | `todo` | Handoff for the bootstrap: what to apply, the order around P42, the minimums | `docs` | `works/phases/active/P32/slices/P32.S10` |
