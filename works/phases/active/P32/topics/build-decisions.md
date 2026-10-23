@@ -298,9 +298,19 @@ against rehearsal 1's old chapters.
   4,118 and 4,803), density, and citation or line-number clutter (G 177 links against 44; C 18 inline line refs
   against 0).
 
-**Rules v2** (budgets; teach, don't report; one citation per source a paragraph; shorter wins) and one C rerun
-from D6 gave 5,881 words, 0 line refs and 14 links. Its two judges did not run: the leak scan's new hits stopped
-the rehearsal (OQ8).
+**Rules v2** (budgets; teach, don't report; one citation per source a paragraph; shorter wins). After OQ8 (d61)
+both subjects were rerun from D6 and judged the same way:
+
+| Subject | Helpfulness | Comprehensiveness | Insight | Readability |
+|---|---|---|---|---|
+| C (5,881 words, 0 line refs, 14 links) | **new** in both orders | new | new | old |
+| G (6,888 words, 125 links, against v1's 8,561 and 177) | **new** in both orders (v1 tied) | new | new | old |
+
+- No R1/R3/R5/R7 failure on new in any of the eight sessions.
+- v2 still misses on Readability alone. The judges gave length on both (each new chapter is about 43% longer than
+  old, and above D6's 5,000-word budget), and on G also the inline citations. On C they now call new "well
+  structured" and mention no clutter.
+- Per d61 no third revision: v2 stays the rules, and the next lever is the operator's (OQ10).
 
 `rehearsal/r1b/scorecard.md`.
 
@@ -321,3 +331,21 @@ the rehearsal (OQ8).
 | §4.3 (trimmed) | −182 |
 | §4.8 (trimmed) | −119 |
 | §5 (trimmed) | −36 |
+
+## d61 · OQ8: the leak-scan stop and the spend (operator, 2026-10-23)
+
+The operator: "I don't care about the token spending for now".
+
+- **The two new leak-scan hits are known.** They are glide-ilab transcripts of 2026-10-07/08
+  (`~/.claude/projects/-Users-sugang-projects-KRPD-glide-glide-ilab/ac92989b….jsonl`, `e1d150e2….jsonl`), moved
+  into `~/.claude/projects` on 2026-10-22, before P32 began; no F1 run wrote them. The known list is five files.
+  Any other new hit still stops the slice.
+- **F1 continues, in order:** C v2's two judges; G rewritten under rules v2 from the same dossier reset as
+  `reset-g.md`, then its two judges (run whatever C v2 shows, since spend is not the bound); the confirming run
+  with the `quick` flag set apart, then `resume` with no run id.
+- **The cap is $75** for all of F1's `claude -p` runs, the $40.59 already spent included. It is a loop-safety stop,
+  not a budget.
+- **No further rule revision.** If v2 still loses Readability on either subject in either order, F1 reports it with
+  what the judges blamed: the next lever, a firm length limit, trades depth and is the operator's call. If v2 wins
+  or ties Readability on both subjects and Helpfulness, Comprehensiveness and Insight still hold, v2 stays the rules
+  and F1 returns `done`.

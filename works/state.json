@@ -2,7 +2,7 @@
   "current_phase": "P32",
   "current_slice": "P32.F1",
   "next_slice": "P32.S8",
-  "waiting_on_operator": null,
-  "mode": "phase",
-  "updated_at": "2026-10-23T10:54:29+09:00"
+  "waiting_on_operator": "P32.F1",
+  "mode": "waiting",
+  "updated_at": "2026-10-23T11:37:38+09:00"
 }
