@@ -3,12 +3,12 @@
   "phase_id": "P32",
   "name": "The verifier refuses to run on the researchers' model, as the critic does with the writer's",
   "kind": "fix",
-  "status": "in_progress",
+  "status": "done",
   "order": 118,
   "depends_on": [],
   "created_at": "2026-10-24T03:28:14+09:00",
   "started_at": "2026-10-24T03:28:45+09:00",
-  "completed_at": null,
+  "completed_at": "2026-10-25T01:25:50+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "verifier blocks on the researchers' model or a missing researchers_model line, lead re-sends once with model corrected (B5's pattern); wait rule scoped to background agents; probe 3/3, Sonnet quick verified on Opus, 0 wakeups ($2.71); landing 2,635",
   "validation": {
     "required": [],
     "last_run": null,

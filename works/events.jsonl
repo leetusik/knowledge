@@ -1397,3 +1397,5 @@
 {"ts": "2026-10-24T03:28:45+09:00", "type": "slice_status_changed", "slice": "P32.F5", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-24T03:28:45+09:00", "type": "slice_status_changed", "slice": "P32.F5", "old_status": "in_progress", "new_status": "pending", "stop_kind": "decision"}
 {"ts": "2026-10-25T00:45:07+09:00", "type": "slice_status_changed", "slice": "P32.F5", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-10-25T01:25:50+09:00", "type": "executor_dispatched", "slice": "P32.F5", "phase": "P32", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": "B4 same-model guard (researchers_model), lead re-sends once; probe 3/3, Sonnet quick run verified on Opus, 0 wakeups ($2.71 of $10)"}
+{"ts": "2026-10-25T01:25:50+09:00", "type": "slice_status_changed", "slice": "P32.F5", "old_status": "in_progress", "new_status": "done"}

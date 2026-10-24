@@ -1,0 +1,14 @@
+# f5q: 20261025-0056-rice-cooker (mtime, bytes, path; pages/ not kept)
+01:00:04    482 ./brief.md
+01:00:13   1039 ./plan.md
+01:01:44   7763 ./findings/r1-lead.md
+01:01:47    496 ./library.md
+01:04:13  11690 ./verify/r1-b1.md
+01:04:35   1205 ./ledger.md
+01:04:39    870 ./gaps/final.md
+01:04:44   1037 ./outline.md
+01:05:30   4683 ./body.md
+01:05:31   1094 ./trace.md
+01:05:49   1157 ./report.md
+01:05:51   1754 ./run.md
+pages/: 20 files (not kept)

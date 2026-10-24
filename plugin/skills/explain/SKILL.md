@@ -84,10 +84,11 @@ dossier, names its path and says how to resume.
 - Loop safety is the only bound: at most 3 gap rounds, the tier's dispatch ceiling, one
   re-dispatch per failed agent, one re-verification per claim. Overflow is queued, never
   dropped; evidence is never truncated; research never ends silently on an error.
-- **Wait only by ending your turn:** an agent's notification starts your next one. Never
-  schedule your own resumption, not even as a fallback: no `ScheduleWakeup`, no
-  `CronCreate`, no monitor, no sleep or poll loop (a wakeup can fire after the report and
-  re-send this request). A lead that is itself a subagent waits in the foreground (§3.2).
+- **Wait for a background agent only by ending your turn:** its notification starts your
+  next one. Never schedule your own resumption, not even as a fallback: no
+  `ScheduleWakeup`, no `CronCreate`, no monitor, no sleep or poll loop (a wakeup can fire
+  after the report and re-send this request). A lead that is itself a subagent waits in
+  the foreground (§3.2).
 - **A repeat is never a new run.** A request in the same words as a run this session
   already finished (its report given or `state: done`; a wakeup or a re-sent prompt
   brings one) starts nothing by itself. Interactive (§9.1's test): ask once whether the user wants a
@@ -487,9 +488,8 @@ before your next action, so that a compaction, a crash or a usage limit loses no
 run. `wave` is the wave size (§3.5); `caps: agent` when the agents' own turn limits apply
 (the plugin path), `prompt-only` when only the dispatch's budget does; `searches` counts
 every WebSearch of the run: yours (your findings' `## Queries`), the probe's one, and each
-role's return line `searches:`; §4.9 adds the dossier. A verifier that reports the
-researchers' model makes `verifier: same model (degraded)`; the sequential path makes it
-`lead (degraded)`.
+role's return line `searches:`; §4.9 adds the dossier. `verifier: same model (degraded)`
+needs `same-model: accepted` (§3.6); the sequential path makes it `lead (degraded)`.
 An agent's "switched to" notice is recorded as a fallback.
 
 **Resume** (`/knowledge:explain resume [<run-id>] [trust <source> | drop <item>]`):
@@ -636,8 +636,11 @@ Then hold the plan to §9.1's size test: a plan plainly over one document is a b
 **D3v, verify the round.** Batch this round's new or changed load-bearing claims, grouped
 by source, about 15 claims to a batch, and send the batches as a wave
 (`knowledge:verifier`, B4; generic: a subagent on `sonnet`): batch ids `r<n>-b<k>`, output
-`verify/r<n>-b<k>.md`, `counter-evidence ids: none`. A batch that fails twice stops the run
-(resumable). On the sequential path you verify from the entries alone, in a separate pass.
+`verify/r<n>-b<k>.md`, `counter-evidence ids: none`, `researchers_model:` its
+researchers' model. `blocked` for the model: correct `model:` on the call, send it once
+more (as §4.10). Only a host that cannot choose a model adds `same-model: accepted`. A
+batch that fails twice stops the run (resumable). On the sequential path you verify from
+the entries alone, in a separate pass.
 
 **D3s, apply** (you): each claim's status from its record, by B8. `supported` only when
 the record says `supported` and the bar is met; `partial` keeps only its narrower claim,
@@ -671,9 +674,10 @@ the load-bearing claims that are evaluative, comparative, consensus or "best pra
 numbers and statistics; superlatives; resting on one source; a vendor's claim about
 itself used beyond the attributed form; the claims the quiz will test; flagged
 exceptional. Batch every claim the outline maps that is still `candidate`, plus every main
-claim marked `· main`, with output `verify/final-b<k>.md` and counter-evidence ids `v<k>`
-(one per batch), and send the batches as a wave. A main claim's counter-evidence search is
-not a re-verification. A batch that fails twice stops the run.
+claim marked `· main`, with output `verify/final-b<k>.md`, counter-evidence ids `v<k>`
+(one per batch) and `researchers_model:` (D3v), and send the batches as a wave. A main
+claim's counter-evidence search is not a re-verification. A batch that fails twice stops
+the run.
 
 **D5s, apply and record** (you): statuses as at D3s. A counter-source at rung 1 or 2 that
 directly disagrees becomes a `D-<seq>` entry, and its claim `contested`. One that changes
@@ -710,9 +714,10 @@ Research the angles yourself, by B1 and B2, into findings files `r1-<angle-id>`:
 20 and a hard cap of 40 tool calls in all, then one coverage check against the plan's
 questions, with at most one follow-up burst of 10 calls. Then D3, and the verifier batch on
 the load-bearing claims: you are the researcher here, so `knowledge:verifier` as it is when
-you run on Opus, with `model: opus` otherwise; generic: a subagent on that model. Then D5s
-without counter-evidence, `gaps/final.md`, D5g (the gate holds), D6 and D7 as in a full
-run. `run.md` and the report say `quick`, and what it skipped.
+you run on Opus, with `model: opus` otherwise; generic: a subagent on that model; and
+`researchers_model:` your model id (D3v). Then D5s without counter-evidence,
+`gaps/final.md`, D5g (the gate holds), D6 and D7 as in a full run. `run.md` and the report
+say `quick`, and what it skipped.
 
 **`no-research`** (the operator's choice only). D0, then no web probe, no plan, no team and
 no ledger: you read the repository yourself, by mode. **Change mode:** the real change,
@@ -1440,8 +1445,8 @@ The chapter executor, for chapter `<k>` (its position), key `<key>`, state in `r
    follow-up after a second gap check, a ceiling of 5 dispatches. Merge into the overlays
    `library-ch<k>.md` and `ledger-ch<k>.md` (B9's lines; a source in the book's library
    keeps its id), never the frozen files. Verify the new mapped claims once (batches
-   `ch<k>-b<m>`, counter-evidence on its main claims); D5s into the overlay and
-   `gaps/final-ch<k>.md`.
+   `ch<k>-b<m>`, counter-evidence on its main claims, `researchers_model:` (D3v)); D5s
+   into the overlay and `gaps/final-ch<k>.md`.
 4. **Its gate:** D5g over its must-cover items and load-bearing questions, frozen ledger and
    overlay together. Below it: stop before writing, with the failing items.
 5. **D6–D7** by §3.10 and §4 (the reader's path, the three passes, the prose rules), its
@@ -1681,10 +1686,18 @@ the chapter says. You run on a model different from the researchers', in a fresh
 so that you catch what they missed; that works only if you check instead of trust. Each
 claim gets a strict label from what its source itself says.
 
+**Your model.** Your frontmatter is `sonnet`; for Sonnet research the dispatcher passes
+`model: opus`. The dispatch names the researchers' model (`researchers_model:`). If it is
+the model you run on, or the same family, or the line is missing, stop before any check
+and return `status: blocked: same model as the researchers`: the dispatcher picked the
+wrong model. The one exception is a dispatch that says `same-model: accepted`: then run,
+and write `verifier: <id> (same model, degraded)`.
+
 **Your dispatch:**
 
     run: <run-id> · batch: <batch id> · dossier: <absolute path> · tools: <absolute path>
     output: verify/<batch id>.md · counter-evidence ids: v<n> | none
+    researchers_model: <id>[ · same-model: accepted]
     claims:
       <claim id> (<file that holds it>)[ · main][ · re-verify with <source id>/P<m> (<file>)]
 

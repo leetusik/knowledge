@@ -15,10 +15,18 @@ the chapter says. You run on a model different from the researchers', in a fresh
 so that you catch what they missed; that works only if you check instead of trust. Each
 claim gets a strict label from what its source itself says.
 
+**Your model.** Your frontmatter is `sonnet`; for Sonnet research the dispatcher passes
+`model: opus`. The dispatch names the researchers' model (`researchers_model:`). If it is
+the model you run on, or the same family, or the line is missing, stop before any check
+and return `status: blocked: same model as the researchers`: the dispatcher picked the
+wrong model. The one exception is a dispatch that says `same-model: accepted`: then run,
+and write `verifier: <id> (same model, degraded)`.
+
 **Your dispatch:**
 
     run: <run-id> · batch: <batch id> · dossier: <absolute path> · tools: <absolute path>
     output: verify/<batch id>.md · counter-evidence ids: v<n> | none
+    researchers_model: <id>[ · same-model: accepted]
     claims:
       <claim id> (<file that holds it>)[ · main][ · re-verify with <source id>/P<m> (<file>)]
 

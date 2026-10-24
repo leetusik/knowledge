@@ -554,3 +554,35 @@ _Moved verbatim from `phase.md` at P32.REVIEW round 3 (the notebook over budget)
   run `…-v2` (stopped by me there). F2's headline held in f4a and f4e (12 of 14; the two misses are D72's). f4c
   sent the verifier without `model: opus` (it ran on Sonnet, the lead's model) and wrote no `report.md`: reported
   as observations.
+
+## d74 · The verifier's same-model guard (F5; B4, card, §3.3, §3.6, §3.8, §3.9, §9.3)
+
+- **Cause** (P32.REVIEW round 3, the one finding): in f4c a Sonnet lead sent `knowledge:verifier` without
+  `model: opus`, so Sonnet checked Sonnet's own `quick` research; the report said only "weaker" and the document
+  was published. 8 of 10 Sonnet `quick` runs that reached D3v had set the model right the first time. The critic
+  was already guarded mechanically (d33, B5's `writer_model`); the verifier was the only role whose model split
+  rested on the lead remembering a parameter.
+- **B4** gains B5's paragraph, near word for word: "**Your model.**" Its frontmatter is `sonnet`, and for Sonnet
+  research the dispatcher passes `model: opus`. The dispatch names the researchers' model (a new dispatch line,
+  `researchers_model: <id>[ · same-model: accepted]`). If that is the model the verifier runs on, or the same
+  family, or the line is missing, it stops before any check and returns `status: blocked: same model as the
+  researchers`. The one exception, `same-model: accepted`, runs it and makes its verify file say `verifier: <id>
+  (same model, degraded)`. `verifier.md` regenerated (`--write-agents`). B5's "which a lead sends only on a host
+  that cannot choose a model" sits on the lead's side (D3v) only, to keep within the size limit.
+- **The dispatch sites:** D3v fills `researchers_model:` with its researchers' model and states the answer once:
+  a `blocked` for the model is re-sent once with `model:` corrected on the call (as §4.10 does for the critic),
+  and only a host that cannot choose a model adds `same-model: accepted` (B5's rule). D5 and §9.3's top-up cite
+  D3v; §3.9 (`quick`) gives the lead's own model id. A second failure is the batch failing twice, which stops the
+  run as before. §3.3's `verifier: same model (degraded)` now needs `same-model: accepted`; the sequential path
+  is still `lead (degraded)`. §4.9's defect clause is unchanged: on the plugin path the model can always be chosen.
+- **The tidy** (round 3's observation): the card's wait rule is "Wait for a background agent only by ending your
+  turn"; a foreground dispatch (§4.10's critic, a subagent lead's) returns in its own turn. The rule's prohibitions
+  and d65's sentence are unchanged.
+- **Size:** 156,887 → 157,738 B (+851 B, limit about 0.8 KB); 2,622 → 2,635 lines; the landing's `lede` and
+  `pane.meta` read 2,635.
+- **Live (`claude -p`, round 2's harness, :8941; $2.71 of $10; `rehearsal/f5/`):** f5p, a Sonnet main thread
+  probing `knowledge:verifier` on 3 of rv3a's claims: `researchers_model: claude-sonnet-5-5` with no `model:` →
+  `blocked` (ran on Sonnet, no check); with `model: opus` → `verify/f5-b2.md` by `claude-opus-5-5` (3 supported);
+  no `researchers_model:` line, on Opus → `blocked`. f5q, a Sonnet `quick` run (a rice cooker): the one verifier
+  dispatch carried `researchers_model: claude-sonnet-5-5` and `model: opus` and ran on Opus; F2's headline 13 of
+  14 (the dossier line, D72); 0 lead wakeups, crons or monitors over a 15-minute hold; one run id; v1.
