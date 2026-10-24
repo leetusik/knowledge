@@ -1396,3 +1396,4 @@
 {"ts": "2026-10-24T03:28:14+09:00", "type": "deferred_created", "deferred": "D75", "source": "P32.REVIEW"}
 {"ts": "2026-10-24T03:28:45+09:00", "type": "slice_status_changed", "slice": "P32.F5", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-24T03:28:45+09:00", "type": "slice_status_changed", "slice": "P32.F5", "old_status": "in_progress", "new_status": "pending", "stop_kind": "decision"}
+{"ts": "2026-10-25T00:45:07+09:00", "type": "slice_status_changed", "slice": "P32.F5", "old_status": "pending", "new_status": "in_progress"}

@@ -52,6 +52,11 @@ it stands), verbatim:
 
 > /do-whole-phase with a
 
+Answer to round 3's hold (go: P32.F5, the verifier refuses to run on the researchers' model, ≈ $5–10; or defer
+it), verbatim:
+
+> go
+
 ## Confirmed Intent (refined + clarified)
 
 Explaining a topic should rest on **thorough research by agents**, not on one writer's quick look. Research

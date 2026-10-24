@@ -8,7 +8,7 @@
 - Current phase: `P32`
 - Current slice: `P32.F5`
 - Next slice: `P32.REVIEW`
-- Waiting on operator: `P32.F5`
+- Waiting on operator: `none`
 - Open deferred jobs: `56`
 
 ## Streams
@@ -224,5 +224,5 @@
 | [x] `P32.F2` | `done` | Quick keeps the research team's shape on any lead: explicit quick card, dossier-completeness check, search count | `fix` | `works/phases/active/P32/slices/P32.F2` |
 | [x] `P32.F3` | `done` | Landing: the skill pane's line count matches the served SKILL.md | `fix` | `works/phases/active/P32/slices/P32.F3` |
 | [x] `P32.F4` | `done` | explain waits only by ending its turn, never re-runs itself; the verifier-defect clause matches B4 | `fix` | `works/phases/active/P32/slices/P32.F4` |
-| [~] `P32.F5` | `pending` | The verifier refuses to run on the researchers' model, as the critic does with the writer's | `fix` | `works/phases/active/P32/slices/P32.F5` |
+| [ ] `P32.F5` | `in_progress` | The verifier refuses to run on the researchers' model, as the critic does with the writer's | `fix` | `works/phases/active/P32/slices/P32.F5` |
 | [ ] `P32.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P32/slices/P32.REVIEW` |
