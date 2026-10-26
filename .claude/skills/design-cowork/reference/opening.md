@@ -2,7 +2,7 @@
 
 ## Opening a round — per job; a wave opens all its jobs
 
-For each job of the slice, in the order the breakdown lists them:
+For each job of the slice, in the order the breakdown (`topics/breakdown.md`) lists them:
 
 1. **Record setup, once per product.** `design-init` on the first job (after `design-migrate` when a
    legacy layout is at the root). When the product has code and `design.json` records no system, sync

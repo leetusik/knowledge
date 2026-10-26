@@ -10,8 +10,8 @@ judge; on the judge's short follow-up pass add `judge-01.md` (*below*). The draf
 nothing. Run it
 as a background task (never pass `run_in_background: false`).
 
-**A wave dispatches one drafter per job at once.** That is the one carve-out from "one executor at a
-time": the jobs' folders are disjoint and these are design spans only. Every later span of the wave
+**A wave dispatches one drafter per job at once.** That is the design-wave carve-out from "one executor
+at a time": the jobs' folders are disjoint and these are design spans only. Every later span of the wave
 (critic, judge, the next drafter pass) runs as soon as its own job is ready for it.
 
 **The drafter's verdict.** `done` → the loop below. `needs_operator` → the handoff is thin or
@@ -53,10 +53,8 @@ anything:** one critic pass, then at most one drafter answer pass. There is no s
      `pass-rejected` sends the must-fixes it names into that same short pass. With no confident
      must-fix for the answer pass, the judge runs first and the drafter takes its upheld items in
      its one pass.
-   - **`skip=yes`** (a loopback proxy, no Fable): dispatch no judge; the escalated items go to the
+   - **`skip=yes`** (the judge row overridden to Fable behind a loopback proxy, which serves no Fable): dispatch no judge; the escalated items go to the
      operator marked **low confidence**.
-   - **Exit 1** (fairness: the critic or judge row names the drafter's model family): stop and tell
-     the operator the row conflict. The rows are the knob.
 4. **A wave choice** (a `choice` finding, a cross-job conflict) never blocks. Copy it onto the other
    job too. Under `critic+judge` the judge rules: `upheld` means this job takes the other's version,
    in its short pass; `dropped` means the other job changes, which you report on that job at the stop
@@ -66,7 +64,7 @@ anything:** one critic pass, then at most one drafter answer pass. There is no s
 **Cost** (measured in P36.S8B, critic at sonnet @ max; v61 runs the critic at high and reuses the drafter's render): a critic pass took 25–36 minutes on a
 flow-board job, and the judge about 2 minutes per item. A job took about 55–100 agent-minutes with a
 critic and about 30 without. The drafter's `--click` self-check takes a few minutes of that. The
-critic's model and effort are the `[claude.critic]` row's (`high` by default since v61, `max` the step up) and
+critic's model and effort are the `[claude.critic]` row's (`xhigh` by default since v66, `max` the step up) and
 the judge's the `[claude.judge]` row's: the operator tunes them in `executors.toml`, never in a prompt.
 
 **Every span's prompt starts with its `slice: <id>` line** — drafter, critic and judge alike: the
@@ -77,4 +75,4 @@ record one by hand.
 
 - Dispatch anything but these spans: the drafting to `design-drafter`, every round; the critique and
   the judging to `design-critic`, when the job's level says so; and the mockup build to
-  `slice-executor-high`, only when the operator asked for one.
+  `slice-executor` on the high row, only when the operator asked for one.

@@ -5,14 +5,8 @@ Durable docs are versioned. Do not patch old versions.
 ## Categories
 
 - `docs/current/product.md`
-- `docs/current/experience.md`
 - `docs/current/architecture.md`
-- `docs/current/frontend.md`
-- `docs/current/backend.md`
-- `docs/current/data.md`
-- `docs/current/api.md`
 - `docs/current/operations.md`
-- `docs/current/security.md`
 - `docs/current/qa.md`
 - `docs/current/decisions.md`
 
@@ -29,14 +23,10 @@ Doc updates happen in a **docs phase the operator creates** — never per slice.
 
 ## Update Triggers
 
-- `product`: goals, users, scope, terminology, business direction
-- `experience`: routes, journeys, UI behavior, copy, UX states
-- `architecture`: system boundaries, components, runtime, integrations
-- `frontend`: routing, components, state, data fetching, browser auth
-- `backend`: server modules, services, jobs, auth/session, logging/errors
-- `data`: schema, migrations, entities, indexes, storage, retention
-- `api`: REST/RPC/webhook/event contracts and error shapes
-- `operations`: env, deployment, local commands, jobs, monitoring, backups
-- `security`: permissions, secrets, customer data boundaries, abuse controls
+- `product`: goals, users, scope, terminology, business direction, and the user journeys and UX rules the code cannot show
+- `architecture`: system boundaries, components, runtime, integrations, and what the code cannot say about its modules, data, API contracts and security model (invariants, ownership, retention, outside contracts, trust boundaries)
+- `operations`: env, deployment, local commands, jobs, monitoring, backups, and how the operator runs and views the product
 - `qa`: test commands, QA missions, regression checklist, acceptance style
 - `decisions`: meaningful choices, tradeoffs, rejected alternatives
+
+These docs are read by agents, which can read the code: write what the code cannot say, and point at the code for the rest. An install made before v79 may also hold `experience`, `frontend`, `backend`, `data`, `api` and `security`: they are retired, kept readable and never versioned again, and their changes go to `product` (experience) or `architecture` (the rest).

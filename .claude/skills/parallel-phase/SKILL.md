@@ -24,8 +24,9 @@ normal shape of this workspace and a branch per phase made every ordinary run pa
 never used. What v42 built stays — the dirty-tree stamp commit, the in-repo worktree home (`.claude/worktrees/`), the local
 merge, the gate-section notes — it is simply reached on request now.
 
-The unit of parallelism is the **phase**. Slices inside a phase stay strictly sequential — they build
-on each other through `phase.md` and a commit at every boundary — so never fan out slices.
+The unit of *worktree* parallelism is the **phase**. Slices inside a phase run one at a time, except that
+the declared, independent slices of a phase may run together in its checkout (the `do-whole-phase` wave,
+`.claude/skills/do-whole-phase/reference/wave.md`); a phase worktree changes none of that.
 
 Everything below is the whole lifecycle, in order: the operator asks → enter → work → review on the
 branch → integrate back (a local merge by default). The contract (`CLAUDE.md`) carries only the rules;
@@ -38,9 +39,10 @@ the detail lives here.
 1. **When — only when asked** — a `planned` phase moves into its own worktree on the operator's
    word and nothing else (the three forms above). `do-next-slice` / `do-whole-phase` run
    `parallel-start <P>` when they are told to and never on their own initiative; `create-phase`
-   never does. A phase already carrying the stamp is entered without asking again.
-2. **Where** — `<repo>/.claude/worktrees/P<N>-<slug>` on branch `phase/P<N>-<slug>` (`--worktree`
-   overrides); the engine puts `.claude/worktrees/` in `.git/info/exclude` (common dir), never in
+   never does, and neither does `/do-whole-phases`. A phase already carrying the stamp is entered
+   without asking again.
+2. **Where** — `<repo>/.claude/worktrees/P<N>-<slug>` on branch `phase/P<N>-<slug>` (`P<N>` is the
+   phase's id, `P12` or `P-7kq2`; `--worktree` overrides); the engine puts `.claude/worktrees/` in `.git/info/exclude` (common dir), never in
    `.gitignore`. **Nested install:** a pair — the host worktree `<host>/.claude/worktrees/P<N>-<slug>`
    on the operator-confirmed host branch, with the nested worktree at its `workflow/` on
    `phase/P<N>-<slug>`; the engine adds `/.claude/worktrees/` to the host's `info/exclude`.
@@ -68,7 +70,7 @@ the detail lives here.
 7. **The merge** — after `parallel-gate <P>` is OPEN (branch phase `done` + review `pass`, default
    stream not busy; never past a closed gate): `ExitWorktree keep` → `git pull --ff-only` only if
    `main` tracks a remote → if anything is staged, or a file the merge touches is uncommitted (typically
-   the generated `works/` files after a phase was created here since the stamp — commit that
+   the generated `works/` files, which a phase worktree refreshes here as it runs (v67) — commit that
    workflow state first), STOP and ask (git refuses both; never unstage or discard the operator's work)
    → `git merge --no-ff phase/P<N>-<slug> -m "merge(P<N>): <name>"`
    (an orchestrator commit; a conflict in a generated file = take either side + regenerate) →
@@ -172,8 +174,12 @@ What *is* stream-scoped:
   merge — that is what `parallel-status` is for.
 
 `works/backlog.md`'s `## Streams` table lists the default stream and every in-flight worktree phase,
-read live from its branch (with the host branch in a nested install); `parallel-status` gives the
-detail.
+read live from its worktree's files while the worktree is on disk, else from its branch (with the
+host branch in a nested install). The same read fills that phase's `## Active Phases` row and slice
+table, so the slices it cut show before the merge. Since v67 every state change in a worktree reruns
+the default checkout's own `rebuild`, so its backlog follows the phase with nothing run there; those
+regenerated files stay uncommitted until the default stream's next commit. `parallel-status` gives
+the detail.
 
 **A worktree isolates files only.** Docker containers, ports, local databases and caches stay shared,
 so coordinate them across streams.
@@ -187,22 +193,27 @@ convention and with no workspace IDs; workflow commits run `git -C workflow …`
 inside it, so "take either side and regenerate" does not apply to the file: a conflict *inside* its
 `<!-- slices:begin -->` … `<!-- slices:end -->` block is resolved by taking either side and re-running
 `python3 scripts/workflow.py rebuild`, while the rest of the notebook — Decisions, Doc impact,
-Operator Questions, Notes, Now — is merged by hand like any other prose.
+Operator Questions, Notes, Now — is merged by hand like any other prose, entry by entry (keep both
+sides' entries; a conflict marker is the one time the file is edited directly). Its `topics/*.md`
+(`topics/breakdown.md` included) are part of the notebook and travel with the phase folder; a
+conflict there is merged the same way. Then `phase-section <P>` shows the index and any over-budget
+section, and `validate` warns on a dangling pointer.
 
 ## 4. Review on the branch — with even the gate sections deferred
 
 Run the phase review exactly as `review-phase` describes, with **one** difference. Every phase now
 defers consolidation to a docs phase, but a default-stream review still writes two named sections
 itself (`## Regression Checklist`, `## Operator Runtime`); on a branch it writes **nothing**. Doc
-versions are allocated from a single `docs/index.json` counter, so two branches writing at once
-collide — everything waits for the serialized post-merge step on the default stream.
+versions copy a doc's whole body from the branch point and write the one `docs/index.json`, so two
+branches versioning one doc at once fork it (a merge keeps one side's edits) — everything waits for
+the serialized post-merge step on the default stream.
 
 So on a parallel branch the review executor:
 
 - validates every slice together and judges the phase as usual;
 - **verifies** that the running "Doc impact" list in `phase.md` covers every durable-truth change the
-  phase made (that list is the input the post-merge step consolidates from — an incomplete list is a
-  review finding, not a detail);
+  phase made (that list is the input the post-merge step consolidates from), appending any missing
+  line itself and reporting it as `doc_impact_added:` (a gap is never a finding on its own);
 - runs **no** `doc-new-version` and no `rebuild-docs` — including the two named gate sections a
   default-stream review may write (`## Regression Checklist`, `## Operator Runtime`) — and reports
   `doc_versions: none — deferred to post-merge consolidation (parallel mode)`;
@@ -220,7 +231,7 @@ note waits for the operator's docs phase, as on the default stream, which record
 Record the verdict normally, from the worktree:
 
 ```sh
-python3 scripts/workflow.py review-phase <P> --verdict pass --reviewer slice-executor-high --note "..."
+python3 scripts/workflow.py review-phase <P> --verdict pass --reviewer slice-executor --note "..."
 ```
 
 A `changes_requested` or `blocked` verdict behaves as always — fix slices on the branch, then
@@ -254,7 +265,8 @@ closes the gate or turns a check red mid-sequence, STOP and report — never mer
 4. **Merge locally.** If `git diff --cached --quiet` fails, STOP and ask the operator to commit or
    unstage — git refuses a merge on a non-clean index, and you never unstage their work. The same
    refusal fires for uncommitted changes to a file the merge touches — typically the generated
-   `works/` files after a phase was created on this checkout since the stamp: that is
+   `works/` files, which a phase worktree refreshes here as it runs (v67) and a phase created on
+   this checkout since the stamp rewrites: that is
    workflow state, yours to commit first (`git add works && git commit`), never the operator's edit
    to discard. Then:
    ```sh
@@ -334,7 +346,7 @@ Only when the operator asks or the repo's policy requires it. It replaces steps 
    here.
 2. **Open the PR.** `gh pr create --base main --head phase/P<N>-<slug> --title "..." --body "..."`.
    The **phase is the reviewable unit** — one PR per phase, body drawn from `phase.md` (objective,
-   slice breakdown, notable decisions). PR approval maps to the passing review verdict that already
+   the slice breakdown in `topics/breakdown.md`, notable decisions). PR approval maps to the passing review verdict that already
    exists; do not re-litigate the review in the PR.
 3. **Wait for CI.** `gh pr checks --watch`. The `validate` job runs everywhere; the `parallel-gate`
    job re-runs the quiet point server-side on `phase/*` PRs. Red → stop and report.
@@ -342,6 +354,63 @@ Only when the operator asks or the repo's policy requires it. It replaces steps 
    so no squash and no rebase.
 5. **Back on the default checkout** (`ExitWorktree` `keep` if you are still in the worktree), `git pull`,
    then continue at step 5 above.
+
+## 6. A multi-repo host — a set instead of a pair
+
+When `python3 scripts/workflow.py nested-repos` lists repos (a host that tracks nothing and holds
+several product repos), a phase worktree is a **set**: the host worktree, the nested worktree at its
+`workflow/`, and one worktree per repo the phase will change, at `<host worktree>/<repo>/`. Sections
+1-5 and the nested paragraphs above still hold; this is what changes. Everything on a repo's side
+follows **that repo's** custom, on the operator's word: the engine never fetches, pushes, opens a PR
+or merges into any repo's default branch.
+
+**Starting.** The orchestrator prepares each repo, as it prepares the host in a nested install:
+
+1. For each repo the phase will change, read its custom (`nested-convention --repo <name>`), propose
+   a branch name in it (no phase or slice IDs), and let the operator confirm it. The engine never
+   invents a name, and one phase's repos can use different names.
+2. The base is that repo's registry `default_branch`, read as a **local** branch; stack on another
+   branch with `--repo-base <name>=<ref>`. Run `git -C <repo> fetch` first when its custom says to
+   branch from fresh main.
+3. `python3 scripts/workflow.py parallel-start <P> --host-branch <name> --repo <name>=<branch>
+   [--repo-base <name>=<ref>] ...`: `--repo` repeats, and `--repo-base` must name a repo `--repo`
+   also names. `--host-branch` is still required (the host worktree needs a branch; no product commit
+   ever goes to the host folder). A repo branch that exists and is checked out nowhere is reused; one
+   checked out anywhere is refused. Every guard runs before any write, so a refusal leaves nothing
+   behind. Then `EnterWorktree` with the printed host worktree path.
+4. A repo the phase needs later: from **inside the set**, `parallel-add-repo <P> --repo
+   <name>=<branch> [--repo-base <ref>]`. It commits its stamp on the phase branch, where
+   `phase.json` advances, so never re-run `parallel-start`. Add `--adopt` to stamp a repo worktree
+   that already exists at `<host worktree>/<repo>/` (registered in that repo, on `<branch>`) instead
+   of cutting one; its branch stays the operator's.
+
+**Not in this set.** A registered repo with no worktree in the set is not in it: inside the set,
+`phase-scope` prints `not in this worktree set` for it and skips it. It never falls back to that
+repo's main checkout, whose branch and working tree belong to another stream. To read it anyway:
+`phase-scope <P> --repo <name> --base <ref>` (or `--head`). `parallel-start` with no `--repo` cuts
+host + nested only.
+
+**Working.** Product commits go to each repo's branch in its own worktree (`git -C <repo> ...` from
+the host worktree), never to the host folder; the nested worktree's workflow commits are unchanged.
+`parallel-status` adds one `repo <name>:` line per stamped repo. Each repo branch is integrated by
+that repo's custom, one PR per repo branch where the custom says so; the nested repo merges as in
+"Integrating in a nested install".
+
+**Tear down.** `parallel-teardown <P>` checks first and refuses in one report: uncommitted work or
+ignored worktree-only files in any repo worktree (the latter only deleted with `--discard-ignored`),
+and detached commits no branch holds. Then it removes the repo worktrees first, then the nested
+worktree, then the host worktree: removing the host first would delete the repo worktrees with
+whatever they hold. A repo branch is deleted only when the engine created it and it holds no commit
+beyond its base; every other one is kept, as the operator's. A failed step prints the rest, and a
+re-run resumes.
+
+**A worktree the stamp does not name is refused, always.** Any git worktree inside the host
+worktree that the phase's stamp does not name (typically one made by hand with `git worktree add`)
+is refused by `parallel-teardown` in every nested install, and `--discard-ignored` never covers it:
+removing the host worktree would delete it with everything uncommitted in it. `validate` warns about
+it while the set is live. Remove it yourself after integrating its branch
+(`git -C <repo> worktree remove <path>`), or adopt it with `parallel-add-repo ... --adopt` from
+inside the set, merge the phase branch again and re-run the teardown.
 
 ## Guardrails
 
@@ -353,8 +422,11 @@ Only when the operator asks or the repo's policy requires it. It replaces steps 
 - Never merge from inside the worktree — exit first.
 - Never `parallel-start` a phase the operator did not ask about, nor a pinned or in-flight one.
 - Never enter a path the engine did not print / `git worktree list` does not show.
-- Slice-level parallelism inside a phase stays out of scope.
+- Slices running together inside a phase are `do-whole-phase`'s wave, in the phase's own checkout; never a worktree per slice.
 - The phase branch and the stamp commit are part of executing a phase; pushing is not — push only
   when asked.
 - Nested install: never merge a host branch into the host's default branch, and never push, open a
   PR or merge on the host without the operator's word; the host's custom decides the shape.
+- Multi-repo host: the same for every repo — never push, open a PR or merge into any repo's default
+  branch without the operator's word; never remove a git worktree inside the host worktree that the phase's
+  stamp does not name before its branch is integrated, and never force the teardown past one.

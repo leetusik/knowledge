@@ -7,7 +7,7 @@ when its moment comes. This file keeps only what this skill adds.
 - **Who runs what.** The round's lifecycle and the operator's words stay inline; the **drafting is
   dispatched to `design-drafter`** every round, the **critique to `design-critic`** (its judge mode
   too) when a job's level asks for it, and the **mockup build is the one span dispatched to a slice
-  executor** (`slice-executor-high`, like any code slice), **when the operator asked for one, and only
+  executor** (`slice-executor` on the high row, like any code slice), **when the operator asked for one, and only
   then**. A wave's drafters run at once: the one carve-out from one executor at a time.
 - **Legacy tool.** A phase whose `intent.md` still says `Design tool: claude-design` is a legacy one:
   at its first design slice set the slice `pending` (`--stop-kind decision`) and ask the operator to

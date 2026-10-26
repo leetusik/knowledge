@@ -9,7 +9,8 @@ canvas, and SIGNOFF waits for PENDING #2. **It transcribes the signed-off design
 nothing.**
 
 - **A throwaway route in the project's own router**, namespaced by job, following the project's own
-  conventions. **Record its path in `phase.md`**, beside the job's signed-round line.
+  conventions. **Record its path in `phase.md`**, beside the job's signed-round line
+  (`phase-section <P> Decisions --entry K --replace`).
 - **The project's real stack, real components, real tokens**, under **RESPECT THE DESIGN**: every
   designed element and state present, nothing dropped, simplified, restyled or "improved".
 - **Stubbed data, no backing work.** It proves **look and states, not wiring.** Non-functional
@@ -22,7 +23,7 @@ nothing.**
   build when they differ. Absent or `UNFILLED` → **`needs_operator`**, and the slice goes `pending`.
   Driven with the same instrument *Verifying* prescribes (**Aside**, `repl` over Bash): the exemption
   is from the sweep, never from the runtime or the tooling.
-- **Dispatched to `slice-executor-high`** (`executor-route <slice>`, the high row by kind), built from
+- **Dispatched to `slice-executor`** (`executor-route <slice>`, the high row by kind), built from
   the round `result.md`'s `## Build` (a legacy round's `build-prompt.md`) and the job's record on disk,
   the canvas tree included. If it has to guess how to build something, `## Build` is what is short.
 - **Its own `needs_operator` condition:** a record that proves **wrong, internally inconsistent, or

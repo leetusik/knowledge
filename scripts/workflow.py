@@ -8,6 +8,7 @@ import json
 import os
 import posixpath
 import re
+import secrets
 import shlex
 import shutil
 import stat
@@ -15,7 +16,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -35,16 +36,36 @@ NESTED_CONVENTION_KEYS = ("inferred", "confirmed", "text", "coauthor_trailers")
 NESTED_TRAILERS = ("allowed", "forbidden", "unknown")
 NESTED_RENAME_KINDS = ("skills", "agents")
 # Optional, but strict when present: the installer's record of which host-side skill directories
-# and agent files are the workspace's own (so `--update --nested` never mistakes them for a clash).
-NESTED_OPTIONAL_KEYS = ("installed",)
+# and agent files are the workspace's own (so `--update --nested` never mistakes them for a clash),
+# and (P40) `repos`, the multi-repo host's registry of its product repos.
+NESTED_OPTIONAL_KEYS = ("installed", "repos")
+# P40: one registry entry per product repo of a multi-repo host (a host that tracks nothing and
+# holds its repos at depth 1). The install is multi-repo iff `repos` is a non-empty list
+# (`nested_repos()`); without it every code path is the single-repo nested one, byte-for-byte.
+# `commit_convention` is the top-level four-key object or null (= inherit the host-level one);
+# `rules` lists the repo's own rules files (AGENTS.md, CLAUDE.md, .agents/skills/*/SKILL.md), repo-relative.
+NESTED_REPO_KEYS = ("name", "path", "default_branch", "commit_convention", "rules")
+NESTED_REPO_NAME = re.compile(r"[A-Za-z0-9._-]+")
+# P40.S10: `converted_from`, which the installer's `--to-multi-repo <repo>` appends to: one entry per
+# per-repo nested install converted into this multi-repo host, `{"repo", "old_nested", "at"}` (strings:
+# the repo's name, its old `<repo>/workflow`, the date). A known field, but lenient: nothing in the
+# engine reads it (the installer renders its CLAUDE.local.md line), so a malformed value is a validate
+# WARNING, never an error that would stop every command.
+NESTED_NOTE_KEYS = ("converted_from",)
+NESTED_CONVERTED_KEYS = ("repo", "old_nested", "at")
 # P35: a nested phase worktree is a pair, and its host half needs a branch the operator names.
 NESTED_HOST_BRANCH_REQUIRED = (
     "parallel-start in a nested install needs --host-branch <name>: the host repo's branch for this phase's product commits, "
     "named by the host's own convention for branches (see nested-convention), with no workspace phase/slice IDs in it; "
     "an existing branch is reused when no host worktree has it checked out -- nothing was written")
 # phase.json `host_anchors` (nested only): the host HEAD at new-phase and at the passing review --
-# phase-scope's range in the host repo, whose commits the nested repo never sees.
-HOST_ANCHOR_KEYS = ("created", "review_pass")
+# phase-scope's range in the host repo, whose commits the nested repo never sees. `review_base`
+# (P40, optional) is written at the passing review only when the base rule resolved something other
+# than `created` (a rebased branch); absent means `created`, so older phase.json files stay valid.
+HOST_ANCHOR_KEYS = ("created", "review_pass", "review_base")
+# phase.json `repo_anchors.<name>` (multi-repo host only, P40): each registered repo's HEAD and branch
+# at new-phase, and both ends of its range frozen at the passing review. Exactly these four keys.
+REPO_ANCHOR_KEYS = ("created", "branch", "review_pass", "review_base")
 
 
 def nested_marker_problems(data) -> list:
@@ -55,13 +76,18 @@ def nested_marker_problems(data) -> list:
          "commit_convention": {"inferred": "<text>" | null, "confirmed": false,
                                "text": "<text>" | null, "coauthor_trailers": "allowed" | "forbidden" | "unknown"},
          "renames": {"skills": {"<original>": "<installed>"}, "agents": {"<original>": "<installed>"}},
-         "installed": {"skills": ["<installed>", ...], "agents": ["<installed>", ...]}}   # optional
+         "installed": {"skills": ["<installed>", ...], "agents": ["<installed>", ...]},  # optional
+         "repos": [{"name": "<name>", "path": "<host-relative dir>", "default_branch": "<branch>" | null,
+                    "commit_convention": {<the four keys above>} | null, "rules": ["<repo-relative path>", ...]}]}  # optional
 
     A confirmed convention carries its text and a decided trailer rule; an installed name is a bare
     file/directory name. `installed` (written by the installer) lists the host-side skill directories
     and agent files that are the workspace's own; when present it has exactly those two lists of
-    distinct bare names, and every renamed name appears in it. Other unknown top-level keys are not
-    problems (`validate` warns about them)."""
+    distinct bare names, and every renamed name appears in it. `repos` (P40, the multi-repo registry)
+    is a list of objects with exactly NESTED_REPO_KEYS: a unique name, a unique normalized host-relative
+    path that is neither the nested workspace nor under `.claude/` and stays under the host, and a
+    `commit_convention` checked by the same rules as the top-level one (or null). Other unknown
+    top-level keys are not problems (`validate` warns about them)."""
     if not isinstance(data, dict):
         return [f"{NESTED_MARKER} is not a JSON object"]
     problems = []
@@ -81,25 +107,7 @@ def nested_marker_problems(data) -> list:
             elif host == ROOT or host not in ROOT.parents:
                 problems.append(f"host_root {raw!r} resolves to {host}, which does not contain the engine root {ROOT}")
     if "commit_convention" in data:
-        conv = data["commit_convention"]
-        if not isinstance(conv, dict):
-            problems.append("commit_convention is not an object")
-        else:
-            gone = [k for k in NESTED_CONVENTION_KEYS if k not in conv]
-            if gone:
-                problems.append(f"commit_convention: missing field(s) {', '.join(gone)}")
-            for key in ("inferred", "text"):
-                if key in conv and conv[key] is not None and not isinstance(conv[key], str):
-                    problems.append(f"commit_convention.{key} must be a string or null")
-            if "confirmed" in conv and not isinstance(conv["confirmed"], bool):
-                problems.append("commit_convention.confirmed must be true or false")
-            if "coauthor_trailers" in conv and conv["coauthor_trailers"] not in NESTED_TRAILERS:
-                problems.append(f"commit_convention.coauthor_trailers {conv['coauthor_trailers']!r} is not one of {', '.join(NESTED_TRAILERS)}")
-            if conv.get("confirmed") is True:
-                if not (isinstance(conv.get("text"), str) and conv["text"].strip()):
-                    problems.append("commit_convention: a confirmed convention records its text")
-                if conv.get("coauthor_trailers") not in ("allowed", "forbidden"):
-                    problems.append("commit_convention: a confirmed convention records coauthor_trailers allowed or forbidden")
+        problems.extend(_convention_problems(data["commit_convention"], "commit_convention"))
     if "renames" in data:
         renames = data["renames"]
         if not isinstance(renames, dict):
@@ -133,7 +141,132 @@ def nested_marker_problems(data) -> list:
                     missing = sorted(v for v in table.values() if isinstance(v, str) and v not in names)
                     if missing:
                         problems.append(f"installed.{kind} does not list the renamed {', '.join(missing)}")
+    if "repos" in data:
+        problems.extend(_repos_problems(data["repos"], data.get("host_root")))
     return problems
+
+
+def _converted_from_problems(raw) -> list:
+    """Every way the marker's `converted_from` (P40.S10) breaks its shape: a list of objects with exactly
+    the three string keys of NESTED_CONVERTED_KEYS. `validate` prints each one as a warning."""
+    if not isinstance(raw, list):
+        return [f"converted_from must be a list of objects with {', '.join(NESTED_CONVERTED_KEYS)} (strings)"]
+    problems = []
+    for i, entry in enumerate(raw):
+        label = f"converted_from[{i}]"
+        if not isinstance(entry, dict):
+            problems.append(f"{label} is not an object")
+            continue
+        missing = [k for k in NESTED_CONVERTED_KEYS if k not in entry]
+        unknown = sorted(str(k) for k in entry if k not in NESTED_CONVERTED_KEYS)
+        if missing:
+            problems.append(f"{label}: missing field(s) {', '.join(missing)}")
+        if unknown:
+            problems.append(f"{label}: unknown field(s) {', '.join(unknown)} (an entry has exactly {', '.join(NESTED_CONVERTED_KEYS)})")
+        for key in NESTED_CONVERTED_KEYS:
+            if key in entry and not (isinstance(entry[key], str) and entry[key].strip()):
+                problems.append(f"{label}.{key} must be a non-empty string")
+    return problems
+
+
+def _convention_problems(conv, label: str) -> list:
+    """Every way a `commit_convention` object breaks schema 1, each problem prefixed with `label`:
+    the top-level one (`commit_convention`) and each registry entry's (`repos[<i>].commit_convention`)."""
+    if not isinstance(conv, dict):
+        return [f"{label} is not an object"]
+    problems = []
+    gone = [k for k in NESTED_CONVENTION_KEYS if k not in conv]
+    if gone:
+        problems.append(f"{label}: missing field(s) {', '.join(gone)}")
+    for key in ("inferred", "text"):
+        if key in conv and conv[key] is not None and not isinstance(conv[key], str):
+            problems.append(f"{label}.{key} must be a string or null")
+    if "confirmed" in conv and not isinstance(conv["confirmed"], bool):
+        problems.append(f"{label}.confirmed must be true or false")
+    if "coauthor_trailers" in conv and conv["coauthor_trailers"] not in NESTED_TRAILERS:
+        problems.append(f"{label}.coauthor_trailers {conv['coauthor_trailers']!r} is not one of {', '.join(NESTED_TRAILERS)}")
+    if conv.get("confirmed") is True:
+        if not (isinstance(conv.get("text"), str) and conv["text"].strip()):
+            problems.append(f"{label}: a confirmed convention records its text")
+        if conv.get("coauthor_trailers") not in ("allowed", "forbidden"):
+            problems.append(f"{label}: a confirmed convention records coauthor_trailers allowed or forbidden")
+    return problems
+
+
+def _repos_problems(repos, host_root) -> list:
+    """Every way the marker's `repos` registry (P40) breaks its shape. `host_root` is the marker's own
+    value: the nested-dir and stays-under-the-host rules read it, and are skipped when it is unusable
+    (that is already a host_root problem). Structural only: whether each path is a git work tree
+    root, hidden from the host and clean of workspace files is `validate`'s (`nested_repo_checks`)."""
+    if not isinstance(repos, list):
+        return [f"repos must be a list of objects with exactly {', '.join(NESTED_REPO_KEYS)}"]
+    host = nested_dir = None
+    if isinstance(host_root, str) and host_root.strip() and not os.path.isabs(host_root):
+        candidate = (ROOT / host_root).resolve()
+        if candidate.is_dir() and candidate != ROOT and candidate in ROOT.parents:
+            host, nested_dir = candidate, Path(os.path.relpath(ROOT, candidate)).as_posix()
+    problems, names, paths = [], set(), set()
+    for i, repo in enumerate(repos):
+        label = f"repos[{i}]"
+        if not isinstance(repo, dict):
+            problems.append(f"{label} is not an object")
+            continue
+        missing = [k for k in NESTED_REPO_KEYS if k not in repo]
+        unknown = sorted(k for k in repo if k not in NESTED_REPO_KEYS)
+        if missing:
+            problems.append(f"{label}: missing field(s) {', '.join(missing)}")
+        if unknown:
+            problems.append(f"{label}: unknown field(s) {', '.join(unknown)} (a repo entry has exactly {', '.join(NESTED_REPO_KEYS)})")
+        if "name" in repo:
+            name = repo["name"]
+            if not (isinstance(name, str) and NESTED_REPO_NAME.fullmatch(name)):
+                problems.append(f"{label}.name {name!r} must match [A-Za-z0-9._-]+")
+            elif name in names:
+                problems.append(f"{label}.name {name!r} is listed twice")
+            else:
+                names.add(name)
+        if "path" in repo:
+            raw = repo["path"]
+            bad = _repo_path_problem(raw, host, nested_dir)
+            if bad:
+                problems.append(f"{label}.path {raw!r} {bad}")
+            elif raw in paths:
+                problems.append(f"{label}.path {raw!r} is listed twice")
+            else:
+                paths.add(raw)
+        branch = repo.get("default_branch")
+        if branch is not None and not (isinstance(branch, str) and branch.strip() and branch == branch.strip()):
+            problems.append(f"{label}.default_branch must be a branch name or null")
+        if repo.get("commit_convention") is not None:
+            problems.extend(_convention_problems(repo["commit_convention"], f"{label}.commit_convention"))
+        if "rules" in repo and not (isinstance(repo["rules"], list) and all(isinstance(r, str) and r.strip() for r in repo["rules"])):
+            problems.append(f"{label}.rules must be a list of repo-relative paths")
+    return problems
+
+
+def _repo_path_problem(raw, host, nested_dir):
+    """Why a registry `path` is unusable, or None. A path is host-relative and normalized (no `.`,
+    `..` or empty segment, no trailing `/`), never the nested workspace or a dir around it, never
+    under `.claude/`, and -- when the host is known -- still under the host once symlinks resolve."""
+    if not (isinstance(raw, str) and raw.strip()) or raw != raw.strip():
+        return "must be a non-empty path relative to the host root"
+    if os.path.isabs(raw) or "\\" in raw:
+        return "must be relative to the host root, not absolute"
+    parts = raw.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        return "must be a normalized path under the host root (no '.', '..' or empty segment, no trailing '/')"
+    if parts[0] == ".claude":
+        return "is under .claude/, which holds the workspace's own files"
+    if nested_dir is not None:
+        if raw == nested_dir or raw.startswith(nested_dir + "/"):
+            return "is the nested workspace"
+        if nested_dir.startswith(raw + "/"):
+            return "contains the nested workspace"
+    if host is not None:
+        resolved = (host / raw).resolve()
+        if host not in resolved.parents:
+            return f"resolves to {resolved}, outside the host {host}"
+    return None
 
 
 def _bare_installed_name(name) -> bool:
@@ -199,7 +332,13 @@ ARCHIVED = WORKS / "phases" / "archived"
 DEFERRED_OPEN = WORKS / "deferred" / "open"
 DEFERRED_PROMOTED = WORKS / "deferred" / "promoted"
 DEFERRED_DROPPED = WORKS / "deferred" / "dropped"
-DOC_TYPES = {"product", "experience", "architecture", "frontend", "backend", "data", "api", "operations", "security", "qa", "decisions"}
+DOC_TYPES = {"product", "architecture", "operations", "qa", "decisions"}
+# The six docs retired by v79: for an AI reader they restated the code (and went stale), and they were
+# written more than read. An install that has them keeps them readable in docs/current, listed as
+# retired; doc-new-version refuses them, and a `## Doc impact` note naming one counts for its successor,
+# where what the code cannot say about it (a journey, a contract, an invariant, a trust boundary) goes.
+RETIRED_DOCS = {"experience": "product", "frontend": "architecture", "backend": "architecture",
+                "data": "architecture", "api": "architecture", "security": "architecture"}
 # An H2 section in a durable doc past this many bytes has outgrown the read-order rule
 # ("read the `docs/current/` SECTIONS the work touches"): at ~4 B/token 10 KB is ~2.5 k tokens,
 # and measured across four live adopting repos (P21.S1 §2.8) 10 % of all H2 sections are already
@@ -224,6 +363,27 @@ SLICE_STOP_KINDS = {
 }
 DEFERRED_STATUSES = {"deferred", "ready", "promoted", "done", "dropped"}
 REVIEW_VERDICTS = {"pass", "changes_requested", "blocked"}
+# Ids (v73, P44): an id minted on any branch or machine never collides at merge. New phase and
+# deferred ids are `P-` / `D-` plus a 4-symbol token, Crockford base32 in lowercase without the
+# look-alikes `i l o u` (32^4 values, drawn with `secrets`); the old `P<n>` / `D<n>` ids stay valid
+# and are never renamed. These patterns are the ONE predicate every reader of a stored id uses, and
+# `id_sort_key` the one order a listing uses (numeric ids first by number, tokens after by creation).
+# A token is re-drawn when it is all digits (so a bare `12` always means `P12`), a mode word the do-*
+# skills strip from the operator's words, or the token of any id this workspace can see (one pool for
+# phases and deferred jobs, so a bare token names exactly one thing). Slice ids keep their per-phase
+# suffixes: `P-7kq2.S1`.
+ID_TOKEN_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz"
+ID_TOKEN_LENGTH = 4
+ID_TOKEN_PATTERN = "[0-9a-hjkmnp-tv-z]{4}"
+ID_MODE_WORDS = frozenset({"gate", "plan"})  # `auto` and `only` cannot be drawn: u, o and l are not in the alphabet
+PHASE_ID_PATTERN = rf"P(?:[0-9]+|-{ID_TOKEN_PATTERN})"
+DEFERRED_ID_PATTERN = rf"D(?:[0-9]+|-{ID_TOKEN_PATTERN})"
+SLICE_SUFFIX_PATTERN = "[A-Z][A-Z0-9]*"
+PHASE_ID_RE = re.compile(PHASE_ID_PATTERN)
+DEFERRED_ID_RE = re.compile(DEFERRED_ID_PATTERN)
+SLICE_ID_RE = re.compile(rf"({PHASE_ID_PATTERN})\.({SLICE_SUFFIX_PATTERN})")
+# An archive folder is `<yyyymmdd>_<hhmmss>_<phase id>_<slug>` (`_archive_one`); the slug is lowercase.
+ARCHIVE_FOLDER_ID_RE = re.compile(rf"_({PHASE_ID_PATTERN})_")
 # Closed set of slice kinds (workspace v34). `kind` routes real behavior -- `co-work` in
 # particular means orchestrator-inline (the round's lifecycle and the operator's words
 # stay on the main thread), so a typo like `cowork` used to create a slice that read as
@@ -232,14 +392,15 @@ REVIEW_VERDICTS = {"pass", "changes_requested", "blocked"}
 # (`new-slice`, `promote-deferred`), only a WARNING in `validate()`, so an adopting repo
 # carrying an invented kind in its history survives an update instead of failing validate
 # on slices it cannot change. Note `--risk` next door is deliberately NOT validated:
-# unrecognized values route to the high tier, which is the safe direction -- do not
+# unrecognized values route to the high row, which is the safe direction -- do not
 # "fix" that asymmetry for symmetry's sake.
 # Kinds route by KIND before `risk` is read (`slice_route`; `executor-route <slice>` prints the
 # decision): `decomposition`, `review` and `co-work` (its mockup span) to the `high` row, and
-# `research` (added in workspace v36) to the `research` row -- both on `slice-executor-high`, never
-# the mid or cheap rows. A `research` slice is findings-only -- it writes no product code, and what
-# it learned lands in the phase notebook for the `DECOMP2` that usually follows -- so a weak read
-# is expensive and it must never be routable to the mid tier by a `low` rating. Set `--risk high`
+# `research` (added in workspace v36) to the `research` row -- never the mid row (all three
+# slice rows run the one `slice-executor` file since v66; the row picks the model and effort). A
+# `research` slice is findings-only -- it writes no product code, and what it learned lands in
+# the phase notebook for the `DECOMP2` that usually follows -- so a weak read is expensive and it
+# must never be routable to the mid row by a `low` rating. Set `--risk high`
 # on one so the recorded rating cannot contradict the routing; if the two ever disagree, the kind
 # wins.
 SLICE_KINDS = {"implementation", "review", "decomposition", "research", "fix", "docs", "qa", "co-work"}
@@ -250,6 +411,28 @@ SLICE_KINDS = {"implementation", "review", "decomposition", "research", "fix", "
 # invites truncating exactly the notes that matter; the warning names the biggest sections
 # so the fix is a move to `topics/` or to the slice's `result.md`, never a deletion.
 PHASE_MD_BUDGET = 40 * 1024
+# Notebook entries: a section's entries are what `phase-section --entry` reads and writes
+# and what `--to-topic` moves (`notebook_entries` is the one parser). An entry over
+# LONG_ENTRY_BYTES (or one with nested list lines) is long: the move's candidate. A moved entry
+# leaves one pointer line whose gist is a verbatim excerpt of at most GIST_MAX characters; a gist
+# with fewer than GIST_PLAIN_MIN characters of plain text once markdown, links and the label are
+# stripped is a bare link, which says nothing where the decision was, so the move refuses it.
+LONG_ENTRY_BYTES = 512
+GIST_MAX = 160
+GIST_PLAIN_MIN = 24
+# Per-section budgets (bytes), warning-only like PHASE_MD_BUDGET, which still judges the total. A
+# section not named here gets SECTION_BUDGET_DEFAULT; None = no budget of its own (Slices is
+# generated, Doc impact is append-only, one line per note), though both still count to the total.
+# `notebook_report` is the one reader: the index, finish-slice, validate and next all print from it.
+SECTION_BUDGETS = {"decisions": 12288, "operator questions": 8192, "notes for later slices": 6144,
+                   "now": 2048, "objective": 2048, "slices": None, "doc impact": None}
+SECTION_BUDGET_DEFAULT = 6144
+SECTION_REMEDIES = {"operator questions": "collapse answered entries with --resolve OQ<n> --pointer <ref>",
+                    "now": "rewrite it shorter with --replace"}
+# Paged reads: a section or topic block over PAGE_BYTES prints one page at a time, whole entries
+# only. Bytes are at least characters, so a page plus its header stays under the Bash tool's
+# 30,000-character output limit and is never printed cut off.
+PAGE_BYTES = 24 * 1024
 # Execution streams (workspace v24; opt-in again since v43). A phase.json MAY carry an
 # optional `execution` block. `mode: "parallel"` = the phase runs on its own branch +
 # worktree, stamped by `parallel-start` -- which a phase gets ONLY when the operator asks
@@ -292,75 +475,121 @@ GENERATED_FILES = ("works/state.json", "works/index.json", "works/backlog.md", "
 # executors.toml and .env stay at ROOT either way.
 
 
-def _main_host_checkout_agents(host: Path) -> Path:
-    """Nested only (P35): the MAIN host checkout's `.claude/agents`, even when HOST_ROOT is a host
-    worktree. A phase worktree pair has no `.claude/` of its own (Claude Code reads agents and
-    skills through from the main checkout), so `<host-wt>/.claude/agents` never exists. The main
+def _main_host_checkout(host: Path) -> Path:
+    """Nested only (P35): the MAIN host checkout, even when HOST_ROOT is a host worktree. The main
     checkout is the parent of the host's common git dir when that dir is a plain `.git`; anything
     else (no git, a submodule's `.git/modules/<name>`, a separate GIT_DIR) falls back to `host`."""
     try:
         proc = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
                               cwd=str(host), capture_output=True, text=True, timeout=10)
     except Exception:  # noqa: BLE001 - git is optional; the host's own folder is the honest fallback
-        return host / ".claude" / "agents"
+        return host
     common = Path(proc.stdout.strip()) if proc.returncode == 0 and proc.stdout.strip() else None
     if common is None or common.name != ".git":
-        return host / ".claude" / "agents"
-    return common.parent / ".claude" / "agents"
+        return host
+    return common.parent
 
 
-CLAUDE_AGENTS = _main_host_checkout_agents(HOST_ROOT) if HOST_ROOT is not None else (HOST_ROOT or ROOT) / ".claude" / "agents"
-EXECUTOR_TIERS = ("mid", "high")
-RETIRED_EXECUTOR_TIERS = ("low",)  # dropped in workspace v23 — routing is two-tier (mid/high)
+# Nested only: the main host checkout (P35), resolved once. HOST_ROOT itself on the default stream;
+# inside a parallel set HOST_ROOT is the host worktree and this is still the main checkout. Its
+# `.claude/agents` is where Claude Code reads the agents from (a phase worktree pair has no `.claude/`
+# of its own, so `<host-wt>/.claude/agents` never exists), and the multi-repo registry's paths
+# resolve against it (`nested_repo_path`, P40), never against HOST_ROOT.
+MAIN_HOST = _main_host_checkout(HOST_ROOT) if HOST_ROOT is not None else None
+CLAUDE_AGENTS = MAIN_HOST / ".claude" / "agents" if MAIN_HOST is not None else (HOST_ROOT or ROOT) / ".claude" / "agents"
+
+
+def nested_repos() -> list:
+    """P40: the multi-repo registry -- the marker's `repos` entries; `[]` when the key is absent or
+    empty, at root, or when the marker is malformed (every command but validate refuses then). The
+    install is multi-repo iff this is non-empty, and EVERY multi-repo branch is gated on it, so a
+    single-repo nested or at-root install runs exactly today's code."""
+    if NESTED is None or NESTED_PROBLEMS:
+        return []
+    repos = NESTED.get("repos")
+    return list(repos) if isinstance(repos, list) else []
+
+
+def nested_repo_path(repo: dict) -> Path:
+    """P40: where a registry entry lives -- under the MAIN host checkout, never HOST_ROOT. Inside a
+    parallel set HOST_ROOT is the host worktree, where a repo with no worktree in that set is simply
+    absent; reading the registry there must not report it missing (S2 §17). The set side
+    (`HOST_ROOT / path`, a repo's worktree in the set) belongs to the parallel commands."""
+    return (MAIN_HOST or HOST_ROOT) / repo["path"]
+
+
+def _git_work_tree_root(path: Path) -> bool:
+    """True when `path` is the root of its own git work tree. `git -C` on a plain directory walks up
+    and answers for the enclosing repo (the host), so `--show-toplevel` must be `path` itself."""
+    if not path.is_dir():
+        return False
+    try:
+        proc = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=str(path), capture_output=True, text=True, timeout=10)
+    except Exception:  # noqa: BLE001 - no git: nothing is a work tree root
+        return False
+    top = proc.stdout.strip()
+    return proc.returncode == 0 and bool(top) and Path(top).resolve() == path.resolve()
+
+
+RETIRED_EXECUTOR_TIERS = ("low",)  # [claude.low]: dropped in workspace v23, still refused with its migration
+# [claude.cheap]: the Haiku row for docs and qa, retired in workspace v83 (those slices run on the mid row);
+# refused with its migration. The meter still reads old spans as `cheap` (METER_ROUTES).
+RETIRED_ROUTES = ("cheap",)
 # The executor route table (workspace v53): ONE table, owned here, that the orchestrator dispatches
 # from. A row is a (model, effort) pair the dispatch passes per call; `executor-route` prints the
 # resolved row for a slice and `sync-agents` writes the rows that own an agent file into that
 # file's frontmatter, which is only the fallback. Each row is overridable, key by key, under
-# [claude.<row>] in the repo-root executors.toml. `cheap` has no defaults of its own: it inherits
-# the RESOLVED mid row for every key it does not override, so an unset cheap row is the mid row.
+# [claude.<row>] in the repo-root executors.toml. There is no Haiku slice row: v83 retired `cheap`
+# (docs and qa rated low ran on Haiku); every slice rated low runs on the mid row.
 # `explore` is the read-only lookup agent (.claude/agents/Explore.md), not a slice route.
-# `design` is the design subagent's own row (.claude/agents/design-drafter.md, workspace v60): not a
-# slice tier and never a slice's route -- only `executor-route --drafter` dispatches on it.
+# `design` is the design subagent's own row (.claude/agents/design-drafter.md, workspace v60): never
+# a slice's route -- only `executor-route --drafter` dispatches on it.
 # `critic` and `judge` (workspace v60) are the design critic's two modes: `critic` owns
 # .claude/agents/design-critic.md and judges each drafted round; `judge` runs that same file in judge
 # mode, with its model passed per call, and rules only on the items the critic escalated. Neither is a
-# tier; `executor-route --critic` / `--judge` dispatch them. Both must be a different model from the
-# design row's (CRITIC_ROWS: a critic never judges its own model's drafting).
-# `research` and `cheap` run another row's agent file (slice-executor-high / -mid) with their model
-# passed per call, and the Agent tool's `model` is an enum, so those rows (and `judge`) take an alias
-# only; a full model id or "inherit" works only on mid, high, design, critic and explore, whose
-# frontmatter carries it.
+# slice route; `executor-route --critic` / `--judge` dispatch them. Either may run on the drafter's model:
+# the operator dropped the different-model rule for the judge in workspace v66 and for the critic in v75.
+# One executor (workspace v66): the three slice rows -- high, research and mid -- all run the
+# one `slice-executor` file, whose frontmatter carries the mid row (the default route). The two
+# executor tiers of v23-v65 (slice-executor-mid / -high, split because the Agent tool could not set
+# effort per dispatch before Claude Code 2.1.292) are retired, and so is the `tier` they carried:
+# a dispatch names its row (`route=`), and the verdict records it (`route:`).
+# Only the rows that own their file (FILE_ROWS: mid, design, critic, explore) are written into
+# frontmatter, so only they accept a full model id or "inherit"; every other row (high, research,
+# judge) runs a file another row owns with its model passed per call, and the Agent tool's
+# `model` is an enum, so those rows take an alias only.
 # effort = "" is the escape hatch for a model that rejects the parameter: no effort line in the
-# agent file and no per-dispatch effort. Rows, never tiers: two tiers stay (EXECUTOR_TIERS), and the
-# cheap row runs the mid file -- which supersedes v46's "haiku is never an executor tier". The
-# named modes of v29-v52 (a top-level `mode` key) are retired; read_executors_toml refuses one.
-EXECUTOR_ROUTES = ("high", "research", "design", "critic", "judge", "mid", "cheap", "explore")  # print order
+# agent file and no per-dispatch effort. The named modes of v29-v52 (a top-level
+# `mode` key) are retired; read_executors_toml refuses one.
+# The defaults are the operator's own routes (workspace v80, v83): every opus row at high, mid on opus at
+# medium, haiku at xhigh for explore only.
+EXECUTOR_ROUTES = ("high", "research", "design", "critic", "judge", "mid", "explore")  # print order
+METER_ROUTES = EXECUTOR_ROUTES + RETIRED_ROUTES  # the meter's order: history still holds cheap spans
 ROUTE_DEFAULTS = {
     "high": {"model": "opus", "effort": "high"},
-    "research": {"model": "opus", "effort": "medium"},
-    "design": {"model": "opus", "effort": "xhigh"},
-    "critic": {"model": "sonnet", "effort": "high"},
-    "judge": {"model": "fable", "effort": "high"},
-    "mid": {"model": "sonnet", "effort": "high"},
-    "cheap": None,  # inherits the resolved mid row
-    "explore": {"model": "haiku", "effort": "high"},
+    "research": {"model": "opus", "effort": "high"},
+    "design": {"model": "opus", "effort": "high"},
+    "critic": {"model": "opus", "effort": "high"},
+    "judge": {"model": "opus", "effort": "high"},
+    "mid": {"model": "opus", "effort": "medium"},
+    "explore": {"model": "haiku", "effort": "xhigh"},
 }
-ROUTE_TIER = {"high": "high", "research": "high", "design": None, "critic": None, "judge": None,
-              "mid": "mid", "cheap": "mid", "explore": None}
-# Rows that own an agent file (sync-agents writes their frontmatter). research and cheap dispatch
-# to another row's file, so their model must be an Agent-tool alias the dispatch can pass. The
-# design row owns design-drafter: it is not a tier and follows no other row, so one [claude.design]
-# override governs it alone (before v60 it followed the high row). The critic row owns design-critic;
-# the judge row borrows that file (ROUTE_BORROWS), like research and cheap borrow a tier's.
-ROUTE_AGENT = {"high": "slice-executor-high", "mid": "slice-executor-mid", "design": "design-drafter",
-               "critic": "design-critic", "explore": "Explore"}
-ROUTE_BORROWS = {"judge": "critic"}  # a non-tier row that runs another row's agent file
-# The rows that judge the design row's drafting: each must resolve to a different model family.
-CRITIC_ROWS = ("critic", "judge")
-# (label, canonical agent name, row) for the five agent files sync-agents manages, in print order.
+# The agent file each row dispatches to (canonical name; `installed_agent_name` applies a nested
+# rename). The design row owns design-drafter and follows no other row, so one [claude.design]
+# override governs it alone (before v60 it followed the high row). The critic row owns
+# design-critic; the judge row runs that same file in judge mode.
+SLICE_AGENT = "slice-executor"
+ROUTE_AGENT = {"high": SLICE_AGENT, "research": SLICE_AGENT, "design": "design-drafter", "critic": "design-critic",
+               "judge": "design-critic", "mid": SLICE_AGENT, "explore": "Explore"}
+# The rows that own their agent file: sync-agents writes each one's resolved model/effort into its
+# frontmatter, so only these accept a full model id or "inherit".
+FILE_ROWS = ("mid", "design", "critic", "explore")
+# The executor pair v66 retired (last shipped in v65): old transcripts still name them, so the meter
+# keeps reading them (`_meter_route`, `_meter_collect`'s canon map).
+RETIRED_AGENTS = ("slice-executor-high", "slice-executor-mid")
+# (label, canonical agent name, row) for the four agent files sync-agents manages, in print order.
 MANAGED_AGENT_FILES = (
-    ("mid", ROUTE_AGENT["mid"], "mid"),
-    ("high", ROUTE_AGENT["high"], "high"),
+    ("slice-executor", ROUTE_AGENT["mid"], "mid"),
     ("design-drafter", ROUTE_AGENT["design"], "design"),
     ("design-critic", ROUTE_AGENT["critic"], "critic"),
     ("Explore", ROUTE_AGENT["explore"], "explore"),
@@ -371,14 +600,15 @@ EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")  # the Agent tool's `e
 MODEL_ATTRIBUTION = {"opus": "Claude Opus 5.5", "sonnet": "Claude Sonnet 5.5",
                      "haiku": "Claude Haiku 5.5", "fable": "Claude Fable 5.1"}
 # A loopback ANTHROPIC_BASE_URL is a local proxy (ocx's Kiro sidecar listens on 127.0.0.1:10100)
-# that serves no Haiku 5.5: there the cheap row falls back to the mid row's model and the explore
-# row to EXPLORE_PROXY_MODEL, printed as a `fallback=` line by executor-route.
+# that serves no Haiku 5.5: there the explore row falls back to EXPLORE_PROXY_MODEL, printed as a
+# `fallback=` line by executor-route.
 LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 EXPLORE_PROXY_MODEL = "sonnet"
-# The same proxy serves no Fable either. The judge row does NOT fall back: a judge is the stronger
-# second opinion, so a substitute would be a weaker one. On Fable behind a loopback proxy
-# `executor-route --judge` prints a `skip=yes` line instead: the orchestrator dispatches no judge and
-# the escalated items reach the operator marked low confidence.
+# The same proxy serves no Fable either. The judge row (Opus @ xhigh by default, so this never fires
+# at the default) does NOT fall back: a judge is the stronger second opinion, so a substitute would be
+# a weaker one. Only when an operator overrides the judge row to Fable and runs behind a loopback proxy
+# does `executor-route --judge` print a `skip=yes` line instead: the orchestrator dispatches no judge
+# and the escalated items reach the operator marked low confidence.
 JUDGE_PROXY_SKIP_FAMILY = "fable"
 
 
@@ -420,6 +650,23 @@ def write_json(path: Path, data: object) -> None:
     write_text(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
 
+def write_json_stamped(path: Path, data: dict, key: str, stamp: str) -> dict:
+    """Write a generated JSON file whose `key` stamps when it was built, unless nothing but that
+    stamp would change: then write nothing and keep the old stamp. So a read (`next`, `run-phases`,
+    a plain `rebuild`) leaves these tracked files, and the tree, unchanged; the stamp moves only
+    with a real change (v74). Returns `data` holding the stamp that is on disk."""
+    try:
+        old = read_json(path)
+    except (OSError, ValueError):
+        old = None
+    if isinstance(old, dict) and key in old and {k: v for k, v in old.items() if k != key} == {k: v for k, v in data.items() if k != key}:
+        data[key] = old[key]
+        return data
+    data[key] = stamp
+    write_json(path, data)
+    return data
+
+
 def append_event(event_type: str, **payload: object) -> None:
     event = {"ts": now_iso(), "type": event_type, **payload}
     WORKS.mkdir(parents=True, exist_ok=True)
@@ -455,7 +702,7 @@ def read_executors_toml() -> dict:
         if re.match(r"^mode\s*=", line):
             raise SystemExit(
                 f"executors.toml line {n}: the economy/flex presets were retired in workspace v53 — delete this line; "
-                "the route table replaces them (flex was xhigh on both tiers: set effort = \"xhigh\" under [claude.mid] "
+                "the route table replaces them (flex was xhigh on both executor rows: set effort = \"xhigh\" under [claude.mid] "
                 f"and [claude.high] to keep it); run: {WORKFLOW_CMD} executor-route"
             )
         if re.match(r"^\[\s*codex\s*\.\s*[^\]]*\]\s*(?:#.*)?$", line):
@@ -466,10 +713,15 @@ def read_executors_toml() -> dict:
         m = re.match(r"^\[\s*claude\s*\.\s*([^\]\s]*)\s*\]\s*(?:#.*)?$", line)
         if m:
             name = m.group(1)
+            if name in RETIRED_ROUTES:
+                raise SystemExit(
+                    f"executors.toml line {n}: the {name} row was retired in workspace v83 — docs and qa slices "
+                    "rated low now run on the mid row; drop this section (to change their model, set [claude.mid])"
+                )
             if name in RETIRED_EXECUTOR_TIERS:
                 raise SystemExit(
                     f"executors.toml line {n}: the {name} executor tier was retired in workspace v23 — "
-                    "routing is two-tier now, so drop this section or move its settings to [claude.mid]"
+                    "drop this section or move its settings to [claude.mid]"
                 )
             if name not in EXECUTOR_ROUTES:
                 raise SystemExit(f"executors.toml line {n}: unknown route {name} (valid: {rows})")
@@ -489,11 +741,17 @@ def read_executors_toml() -> dict:
                     f"executors.toml line {n}: [claude.{section}] effort must be one of {', '.join(EFFORT_LEVELS)} "
                     f"— or \"\" to write no effort line (got {value!r})"
                 )
-            if key == "model" and section not in ROUTE_AGENT and value not in AGENT_MODEL_ALIASES:
+            if key == "model" and section == "high" and value not in AGENT_MODEL_ALIASES:
+                raise SystemExit(
+                    f"executors.toml line {n}: [claude.high] model {value!r}: since v66 one executor file carries the mid row; "
+                    f"the high row is passed per dispatch, so use an alias ({', '.join(AGENT_MODEL_ALIASES)}); "
+                    "a full model id or inherit belongs under [claude.mid], which slice-executor.md carries"
+                )
+            if key == "model" and section not in FILE_ROWS and value not in AGENT_MODEL_ALIASES:
                 raise SystemExit(
                     f"executors.toml line {n}: [claude.{section}] model {value!r}: route {section} dispatches to another row's "
                     f"agent file, so its model must be an Agent-tool alias ({', '.join(AGENT_MODEL_ALIASES)}); a full model id "
-                    f"or inherit works only on {', '.join(r for r in EXECUTOR_ROUTES if r in ROUTE_AGENT)}, whose agent files carry it"
+                    f"or inherit works only on {', '.join(r for r in EXECUTOR_ROUTES if r in FILE_ROWS)}, whose agent files carry it"
                 )
             values[(section, key)] = value
             continue
@@ -505,24 +763,39 @@ def read_executors_toml() -> dict:
 
 def resolve_routes(overrides=None) -> dict:
     """{row: {model, effort, model_source, effort_source}} in EXECUTOR_ROUTES order: the engine
-    defaults overlaid key by key with executors.toml. A source is `default`, `executors.toml`, or
-    -- for a cheap key it does not override -- `mid row`; cheap resolves after mid, from mid's
-    resolved values, so a [claude.mid] override carries over to an unset cheap row."""
+    defaults overlaid key by key with executors.toml. A source is `default` or `executors.toml`."""
     if overrides is None:
         overrides = read_executors_toml()
     resolved: dict = {}
-    for row in sorted(EXECUTOR_ROUTES, key=lambda r: ROUTE_DEFAULTS[r] is None):  # inheriting rows last
-        default = ROUTE_DEFAULTS[row]
+    for row in EXECUTOR_ROUTES:
         entry: dict = {}
         for key in ("model", "effort"):
             if (row, key) in overrides:
                 entry[key], entry[f"{key}_source"] = overrides[(row, key)], "executors.toml"
-            elif default is None:
-                entry[key], entry[f"{key}_source"] = resolved["mid"][key], "mid row"
             else:
-                entry[key], entry[f"{key}_source"] = default[key], "default"
+                entry[key], entry[f"{key}_source"] = ROUTE_DEFAULTS[row][key], "default"
         resolved[row] = entry
-    return {row: resolved[row] for row in EXECUTOR_ROUTES}
+    return resolved
+
+
+def route_overrides(routes: dict) -> list:
+    """`override=` lines for the rows executors.toml sets: what each pins against the engine default,
+    or that it repeats the default (and so would stop following a later one). /update-workspace shows
+    them to the operator, who decides whether to drop each [claude.<row>] table."""
+    def pair(model, effort):
+        return f"{model}@{effort or '(no effort)'}"
+    lines = []
+    for row in EXECUTOR_ROUTES:
+        entry, default = routes[row], ROUTE_DEFAULTS[row]
+        if "executors.toml" not in (entry["model_source"], entry["effort_source"]):
+            continue
+        if (entry["model"], entry["effort"]) == (default["model"], default["effort"]):
+            lines.append(f"override={row} {pair(entry['model'], entry['effort'])} same as the default "
+                         f"(drop [claude.{row}] to follow later defaults)")
+        else:
+            lines.append(f"override={row} {pair(entry['model'], entry['effort'])} "
+                         f"(default {pair(default['model'], default['effort'])})")
+    return lines
 
 
 def route_source(entry: dict) -> str:
@@ -561,10 +834,10 @@ def installed_agent_name(name: str) -> str:
 
 
 def executor_agent_files(routes: dict) -> list:
-    """(label, path, model, effort) for the 5 managed agent files (MANAGED_AGENT_FILES): the two
-    slice-executor tiers from the mid and high rows, design-drafter from its own design row and
-    design-critic from the critic row (neither is a tier), and Explore from the explore row.
-    research, cheap and judge own no file. Labels stay canonical;
+    """(label, path, model, effort) for the 4 managed agent files (MANAGED_AGENT_FILES): slice-executor
+    from the mid row (the default route; high and research pass their model and effort per
+    dispatch), design-drafter from its own design row, design-critic from the critic row and Explore
+    from the explore row. high, research and judge own no file. Labels stay canonical;
     paths resolve through the nested rename map (`installed_agent_name`)."""
     return [
         (label, CLAUDE_AGENTS / f"{installed_agent_name(agent)}.md", routes[row]["model"], routes[row]["effort"])
@@ -587,8 +860,9 @@ def executor_agent_drift(routes: dict) -> tuple:
 
 
 def sync_agents(args: argparse.Namespace) -> None:
-    """Write the resolved route table into the five managed agent files' model/effort frontmatter:
-    slice-executor-mid/-high from the mid/high rows, design-drafter from the design row, design-critic
+    """Write the resolved route table into the four managed agent files' model/effort frontmatter:
+    slice-executor from the mid row (high and research run it with their model and effort
+    passed per dispatch), design-drafter from the design row, design-critic
     from the critic row (the judge row borrows that file, its model passed per call), Explore from
     the explore row (--check: report drift, write nothing, exit 1 when out of sync)."""
     overrides = read_executors_toml()
@@ -596,7 +870,7 @@ def sync_agents(args: argparse.Namespace) -> None:
     config_present = (ROOT / "executors.toml").exists()
     legacy_env = ROOT / ".env"
     if legacy_env.exists() and "SLICE_EXECUTOR" in legacy_env.read_text(encoding="utf-8"):
-        print("warning: .env holds SLICE_EXECUTOR_* keys, but tier config moved to executors.toml in v8 — .env is no longer read")
+        print("warning: .env holds SLICE_EXECUTOR_* keys, but executor config moved to executors.toml in v8 — .env is no longer read")
     drift, missing_paths = executor_agent_drift(routes)
     if not args.check:
         for path, desired in drift:
@@ -642,52 +916,25 @@ def _loopback_base_url():
     return url if host in LOOPBACK_HOSTS else None
 
 
-def _route_fallback(row: str, model: str, routes: dict, proxy):
-    """(model to dispatch, `fallback=` line or None) for one row under the environment: behind a
-    loopback proxy (no Haiku 5.5) cheap takes the mid row's model and explore EXPLORE_PROXY_MODEL."""
-    if proxy is None or row not in ("cheap", "explore"):
-        return model, None
-    target = routes["mid"]["model"] if row == "cheap" else EXPLORE_PROXY_MODEL
-    if target == model:
-        return model, None
-    return target, f"fallback={row} model {model} -> {target} (loopback ANTHROPIC_BASE_URL {proxy}: ocx/Kiro serves no Haiku 5.5)"
+def _route_fallback(row: str, routes: dict, proxy) -> tuple:
+    """(model, effort, `fallback=` line or None) to dispatch one row under the environment: behind a
+    loopback proxy (no Haiku 5.5) the explore row takes EXPLORE_PROXY_MODEL."""
+    model, effort = routes[row]["model"], routes[row]["effort"]
+    if row != "explore" or proxy is None or model == EXPLORE_PROXY_MODEL:
+        return model, effort, None
+    return EXPLORE_PROXY_MODEL, effort, (f"fallback=explore model {model} -> {EXPLORE_PROXY_MODEL} "
+                                         f"(loopback ANTHROPIC_BASE_URL {proxy}: ocx/Kiro serves no Haiku 5.5)")
 
 
 def model_family(model: str):
-    """The model family a row's model names, for the critic fairness rule: an alias is its own family;
-    a full id names one (`claude-opus-5-5`, a provider id such as `us.anthropic.claude-opus-…`, a
+    """The model family a row's model names, for the judge's proxy skip and the meter's routes: an
+    alias is its own family; a full id names one (`claude-opus-5-5`, a provider id such as `us.anthropic.claude-opus-…`, a
     `[1m]` suffix -> opus). `inherit` and an id naming no family are None: unknown here."""
     m = (model or "").strip().lower()
     if m in AGENT_MODEL_ALIASES:
         return m
     found = re.search(r"(?<![a-z])(" + "|".join(AGENT_MODEL_ALIASES) + r")(?![a-z])", m)
     return found.group(1) if found else None
-
-
-def critic_fairness(row: str, routes: dict) -> tuple:
-    """(refusal, warning) for a critic row (CRITIC_ROWS) against the design row. The operator's rule
-    (P36): "using same model for critique and draft is not fair", so the critic and the judge must
-    each resolve to a different model from the drafter's. Models compare by family, so an alias and
-    its full id (`opus`, `claude-opus-5-5`) are the same model, and so are two versions of one family.
-    refusal: a message when they are the same; warning: a `warning=` line when one side cannot be
-    told (`inherit` -- the session's model -- against anything but `inherit`, or an unknown id)."""
-    mine, drafter = routes[row]["model"], routes["design"]["model"]
-    if mine.strip().lower() == drafter.strip().lower():
-        same = True
-    else:
-        a, d = model_family(mine), model_family(drafter)
-        if a is None or d is None:
-            return None, (f"warning=fairness: cannot tell whether the {row} row ({mine}) and the design row ({drafter}) "
-                          "are different models; make sure the design critic never runs on the drafter's model")
-        same = a == d
-    if not same:
-        return None, None
-    prefer = ("sonnet", "opus", "fable") if row == "critic" else ("fable", "opus", "sonnet")
-    d = model_family(drafter)
-    hint = next(m for m in prefer if m != d)
-    return (f"the {row} row ({mine}) is the design row's model ({drafter}): the design critic never judges its own "
-            f"model's drafting (\"using same model for critique and draft is not fair\"). Set [claude.{row}] "
-            f"model = \"{hint}\" in executors.toml (or move the drafter's [claude.design] row)"), None
 
 
 def _judge_proxy_skip(routes: dict, proxy):
@@ -716,7 +963,8 @@ def slice_route(kind, risk, retry: bool) -> tuple:
     """(row, reason) for one dispatch: kind first, then risk, then attempt -- bump up, never down.
     A second attempt is always the high row; review, decomposition and co-work (the mockup span)
     route high by kind and research to the research row, whatever `risk` says; otherwise only a
-    risk of exactly `low` reaches the mid row (implementation, fix) or the cheap row (docs, qa)."""
+    risk of exactly `low` reaches the mid row (implementation, fix, docs and qa; v83 retired the
+    Haiku cheap row that docs and qa rated low ran on)."""
     if retry:
         return "high", "second attempt"
     if kind in ("review", "decomposition", "co-work"):
@@ -725,18 +973,14 @@ def slice_route(kind, risk, retry: bool) -> tuple:
         return "research", "kind research"
     if risk != "low":
         return "high", f"risk {risk if risk not in (None, '') else 'unset'} (not low)"
-    if kind in ("implementation", "fix"):
+    if kind in ("implementation", "fix", "docs", "qa"):
         return "mid", f"kind {kind} rated low"
-    if kind in ("docs", "qa"):
-        return "cheap", f"kind {kind} rated low"
     return "high", f"unknown kind {kind if kind not in (None, '') else 'unset'}"
 
 
 def _dispatch_lines(row: str, routes: dict, proxy) -> tuple:
     """(the model..attribution lines for one dispatch on `row`, its fallback line or None)."""
-    entry = routes[row]
-    model, fallback = _route_fallback(row, entry["model"], routes, proxy)
-    effort = entry["effort"]
+    model, effort, fallback = _route_fallback(row, routes, proxy)
     lines = [
         f"model={model}",
         f"pass_model={'yes' if model in AGENT_MODEL_ALIASES else 'no'}",
@@ -752,12 +996,13 @@ def cmd_executor_route(args: argparse.Namespace) -> None:
     line: bare, the resolved route table and the agent files' sync state; with a slice id, that
     slice's route (--retry: its second attempt); --drafter / --critic / --judge / --explore, the
     design subagent's (the design row), the design critic's two modes (the critic and judge rows,
-    both running design-critic) and the lookup agent's (the explore row), all tier -.
+    both running design-critic) and the lookup agent's (the explore row). Every form names the
+    agent file it dispatches to as `subagent_type=`; the three slice rows all run slice-executor.
 
-    The critic and the judge must be a different model from the drafter's: --critic / --judge exit 1
-    on an equal pair (critic_fairness) and the bare table prints a warning= line for it. Behind a
-    loopback proxy (no Fable) --judge on Fable prints `skip=yes reason=…` and exits 0: unlike a
-    `fallback=` line, which names a substitute model to dispatch, `skip=` means dispatch nothing.
+    The critic and the judge may share the drafter's model (v75). Behind a loopback proxy (no Fable)
+    --judge on a Fable override prints
+    `skip=yes reason=…` and exits 0: unlike a `fallback=` line, which names a substitute model to
+    dispatch, `skip=` means dispatch nothing.
     Reads executors.toml (a malformed one errors here) and writes nothing."""
     forms = [f for f, on in (("<slice_id>", args.slice is not None), ("--drafter", args.drafter), ("--critic", args.critic),
                              ("--judge", args.judge), ("--explore", args.explore)) if on]
@@ -771,7 +1016,6 @@ def cmd_executor_route(args: argparse.Namespace) -> None:
         sdata = read_json(require_slice(args.slice) / "slice.json")
         kind, risk = sdata.get("kind"), sdata.get("risk")
         row, reason = slice_route(kind, risk, args.retry)
-        tier = ROUTE_TIER[row]
         lines, fallback = _dispatch_lines(row, routes, proxy)
         print(f"slice={args.slice}")
         print(f"phase={args.slice.split('.', 1)[0]}")
@@ -780,32 +1024,24 @@ def cmd_executor_route(args: argparse.Namespace) -> None:
         print(f"attempt={2 if args.retry else 1}")
         print(f"route={row}")
         print(f"reason={reason}")
-        print(f"tier={tier}")
-        print(f"subagent_type={installed_agent_name(ROUTE_AGENT[tier])}")
+        print(f"subagent_type={installed_agent_name(ROUTE_AGENT[row])}")
         print("\n".join(lines))
         extra = [fallback] if fallback else []
     elif args.drafter or args.critic or args.judge or args.explore:
         row = "design" if args.drafter else "critic" if args.critic else "judge" if args.judge else "explore"
-        agent = ROUTE_AGENT[ROUTE_BORROWS.get(row, row)]
+        agent = ROUTE_AGENT[row]
         skip = _judge_proxy_skip(routes, proxy) if row == "judge" else None
-        if row in CRITIC_ROWS and skip is None:
-            refusal, _warning = critic_fairness(row, routes)
-            if refusal:
-                raise SystemExit(f"executor-route: {refusal}")
         lines, fallback = _dispatch_lines(row, routes, proxy)
         print(f"agent={agent}")
         print(f"route={row}")
-        print(f"tier={ROUTE_TIER[row] or '-'}")
         print(f"subagent_type={installed_agent_name(agent)}")
         print("\n".join(lines))
         extra = [fallback] if fallback else []
-        if row in CRITIC_ROWS and skip is None:
-            extra += [w for w in (critic_fairness(row, routes)[1],) if w]
         if skip:
             extra.append(skip)
     else:
-        table = [("route", "tier", "model", "effort", "source")] + [
-            (row, ROUTE_TIER[row] or "-", routes[row]["model"], routes[row]["effort"] or "(no effort line)", route_source(routes[row]))
+        table = [("route", "agent", "model", "effort", "source")] + [
+            (row, ROUTE_AGENT[row], routes[row]["model"], routes[row]["effort"] or "(no effort line)", route_source(routes[row]))
             for row in EXECUTOR_ROUTES
         ]
         widths = [max(len(r[i]) for r in table) for i in range(4)]
@@ -817,13 +1053,7 @@ def cmd_executor_route(args: argparse.Namespace) -> None:
             print(f"agent files: out of sync: {', '.join(stale)} (run: {WORKFLOW_CMD} sync-agents)")
         else:
             print("agent files: in sync")
-        extra = [f for f in (_route_fallback(row, routes[row]["model"], routes, proxy)[1] for row in EXECUTOR_ROUTES) if f]
-        for row in CRITIC_ROWS:
-            refusal, warning = critic_fairness(row, routes)
-            if refusal:
-                extra.append(f"warning=fairness: {refusal}; executor-route --{row} refuses it")
-            elif warning:
-                extra.append(warning)
+        extra = route_overrides(routes) + [f for f in (_route_fallback(row, routes, proxy)[2] for row in EXECUTOR_ROUTES) if f]
         judge_skip = _judge_proxy_skip(routes, proxy)
         if judge_skip:
             extra.append(judge_skip.replace("skip=yes ", "skip=judge ", 1))
@@ -931,8 +1161,9 @@ PRICES = {
 # is over the threshold pays the second row, cache hit or not.
 PRICES_LONG_PROMPT = {"claude-haiku-5-5": (100_000, (0.50, 0.625, 1.0, 0.05, 2.50))}
 METER_PRICES_SOURCE = "https://platform.claude.com/docs/en/about-claude/pricing, fetched 2026-10-20"
-METER_SLICE_ID_RE = re.compile(r"\bP\d+\.[A-Z][A-Z0-9]*\b")
-METER_SLICE_LINE_RE = re.compile(r"(?im)^[\s>*`-]*slice[`*]*\s*:\s*[`*]*(P\d+\.[A-Za-z][A-Za-z0-9]*)")
+# Composed from the id block's patterns (v73), so a minted `P-7kq2.S1` attributes beside `P12.S1`.
+METER_SLICE_ID_RE = re.compile(rf"\b{PHASE_ID_PATTERN}\.{SLICE_SUFFIX_PATTERN}\b")
+METER_SLICE_LINE_RE = re.compile(rf"(?im)^[\s>*`-]*slice[`*]*\s*:\s*[`*]*({PHASE_ID_PATTERN}\.[A-Za-z][A-Za-z0-9]*)")
 METER_ROUND_RE = re.compile(r"\b(\d{2}-[a-z0-9][a-z0-9-]*)/(\d{2}-[a-z0-9][a-z0-9-]*)\b")
 METER_LIMIT_RE = re.compile(r"(?i)\b(usage|rate|spend|session|weekly|monthly|daily|5-hour)\b[^.\n]{0,24}\blimit|\blimit (reached|exceeded)")
 METER_RESET_RE = re.compile(r"(?i)\bresets?\s+(?:at\s+)?([^·\n]+?)\s*(?:·|$)")
@@ -1249,9 +1480,27 @@ def _meter_attribute(prompt: str, start, known: dict, windows: _MeterWindows) ->
     return "unattributed", "none"
 
 
-def _meter_route(agent: str, prompt: str, model, kind) -> str:
+def _meter_slice_families() -> tuple:
+    """(high row's model family, mid row's, high row's effort, mid row's) from the resolved route
+    table, for reading `slice-executor` spans; the engine defaults when executors.toml cannot be read."""
+    try:
+        routes = resolve_routes()
+    except (SystemExit, Exception):  # noqa: BLE001 - the meter reads history; a bad toml must not stop it
+        routes = resolve_routes({})
+    return (model_family(routes["high"]["model"]), model_family(routes["mid"]["model"]),
+            routes["high"]["effort"], routes["mid"]["effort"])
+
+
+def _meter_route(agent: str, prompt: str, model, kind, families=None, effort=None) -> str:
     """The route row a span most likely ran on, for the means: the agent type, the judge mode, the
-    slice kind (research) and the cheap row's haiku. Approximate by nature; other agents keep their name."""
+    slice kind (research) and the model. Approximate by nature, and more so for the one
+    `slice-executor` (v66), which every slice row runs: a research kind reads as research, review,
+    decomposition and co-work as high (they route there by kind), a haiku model as cheap (the row v83
+    retired: old spans keep the label), a model of
+    the high row's family (and not the mid row's, `families`) as high; when the two rows share a family
+    (opus at v80's defaults) the span's recorded effort tells them apart; anything else reads as mid.
+    The retired pair (v23-v65, still in old transcripts) keeps its reading: slice-executor-high is
+    research by kind, else high; slice-executor-mid is cheap on haiku, else mid. Other agents keep their name."""
     if agent == "design-drafter":
         return "design"
     if agent == "design-critic":
@@ -1262,6 +1511,20 @@ def _meter_route(agent: str, prompt: str, model, kind) -> str:
         return "research" if kind == "research" else "high"
     if agent == "slice-executor-mid":
         return "cheap" if isinstance(model, str) and "haiku" in model else "mid"
+    if agent == SLICE_AGENT:
+        if kind == "research":
+            return "research"
+        if kind in ("review", "decomposition", "co-work"):
+            return "high"
+        family = model_family(model) if isinstance(model, str) else None
+        if family == "haiku":
+            return "cheap"
+        high, mid, high_effort, mid_effort = families if families is not None else _meter_slice_families()
+        if not family or family != high:
+            return "mid"
+        if family != mid:
+            return "high"
+        return "high" if effort and effort == high_effort and effort != mid_effort else "mid"
     return agent or "?"
 
 
@@ -1278,7 +1541,9 @@ def _meter_verdict(agent: str, final) -> str:
 def _meter_collect(dirs: list, known: dict, windows: "_MeterWindows", selected, lo, hi) -> dict:
     """Read the sessions overlapping [lo, hi] (None = unbounded) and meter them. `selected(slice)` says
     whether a slice is in the report; everything else is `before`, `after` or `other`."""
-    canon = {installed_agent_name(a): a for a in ROUTE_AGENT.values()}
+    canon = {installed_agent_name(a): a for a in (*ROUTE_AGENT.values(), *RETIRED_AGENTS)}
+    canon.update({f"wf-{a}": a for a in RETIRED_AGENTS})  # a nested rename the marker no longer records
+    families = _meter_slice_families()
     res = {"sessions": [], "main": {}, "spans": [], "outside": {}, "found": 0, "windows": windows, "kinds": known}
     for d in dirs:
         for path in sorted(d.glob("*.jsonl")):
@@ -1325,7 +1590,7 @@ def _meter_collect(dirs: list, known: dict, windows: "_MeterWindows", selected, 
                     outcome = _meter_verdict(agent, sp["final"])
                 minutes = round((sp["last"] - sp["first"]) / 60, 1) if sp["first"] is not None and sp["last"] is not None else None
                 span = {"id": jl.stem[len("agent-"):], "session": path.stem, "agent": agent, "model": model,
-                        "effort": meta.get("effort"), "route": _meter_route(agent, sp["prompt"], model, known.get(sid)),
+                        "effort": meta.get("effort"), "route": _meter_route(agent, sp["prompt"], model, known.get(sid), families, meta.get("effort")),
                         "slice": sid, "attributed_by": how, "start": sp["first"], "minutes": minutes,
                         "resumes": sp["resumes"], "outcome": outcome, "reset": sp["last_limit"] or None,
                         "usage": agg}
@@ -1434,7 +1699,7 @@ def _meter_report(res: dict, slices: list) -> dict:
     means = {
         "by_route": {r: {"spans": v["spans"], "min_per_span": round(v["minutes"] / v["spans"], 1),
                          "usd_per_span": round(v["cost"] / v["spans"], 2), "unpriced_requests": v["unpriced"]}
-                     for r, v in sorted(routes.items(), key=lambda kv: (EXECUTOR_ROUTES.index(kv[0]) if kv[0] in EXECUTOR_ROUTES else 99, kv[0]))},
+                     for r, v in sorted(routes.items(), key=lambda kv: (METER_ROUTES.index(kv[0]) if kv[0] in METER_ROUTES else 99, kv[0]))},
         "by_kind": {k: {"slices": v["slices"], "spans_per_slice": round(v["spans"] / v["slices"], 1),
                         "span_min_per_slice": round(v["minutes"] / v["slices"], 1), "usd_per_slice": round(v["cost"] / v["slices"], 2)}
                     for k, v in sorted(kinds.items())},
@@ -1535,7 +1800,7 @@ def _meter_print(res: dict, rep: dict, dirs: list) -> None:
     means = rep["means"]
     if means["by_route"] or means["by_kind"]:
         print()
-        print("[means] (metered; a DECOMP estimates from these)")
+        print("[means] (metered; a DECOMP estimates time from these)")
         rows = [["route", "spans", "min/span", "$/span"]] + [
             [r, str(v["spans"]), f"{v['min_per_span']:.1f}", f"{v['usd_per_span']:.2f}" + ("+?" if v["unpriced_requests"] else "")]
             for r, v in means["by_route"].items()]
@@ -1587,7 +1852,7 @@ def cmd_dispatch_summary(args: argparse.Namespace) -> None:
                 records.append(obj)
     if args.phase is not None:
         known = (ACTIVE / args.phase).is_dir() or any(r.get("phase") == args.phase for r in records) \
-            or (ARCHIVED.is_dir() and any(ARCHIVED.glob(f"**/{args.phase}")))
+            or args.phase in archived_phase_ids()  # an archived folder is `<stamp>_<id>_<slug>`: the old glob never matched it
         if not known:
             raise SystemExit(f"dispatch-summary: no such phase: {args.phase}")
         records = [r for r in records if r.get("phase") == args.phase]
@@ -1652,14 +1917,14 @@ def cmd_dispatch_summary(args: argparse.Namespace) -> None:
 
     # --- recorded verdicts (executor_dispatched) ---
     legacy = [r for r in records if r.get("route")]
-    by_route = _dispatch_groups(legacy, lambda r: r.get("route") or "?", order=EXECUTOR_ROUTES)
+    by_route = _dispatch_groups(legacy, lambda r: r.get("route") or "?", order=METER_ROUTES)
     by_model = _dispatch_groups(legacy, lambda r: f"{r.get('model') or '?'} @ {r.get('effort') or '(none)'}")
     by_kind = _dispatch_groups(records, lambda r: r.get("kind") or "unset")
     if args.json:
         body.update({"by_route": by_route, "by_model_effort": by_model, "by_kind": by_kind, "skipped_lines": skipped})
         print(json.dumps(body, ensure_ascii=False, indent=2))
         return
-    phases = sorted({r.get("phase") for r in records if r.get("phase")})
+    phases = sort_phase_ids({r.get("phase") for r in records if r.get("phase")}, _phase_created_records())
     stamps = [r.get("ts") for r in records if r.get("ts")]
     print(f"records={len(records)}")
     if not records:
@@ -1691,14 +1956,32 @@ def cmd_dispatch_summary(args: argparse.Namespace) -> None:
         print("\n".join(_dispatch_table(title, groups, cols)))
 
 
+def _phase_created_records() -> list:
+    """`[{id, created_at}]` of every active and archived phase: what `id_sort_key` needs to order minted ids
+    (an archived phase is read from its `phase.json`); an unreadable file is skipped."""
+    out = []
+    for root in (ACTIVE, ARCHIVED):
+        for pj in (root.glob("*/phase.json") if root.is_dir() else []):
+            try:
+                data = read_json(pj)
+            except (OSError, ValueError):
+                continue
+            if isinstance(data, dict) and isinstance(data.get("id"), str):
+                out.append({"id": data["id"], "created_at": data.get("created_at")})
+    return out
+
+
 def _meter_slice_order(windows: "_MeterWindows"):
-    """A sort key for slice ids: phase number, then the order they were worked (window end, an open
-    window last), then never-worked slices by name."""
+    """A sort key for slice ids: the phase by `id_sort_key` (numbers first, minted ids after by creation; a
+    slice of no known phase last), then the order they were worked (window end, an open window last), then
+    never-worked slices by name."""
+    created = {p["id"]: p["created_at"] for p in _phase_created_records()}
+
     def key(sid: str) -> tuple:
-        m = re.match(r"P(\d+)\.", sid)
+        pid = sid.split(".", 1)[0] if "." in sid else ""
         b = windows.bounds.get(sid)
         when = (0, b[1]) if b and b[1] is not None else (1, b[0] or 0.0) if b else (2, 0.0)
-        return (int(m.group(1)) if m else 10 ** 9, when, sid)
+        return (id_sort_key(pid, created.get(pid)) if PHASE_ID_RE.fullmatch(pid) else (3, "", ""), when, sid)
     return key
 
 
@@ -1707,8 +1990,7 @@ def doc_index() -> dict:
 
 
 def write_doc_index(index: dict) -> None:
-    index["last_rebuilt_at"] = now_iso()
-    write_json(DOCS / "index.json", index)
+    write_json_stamped(DOCS / "index.json", index, "last_rebuilt_at", now_iso())
 
 
 def rebuild_docs() -> None:
@@ -1725,12 +2007,27 @@ def rebuild_docs() -> None:
 
 
 def next_doc_version_id(doc_id: str, index: dict) -> tuple:
+    """`("v<yyMMddHHmm>", number)`: the next version of one doc, named by its UTC minute (v73).
+
+    The version NUMBER stays the digits after `v`, per doc -- unique and strictly increasing -- and a
+    name is now the minute the version was made, so two branches that each version a doc never pick
+    the same `max + 1`. When the doc's highest number is not below this minute (a second version in
+    the same minute, or a clock behind a teammate's) the new one takes the minute after it, so a name
+    stays a valid minute and always sorts above every older one, `v0001`-`v0043` included. Two
+    branches versioning one doc in one minute is an accepted risk (`validate` fails loudly on it)."""
     nums = []
     for v in index["docs"][doc_id].get("versions", []):
         m = re.match(r"v(\d+)", v["id"])
         if m:
             nums.append(int(m.group(1)))
-    num = max(nums, default=0) + 1
+    top = max(nums, default=0)
+    num = int(datetime.now(timezone.utc).strftime("%y%m%d%H%M"))
+    if num <= top:
+        try:
+            num = int((datetime.strptime(f"{top:010d}", "%y%m%d%H%M") + timedelta(minutes=1)).strftime("%y%m%d%H%M"))
+        except ValueError:  # a highest number that is not a minute (hand-written): just step past it
+            num = top + 1
+        num = max(num, top + 1)
     return f"v{num:04d}", num
 
 
@@ -1775,15 +2072,20 @@ def doc_marker(version: dict) -> str:
 
 def new_doc_version(args: argparse.Namespace) -> None:
     doc_id = args.doc
+    if doc_id in RETIRED_DOCS:
+        kept = f"; {shown_rel(f'docs/current/{doc_id}.md')} stays readable as it is" if (DOCS / "current" / f"{doc_id}.md").exists() else ""
+        raise SystemExit(f"{doc_id} is a retired doc (v79), never versioned again: write the change into a new version of "
+                         f"{RETIRED_DOCS[doc_id]} (doc-new-version --doc {RETIRED_DOCS[doc_id]}), keeping only what the code cannot say{kept}")
     if doc_id not in DOC_TYPES:
         raise SystemExit(f"doc must be one of: {', '.join(sorted(DOC_TYPES))}")
-    # Doc versions are allocated from a single `docs/index.json` (`max+1` per doc), so two streams
-    # consolidating at once pick the same vNNNN and collide silently on the merge. Consolidation
-    # therefore always runs on the default stream -- refuse here, before any allocation or write,
-    # so a refusal leaves zero partial state.
+    # Doc versions are named by their UTC minute (v73), so two streams no longer pick the same
+    # number -- but two branches versioning one doc each copy its whole body from the same parent, so
+    # a merge silently keeps one side's edits, and both write the one `docs/index.json`.
+    # Consolidation therefore still runs on the default stream only -- refuse here, before any
+    # allocation or write, so a refusal leaves zero partial state.
     stream = current_stream(all_active_phases())
     if stream:
-        raise SystemExit(f"this checkout is on parallel stream {stream}; doc consolidation runs on the default stream, never on a phase branch -- for a parallel phase defer it to the post-merge step (parallel-merge-finish, then doc-new-version, then parallel-consolidated)")
+        raise SystemExit(f"this checkout is on parallel stream {stream}; doc consolidation runs on the default stream, never on a phase branch -- the names no longer collide, but two branches versioning one doc each copy its whole body from the same parent (a merge silently keeps one side's edits) and both write the one docs/index.json; for a parallel phase defer it to the post-merge step (parallel-merge-finish, then doc-new-version, then parallel-consolidated)")
     index = doc_index()
     info = index["docs"][doc_id]
     latest_id = info["latest"]
@@ -1835,15 +2137,20 @@ def cmd_docs(args: argparse.Namespace) -> None:
     each doc's last-updated marker and its staleness belong. Writes nothing."""
     index = doc_index()
     stale = stale_docs()
+    owing_ids = {pid for owed in stale.values() for pid in owed}
+    active = all_active_phases() if any(id_sort_key(pid)[0] == 1 for pid in owing_ids) else []  # tokens list by created_at
     for doc_id in sorted(index["docs"]):
         info = index["docs"][doc_id]
         latest = next(v for v in info["versions"] if v["id"] == info["latest"])
         print(f"{doc_id}: latest={info['latest']} current={shown_rel(info['current_path'])} latest_path={shown_rel(latest['path'])}")
         line = f"  {doc_marker(latest)}"
+        if doc_id in RETIRED_DOCS:  # v79: kept readable, never versioned; its notes count for the successor
+            print(f"{line} -- retired (v79): frozen as it is; read the code first, and durable truth for it now goes to {RETIRED_DOCS[doc_id]}.md")
+            continue
         owed = stale.get(doc_id)
         if owed:
             notes = sum(owed.values())
-            line += (f" -- STALE: {notes} unconsolidated '## Doc impact' note(s) from {', '.join(sorted(owed))}"
+            line += (f" -- STALE: {notes} unconsolidated '## Doc impact' note(s) from {', '.join(sort_phase_ids(owed, active))}"
                      f" are newer than this version; read them (docs-debt) before trusting this doc")
         print(line)
     hint = stale_docs_line(stale)
@@ -1909,7 +2216,8 @@ def oversized_sections_line(sections: list, limit: int = 3) -> str:
             f" -- split them at the next consolidation (a docs phase), by per-doc judgment, never a sweep")
 
 
-def validate_docs(errors: list) -> None:
+def validate_docs(errors: list, warnings: list = None) -> None:
+    warnings = [] if warnings is None else warnings
     if not (DOCS / "index.json").exists():
         errors.append("missing docs/index.json")
         return
@@ -1919,10 +2227,11 @@ def validate_docs(errors: list) -> None:
         if not info:
             errors.append(f"missing doc index entry: {doc_id}")
             continue
-        # Version numbers must be unique per doc: `next_doc_version_id` allocates `max+1`, so two
-        # entries claiming the same vNNNN means a collision already happened (two streams, or a
-        # hand-resolved merge of docs/index.json) and one version is silently absent from
-        # docs/current. Fail loudly instead.
+        # Version numbers must be unique per doc (the digits after `v`: `v0007` in the old counter,
+        # `v2610230147` -- a UTC minute -- since v73). `next_doc_version_id` never repeats one, so two
+        # entries claiming the same number means a collision already happened (two branches versioning
+        # one doc in the same minute, or a hand-resolved merge of docs/index.json) and one version is
+        # silently absent from docs/current. Fail loudly instead, naming the ids as written.
         seen_nums = {}
         for version in info.get("versions", []):
             m = re.match(r"v(\d+)", str(version.get("id", "")))
@@ -1930,13 +2239,20 @@ def validate_docs(errors: list) -> None:
                 continue
             num = int(m.group(1))
             if num in seen_nums:
-                errors.append(f"duplicate doc version number in docs/index.json: {doc_id} v{num:04d} claimed by both {seen_nums[num]} and {version.get('id')}")
+                errors.append(f"duplicate doc version number in docs/index.json: {doc_id} v{m.group(1)} claimed by both {seen_nums[num]} and {version.get('id')}")
             else:
                 seen_nums[num] = version.get("id")
         latest = next((v for v in info.get("versions", []) if v.get("id") == info.get("latest")), None)
         if not latest:
             errors.append(f"missing latest doc version entry: {doc_id}")
             continue
+        # `latest` stays the stored pointer `rebuild-docs` reads; it is not recomputed. But a pointer
+        # below the highest version number means docs/current is generated from an older version than
+        # the newest one on file -- a hand-resolved merge, most likely -- so say so (advisory).
+        latest_match = re.match(r"v(\d+)", str(latest.get("id", "")))
+        if latest_match and seen_nums and int(latest_match.group(1)) < max(seen_nums):
+            highest_id = seen_nums[max(seen_nums)]
+            warnings.append(f"doc {doc_id}: latest is {latest.get('id')}, but {highest_id} has the highest version number -- docs/current is generated from latest; if the newer version is the one meant, set docs/index.json's latest to {highest_id} and run rebuild-docs")
         latest_path = ROOT / latest["path"]
         current_path = ROOT / info["current_path"]
         if not latest_path.exists():
@@ -1947,10 +2263,54 @@ def validate_docs(errors: list) -> None:
             errors.append(f"current doc is stale; run rebuild-docs: {doc_id}")
 
 
+def _created_sort_stamp(created_at) -> str:
+    """A `created_at` as a string that sorts by time across machines in different zones (UTC), or
+    the value as written when it is not an ISO time; "" when absent."""
+    if not created_at:
+        return ""
+    try:
+        return datetime.fromisoformat(str(created_at)).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    except (TypeError, ValueError):
+        return str(created_at)
+
+
+def id_sort_key(value, created_at=None) -> tuple:
+    """The ONE order of phase and deferred ids in a listing (v73): numeric ids first, by number --
+    `(0, n, "")`, exactly the order v72 gave an all-numeric list -- then minted tokens, by creation
+    time and then token -- `(1, created_at, token)`; an id of neither shape sorts last, as written.
+    Phases still SELECT by `order`; this key lists them, and breaks a tie in `order`."""
+    text = str(value)
+    numeric = re.fullmatch(r"[PD]([0-9]+)", text)
+    if numeric:
+        return (0, int(numeric.group(1)), "")
+    token = re.fullmatch(rf"[PD]-({ID_TOKEN_PATTERN})", text)
+    if token:
+        return (1, _created_sort_stamp(created_at), token.group(1))
+    return (2, "", text)
+
+
+def sort_phase_ids(ids, phases=None) -> list:
+    """`ids` in `id_sort_key` order, a token's `created_at` read from `phases` (default: the active
+    phases, read only when a token is listed); an id no record names sorts as if it had none."""
+    ids = list(ids)
+    if phases is None:
+        phases = all_active_phases() if any(id_sort_key(pid)[0] == 1 for pid in ids) else []
+    created = {p.get("id"): p.get("created_at") for p in phases if isinstance(p, dict)}
+    return sorted(ids, key=lambda pid: id_sort_key(pid, created.get(pid)))
+
+
 def phase_dirs() -> list:
+    """The active phase folders in selection order: by `order`, a tie broken by `id_sort_key` (two
+    branches that each created a phase give both the same next order; the merge must still select
+    the same phase on every machine, never in directory-listing order)."""
     if not ACTIVE.exists():
         return []
-    return sorted([p for p in ACTIVE.iterdir() if p.is_dir() and (p / "phase.json").exists()], key=lambda p: read_json(p / "phase.json").get("order", 999999))
+    found = []
+    for p in ACTIVE.iterdir():
+        if p.is_dir() and (p / "phase.json").exists():
+            data = read_json(p / "phase.json")
+            found.append(((data.get("order", 999999), id_sort_key(data.get("id", p.name), data.get("created_at"))), p))
+    return [p for _key, p in sorted(found, key=lambda item: item[0])]
 
 
 def slice_dirs(phase_dir: Path) -> list:
@@ -1986,6 +2346,8 @@ def deferred_jobs() -> dict:
             data = read_json(djson)
             data["path"] = str(ddir.relative_to(ROOT))
             groups[label].append(data)
+        # v73: in id order (D2 before D10, then minted D- tokens by creation), not folder-name order.
+        groups[label].sort(key=lambda d: id_sort_key(Path(d["path"]).name, d.get("created_at")))
     return groups
 
 
@@ -2124,6 +2486,60 @@ def _nested_execution_problems(phase_id: str, execution: dict) -> list:
     return problems
 
 
+SET_REPO_KEYS = ("worktree", "branch", "base", "base_sha", "branch_created")
+
+
+def _nested_execution_repo_problems(phase_id: str, execution: dict, errors: list, warnings: list) -> None:
+    """`validate`'s checks on a worktree set's repo half (P40.S6, S2 §18): `execution.repos.<name> =
+    {worktree, branch, base, base_sha, branch_created}`, written by `parallel-start --repo` on a
+    multi-repo host only. Called only when the key is present, so every single-repo and at-root block
+    reads exactly as before. A stamped name the registry no longer lists is a warning (history stays
+    readable); everything else is an error. Registry paths come from the marker, never the disk."""
+    repos = execution.get("repos")
+    if NESTED is None:
+        errors.append(f"phase {phase_id} has execution.repos in an at-root install; it is written only by parallel-start --repo on a multi-repo host")
+        return
+    if not NESTED_PROBLEMS and not nested_repos():
+        errors.append(f"phase {phase_id} has execution.repos in a single-repo nested install; it is written only by parallel-start --repo on a multi-repo host")
+        return
+    if not isinstance(repos, dict):
+        errors.append(f"phase {phase_id} has a non-object execution.repos {repos!r}; expected {{<repo name>: {{{', '.join(SET_REPO_KEYS)}}}}}")
+        return
+    registry = {r.get("name"): r for r in nested_repos() if isinstance(r, dict)}
+    host_wt = execution.get("host_worktree")
+    for name, value in repos.items():
+        label = f"phase {phase_id} execution.repos.{name}"
+        if not isinstance(value, dict):
+            errors.append(f"{label} is {value!r}; expected an object with {', '.join(SET_REPO_KEYS)}")
+            continue
+        missing = [k for k in SET_REPO_KEYS if k not in value]
+        if missing:
+            errors.append(f"{label} is missing {', '.join(missing)} (parallel-start writes all five together)")
+        for key in ("branch", "base"):
+            v = value.get(key)
+            if key in value and not (isinstance(v, str) and v.strip()):
+                errors.append(f"{label}.{key} is {v!r}; expected a non-empty string")
+        sha = value.get("base_sha")
+        if "base_sha" in value and not (isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{7,64}", sha)):
+            errors.append(f"{label}.base_sha is {sha!r}; expected a commit sha in {name}")
+        created = value.get("branch_created")
+        if "branch_created" in value and not isinstance(created, bool):
+            errors.append(f"{label}.branch_created is {created!r}; expected true or false")
+        wt = value.get("worktree")
+        if wt is not None and not isinstance(wt, str):
+            errors.append(f"{label}.worktree is {wt!r}; expected a path string or null")
+        elif isinstance(wt, str) and host_wt is None:
+            errors.append(f"{label}.worktree is {wt!r} while execution.host_worktree is null; a repo worktree lives inside the host worktree (null it once torn down)")
+        if name not in registry:
+            if registry:
+                warnings.append(f"{label}: no registered repo is named {name} -- kept as history (re-register it with: {WORKFLOW_CMD} nested-repos --add <path> --name {name})")
+            continue
+        if isinstance(wt, str) and isinstance(host_wt, str):
+            expected = os.path.normpath(os.path.join(host_wt, registry[name]["path"]))
+            if os.path.normpath(wt) != expected:
+                errors.append(f"{label}.worktree is {wt!r}, but {name}'s worktree in host_worktree {host_wt!r} is {expected!r} (its registry path)")
+
+
 def phase_pinned(data) -> bool:
     """True when the phase carries v42's legacy pin (`execution.mode == "default"`).
 
@@ -2204,11 +2620,12 @@ def doc_impact_docs(note: str) -> list:
 
     A note names its doc(s) in prose, so this is a best-effort read against the known `DOC_TYPES`
     only -- one note may name several docs (`operations.md: ...; qa.md: ...`) and a note naming
-    none is reported unassigned rather than guessed at. Nothing routes on it: `docs-debt` groups
-    the worklist with it, and the operator still reads the note.
+    none is reported unassigned rather than guessed at. A retired doc (v79) counts for its successor,
+    so an older note naming `backend.md` lands in architecture's worklist. Nothing routes on it:
+    `docs-debt` groups the worklist with it, and the operator still reads the note.
     """
-    found = [d for d in sorted(DOC_TYPES) if re.search(rf"\b{re.escape(d)}\.md\b", note, re.I)]
-    return found
+    named = [d for d in sorted(DOC_TYPES | set(RETIRED_DOCS)) if re.search(rf"\b{re.escape(d)}\.md\b", note, re.I)]
+    return sorted({RETIRED_DOCS.get(d, d) for d in named})
 
 
 def phases_owing_consolidation(phases: list) -> list:
@@ -2249,30 +2666,164 @@ def consolidation_cover(phases: list) -> dict:
     return cover
 
 
-def next_phase_id() -> str:
-    """`P<n>`, one above the highest phase number across the active AND archived phases: an archived
-    id is spent, so reusing it would collide in history. Archived phases are read from their
-    `archive_manifest.json` `phase_id`, falling back to the `_P<N>_` in the folder name."""
-    numbers = []
-    for pdir in phase_dirs():
-        match = re.fullmatch(r"P([0-9]+)", str(read_json(pdir / "phase.json").get("id", "")))
+def archived_phase_ids() -> set:
+    """Every phase id archived/ holds, from each folder's `archive_manifest.json` `phase_id`, its
+    `phase.json` `id` and the `_<id>_` in the folder name (`_archive_one` writes all three): an archived
+    id is spent. An unreadable entry gives what still reads, never an error."""
+    ids = set()
+    for adir in (ARCHIVED.iterdir() if ARCHIVED.is_dir() else []):
+        if not adir.is_dir():
+            continue
+        for name, key in (("archive_manifest.json", "phase_id"), ("phase.json", "id")):
+            try:
+                value = read_json(adir / name).get(key) if (adir / name).is_file() else None
+            except Exception:  # noqa: BLE001 - an unreadable archive entry is skipped, never fatal
+                value = None
+            if isinstance(value, str) and value:
+                ids.add(value)
+        match = ARCHIVE_FOLDER_ID_RE.search(adir.name)
         if match:
-            numbers.append(int(match.group(1)))
-    if ARCHIVED.exists():
-        for adir in ARCHIVED.iterdir():
-            if not adir.is_dir():
-                continue
-            pid = ""
-            manifest = adir / "archive_manifest.json"
-            if manifest.exists():
-                try:
-                    pid = str(read_json(manifest).get("phase_id", ""))
-                except (ValueError, OSError):
-                    pid = ""
-            match = re.fullmatch(r"P([0-9]+)", pid) or re.search(r"_P([0-9]+)_", adir.name)
-            if match:
-                numbers.append(int(match.group(1)))
-    return f"P{max(numbers, default=0) + 1}"
+            ids.add(match.group(1))
+    return ids
+
+
+def deferred_folder_ids() -> set:
+    """Every deferred id with a folder in open/, promoted/ or dropped/ (the folder name is the id)."""
+    return {d.name for base in (DEFERRED_OPEN, DEFERRED_PROMOTED, DEFERRED_DROPPED) if base.is_dir()
+            for d in base.iterdir() if d.is_dir()}
+
+
+def _id_token(value):
+    """The lowercase token of a `P-`/`D-` id, any case, or None for any other shape."""
+    match = re.fullmatch(r"[PDpd]-([0-9A-Za-z]+)", str(value))
+    return match.group(1).lower() if match else None
+
+
+def visible_id_tokens() -> set:
+    """The tokens of every phase and deferred id this workspace can see -- ONE pool for both kinds:
+    active phases (folder and `phase.json` id), archived phases (`archived_phase_ids`) and every
+    deferred folder. A minted token is drawn outside it, so a bare token names exactly one thing."""
+    ids = set(archived_phase_ids()) | deferred_folder_ids()
+    for pdir in (ACTIVE.iterdir() if ACTIVE.is_dir() else []):
+        if pdir.is_dir():
+            ids.add(pdir.name)
+            try:
+                ids.add(str(read_json(pdir / "phase.json").get("id", "")))
+            except Exception:  # noqa: BLE001 - an unreadable phase.json still has its folder name
+                pass
+    return {tok for tok in (_id_token(i) for i in ids) if tok}
+
+
+def id_token_refusal(token: str, taken=None):
+    """Why `token` cannot be a new id's token, or None: all digits (it would read as an old number), a
+    mode word (`gate`, `plan`), a `p`/`d` and three digits (typed bare it would read as the old `P123` / `D123`),
+    or a token some visible phase or deferred id already has."""
+    token = token.lower()
+    if token.isdigit():
+        return f"its token {token} is all digits, which reads as an old number"
+    if token in ID_MODE_WORDS:
+        return f"its token {token} is a mode word"
+    if re.fullmatch(r"[pd][0-9]{3}", token):
+        return f"its token {token}, typed bare, would read as the old id {token.upper()}"
+    if token in (visible_id_tokens() if taken is None else taken):
+        return f"its token {token} is already the token of a phase or deferred id this workspace holds (one pool for both kinds)"
+    return None
+
+
+def mint_id(prefix: str) -> str:
+    """A new `<prefix>-<token>` id (prefix `P` or `D`), the token drawn with `secrets` until
+    `id_token_refusal` accepts it. Nothing else allocates a phase or deferred id (v73)."""
+    taken = visible_id_tokens()
+    for _ in range(10000):
+        token = "".join(secrets.choice(ID_TOKEN_ALPHABET) for _ in range(ID_TOKEN_LENGTH))
+        if id_token_refusal(token, taken) is None:
+            return f"{prefix}-{token}"
+    raise SystemExit(f"could not mint a free {prefix}- id: {len(taken)} tokens are taken")
+
+
+def mint_phase_id() -> str:
+    """`P-<token>`: `new-phase` without `--phase`, `promote-deferred --create-phase` without `--phase`, and
+    rotate-backlog's docs-phase proposal. It supersedes v72's `max + 1` (`P<n>`), which two branches drew alike."""
+    return mint_id("P")
+
+
+# Brief names (v73, P44.S2): what an operator may TYPE for an id, and the one place it becomes the id as
+# stored. `7kq2`, `P-7kq2`, `p-7KQ2` are the minted `P-7kq2`; `12`, `p12`, `P12` the old `P12` (a deferred
+# job likewise: `m3xa`, `D-m3xa`, `d12`, `12`). A token needs a letter (a bare number is always an old id), is
+# never a mode word (`gate`), and its dash is required once the prefix is written: `P7kq2` names nothing.
+# `brief_id` is the parser; `resolve_id_arg` is what a command argument goes through (a stored id keeps its
+# exact name, and an id of no known shape is refused with the shapes); `normalize_id_args` applies it to every
+# phase / deferred-id argument after argparse, so no command parses one on its own. Slice ids are full-form only.
+ID_ARG_KINDS = {"P": "phase", "D": "deferred job"}
+PHASE_ARG_HELP = "the phase, in any brief form: 7kq2 or P-7kq2 (minted), 12 or P12 (numbered), any case"
+ID_ARG_EXAMPLES = {"P": ("P-7kq2", "7kq2", "P12", "12"), "D": ("D-m3xa", "m3xa", "D12", "12")}
+
+
+def brief_id(prefix: str, raw) -> "str | None":
+    """The stored id (`P-7kq2`, `P12`; prefix `D` for a deferred job) that `raw` names in any brief form, or
+    None when it names none: the optional `P-`/`p-` and four token symbols with a letter and no mode word,
+    or the optional `P`/`p` and digits (leading zeros dropped, as `run-phases` always did)."""
+    text = str(raw).strip()
+    number = re.fullmatch(rf"{prefix}?([0-9]+)", text, re.I)
+    if number:
+        return f"{prefix}{int(number.group(1))}"
+    token = re.fullmatch(rf"(?:{prefix}-)?({ID_TOKEN_PATTERN})", text, re.I)
+    if token and not token.group(1).isdigit() and token.group(1).lower() not in ID_MODE_WORDS:
+        return f"{prefix}-{token.group(1).lower()}"
+    return None
+
+
+def id_arg_refusal(prefix: str, raw) -> str:
+    """Why `raw` is not a phase (`P`) or deferred job (`D`) id, with the shapes that are."""
+    text = str(raw).strip()
+    minted, bare, old, number = ID_ARG_EXAMPLES[prefix]
+    msg = (f"{raw!r} is not a {ID_ARG_KINDS[prefix]} id: write {minted} or {bare} (minted), or {old} or {number} (numbered)")
+    lone = re.fullmatch(rf"{prefix}({ID_TOKEN_PATTERN})", text, re.I)
+    if lone:
+        msg += f"; a minted id keeps its dash: {prefix}-{lone.group(1).lower()} (or just {lone.group(1).lower()})"
+    return msg
+
+
+def _stored_id_named(prefix: str, text: str) -> bool:
+    """True when an id of a shape `brief_id` does not know is held exactly as typed (an old install's folder is
+    never made unreachable): an active or archived phase, or a deferred job."""
+    if not re.fullmatch(r"[A-Za-z0-9._-]+", text) or text in (".", ".."):
+        return False
+    if prefix == "D":
+        return text in deferred_folder_ids()
+    return (ACTIVE / text).is_dir() or text in archived_phase_ids()
+
+
+def resolve_id_arg(prefix: str, raw) -> str:
+    """A phase (`P`) or deferred job (`D`) id as typed -> the id as stored; SystemExit with the shapes when
+    it is neither. An id already in a stored shape (`PHASE_ID_RE` / `DEFERRED_ID_RE`) is returned untouched."""
+    text = str(raw).strip()
+    if (PHASE_ID_RE if prefix == "P" else DEFERRED_ID_RE).fullmatch(text):
+        return text
+    stored = brief_id(prefix, text)
+    if stored is not None:
+        return stored
+    if _stored_id_named(prefix, text):
+        return text
+    raise SystemExit(id_arg_refusal(prefix, raw))
+
+
+def normalize_id_args(args: argparse.Namespace) -> None:
+    """The ONE choke point for an id typed on a command line, run once after argparse: every `phase` /
+    `--phase` argument is a phase id, every `deferred_id` and `defer-job --id` a deferred job's, and
+    `new-phase --consolidates` a comma list of phase ids (an item that names nothing is left for that flag's own
+    refusal). A command then only ever sees the stored shape. Slice ids are not touched (full-form only)."""
+    phase = getattr(args, "phase", None)
+    if isinstance(phase, str):
+        args.phase = resolve_id_arg("P", phase)
+    deferred = getattr(args, "deferred_id", None)
+    if isinstance(deferred, str):
+        args.deferred_id = resolve_id_arg("D", deferred)
+    if getattr(args, "cmd", None) == "defer-job" and isinstance(getattr(args, "id", None), str) and args.id:
+        args.id = resolve_id_arg("D", args.id)
+    consolidates = getattr(args, "consolidates", None)
+    if isinstance(consolidates, str):
+        args.consolidates = ",".join(brief_id("P", part) or part.strip() for part in consolidates.split(","))
 
 
 def stale_docs(phases=None) -> dict:
@@ -2319,7 +2870,7 @@ def stale_docs_line(stale: dict) -> str:
     named = sorted(d for d in stale if d != UNASSIGNED_DOC)
     if not named:
         return ""
-    phases = sorted({pid for doc in named for pid in stale[doc]})
+    phases = sort_phase_ids({pid for doc in named for pid in stale[doc]})
     notes = sum(sum(stale[doc].values()) for doc in named)
     return (f"stale_docs={', '.join(named)} ({len(named)} doc(s) named by {notes} unconsolidated"
             f" '## Doc impact' note(s) from {', '.join(phases)}; docs/current is older than those notes, so"
@@ -2479,8 +3030,461 @@ def operator_wait_target(phases: list, current_phase, current_slice):
         cur = next((s for s in phase["slices"] if s["id"] == current_slice), None)
         if cur and cur.get("status") == "pending":
             return current_slice
-        break
+        return wave_wait_target(phase)  # P42: a declared phase's pending slice anywhere by order; None otherwise
     return None
+
+
+# run-phases (P41): the phase list and the next target of a /do-whole-phases run. A run passes a
+# PARKED phase -- one whose only stop is an open operator acceptance gate -- instead of halting there.
+# It is stateless: its whole input is the operator's phase tokens, which a compaction keeps, and each
+# call recomputes it from disk and writes nothing. The plain pointer above (resolve_current /
+# operator_wait_target, so `next`, works/state.json, the backlog and the resume card's stop) never
+# reads any of this, so it still halts at a parked phase in every plain session.
+
+
+def phase_parked(phase: dict) -> bool:
+    """True when a run may pass this phase: `pending` with its acceptance gate open and no slice of it
+    `pending` or `blocked`. Every other `pending`, and every `blocked`, halts a run."""
+    return bool(phase.get("status") == "pending" and acceptance_gate_is_open(phase)
+                and not any(s.get("status") in ("pending", "blocked") for s in phase.get("slices", [])))
+
+
+def run_phase_tokens(tokens) -> tuple:
+    """`(phase ids, refused tokens)`: any brief form of a phase id (`brief_id`: `7kq2`, `P-7kq2`, `P12`, `p12`,
+    `12`, any case), separated by commas and/or spaces, in the given order, duplicates dropped. Anything else
+    (a range, `worktree`, a mode word such as `gate`, `P7kq2` without its dash) is refused."""
+    ids, refused = [], []
+    for raw in tokens or []:
+        for piece in re.split(r"[,\s]+", raw):
+            if not piece:
+                continue
+            pid = brief_id("P", piece)
+            if pid is None and piece not in refused:
+                refused.append(piece)
+            elif pid is not None and pid not in ids:
+                ids.append(pid)
+    return ids, refused
+
+
+def _run_halt(phase: dict):
+    """`(item, reason)` for the stop a run meets at a queued phase that is not parked, else None."""
+    pid, status, slices = phase["id"], phase.get("status"), phase.get("slices", [])
+    if status in ("pending", "blocked"):
+        stuck = next((s for s in slices if s.get("status") in ("pending", "blocked")), None)
+        if status == "pending" and stuck is not None and acceptance_gate_is_open(phase):
+            return stuck, f"phase {pid}'s acceptance gate is open, but slice {stuck['id']} is {stuck.get('status')}, so it is not parked"
+        return phase, f"phase {pid} is {status}" + (" without an open acceptance gate" if status == "pending" else "")
+    cur = next((s for s in slices if s.get("status") != "done"), None)
+    cur = wave_stop(phase) or cur  # P42: a declared phase halts at a stop anywhere by order
+    if cur is not None and cur.get("status") in ("pending", "blocked"):
+        return cur, f"slice {cur['id']} is {cur.get('status')}"
+    return None
+
+
+def run_selection(phases: list, stream, ids=None) -> dict:
+    """A run over `ids` (None: every non-`done` phase, by order), scoped to `stream` like `next`:
+    the queue, the skipped `(id, reason, stream)`, the parked phases, then either the target
+    `(phase, slice, next slice)` or the halt `(item, reason)`; both None means the run is done."""
+    by_id = {p["id"]: p for p in phases}
+    on_stream = {p["id"] for p in stream_phases(phases, stream)}
+    out = {"queue": [], "skipped": [], "parked": [], "target": None, "halt": None}
+    for pid in (ids if ids is not None else [p["id"] for p in phases if p.get("status") != "done"]):
+        phase = by_id.get(pid)
+        if phase is None or phase.get("status") == "done":
+            out["skipped"].append((pid, "done" if phase else "done (archived)", None))
+        elif pid not in on_stream:
+            out["skipped"].append((pid, "other-stream", (phase_execution(phase) or {}).get("branch") or "default"))
+        else:
+            out["queue"].append(phase)
+    for phase in out["queue"]:
+        if phase_parked(phase):
+            out["parked"].append(phase)
+        elif out["target"] is None and out["halt"] is None:
+            out["halt"] = _run_halt(phase)
+            if out["halt"] is None:
+                open_slices = [s for s in phase.get("slices", []) if s.get("status") != "done"] + [None, None]
+                out["target"] = (phase, open_slices[0], open_slices[1])
+    return out
+
+
+def cmd_run_phases(args: argparse.Namespace) -> None:
+    """Read-only: resolve a /do-whole-phases run (see run_selection) and print it as key=value lines."""
+    ids, refused = run_phase_tokens(args.tokens)
+    phases = all_active_phases()
+    active = {p["id"] for p in phases}
+    archived = archived_phase_ids() if any(pid not in active for pid in ids) else set()
+    unknown = [pid for pid in ids if pid not in active and pid not in archived]
+    if refused or unknown:
+        for token in refused:
+            print(f"refused={token} -- not a phase id (7kq2, P-7kq2, P12 or 12, any case, separated by commas and/or spaces"
+                  + (f"; a minted id keeps its dash: P-{token[1:].lower()}" if re.fullmatch(rf"[Pp]{ID_TOKEN_PATTERN}", token, re.I) else "")
+                  + "); the run starts nothing")
+        for pid in unknown:
+            print(f"refused={pid} -- no such phase, active or archived; the run starts nothing")
+        raise SystemExit(2)
+    stream = current_stream(phases)
+    run = run_selection(phases, stream, ids or None)
+    print(f"run={','.join(ids) or 'all'}")
+    print(f"stream={stream or 'default'}")
+    print(f"queue={','.join(p['id'] for p in run['queue']) or 'none'}")
+    for pid, reason, where in run["skipped"]:
+        if where is None:
+            print(f"skipped={pid} reason={reason}")
+        else:
+            home = "runs from its own branch" if where != "default" else "runs on the default stream, not in this worktree"
+            print(f"skipped={pid} reason={reason} stream={where} -- {home}")
+    for phase in run["parked"]:
+        pid = phase["id"]
+        print(f"parked={pid} since={phase_acceptance(phase).get('requested_at')} -- acceptance gate open, no slice pending or blocked: "
+              f"the run passes it; accept-gate {pid} prints the walkthrough, accept-gate {pid} --clear clears it")
+    if run["halt"] is not None:
+        item, reason = run["halt"]
+        print(f"halt={item['id']} status={item.get('status')}")
+        if "." in item["id"] and item.get("status") == "pending":
+            record = item.get("pending")
+            print(f"stop_kind={record.get('kind') if isinstance(record, dict) else 'untyped'}")
+            if isinstance(record, dict):
+                print(f"on_words={_one_line(record.get('on_words') or '')}")
+        print(f"halt_reason={reason} -- the whole run stops here: report it, start nothing past it")
+        for line in wave_lines(next((p for p in run["queue"] if p["id"] == item["id"].split(".", 1)[0]), None)):
+            print(line)
+    elif run["target"] is not None:
+        phase, cur, nxt = run["target"]
+        print(f"target_phase={phase['id']}")
+        if cur is None:
+            print("target_slice=none -- no open slice in this phase: record its review verdict or archive it")
+            return
+        sdir = ACTIVE / phase["id"] / "slices" / cur["id"]
+        print(f"target_slice={cur['id']}")
+        print(f"slice_path={shown(sdir)}")
+        print(f"next_slice={nxt['id'] if nxt else 'none'}")
+        for line in wave_lines(phase):  # P42: declared phases only
+            print(line)
+        for line in notebook_step_lines(phase["id"]):  # §6: silent under budget
+            print(line)
+        acceptance = phase_acceptance(phase)
+        if (acceptance and acceptance.get("required") is True and acceptance.get("cleared_at") and cur.get("kind") == "review"
+                and (sdir / "result.md").is_file()):
+            print(f"gate_cleared={phase['id']} cleared_at={acceptance.get('cleared_at')} -- the review passed before the gate opened: "
+                  f"record the pass (review-phase {phase['id']} --verdict pass) without re-dispatching it")
+    else:
+        print("run_done=yes -- nothing left to run" + ("; report every parked gate with its walkthrough" if run["parked"] else ""))
+
+
+# The ready set (P42): several slices of one phase in flight at once. A slice created with `--depends-on <id>`
+# (repeatable) or `--depends-on none` is DECLARED: its slice.json carries `"depends_declared": true` beside
+# `depends_on`, and that list binds -- each id names a slice of the same phase ordered strictly before it, so
+# `order` stays a topological order and the plain pointer (the first open slice) always has its dependencies
+# done. Every other slice is UNDECLARED (every pre-v71 slice, an advisory pre-v71 list included) and, like the
+# barrier kinds, runs alone. Stateless like run-phases: recomputed from disk on every call, it writes nothing,
+# and a phase with no declared slice prints, stores and halts exactly as before (the plain pointer above).
+# A barrier is never a wave slice (P42.F1): while one is in_progress it holds the phase alone, nothing is
+# ready, and -- unless wave slices also run -- no wave line prints, so a declared phase then reads exactly as
+# an undeclared one in the same state (at an open acceptance gate the running REVIEW is the gate's, not a
+# returned wave slice to finish). start-slice warns, never refuses, at a start the ready set would not make.
+DEPENDS_DECLARED = "depends_declared"
+BARRIER_KINDS = ("decomposition", "review", "co-work")
+STOP_STATUSES = ("pending", "blocked")
+DEPENDS_ON_HELP = ("a slice of this phase ordered before this one (repeat the flag for several), or `none`; either form "
+                   "DECLARES the slice: its dependencies bind, and /do-whole-phase may run it beside other declared slices "
+                   "once they are done. Refused (nothing written) for an id of another phase, one not ordered strictly "
+                   "before this slice, or `none` beside an id. Without the flag the slice is undeclared and runs alone")
+
+
+def slice_declared(s) -> bool:
+    return isinstance(s, dict) and s.get(DEPENDS_DECLARED) is True
+
+
+def phase_declared(phase) -> bool:
+    """True when any slice of the phase, done ones included, was created with --depends-on."""
+    return isinstance(phase, dict) and any(slice_declared(s) for s in phase.get("slices", []))
+
+
+def slice_barrier(s: dict) -> bool:
+    """A barrier runs alone: a decomposition, review or co-work slice, and every undeclared slice
+    (nobody stated its file set, so nothing can be shown disjoint from it)."""
+    return s.get("kind") in BARRIER_KINDS or not slice_declared(s)
+
+
+def _order_of(s: dict):
+    order = s.get("order", 999999)
+    return order if isinstance(order, (int, float)) else 999999
+
+
+def ready_set(phase: dict) -> dict:
+    """`{ready, running, stops, barrier}` of one phase: lists of slices by order, and `barrier` the first
+    barrier `in_progress` (else None). `running` is the wave: the non-barrier slices `in_progress`; a barrier
+    never joins it, it holds the phase alone. `stops` are the open slices `pending` or `blocked`; any stop, a
+    barrier in progress, or the phase itself `pending`/`blocked`, leaves `ready` empty. Else a walk over the
+    open slices admits a barrier only as the first open slice with nothing running, ends at the first barrier
+    either way, and admits a declared slice that is todo/ready with every dependency `done`. So an undeclared
+    phase's ready set is its first open slice when that can start: the pointer."""
+    slices = phase.get("slices", [])
+    done = {s.get("id") for s in slices if s.get("status") == "done"}
+    open_slices = [s for s in slices if s.get("status") != "done"]
+    in_progress = [s for s in open_slices if s.get("status") == "in_progress"]
+    out = {"ready": [], "running": [s for s in in_progress if not slice_barrier(s)],
+           "barrier": next((s for s in in_progress if slice_barrier(s)), None),
+           "stops": [s for s in open_slices if s.get("status") in STOP_STATUSES]}
+    if out["stops"] or out["barrier"] is not None or phase.get("status") in STOP_STATUSES + ("done",):
+        return out
+    for i, s in enumerate(open_slices):
+        startable = s.get("status") in ("todo", "ready")
+        if slice_barrier(s):
+            if i == 0 and startable and not out["running"]:
+                out["ready"].append(s)
+            break
+        if startable and all(dep in done for dep in s.get("depends_on") or []):
+            out["ready"].append(s)
+    return out
+
+
+def wave_stop(phase: dict):
+    """A declared phase's first `pending`/`blocked` slice wherever it sits by order, else None: there a stop
+    behind a running or finished sibling halts too (undeclared phases halt at the first open slice only)."""
+    if not phase_declared(phase):
+        return None
+    return next((s for s in phase.get("slices", []) if s.get("status") in STOP_STATUSES), None)
+
+
+def wave_wait_target(phase: dict):
+    """operator_wait_target's widening: the id of a declared phase's first `pending` slice, else None."""
+    stop = next((s for s in phase.get("slices", []) if s.get("status") == "pending"), None) if phase_declared(phase) else None
+    return stop["id"] if stop else None
+
+
+def _slice_ids(slices) -> str:
+    return ",".join(s["id"] for s in slices) or "none"
+
+
+def _wave_stops(phase: dict, wave: dict) -> list:
+    stops = [f"{s['id']} ({s.get('status')})" for s in wave["stops"]]
+    return ([f"phase {phase['id']} ({phase.get('status')})"] if phase.get("status") in STOP_STATUSES else []) + stops
+
+
+def wave_held(wave: dict) -> bool:
+    """True while a barrier runs alone (no wave slice beside it): a single-slice run that the plain pointer's
+    lines carry, so the phase prints no wave line and reads as an undeclared phase does (P42.F1)."""
+    return wave["barrier"] is not None and not wave["running"]
+
+
+def wave_lines(phase) -> list:
+    """`next` / `run-phases` lines for a declared phase: `ready_slices=` and `running_slices=`. Empty for an
+    undeclared phase (or None), so those outputs stay byte-identical there, and while a barrier holds the phase."""
+    if not phase_declared(phase):
+        return []
+    wave = ready_set(phase)
+    if wave_held(wave):
+        return []
+    stops = _wave_stops(phase, wave)
+    ready = f"ready_slices={_slice_ids(wave['ready'])}"
+    running = f"running_slices={_slice_ids(wave['running'])}"
+    if stops:
+        ready += f" -- stopped by {', '.join(stops)}: nothing new starts while a stop is on disk"
+        if wave["running"]:
+            running += " -- already running beside the stop: wait for each, then finish and commit it"
+    return [ready, running]
+
+
+def _active_phase(phase_id):
+    """One active phase as all_active_phases() reads it, its slices in order; None when there is none."""
+    pdir = ACTIVE / phase_id if isinstance(phase_id, str) and phase_id else None
+    if pdir is None or not (pdir / "phase.json").is_file():
+        return None
+    data = read_json(pdir / "phase.json")
+    data["slices"] = [read_json(sdir / "slice.json") for sdir in slice_dirs(pdir)]
+    return data
+
+
+def wave_card_lines(phase: dict, sid) -> list:
+    """The resume card's wave lines for a declared phase, none otherwise: a sibling's stop that the pointer's
+    lines do not show, then one `wave:` line -- the running wave slices, those of them whose result.md exists
+    (returned), the ready set and the stops -- with the wave's next action. A barrier is never running or
+    returned there, and while one holds the phase alone the card has no `wave:` line (P42.F1)."""
+    if not phase_declared(phase):
+        return []
+    wave, lines = ready_set(phase), []
+    shown_stop = phase.get("status") in STOP_STATUSES or any(s["id"] == sid for s in wave["stops"])
+    hidden = None if shown_stop else next(iter(wave["stops"]), None)
+    if hidden is not None:
+        hid, record = hidden["id"], hidden.get("pending")
+        if hidden.get("status") == "blocked":
+            lines.append(f"stop: slice {hid} blocked -- report the blocker (its result.md) to the operator")
+        elif isinstance(record, dict):
+            lines.append(f"stop: slice {hid} {record.get('kind')} (since {record.get('since')}) -- the operator's words will: "
+                         f"{_card_cut(record.get('on_words'))}; they clear it with set-slice-status {hid} in_progress")
+        else:
+            lines.append(f"stop: slice {hid} untyped pending -- say what you need; the operator's words clear it with set-slice-status {hid} in_progress")
+    if wave_held(wave):
+        return lines
+    returned = [s for s in wave["running"] if (ACTIVE / phase["id"] / "slices" / s["id"] / "result.md").is_file()]
+    stops = ([phase["id"]] if phase.get("status") in STOP_STATUSES else []) + [s["id"] for s in wave["stops"]]
+    then = "start nothing new: a stop is on disk" if stops else "start the ready set only while no stop is on disk"
+    lines.append(f"wave: running={_slice_ids(wave['running'])}; returned={_slice_ids(returned)}; ready={_slice_ids(wave['ready'])}; "
+                 f"stops={','.join(stops) or 'none'} -- in a /do-whole-phase run, wait for every running span (never re-dispatch one), "
+                 f"finish each returned slice, and {then}")
+    return lines
+
+
+def start_warning(slice_id: str):
+    """start-slice's one `warning:` line in a declared phase (OQ3, P42.F1), for a start the ready set would not
+    make: a declared slice with a dependency not yet `done`, or a barrier while another slice of the phase is
+    `in_progress`. None otherwise, and always None in an undeclared phase. It warns, never refuses."""
+    try:
+        phase = _active_phase(slice_id.split(".", 1)[0]) if isinstance(slice_id, str) else None
+    except (OSError, ValueError, TypeError):  # an unreadable slice.json: the start goes on as before, unwarned
+        return None
+    if not phase_declared(phase):
+        return None
+    by_id = {s.get("id"): s for s in phase["slices"]}
+    me = by_id.get(slice_id)
+    if me is None:
+        return None
+    reasons = []
+    if slice_declared(me):
+        deps = [f"{dep} ({by_id[dep].get('status')})" if dep in by_id else f"{dep} (missing)"
+                for dep in me.get("depends_on") or [] if (by_id.get(dep) or {}).get("status") != "done"]
+        if deps:
+            reasons.append(f"depends on {', '.join(deps)}, not done yet")
+    if slice_barrier(me):
+        beside = [s["id"] for s in phase["slices"] if s.get("status") == "in_progress" and s.get("id") != slice_id]
+        if beside:
+            reasons.append(f"is a barrier that runs alone, but {', '.join(beside)} {'is' if len(beside) == 1 else 'are'} in_progress")
+    if not reasons:
+        return None
+    return f"warning: {slice_id} {', and '.join(reasons)} -- the ready set would not start it; started anyway (start-slice warns, never refuses)"
+
+
+def parse_depends_on(values):
+    """`--depends-on` values -> the declared ids (`[]` for `none`), or None when the flag is absent: an
+    undeclared slice, created exactly as before. Refuses an empty value and `none` beside an id."""
+    if values is None:
+        return None
+    raw = [v.strip() for v in values]
+    ids = list(dict.fromkeys(v for v in raw if v.lower() != "none"))
+    if "" in ids:
+        raise SystemExit("--depends-on needs a slice id or none; refused, nothing was written")
+    if ids and any(v.lower() == "none" for v in raw):
+        raise SystemExit(f"--depends-on none declares no dependency and never stands beside a slice id (got: {', '.join(raw)}); refused, nothing was written")
+    return ids
+
+
+def declared_dependencies(phase_id: str, slice_id: str, order, values):
+    """parse_depends_on, then rule 2 at creation: each id names an existing slice of the same phase, other
+    than this one, ordered strictly before `order`. Refuses (SystemExit, nothing written) otherwise."""
+    ids = parse_depends_on(values)
+    if not ids:
+        return ids
+    siblings = {s.get("id"): s for s in (read_json(d / "slice.json") for d in slice_dirs(ACTIVE / phase_id))}
+    for dep in ids:
+        if dep == slice_id:
+            problem = "a slice cannot depend on itself"
+        elif dep.split(".", 1)[0] != phase_id:
+            problem = f"not a slice of phase {phase_id}; a declared dependency names a slice of the same phase"
+        elif dep not in siblings:
+            problem = f"phase {phase_id} has no such slice; create it first, ordered before {slice_id}"
+        elif not _order_of(siblings[dep]) < order:
+            problem = (f"it is ordered at {siblings[dep].get('order')}, not before {slice_id} at {order}; a declared dependency "
+                       "comes strictly earlier by --order, so order stays a topological order")
+        else:
+            continue
+        raise SystemExit(f"--depends-on {dep}: {problem}; refused, nothing was written")
+    return ids
+
+
+def declared_slice_lines(kind: str, deps) -> list:
+    """new-slice / promote-deferred's lines for a declared slice (none for an undeclared one)."""
+    if deps is None:
+        return []
+    lines = [f"depends_on={','.join(deps)} (declared: binding; /do-whole-phase starts it once these are done)" if deps else
+             "depends_on=none (declared: no dependency; /do-whole-phase may start it beside other ready slices)"]
+    if kind in BARRIER_KINDS:
+        lines.append(f"note: kind {kind} is a barrier that runs alone, so this declaration has no effect (validate warns)")
+    return lines
+
+
+def declaration_checks(phase: dict, s: dict, errors: list, warnings: list) -> None:
+    """validate's checks of one slice's declaration. Silent for a slice with no marker key at all (every
+    undeclared slice), so an undeclared workspace's validate output is unchanged."""
+    if DEPENDS_DECLARED not in s:
+        return
+    if s.get(DEPENDS_DECLARED) is not True:
+        errors.append(f"slice {s['id']} has invalid {DEPENDS_DECLARED} {s.get(DEPENDS_DECLARED)!r}; expected true "
+                      "(written by new-slice/promote-deferred --depends-on) or no key at all")
+        return
+    if s.get("kind") in BARRIER_KINDS:
+        warnings.append(f"slice {s['id']} declares its dependencies, but kind {s.get('kind')} is a barrier that runs alone: "
+                        f"the declaration has no effect -- drop {DEPENDS_DECLARED} from its slice.json")
+    orders = {x.get("id"): x for x in phase.get("slices", [])}
+    for dep in s.get("depends_on") or []:
+        if dep in orders and not _order_of(orders[dep]) < _order_of(s):
+            errors.append(f"declared dependency of {s['id']} (order {s.get('order')}) on {dep} (order {orders[dep].get('order')}) "
+                          "is not ordered before it; a declared dependency comes strictly earlier by order, so order stays a "
+                          "topological order -- reorder one of them")
+        elif dep not in orders and isinstance(dep, str) and re.fullmatch(rf"{PHASE_ID_PATTERN}\..+", dep) and dep.split(".", 1)[0] != phase["id"]:
+            errors.append(f"declared dependency of {s['id']} on {dep} crosses phases; a declared dependency names a slice "
+                          f"of the same phase ({phase['id']})")
+
+
+# Forced declaration (v77, operator: "force engine to determine parallel run about slice when decomp"). A
+# decomposition must leave every open middle slice of its phase DECLARED, so finish-slice on a decomposition
+# refuses while one is not: the parallel decision is made at the cut, never left to the default. The engine,
+# not the decomposition's prose, then determines what may run together (parallel_plan). An explain phase
+# (`## Explain` in intent.md) is exempt: its chapters stay undeclared by design, as fix slices do. set-slice-deps
+# declares a slice that was cut without the flag.
+def explain_phase(pdir: Path) -> bool:
+    """True when the phase's intent.md carries the `## Explain` section (the explain route's only marker)."""
+    intent = pdir / "intent.md"
+    return intent.is_file() and any(line.strip() == "## Explain" for line in intent.read_text(encoding="utf-8").split("\n"))
+
+
+def undeclared_middle_slices(phase: dict) -> list:
+    """The open (not `done`) slices of a phase that are neither a barrier kind, a fix nor declared, by order: a
+    fix slice is cut after a review, outside any decomposition's reach, and stays undeclared unless its set is known."""
+    return [s for s in phase.get("slices", []) if s.get("status") != "done" and s.get("kind") not in BARRIER_KINDS + ("fix",)
+            and not slice_declared(s)]
+
+
+def parallel_plan(phase: dict) -> list:
+    """The rounds the open slices run in, as the ready set would start them if every round finished together:
+    a list of slice lists, by order. A barrier is a round of its own; declared slices whose dependencies are
+    all done (or in an earlier round) share a round; an undeclared slice runs alone, like a barrier. Pure:
+    it reads the slice records and writes nothing."""
+    done = {s.get("id") for s in phase.get("slices", []) if s.get("status") == "done"}
+    pending = [s for s in phase.get("slices", []) if s.get("status") != "done"]
+    rounds = []
+    while pending:
+        batch = []
+        for i, s in enumerate(pending):
+            if slice_barrier(s):
+                if i == 0:
+                    batch = [s]
+                break
+            if all(dep in done for dep in s.get("depends_on") or []):
+                batch.append(s)
+        if not batch:  # unreachable while order stays topological (validate errors otherwise); never loop
+            batch = [pending[0]]
+        rounds.append(batch)
+        done |= {s.get("id") for s in batch}
+        pending = [s for s in pending if s not in batch]
+    return rounds
+
+
+def parallel_plan_lines(phase: dict) -> list:
+    """`parallel_plan=` and `parallel_rounds=` lines for a phase's open slices (none when nothing is open)."""
+    rounds = parallel_plan(phase)
+    if not rounds:
+        return []
+    short = lambda s: str(s.get("id", "")).split(".", 1)[-1]
+    shown_rounds = " -> ".join(" + ".join(short(s) for s in batch) for batch in rounds)
+    together = sum(len(batch) for batch in rounds if len(batch) > 1)
+    total = sum(len(batch) for batch in rounds)
+    widest = max(len(batch) for batch in rounds)
+    if together:
+        summary = f"{len(rounds)} rounds for {total} open slices; {together} run beside another (widest round: {widest})"
+    else:
+        summary = f"{len(rounds)} rounds for {total} open slices; a chain: no two slices run together"
+    return [f"parallel_plan={phase.get('id')}: {shown_rounds}", f"parallel_rounds={summary}"]
 
 
 SLICES_BEGIN = "<!-- slices:begin -->"
@@ -2578,6 +3582,419 @@ PHASE_SECTION_APPEND_ONLY = {"doc impact": "--append", "operator questions": "--
 OQ_ENTRY = re.compile(r"^- \*\*OQ(\d+)\b")
 OQ_PARTS = re.compile(r"^- \*\*OQ\d+[^*]*\*\*:?\s*(.*)$")
 
+# Notebook entries. An entry is a column-0 list item of a section: ENTRY_MARKER, then its
+# continuation and nested lines. `notebook_entries` is the ONE parser; every entry read and write,
+# the move, the budget report and paging go through it. A pointer line is what a move leaves in an
+# entry's place: one line, `<marker><gist> → [topics/<slug>.md](topics/<slug>.md) § <block>`.
+ENTRY_MARKER = re.compile(r"(?:[-*+]|[0-9]+[.)]) ")
+ENTRY_DEEP_HEADING = re.compile(r"#{3,}(?:\s|$)")
+ENTRY_OQ = re.compile(r"\*\*OQ([0-9]+)\b")
+ENTRY_KEY_PART = re.compile(r"([0-9]+)(?:\s*-\s*([0-9]+))?|OQ([0-9]+)", re.I)
+TOPIC_SLUG_RE = re.compile(r"[a-z0-9][a-z0-9-]{0,63}")
+POINTER_LINE = re.compile(r"(?:[-*+]|[0-9]+[.)]) .* → \[topics/([a-z0-9][a-z0-9-]{0,63})\.md\]\(topics/\1\.md\) § (\S.*)")
+GIST_SENTENCE_END = re.compile(r"[.!?][*_`)\]\"'”’]*(?=\s|$)")
+TOPIC_INTRO = ("_Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, one `## ` block each; "
+               "the pointer line left in each one's place names its block._")
+# The sections a move refuses, and why (every other section moves: Decisions, Notes for later slices,
+# Objective and any custom section).
+PHASE_SECTION_UNMOVABLE = {
+    "slices": "it is generated from each slice.json by `rebuild`",
+    "doc impact": "it is append-only, and the docs phase and the review read its notes where they are (add with --append)",
+    "operator questions": "it is append-only, and the review routes its entries where they are: collapse an answered one with --resolve OQ<n> --pointer <ref>",
+    "now": "it is the handoff the next dispatch reads first: rewrite it shorter with --replace",
+}
+
+
+def notebook_entries(lines: list, first: int, end: int) -> list:
+    """The entries of one notebook section, in document order: the one parser behind every
+    entry read and write, the move, the budget report and paging. `lines[first:end]` is the section's
+    body; for a section `(heading, i, e)` from `h2_spans`, pass `i + 1, e`.
+
+    An entry starts at a column-0 line, outside a fence, that begins with a list marker (`- `, `* `,
+    `+ `, `<digits>. `, `<digits>) `). It runs to the next such line, the next column-0 `###`-or-deeper
+    heading, an unindented paragraph after a blank line, or the section's end. Its continuation and
+    indented (nested) lines belong to it; its trailing blank lines are separators, not part of it. A
+    line whose stripped form starts with ``` or ~~~ toggles a fence, and nothing inside a fence starts
+    or ends an entry. Lines outside every entry (the italic guidance line, prose, `###` headings, table
+    rows) are never touched by an entry operation.
+
+    Each entry is a dict: `pos` (1-based), `start` and `end` (line indices, `end` exclusive and before
+    the trailing blank lines), `sep_end` (the end of those blank lines, never past `end` of the
+    section), `marker` (`- `, `9. `, ...), `label` (`9.`, `OQ3` or ""), `oq` (the n of a `**OQ<n>`
+    lead, else None), `bytes` (UTF-8 bytes of its lines joined by newlines), `nested` (an indented
+    line that starts with a list marker), `pointer` (a one-line pointer, POINTER_LINE), `long` (over
+    LONG_ENTRY_BYTES or nested; a pointer is never long) and `lead` (its first line after the marker).
+    """
+    spans, fenced, current, prev_blank = [], False, None, False
+    for k in range(first, end):
+        line = lines[k]
+        stripped = line.strip()
+        fence = stripped.startswith("```") or stripped.startswith("~~~")
+        if fenced:
+            fenced = not fence
+            if current is not None:
+                current[1] = k + 1
+            prev_blank = False
+            continue
+        if not stripped:
+            prev_blank = True
+            continue
+        column0 = not line[0].isspace()
+        if column0 and ENTRY_MARKER.match(line):
+            current = [k, k + 1, False]
+            spans.append(current)
+        elif column0 and (prev_blank or ENTRY_DEEP_HEADING.match(line)):
+            current = None
+        elif current is not None and not column0 and ENTRY_MARKER.match(line.lstrip()):
+            current[2] = True
+        if current is not None:
+            current[1] = k + 1
+        fenced = fence
+        prev_blank = False
+    out = []
+    for pos, (start, stop, nested) in enumerate(spans, 1):
+        sep = stop
+        while sep < end and not lines[sep].strip():
+            sep += 1
+        marker = ENTRY_MARKER.match(lines[start]).group(0)
+        lead = lines[start][len(marker):]
+        oq = ENTRY_OQ.match(lead)
+        size = len("\n".join(lines[start:stop]).encode("utf-8"))
+        pointer = stop - start == 1 and POINTER_LINE.fullmatch(lines[start].rstrip()) is not None
+        label = marker.strip() if marker[0].isdigit() else (f"OQ{int(oq.group(1))}" if oq else "")
+        out.append({"pos": pos, "start": start, "end": stop, "sep_end": sep, "marker": marker, "label": label,
+                    "oq": int(oq.group(1)) if oq else None, "bytes": size, "nested": nested, "pointer": pointer,
+                    "long": not pointer and (nested or size > LONG_ENTRY_BYTES), "lead": lead})
+    return out
+
+
+def entry_ranges(positions) -> str:
+    """`1-8,10` for positions 1..8 and 10: a set of entry positions in the form `--entry` takes."""
+    runs = []
+    for pos in sorted(set(positions)):
+        if runs and pos == runs[-1][1] + 1:
+            runs[-1][1] = pos
+        else:
+            runs.append([pos, pos])
+    return ",".join(str(a) if a == b else f"{a}-{b}" for a, b in runs)
+
+
+def section_topic_slug(heading: str) -> str:
+    """The topic slug a suggested move uses for a section: `Notes for later slices` -> `notes-for-later-slices`."""
+    slug = re.sub(r"[^a-z0-9]+", "-", heading.lower()).strip("-")[:64].strip("-")
+    return slug if slug and slug != "breakdown" else "notes"
+
+
+def notebook_report(phase: str, text: str) -> dict:
+    """The one budget report of a notebook (design §4), read by the index, finish-slice, validate and
+    next. Returns data:
+
+    `{"phase", "lines", "bytes", "budget": PHASE_MD_BUDGET, "over", "sections": [...], "moves": [...],
+      "flagged": [...]}`; each section is `{"heading", "bytes", "budget" (None = none of its own),
+    "over", "movable", "long": [the long entries' dicts from notebook_entries], "move" (the suggested
+    `phase-section <P> "<Section>" --to-topic <slug> --entry <ranges>` or None), "remedy" (the fix for
+    an over-budget section a move cannot shrink, or None)}`. Long entries are named only in movable
+    sections (not PHASE_SECTION_UNMOVABLE); `moves` lists every section's move command; `flagged` the
+    sections over their budget or holding long entries. Section bytes are `h2_sections`' bytes."""
+    lines = text.split("\n")
+    sections = []
+    for heading, i, e in h2_spans(lines):
+        key = heading.lower()
+        size = len("\n".join(lines[i:e]).encode("utf-8"))
+        budget = SECTION_BUDGETS.get(key, SECTION_BUDGET_DEFAULT)
+        movable = key not in PHASE_SECTION_UNMOVABLE
+        long_entries = [x for x in notebook_entries(lines, i + 1, e) if x["long"]] if movable else []
+        move = (f'phase-section {phase} "{heading}" --to-topic {section_topic_slug(heading)} '
+                f'--entry {entry_ranges(x["pos"] for x in long_entries)}') if long_entries else None
+        over = budget is not None and size > budget
+        remedy = SECTION_REMEDIES.get(key) if over and not move else None
+        sections.append({"heading": heading, "bytes": size, "budget": budget, "over": over, "movable": movable,
+                         "long": long_entries, "move": move, "remedy": remedy})
+    total = len(text.encode("utf-8"))
+    return {"phase": phase, "lines": len(text.splitlines()), "bytes": total, "budget": PHASE_MD_BUDGET,
+            "over": total > PHASE_MD_BUDGET, "sections": sections,
+            "moves": [s["move"] for s in sections if s["move"]],
+            "flagged": [s for s in sections if s["over"] or s["long"]]}
+
+
+def notebook_section_line(section: dict, limit: int = 8) -> str:
+    """One line for a flagged section of `notebook_report`: its size against its budget, up to `limit`
+    long-entry labels (a label, else the position) with `+N more`, and its move command or remedy."""
+    parts = []
+    if section["over"]:
+        parts.append(f"{section['bytes']} B, over its {section['budget']} B budget")
+    else:
+        parts.append(f"{section['bytes']} B")
+    if section["long"]:
+        names = [x["label"] or str(x["pos"]) for x in section["long"]]
+        more = f" +{len(names) - limit} more" if len(names) > limit else ""
+        parts.append(f"long entries: {', '.join(names[:limit])}{more}")
+    if section["move"]:
+        parts.append(f"move: {section['move']}")
+    elif section["remedy"]:
+        parts.append(section["remedy"])
+    return f"## {section['heading']}: " + "; ".join(parts)
+
+
+# The required step (design §6): when a phase that is not done has a notebook over PHASE_MD_BUDGET,
+# `next`, `run-phases`, `start-slice` and the resume card tell the main thread to move long entries to
+# topics before the next dispatch. `notebook_step` is the one function they print from; it is silent
+# (None) under budget, for a done phase and for a phase with no notebook, so those outputs never change.
+NOTEBOOK_STEP_MOVES = 3
+
+
+def notebook_step(phase_id) -> dict:
+    """The over-budget step of one phase, or None. `{"phase", "bytes", "form": "required" | "advisory",
+    "lines": [...]}`: required when a movable long entry exists (`notebook_over_budget=` and at most
+    NOTEBOOK_STEP_MOVES `notebook_move=` lines), advisory when nothing can move (`notebook_over_budget=`
+    naming what remains, no move line). Read-only: it never writes and never blocks anything."""
+    if not phase_id:
+        return None
+    pdir = ACTIVE / phase_id
+    notebook = pdir / "phase.md"
+    if not notebook.is_file():
+        return None
+    try:
+        if read_json(pdir / "phase.json").get("status") == "done":
+            return None
+    except (OSError, ValueError):
+        return None
+    text = notebook.read_text(encoding="utf-8")
+    if len(text.encode("utf-8")) <= PHASE_MD_BUDGET:
+        return None
+    report = notebook_report(phase_id, text)
+    head = f"notebook_over_budget={phase_id} ({report['bytes']} of {PHASE_MD_BUDGET} B) -- "
+    moves = report["moves"]
+    if moves:
+        more = (f" (+{len(moves) - NOTEBOOK_STEP_MOVES} more moves: `phase-section {phase_id}` lists them)"
+                if len(moves) > NOTEBOOK_STEP_MOVES else "")
+        lines = [head + "required before the next dispatch: move long entries to topics first (gists stay, nothing is lost)" + more]
+        lines.extend(f"notebook_move={m}" for m in moves[:NOTEBOOK_STEP_MOVES])
+        return {"phase": phase_id, "bytes": report["bytes"], "form": "required", "lines": lines}
+    remains = []
+    for s in report["sections"]:
+        if s["heading"].lower() == "slices":
+            remains.append(f"{s['heading']} {s['bytes']} B generated")
+        elif s["over"]:
+            remains.append(f"{s['heading']} {s['bytes']} B: {s['remedy'] or 'no long entry left to move'}")
+    if not remains:  # nothing over its own budget: name the biggest section
+        big = max(report["sections"], key=lambda s: s["bytes"], default=None)
+        if big:
+            remains.append(f"{big['heading']} {big['bytes']} B")
+    lines = [head + f"advisory: nothing left to move ({'; '.join(remains)})"]
+    return {"phase": phase_id, "bytes": report["bytes"], "form": "advisory", "lines": lines}
+
+
+def notebook_step_lines(phase_id) -> list:
+    """`notebook_step`'s lines, or [] when it is silent."""
+    step = notebook_step(phase_id)
+    return step["lines"] if step else []
+
+
+def dangling_pointers(pdir: Path) -> list:
+    """The pointer lines of a phase notebook whose topic file or `§ <block>` does not exist, as
+    `(section, entry position, topics/<slug>.md, block)`: each one is a lost decision."""
+    path = pdir / "phase.md"
+    if not path.exists():
+        return []
+    lines = path.read_text(encoding="utf-8").split("\n")
+    topics, out = {}, []
+    for heading, i, e in h2_spans(lines):
+        for x in notebook_entries(lines, i + 1, e):
+            if not x["pointer"]:
+                continue
+            m = POINTER_LINE.fullmatch(lines[x["start"]].rstrip())
+            slug, block = m.group(1), m.group(2).strip()
+            if slug not in topics:
+                topic = pdir / "topics" / f"{slug}.md"
+                topics[slug] = ({h.lower() for h, _, _ in h2_spans(topic.read_text(encoding="utf-8").split("\n"))}
+                                if topic.is_file() else None)
+            if topics[slug] is None or block.lower() not in topics[slug]:
+                out.append((heading, x["pos"], f"topics/{slug}.md", block if topics[slug] is not None else None))
+    return out
+
+
+def paged_units(lines: list, first: int, end: int) -> list:
+    """The page units of a block `lines[first:end]` (its heading at `first`, trailing blanks already
+    dropped): the heading with the lines before the first entry, then each entry with its trailing
+    separators, and each non-entry line after an entry on its own. `(start, stop, entry pos or None)`."""
+    entries = notebook_entries(lines, first + 1, end)
+    units, cur = [], first
+    for x in entries:
+        if not units:
+            units.append((first, x["start"], None))
+        else:
+            units += [(k, k + 1, None) for k in range(cur, x["start"])]
+        stop = min(x["sep_end"], end)
+        units.append((x["start"], stop, x["pos"]))
+        cur = stop
+    if not entries:
+        return [(first, end, None)]
+    units += [(k, k + 1, None) for k in range(cur, end)]
+    return units
+
+
+def paged_print(lines: list, first: int, end: int, title: str, next_cmd: str, page) -> None:
+    """Print a section or topic block `lines[first:end]` (trailing blanks dropped), paged (design §5).
+    Without `page`, a block at or under PAGE_BYTES prints whole and unchanged; over it, page 1. A page
+    packs whole units (an entry is never split; a unit bigger than a page gets its own) and opens with
+    `<!-- page i of n · <title> · entries a–b of m · next: <next_cmd> --page i+1 -->` (`last page` on
+    the last). Drop the header lines, concatenate the pages, and the result is the plain print."""
+    while end > first + 1 and not lines[end - 1].strip():
+        end -= 1
+    plain = "\n".join(lines[first:end])
+    if page is None and len(plain.encode("utf-8")) <= PAGE_BYTES:
+        print(plain)
+        return
+    pages, size = [], 0
+    for unit in paged_units(lines, first, end):
+        ubytes = len("\n".join(lines[unit[0]:unit[1]]).encode("utf-8")) + 1
+        if pages and size + ubytes <= PAGE_BYTES:
+            pages[-1].append(unit)
+            size += ubytes
+        else:
+            pages.append([unit])
+            size = ubytes
+    n, want = len(pages), page or 1
+    if want < 1 or want > n:
+        raise SystemExit(f"{title} has {n} page{'' if n == 1 else 's'}, so --page {want} names none")
+    total = len(notebook_entries(lines, first + 1, end))
+    chosen = pages[want - 1]
+    pos = [u[2] for u in chosen if u[2] is not None]
+    span = f"entries {pos[0]}–{pos[-1]} of {total}" if pos else f"entries none of {total}"
+    tail = f"next: {next_cmd} --page {want + 1}" if want < n else "last page"
+    print(f"<!-- page {want} of {n} · {title} · {span} · {tail} -->")
+    print("\n".join(lines[chosen[0][0]:chosen[-1][1]]))
+
+
+def resolve_entry_key(entries: list, key: str, section: str, phase: str, several: bool = False) -> list:
+    """The entries `--entry K` names, in document order; SystemExit naming why when it names none or,
+    unless `several`, more than one. K is a position (1-based), `OQ<n>`, or, with `several`, ranges and
+    comma lists of those (`1-8,10`); any other text is a case-insensitive piece of an entry's first
+    line and must match exactly one entry."""
+    text = (key or "").strip()
+    listing = f'phase-section {phase} "{section}" --list'
+    if not text:
+        raise SystemExit(f"--entry needs a key: a position, OQ<n> or a piece of the entry's first line (see {listing})")
+    parts = [part.strip() for part in text.split(",")]
+    matched = [ENTRY_KEY_PART.fullmatch(part) for part in parts]
+    if all(matched):
+        if not several and (len(parts) > 1 or matched[0].group(2)):
+            raise SystemExit(f"--entry {text} names several entries; here it takes one (ranges and lists go with --to-topic only)")
+        chosen = {}
+        for m in matched:
+            if m.group(3):
+                n = int(m.group(3))
+                hits = [x for x in entries if x["oq"] == n]
+                if len(hits) != 1:
+                    have = ", ".join(f"OQ{x['oq']} ({x['pos']})" for x in entries if x["oq"] is not None) or "none"
+                    raise SystemExit(f"{'no' if not hits else 'more than one'} entry OQ{n} in {section}; its OQ entries: {have}")
+            else:
+                a, b = int(m.group(1)), int(m.group(2) or m.group(1))
+                if a < 1 or a > b or b > len(entries):
+                    raise SystemExit(f"{section} has {len(entries)} entr{'y' if len(entries) == 1 else 'ies'}, so {m.group(0)} names none (see {listing})")
+                hits = entries[a - 1:b]
+            for x in hits:
+                chosen[x["pos"]] = x
+        return [chosen[pos] for pos in sorted(chosen)]
+    wanted = text.lower()
+    hits = [x for x in entries if wanted in (x["marker"] + x["lead"]).lower()]
+    if len(hits) == 1:
+        return hits
+    if not hits:
+        raise SystemExit(f"no entry of {section} has {text!r} in its first line (see {listing})")
+    named = "; ".join(f"{x['pos']}: {x['lead'][:60]}" for x in hits)
+    raise SystemExit(f"{text!r} matches {len(hits)} entries of {section}, so it names none; use a position -- {named}")
+
+
+def _markdown_closers(text: str) -> str:
+    """What closes the markdown `text` leaves open: a backtick for an open code span, then `**` for
+    open bold; "" when nothing is open."""
+    code = bold = False
+    k = 0
+    while k < len(text):
+        if text[k] == "`":
+            code = not code
+        elif not code and text.startswith("**", k):
+            bold = not bold
+            k += 1
+        k += 1
+    return ("`" if code else "") + ("**" if bold else "")
+
+
+def entry_gist(entry_lines: list) -> str:
+    """The derived gist of an entry: a verbatim excerpt, never a summary. The entry's text is flattened
+    (its marker and its continuation lines' markers dropped, whitespace collapsed) and kept whole up to
+    GIST_MAX characters. Longer, it is cut at the last sentence end (`.` `!` `?` with any closing `**`,
+    backtick, bracket or quote; never `:`) between characters 40 and GIST_MAX, else at the last word
+    boundary that leaves room for ` …`. Markdown is kept, and a cut never leaves a `**` or a backtick
+    open: the markers it would leave open are closed at the cut, inside GIST_MAX."""
+    words = []
+    for line in entry_lines:
+        stripped = line.strip()
+        marker = ENTRY_MARKER.match(stripped)
+        words.append(stripped[marker.end():] if marker else stripped)
+    flat = re.sub(r"\s+", " ", " ".join(words)).strip()
+    if len(flat) <= GIST_MAX:
+        return flat
+    best = None
+    for m in GIST_SENTENCE_END.finditer(flat):
+        if m.end() > GIST_MAX:
+            break
+        if m.end() >= 40 and m.end() + len(_markdown_closers(flat[:m.end()])) <= GIST_MAX:
+            best = m.end()
+    if best is not None:
+        return flat[:best] + _markdown_closers(flat[:best])
+    for cut in range(GIST_MAX - 2, 0, -1):
+        if flat[cut] == " " and cut + len(_markdown_closers(flat[:cut])) + 2 <= GIST_MAX:
+            return flat[:cut] + _markdown_closers(flat[:cut]) + " \u2026"
+    kept = flat[:GIST_MAX - 5]  # no word boundary at all: one long token (a URL, a path)
+    return kept + _markdown_closers(kept) + " \u2026"
+
+
+def gist_plain_chars(gist: str, entry: dict) -> int:
+    """The characters of plain text a gist keeps once its links (whole, bare URLs too), its markdown and
+    the entry's own label are stripped: under GIST_PLAIN_MIN, the gist is a bare link."""
+    text = re.sub(r"!?\[[^\]]*\]\([^)]*\)", " ", gist)
+    text = re.sub(r"<?https?://\S+", " ", text)
+    if entry.get("oq") is not None:
+        text = re.sub(rf"\bOQ{entry['oq']}\b", " ", text)
+    text = re.sub(r"[*_`~#>\[\]…]", "", text)
+    return len(re.sub(r"\s+", " ", text).strip())
+
+
+def entry_block_label(entry: dict) -> str:
+    """The label of a moved entry's topic block: its own number, its OQ<n>, else its position."""
+    if entry["marker"][0].isdigit():
+        return entry["marker"].strip()[:-1]
+    if entry["oq"] is not None:
+        return f"OQ{entry['oq']}"
+    return str(entry["pos"])
+
+
+def _topic_blocks_missing(text: str, blocks: list) -> list:
+    """The names of `blocks` (`(name, entry lines)`) that `text` does not hold as a `## <name>` line, a
+    blank line, then those lines byte for byte: the move's check, run before it touches phase.md."""
+    lines = text.split("\n")
+    found = {}
+    for heading, i, e in h2_spans(lines):
+        if lines[i] == f"## {heading}":
+            found.setdefault(heading, (i, e))
+    missing = []
+    for name, body in blocks:
+        if name not in found:
+            missing.append(name)
+            continue
+        i, e = found[name]
+        got, want = lines[i + 1:e], [""] + list(body)
+        while got and not got[-1].strip():
+            got.pop()
+        while len(want) > 1 and not want[-1].strip():
+            want.pop()
+        if got != want:
+            missing.append(name)
+    return missing
+
 
 def _phase_section_body(args: argparse.Namespace) -> str:
     """The text for --replace / --append: `--file`, else stdin."""
@@ -2606,27 +4023,233 @@ def _clean_section_body(body: str, heading: str) -> list:
     return lines
 
 
+def _phase_section_flags(args: argparse.Namespace, mode) -> None:
+    """Refuse the flag combinations `phase-section` has no meaning for, naming the right form."""
+    if args.topic is not None and (mode or args.list or args.entry is not None or args.gist is not None or args.dry_run):
+        raise SystemExit("--topic reads a topic file: give it a block name or nothing (a topic is written by --to-topic, or directly)")
+    if args.list and (mode or args.entry is not None):
+        raise SystemExit("--list is a read: it takes a section name, no --entry and no write flag")
+    if (args.gist is not None or args.dry_run) and mode != "--to-topic":
+        raise SystemExit(f"{'--gist' if args.gist is not None else '--dry-run'} works with --to-topic only")
+    if args.entry is not None and mode == "--append":
+        raise SystemExit("--append adds at the section's end and takes no --entry (to change one entry: --entry K --replace)")
+    if args.entry is not None and mode == "--resolve":
+        raise SystemExit("--resolve names its entry itself (--resolve OQ<n> --pointer <ref>) and takes no --entry")
+    if args.page is not None:
+        if mode:
+            raise SystemExit(f"--page is a read: it takes no {mode}")
+        if args.list or args.entry is not None:
+            raise SystemExit(f"--page pages a whole section or topic block; it takes no {'--list' if args.list else '--entry'}")
+        if args.page < 1:
+            raise SystemExit(f"--page counts from 1, got {args.page}")
+    if mode == "--remove" and args.entry is None:
+        raise SystemExit("--remove needs --entry K: it deletes one entry, never a section")
+
+
+def _phase_topic_read(args: argparse.Namespace, pdir: Path, name: str) -> None:
+    """`phase-section <P> [<block>] --topic <slug>`: the topic's index (its `## ` blocks with bytes, then
+    the total), or one block, heading included, paged like a section (`paged_print`)."""
+    slug = args.topic.strip()
+    if not TOPIC_SLUG_RE.fullmatch(slug):
+        raise SystemExit(f"--topic takes a slug [a-z0-9][a-z0-9-]{{0,63}} (the file topics/<slug>.md), got {args.topic!r}")
+    topic = pdir / "topics" / f"{slug}.md"
+    if not topic.is_file():
+        have = sorted(p.stem for p in (pdir / "topics").glob("*.md")) if (pdir / "topics").is_dir() else []
+        raise SystemExit(f"phase {args.phase} has no topics/{slug}.md; its topics: {', '.join(have) or 'none'}")
+    text = topic.read_text(encoding="utf-8")
+    if not name:
+        if args.page is not None:
+            raise SystemExit("--page pages one block: give the block name (the index is never paged)")
+        for heading, size in h2_sections(text):
+            print(f"{size:>8}  {heading}")
+        print(f"{len(text.encode('utf-8')):>8}  total")
+        return
+    lines = text.split("\n")
+    spans = h2_spans(lines)
+    for heading, i, e in spans:
+        if heading.lower() == name.lower():
+            paged_print(lines, i, e, heading, f'phase-section {args.phase} "{heading}" --topic {slug}', args.page)
+            return
+    blocks = ", ".join(f"`{h}`" for h, _, _ in spans) or "none"
+    print(f"unknown block: {name!r} in topics/{slug}.md; its blocks are {blocks}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def _phase_section_entry_write(args: argparse.Namespace, path: Path, text: str, lines: list, heading: str, i: int, e: int) -> None:
+    """`--entry K --replace` swaps exactly that entry's lines; `--entry K --remove` deletes it with its
+    trailing separator (the last entry of a section takes the blank lines before it instead, so the
+    section still ends with its blank line). Every other byte of the file stays identical."""
+    key = heading.lower()
+    flag = "--replace" if args.replace else "--remove"
+    if key == "slices":
+        raise SystemExit("`Slices` is generated from each slice.json by `rebuild`; never write it")
+    if key in PHASE_SECTION_APPEND_ONLY:
+        raise SystemExit(f"`{heading}` is append-only: use {PHASE_SECTION_APPEND_ONLY[key]}, never --entry {flag}")
+    if args.remove and key == "decisions":
+        raise SystemExit("`Decisions` keeps every decision: replace a superseded one in place (--entry K --replace), never --remove")
+    entries = notebook_entries(lines, i + 1, e)
+    entry = resolve_entry_key(entries, args.entry, heading, args.phase)[0]
+    old_size = len("\n".join(lines[entry["start"]:entry["end"]]).encode("utf-8"))
+    if args.replace:
+        new = _clean_section_body(_phase_section_body(args), heading)
+        while new and not new[-1].strip():
+            new.pop()
+        if not ENTRY_MARKER.match(new[0]):
+            new[0] = entry["marker"] + new[0].lstrip()  # text without a marker takes the old entry's marker
+        parsed = notebook_entries(new, 0, len(new))
+        if len(parsed) > 1:
+            raise SystemExit(f"the text holds {len(parsed)} entries; --entry K --replace writes exactly one (add the others with --append)")
+        if not parsed or parsed[0]["start"] != 0 or parsed[0]["end"] != len(new):
+            raise SystemExit("the text is not one entry: a `###` heading or an unindented paragraph after a blank line would stand outside it; indent its continuation lines, or write the rest with --append")
+        lines[entry["start"]:entry["end"]] = new
+        after = notebook_entries(lines, i + 1, e + len(new) - (entry["end"] - entry["start"]))
+        if len(after) != len(entries) or (after[entry["pos"] - 1]["start"], after[entry["pos"] - 1]["end"]) != (entry["start"], entry["start"] + len(new)):
+            raise SystemExit("the text would change the entries around it (a fence it opens and never closes?); nothing written")
+        verb, new_size = "replaced", len("\n".join(new).encode("utf-8"))
+    else:
+        if entry["sep_end"] < e:
+            del lines[entry["start"]:entry["sep_end"]]
+        else:
+            first = entry["start"]
+            while first > i + 1 and not lines[first - 1].strip():
+                first -= 1
+            del lines[first:entry["end"]]
+        verb, new_size = "removed", 0
+    updated = "\n".join(lines)
+    if updated != text:
+        write_text(path, updated)
+    print(f"{verb}={heading} entry={entry['pos']} bytes={old_size}->{new_size} phase_md={len(updated.encode('utf-8'))}")
+
+
+def _phase_section_move(args: argparse.Namespace, pdir: Path, archived: bool, path: Path, lines: list, heading: str, i: int, e: int) -> None:
+    """`--to-topic <slug> [--entry K] [--gist TEXT] [--dry-run]`: move entries to `topics/<slug>.md`,
+    losslessly. Each entry is appended as a `## <Section> <label>` block holding its lines byte for
+    byte, the topic is re-read and every block verified, and only then is phase.md rewritten, each
+    entry replaced by one pointer line carrying a verbatim gist. A failure between the two writes
+    leaves a duplicate, never a loss. Every refusal is named and nothing is written."""
+    key = heading.lower()
+    slug = args.to_topic.strip()
+    if archived and not args.dry_run:
+        raise SystemExit(f"phase {args.phase} is archived; its notebook is read-only (--dry-run still reads it)")
+    if key in PHASE_SECTION_UNMOVABLE:
+        raise SystemExit(f"`{heading}` cannot move to a topic: {PHASE_SECTION_UNMOVABLE[key]}")
+    if not TOPIC_SLUG_RE.fullmatch(slug):
+        raise SystemExit(f"--to-topic takes a slug [a-z0-9][a-z0-9-]{{0,63}} (the file is topics/<slug>.md), got {args.to_topic!r}")
+    if slug == "breakdown":
+        raise SystemExit("the slug `breakdown` is refused: each decomposition pass rewrites topics/breakdown.md whole, so entries moved there would be lost; pick another slug")
+    entries = notebook_entries(lines, i + 1, e)
+    if not entries:
+        raise SystemExit(f"`{heading}` has no entries to move (an entry is a column-0 list item: `- `, `* `, `+ `, `1. `, `1) `)")
+    reasons, skipped = [], []
+    if args.entry is not None:
+        chosen = resolve_entry_key(entries, args.entry, heading, args.phase, several=True)
+        reasons += [f"entry {x['pos']} is already a pointer line: nothing to move" for x in chosen if x["pointer"]]
+    else:  # the whole section: entries already moved stay as they are
+        chosen = [x for x in entries if not x["pointer"]]
+        skipped = [x["pos"] for x in entries if x["pointer"]]
+        if not chosen:
+            raise SystemExit(f"every entry of `{heading}` is already a pointer line: nothing to move")
+    given = args.gist.strip() if args.gist is not None else None
+    if given is not None and len(chosen) != 1:
+        reasons.append(f"--gist gives one entry's gist, but this move takes {len(chosen)} entries: move that entry alone (--entry K --gist TEXT), or let the gists derive")
+    if given is not None and ("\n" in given or not given):
+        reasons.append("--gist must be one non-empty line")
+    plans = []
+    for x in chosen:
+        if x["pointer"]:
+            continue
+        body = lines[x["start"]:x["end"]]
+        gist = given if given is not None else entry_gist(body)
+        plain = gist_plain_chars(gist, x)
+        if plain < GIST_PLAIN_MIN:
+            reasons.append(f"entry {x['pos']}: {'the given' if given is not None else 'its derived'} gist {gist!r} keeps {plain} characters of plain text once markdown, links and the label are stripped, under the {GIST_PLAIN_MIN}-character floor (a bare link): give it a gist that says what the entry holds (--entry {x['pos']} --gist TEXT)")
+        plans.append((x, body, gist))
+    if reasons:
+        for reason in reasons:
+            print(f"refused: {reason}", file=sys.stderr)
+        raise SystemExit(f"--to-topic refused, nothing written ({len(reasons)} reason{'' if len(reasons) == 1 else 's'} above)")
+    rel = f"topics/{slug}.md"
+    topic = pdir / "topics" / f"{slug}.md"
+    old_topic = topic.read_text(encoding="utf-8") if topic.is_file() else ""
+    if old_topic.strip():
+        base = old_topic if old_topic.endswith("\n") else old_topic + "\n"
+    else:
+        base = f"# {args.phase} — {slug}\n\n{TOPIC_INTRO}\n"
+    taken = {h.lower() for h, _, _ in h2_spans(base.split("\n"))}
+    blocks, added, pointers = [], [], []
+    for x, body, gist in plans:
+        label = f"{heading} {entry_block_label(x)}"
+        name, n = label, 2
+        while name.lower() in taken:
+            name, n = f"{label} ({n})", n + 1
+        taken.add(name.lower())
+        blocks.append((name, body))
+        added.append(f"\n## {name}\n\n" + "\n".join(body) + "\n")
+        pointers.append(f"{x['marker']}{gist} → [{rel}]({rel}) § {name}")
+    new_topic = base + "".join(added)
+    new_lines = list(lines)
+    for (x, _, _), pointer in reversed(list(zip(plans, pointers))):
+        new_lines[x["start"]:x["end"]] = [pointer]
+    end = e - sum(x["end"] - x["start"] - 1 for x, _, _ in plans)
+    after = notebook_entries(new_lines, i + 1, end)
+    if (_topic_blocks_missing(new_topic, blocks) or len(after) != len(entries)
+            or any(not after[x["pos"] - 1]["pointer"] for x, _, _ in plans)):
+        raise SystemExit(f"--to-topic refused, nothing written: the blocks would not read back from {rel} byte for byte, "
+                         f"or a pointer line would not parse as one (an unclosed fence in the topic or the entry?)")
+    updated = "\n".join(new_lines)
+    keys = entry_ranges(x["pos"] for x, _, _ in plans)
+    old_size = len("\n".join(lines[i:e]).encode("utf-8"))
+    new_size = len("\n".join(new_lines[i:end]).encode("utf-8"))
+    tail = f"to={rel} bytes={old_size}->{new_size} phase_md={len(updated.encode('utf-8'))}"
+    note = f"skipped={entry_ranges(skipped)} (already pointer lines)" if skipped else ""
+    if args.dry_run:
+        for pointer in pointers:
+            print(pointer)
+        print(f"would_move={heading} entries={keys} {tail} saved={old_size - new_size} (dry run: nothing written)")
+        if note:
+            print(note)
+        return
+    write_text(topic, new_topic)
+    missing = _topic_blocks_missing(topic.read_text(encoding="utf-8"), blocks)
+    if missing:
+        raise SystemExit(f"{rel} does not hold {', '.join(missing)} byte for byte after the write; phase.md is unchanged, "
+                         f"so nothing is lost (check the topic for a partial copy)")
+    write_text(path, updated)
+    print(f"moved={heading} entries={keys} {tail}")
+    if note:
+        print(note)
+
+
 def phase_section(args: argparse.Namespace) -> None:
-    """Read or write ONE `## ` section of a phase's phase.md (v61): the notebook is an index, so a
-    reader prints a section and a writer replaces or appends to one, never the whole file.
+    """Read or write ONE `## ` section of a phase's phase.md (v61), or one entry of it: the
+    notebook is an index, so a reader prints a section or an entry and a writer replaces, appends,
+    removes or moves one, never the whole file.
 
     No name prints the index (a line per heading with its bytes, then the total). `--replace`
     keeps the heading and every other byte of the file; the generated `Slices` section and the
     two append-only sections refuse it and name the right flag. `--resolve OQ<n> --pointer <ref>`
     collapses one Operator Questions entry to a single resolved line (entries are never deleted).
+    `--list` lists a section's entries (`notebook_entries`); `--entry K` prints one, and with
+    `--replace` / `--remove` writes only it. `--to-topic <slug>` moves entries verbatim into
+    `topics/<slug>.md`, leaving one pointer line each; `--topic <slug>` reads that file.
     A write happens only when the text changes; an archived phase is read-only.
     """
     pdir, archived = _find_phase_dir(args.phase)
+    name = " ".join(args.name).strip().lstrip("#").strip() if args.name else ""
+    modes = [flag for flag, on in (("--replace", args.replace), ("--append", args.append), ("--resolve", bool(args.resolve)),
+                                   ("--remove", args.remove), ("--to-topic", args.to_topic is not None)) if on]
+    if len(modes) > 1:
+        raise SystemExit(f"choose one of {', '.join(modes)}")
+    _phase_section_flags(args, modes[0] if modes else None)
+    if args.topic is not None:
+        _phase_topic_read(args, pdir, name)
+        return
     path = pdir / "phase.md"
     if not path.exists():
         raise SystemExit(f"phase {args.phase} has no phase.md")
     text = path.read_text(encoding="utf-8")
     lines = text.split("\n")
     spans = h2_spans(lines)
-    name = " ".join(args.name).strip().lstrip("#").strip() if args.name else ""
-    modes = [flag for flag, on in (("--replace", args.replace), ("--append", args.append), ("--resolve", bool(args.resolve))) if on]
-    if len(modes) > 1:
-        raise SystemExit(f"choose one of {', '.join(modes)}")
     headings = ", ".join(f"`{h}`" for h, _, _ in spans)
 
     def find(wanted: str):
@@ -2638,19 +4261,57 @@ def phase_section(args: argparse.Namespace) -> None:
 
     if not modes:
         if not name:
-            sizes = h2_sections(text)
-            for heading, size in sizes:
-                print(f"{size:>8}  {heading}")
-            print(f"{len(text.encode('utf-8')):>8}  total (budget {PHASE_MD_BUDGET})")
+            if args.page is not None:
+                raise SystemExit(f"--page needs a section name (the index is never paged); the headings are {headings}")
+            if args.list or args.entry is not None:
+                raise SystemExit(f"{'--list' if args.list else '--entry'} needs a section name; the headings are {headings}")
+            report = notebook_report(args.phase, text)
+            if not report["flagged"]:  # nothing over or long: the index exactly as before
+                for sec in report["sections"]:
+                    print(f"{sec['bytes']:>8}  {sec['heading']}")
+            else:  # bytes, budget and flags per section, the heading still last
+                for sec in report["sections"]:
+                    flags = ",".join(f for f, on in (("over", sec["over"]), (f"long:{len(sec['long'])}", sec["long"])) if on) or "-"
+                    budget = sec["budget"] if sec["budget"] is not None else "-"
+                    print(f"{sec['bytes']:>8}  {budget:>6}  {flags:<12} {sec['heading']}")
+            over = " \u2014 OVER BUDGET" if report["over"] else ""
+            print(f"{report['bytes']:>8}  total (budget {PHASE_MD_BUDGET}){over}")
+            for sec in report["flagged"]:
+                if sec["move"]:
+                    print(f"move: {sec['move']}")
+                elif sec["remedy"]:
+                    print(f"fix ## {sec['heading']}: {sec['remedy']}")
             return
-        _, i, e = find(name)
-        sec = lines[i:e]
-        while sec and not sec[-1].strip():
-            sec.pop()
-        print("\n".join(sec))
+        heading, i, e = find(name)
+        if args.list:
+            entries = notebook_entries(lines, i + 1, e)
+            if not entries:
+                print(f"`{heading}` has no entries", file=sys.stderr)
+            for x in entries:
+                flags = ",".join(f for f, on in (("long", x["long"]), ("nested", x["nested"]), ("pointer", x["pointer"])) if on) or "-"
+                lead = x["lead"] if len(x["lead"]) <= 80 else x["lead"][:80] + "…"
+                print(f"{x['pos']:>4}  {x['label'] or '-':<5} {x['bytes']:>7} B  {flags:<18} {lead}")
+            return
+        if args.entry is not None:
+            entry = resolve_entry_key(notebook_entries(lines, i + 1, e), args.entry, heading, args.phase)[0]
+            print("\n".join(lines[entry["start"]:entry["end"]]))
+            return
+        paged_print(lines, i, e, heading, f'phase-section {args.phase} "{heading}"', args.page)
+        return
+    if args.to_topic is not None:
+        if not name:
+            raise SystemExit(f"--to-topic needs a section name; the headings are {headings}")
+        heading, i, e = find(name)
+        _phase_section_move(args, pdir, archived, path, lines, heading, i, e)
         return
     if archived:
         raise SystemExit(f"phase {args.phase} is archived; its notebook is read-only")
+    if args.entry is not None:
+        if not name:
+            raise SystemExit(f"--entry needs a section name; the headings are {headings}")
+        heading, i, e = find(name)
+        _phase_section_entry_write(args, path, text, lines, heading, i, e)
+        return
     if args.resolve:
         if name and name.lower() != "operator questions":
             raise SystemExit("--resolve works on `Operator Questions` only; omit the section name")
@@ -2746,17 +4407,73 @@ def rebuild_index_and_state() -> None:
         "deferred_dropped_count": len(deferred.get("dropped", [])),
         "last_rebuilt_at": rebuilt_at,
     }
-    write_json(WORKS / "index.json", index)
+    write_json_stamped(WORKS / "index.json", index, "last_rebuilt_at", rebuilt_at)
     mode = "waiting" if waiting_on else ("phase" if current_phase else "idle")
     state = {"current_phase": current_phase, "current_slice": current_slice, "next_slice": next_slice, "waiting_on_operator": waiting_on, "mode": mode}
     if stream:  # only ever present in a parallel-phase checkout
         state["stream"] = stream
-    state["updated_at"] = rebuilt_at
-    write_json(WORKS / "state.json", state)
+    write_json_stamped(WORKS / "state.json", state, "updated_at", rebuilt_at)
     rebuild_backlog(phases, state, index)
     rebuild_deferred_dashboard(deferred)
     for p in phases:  # only the marker-delimited ## Slices block; archived phases are never touched
         refresh_phase_md_slices(ROOT / p["path"], p)
+    if stream:  # a parallel stream's state just changed: the default checkout's dashboards follow it live
+        refresh_default_checkout()
+
+
+DEFAULT_REFRESH_ENV = "AGENTIC_WORKSPACE_REFRESHING_DEFAULT"
+
+
+def _default_checkout_root():
+    """The workspace root in this repo's main checkout when this checkout is one of its linked
+    worktrees, else None (the main checkout itself, no git, or a common dir that is not a plain
+    `.git`, as in `_main_host_checkout_agents`)."""
+    try:
+        proc = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                              cwd=str(ROOT), capture_output=True, text=True, timeout=10)
+    except Exception:  # noqa: BLE001 - best effort: no refresh is the honest fallback
+        return None
+    common = Path(proc.stdout.strip()) if proc.returncode == 0 and proc.stdout.strip() else None
+    if common is None or common.name != ".git":
+        return None
+    root = (common.parent / _repo_prefix()).resolve()
+    return None if root == ROOT.resolve() else root
+
+
+def refresh_default_checkout() -> None:
+    """Rerun the default checkout's OWN engine `rebuild` from a parallel stream (workspace v67), so
+    its `works/backlog.md` follows this phase whether or not anything runs there. Its rebuild reads
+    this phase from this worktree's files (`streams_section`); the files it rewrites are generated
+    and stay uncommitted there. Best effort and silent: a missing engine, a failure or a timeout
+    never blocks this stream, and the env guard stops a refresh from refreshing again."""
+    if os.environ.get(DEFAULT_REFRESH_ENV):
+        return
+    root = _default_checkout_root()
+    engine = root / "scripts" / "workflow.py" if root is not None else None
+    if engine is None or not engine.is_file():
+        return
+    try:
+        subprocess.run([sys.executable, str(engine), "rebuild"], cwd=str(root), capture_output=True, text=True,
+                       timeout=60, env={**os.environ, DEFAULT_REFRESH_ENV: "1"})
+    except Exception:  # noqa: BLE001 - never block the stream on the default checkout's dashboards
+        pass
+
+
+def _phase_at_worktree(worktree: str, phase_id: str):
+    """`(phase data, slices)` of one phase as its worktree's files hold them right now (uncommitted
+    progress included), or None when the worktree or its phase folder cannot be read."""
+    pdir = Path(worktree) / _repo_prefix() / "works" / "phases" / "active" / phase_id
+    try:
+        data = json.loads((pdir / "phase.json").read_text(encoding="utf-8"))
+        slices = [json.loads((s / "slice.json").read_text(encoding="utf-8"))
+                  for s in (sorted((pdir / "slices").iterdir()) if (pdir / "slices").is_dir() else [])
+                  if (s / "slice.json").is_file()]
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or not all(isinstance(s, dict) for s in slices):
+        return None
+    slices.sort(key=lambda d: d.get("order", 999999))
+    return data, slices
 
 
 def _phase_progress(phase_like: dict, slices: list) -> tuple:
@@ -2766,16 +4483,19 @@ def _phase_progress(phase_like: dict, slices: list) -> tuple:
     return (cur or "none", f"{sum(1 for x in slices if x.get('status') == 'done')}/{len(slices)}")
 
 
-def streams_section(phases: list, state: dict) -> list:
+def streams_section(phases: list, state: dict, live=None) -> list:
     """The `## Streams` table for `works/backlog.md` (P35.S7): the default stream plus every stamped
     phase still in flight, each read live from where its slices actually advance.
 
-    A parallel phase's slice progress lives on its own branch, so the stamp-time copy in the
-    `## Active Phases` table stands still until the merge. Rows: this checkout's own stream first
+    A parallel phase's slice progress lives on its own branch, so this checkout's copy of it stands
+    still until the merge. Each phase read from elsewhere lands in `live` (phase id -> (phase data,
+    slices, where it was read)), so `rebuild_backlog` renders its `## Active Phases` row and its
+    slice table from the same read. Rows: this checkout's own stream first
     when it is a parallel one (from its working tree), then the `default` row (this checkout's
     pointer on the default stream; on a parallel stream the base branch's pointer, from
     `execution.base_branch`, else the local copy), then one row per other in-flight phase, read
-    from its branch, then `origin/<branch>`, else the local copy -- labelled so. Git is touched
+    from its worktree's files while that worktree is on disk (workspace v67: uncommitted progress
+    included), then its branch, then `origin/<branch>`, else the local copy -- labelled so. Git is touched
     only when a stamped phase is in flight (the same gate as `current_stream`); with none, this is
     a single working-tree default row and no git call is made. The Host branch column is nested only.
     """
@@ -2832,6 +4552,8 @@ def streams_section(phases: list, state: dict) -> list:
         else:
             if plist is not None:
                 target["slices"] = _slices_at_ref(base, target["id"]) or []
+                if live is not None:
+                    live[target["id"]] = (target, target["slices"], f"branch `{clean_cell(base)}`")
             cur_slice = resolve_current([target])[1]
             _, done = _phase_progress(target, target["slices"])
             add("default", target["id"], target.get("status"), cur_slice or "none", done, None, None, source)
@@ -2841,11 +4563,18 @@ def streams_section(phases: list, state: dict) -> list:
         branch = execution.get("branch")
         data, slices, source = p, p["slices"], "local copy"
         branch_gone, merged = False, None
+        on_disk = _phase_at_worktree(execution["worktree"], p["id"]) if use_git and isinstance(execution.get("worktree"), str) else None
+        if on_disk is not None:
+            (data, slices), source = on_disk, "worktree"
+            if live is not None:
+                live[p["id"]] = (data, slices, f"its worktree `{clean_cell(where(execution['worktree']))}`")
         if use_git and branch:
-            for candidate in (branch, f"origin/{branch}"):
+            for candidate in ((branch, f"origin/{branch}") if on_disk is None else ()):
                 found = _phase_json_at_ref(candidate, p["id"])
                 if found is not None:
                     data, slices, source = found, _slices_at_ref(candidate, p["id"]) or [], f"branch {candidate}"
+                    if live is not None:
+                        live[p["id"]] = (data, slices, f"branch `{clean_cell(candidate)}`")
                     break
             branch_gone = not _branch_exists(branch)
             if not branch_gone:
@@ -2871,30 +4600,37 @@ def rebuild_backlog(phases: list, state: dict, index: dict) -> None:
     ]
     if state.get("stream"):  # only in a parallel-phase checkout; absent on the default stream
         lines.append(f"- Stream: `{clean_cell(state['stream'])}` (parallel phase checkout; the pointer above is scoped to it)")
+    live = {}  # phase id -> (phase data, slices, where) for every phase streams_section read from elsewhere
     lines += [
         f"- Open deferred jobs: `{index.get('deferred_open_count', 0)}`", "",
-        *streams_section(phases, state),
+        *streams_section(phases, state, live),
         "## Active Phases", "", "| Phase | Status | Review | Name | Current Slice | Path |", "|---|---|---|---|---|---|",
     ]
     if not phases:
         lines.append("| - | - | - | - | - | - |")
     for p in phases:
-        current = next((s["id"] for s in p["slices"] if s.get("status") != "done"), "none")
+        data, slices, _ = live.get(p["id"], (p, p["slices"], None))
+        current = next((s["id"] for s in slices if s.get("status") != "done"), "none")
         name = clean_cell(p.get("name", ""))
-        review = clean_cell(p.get("review", {}).get("status"))
+        review = clean_cell((data.get("review") or {}).get("status"))
         current_cell = f"`{current}`"
         execution = phase_execution(p)
-        if execution:  # runs on its own branch; from another stream the slice state may be behind
+        if execution:  # runs on its own branch; read from it when git could reach it, else this checkout's copy
             current_cell += f" · parallel: `{clean_cell(execution.get('branch'))}`"
         elif phase_pinned(p):  # v42's legacy pin; since v43 the default stream needs no marker
             current_cell += " · pinned: default stream"
-        lines.append(f"| [{status_box(p['status'])}] `{p['id']}` | `{p['status']}` | `{review}` | {name} | {current_cell} | `{p['path']}` |")
+        lines.append(f"| [{status_box(data.get('status'))}] `{p['id']}` | `{data.get('status')}` | `{review}` | {name} | {current_cell} | `{p['path']}` |")
     for p in phases:
-        lines.extend(["", f"## Phase {p['id']}: {p['name']}", "", "| Slice | Status | Name | Kind | Path |", "|---|---|---|---|---|"])
-        for s in p["slices"]:
+        _, slices, read_from = live.get(p["id"], (p, p["slices"], None))
+        lines.extend(["", f"## Phase {p['id']}: {p['name']}", ""])
+        if read_from:  # its slices advance elsewhere: show them as that worktree or branch records them
+            lines.extend([f"_Read live from {read_from}, where this phase advances._", ""])
+        lines.extend(["| Slice | Status | Name | Kind | Path |", "|---|---|---|---|---|"])
+        for s in slices:
             checkbox = status_box(s.get("status"))
             name = clean_cell(s.get("name", ""))
-            lines.append(f"| [{checkbox}] `{s['id']}` | `{s['status']}` | {name} | `{clean_cell(s.get('kind', ''))}` | `{s['path']}` |")
+            path = s.get("path") or f"{p['path']}/slices/{s['id']}"  # slice.json read at a ref carries no path
+            lines.append(f"| [{checkbox}] `{s['id']}` | `{s['status']}` | {name} | `{clean_cell(s.get('kind', ''))}` | `{path}` |")
     lines.append("")
     write_text(WORKS / "backlog.md", "\n".join(lines))
 
@@ -2906,10 +4642,18 @@ def validate() -> int:
     seen_phases, seen_slices = set(), set()
     seen_branches: dict = {}
     all_slice_ids = {s["id"] for p in phases for s in p["slices"]}
+    archived_ids = archived_phase_ids()
     for p in phases:
         if p["id"] in seen_phases:
             errors.append(f"duplicate phase id: {p['id']}")
         seen_phases.add(p["id"])
+        # v73 ids: both shapes are valid and nothing is renamed, so these two only WARN -- an adopter's
+        # history must keep validating. Creation is the hard gate (new-phase refuses either case).
+        if not PHASE_ID_RE.fullmatch(str(p["id"])):
+            warnings.append(f"phase id {p['id']!r} has an unknown shape; expected P<n> (P12) or a minted P-<token> (P-7kq2) -- nothing renames it")
+        if p["id"] in archived_ids:
+            warnings.append(f"active phase {p['id']} has the same id as an archived phase; an archived id is spent, so lookups by id "
+                            "(phase-scope, the meter, events.jsonl) mix the two -- new phases are minted (new-phase without --phase)")
         if p["status"] not in PHASE_STATUSES:
             errors.append(f"invalid phase status {p['id']}: {p['status']}")
         review_status = p.get("review", {}).get("status")
@@ -2926,8 +4670,8 @@ def validate() -> int:
         # Optional docs-phase marker (v51): the active phases a docs phase pays. Absent = not a docs phase.
         if "consolidates" in p:
             paid = p.get("consolidates")
-            if not (isinstance(paid, list) and paid and all(isinstance(v, str) and re.fullmatch(r"P[0-9]+", v) for v in paid)):
-                errors.append(f"phase {p['id']} has invalid consolidates {paid!r}; expected a non-empty list of phase ids such as [\"P26\", \"P27\"] (written by new-phase --consolidates)")
+            if not (isinstance(paid, list) and paid and all(isinstance(v, str) and PHASE_ID_RE.fullmatch(v) for v in paid)):
+                errors.append(f"phase {p['id']} has invalid consolidates {paid!r}; expected a non-empty list of phase ids such as [\"P26\", \"P-7kq2\"] (written by new-phase --consolidates)")
         # Optional parallel-execution block. Absent = default stream = nothing to check.
         # A phase that merged `done` while its doc consolidation is still pending
         # (`consolidation: "pending"`) is a legitimate state and passes cleanly here.
@@ -2956,6 +4700,11 @@ def validate() -> int:
                     if consolidation is not None and consolidation not in CONSOLIDATION_STATES:
                         errors.append(f"phase {p['id']} has invalid execution.consolidation {consolidation!r}; expected one of {sorted(CONSOLIDATION_STATES)} or null")
                     errors.extend(_nested_execution_problems(p["id"], execution))
+                    if "repos" in execution:  # P40.S6: a worktree set's repo half (multi-repo only)
+                        _nested_execution_repo_problems(p["id"], execution, errors, warnings)
+                    unstamped = _unstamped_set_warning(p["id"], execution)  # P40.S8: nested only, a live host worktree only
+                    if unstamped:
+                        warnings.append(unstamped)
         # Optional operator acceptance gate. Absent = legacy phase = nothing to check and
         # NO warning: nagging every pre-v32 phase on every run would clutter the dashboards.
         if "acceptance" in p:
@@ -2984,6 +4733,8 @@ def validate() -> int:
                         errors.append(f"phase {p['id']} has unknown host_anchors.{key}; expected only {', '.join(HOST_ANCHOR_KEYS)}")
                     elif value is not None and not (isinstance(value, str) and re.fullmatch(r"[0-9a-f]{7,64}", value)):
                         errors.append(f"phase {p['id']} has invalid host_anchors.{key} {value!r}; expected a host commit sha or null")
+        if "repo_anchors" in p and nested_repos():
+            _repo_anchor_problems(p, errors, warnings)
         if not (ACTIVE / p["id"] / "intent.md").exists():
             warnings.append(f"phase {p['id']} has no intent.md (expected {p['id']}/intent.md); capture operator intent via the create-phase skill")
         # Bounded notebook (v35). Warnings only: `validate` prints them and still exits 0.
@@ -2994,6 +4745,12 @@ def validate() -> int:
         lines_n, bytes_n = phase_md_size(notebook.parent)
         if p["status"] != "done" and bytes_n > PHASE_MD_BUDGET:
             warnings.append(f"phase {p['id']}: phase.md is {lines_n} lines / {bytes_n} bytes, over the notebook budget of {PHASE_MD_BUDGET} bytes; {notebook_sections_hint(notebook.parent)}")
+        if p["status"] != "done" and notebook.exists():  # per section (design §4): over its budget, or long entries
+            for section in notebook_report(p["id"], notebook.read_text(encoding="utf-8"))["flagged"]:
+                warnings.append(f"phase {p['id']}: phase.md {notebook_section_line(section)}")
+        for heading, pos, rel, block in dangling_pointers(notebook.parent):  # every active phase: a lost decision
+            what = f"has no block `{block}`" if block is not None else "does not exist"
+            warnings.append(f"phase {p['id']}: phase.md ## {heading} entry {pos} points at {rel}, which {what}: the moved entry is lost (restore the topic from git, or rewrite the pointer)")
         # Heading-line check, not a substring search: notebooks legitimately quote both
         # spellings in prose (this very rule, for one).
         if notebook.exists() and any(re.match(r"## Doc Impact\b", ln) for ln in notebook.read_text(encoding="utf-8").split("\n")):
@@ -3028,6 +4785,7 @@ def validate() -> int:
             for dep in s.get("depends_on", []):
                 if dep not in all_slice_ids:
                     errors.append(f"missing dependency for {s['id']}: {dep}")
+            declaration_checks(p, s, errors, warnings)  # P42: declared slices only; silent without the marker
     state = read_json(WORKS / "state.json") if (WORKS / "state.json").exists() else {}
     if state.get("current_phase") and state["current_phase"] not in seen_phases:
         errors.append(f"state current_phase does not exist: {state['current_phase']}")
@@ -3044,6 +4802,8 @@ def validate() -> int:
                 errors.append(f"missing deferred.json: {shown(ddir)}")
                 continue
             data = read_json(djson)
+            if not DEFERRED_ID_RE.fullmatch(ddir.name):
+                warnings.append(f"deferred id {ddir.name!r} has an unknown shape; expected D<n> (D12) or a minted D-<token> (D-m3xa) -- nothing renames it")
             if data.get("status") not in DEFERRED_STATUSES:
                 errors.append(f"invalid deferred status {data.get('id')}: {data.get('status')}")
             if data.get("status") not in allowed:
@@ -3067,7 +4827,7 @@ def validate() -> int:
     oversized = oversized_sections_line(oversized_doc_sections())
     if oversized:
         warnings.append(oversized)
-    # Agent-file drift is advisory only: warn (never error, never crash) when the five managed agent
+    # Agent-file drift is advisory only: warn (never error, never crash) when the four managed agent
     # files disagree with the route table (executors.toml/defaults), so a foreign or partial
     # workspace still validates. Skipped when a broken nested marker names no host: the agent files
     # live there, not under ROOT.
@@ -3081,16 +4841,19 @@ def validate() -> int:
             if desired != current:
                 warnings.append(f"executor agent file out of sync with executors.toml/defaults: {shown(path)} (run: {WORKFLOW_CMD} sync-agents)")
     except (SystemExit, Exception) as exc:  # noqa: BLE001 - advisory check must not fail validate
-        warnings.append(f"executor tier config check failed: {exc}")
+        warnings.append(f"executor agent config check failed: {exc}")
     # Nested personal install (P28): a malformed marker is an ERROR, so a broken nested install is
     # never mistaken for at-root mode; the host must be a git work tree (phase-scope and the
     # product commits read it). Silent at root -- no marker, nothing checked.
     if NESTED is not None:
         marker = shown(ROOT / NESTED_MARKER)
         errors.extend(f"{marker}: {problem}" for problem in NESTED_PROBLEMS)
-        unknown = sorted(set(NESTED) - set(NESTED_KEYS) - set(NESTED_OPTIONAL_KEYS))
+        unknown = sorted(set(NESTED) - set(NESTED_KEYS) - set(NESTED_OPTIONAL_KEYS) - set(NESTED_NOTE_KEYS))
         if unknown:
             warnings.append(f"{marker}: unknown field(s) {', '.join(unknown)} (schema {NESTED_SCHEMA} reads only {', '.join(NESTED_KEYS + NESTED_OPTIONAL_KEYS)})")
+        if "converted_from" in NESTED:
+            warnings.extend(f"{marker}: {problem} (the --to-multi-repo record; only the CLAUDE.local.md line reads it)"
+                            for problem in _converted_from_problems(NESTED["converted_from"]))
         if HOST_ROOT is not None and HOST_ROOT.is_dir():
             try:
                 proc = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], cwd=str(HOST_ROOT), capture_output=True, text=True, timeout=10)
@@ -3099,7 +4862,9 @@ def validate() -> int:
             else:
                 if proc.returncode != 0 or proc.stdout.strip() != "true":
                     errors.append(f"nested install: the host {HOST_ROOT} is not a git work tree (phase-scope and the host product commits need one)")
-    validate_docs(errors)
+        if nested_repos() and HOST_ROOT is not None and HOST_ROOT.is_dir():
+            nested_repo_checks(errors, warnings)
+    validate_docs(errors, warnings)
     for w in warnings:
         print(f"warning: {w}")
     if errors:
@@ -3155,7 +4920,7 @@ _Generated by `python3 scripts/workflow.py rebuild` from each slice's `slice.jso
 
 ## Decisions
 
-_Durable cross-slice decisions, one line each. Replace a superseded line; never stack versions. Contracts and signed-design summaries go to `topics/<slug>.md` beside this file, linked by one line._
+_Durable cross-slice decisions, one gist line each. Replace a superseded line (`--entry K --replace`); never stack versions. Long detail goes to `topics/<slug>.md` behind its gist line (`--to-topic` moves one); a breakdown lives in `topics/breakdown.md`._
 
 ## Doc impact
 
@@ -3167,7 +4932,7 @@ _Questions only the operator can answer, one entry each: `- **OQ<n> (<slice>):**
 
 ## Notes for later slices
 
-_Gotchas and constraints the next slices need, each tagged `**(from <slice>, for <slice>)**`. A slice that consumes a note removes it; the detail stays in that slice's `result.md`. This file is an index read and written one section at a time (`phase-section <P>`); keep it under 40 KB._
+_Gotchas and constraints the next slices need, each tagged `**(from <slice>, for <slice>)**`. A slice that consumes a note removes it (`--entry K --remove`); the detail stays in that slice's `result.md`. This file is an index read and written only through `phase-section <P>`, never whole; keep it under 40 KB._
 
 ## Now
 
@@ -3193,7 +4958,7 @@ def require_slice_kind(kind: str) -> str:
     return kind
 
 
-def create_slice(phase_id: str, slice_id: str, name: str, kind: str, order, risk: str, source: dict, depends_on=None) -> Path:
+def create_slice(phase_id: str, slice_id: str, name: str, kind: str, order, risk: str, source: dict, depends_on=None, declared=False) -> Path:
     require_slice_kind(kind)
     require_phase(phase_id)
     if not slice_id.startswith(f"{phase_id}."):
@@ -3204,7 +4969,7 @@ def create_slice(phase_id: str, slice_id: str, name: str, kind: str, order, risk
     created = now_iso()
     data = {
         "id": slice_id, "phase_id": phase_id, "name": name, "kind": kind, "status": "todo", "order": order,
-        "depends_on": depends_on or [], "created_at": created, "started_at": None, "completed_at": None, "risk": risk, "source": source,
+        "depends_on": depends_on or [], **({DEPENDS_DECLARED: True} if declared else {}), "created_at": created, "started_at": None, "completed_at": None, "risk": risk, "source": source,
         "paths": {"plan": "plan.md", "result": "result.md"},
         "outcome": None,  # one line, set by `finish-slice --outcome`; rendered in the phase's ## Slices table
         "validation": {"required": [], "last_run": None, "last_status": "pending"},
@@ -3237,8 +5002,30 @@ def _with_host_anchors(data: dict, anchors: dict) -> dict:
     return data
 
 
+def _with_repo_anchors(data: dict, entries: dict) -> dict:
+    """`data` with `entries` ({repo name: anchor entry}) merged into its `repo_anchors` block (P40,
+    multi-repo only), the block placed right after `host_anchors` (else `acceptance`, else appended)
+    when it is new -- `_with_host_anchors`' ordering idiom."""
+    current = data.get("repo_anchors")
+    merged = dict(current) if isinstance(current, dict) else {}
+    merged.update(entries)
+    if "repo_anchors" in data:
+        data["repo_anchors"] = merged
+        return data
+    after = "host_anchors" if "host_anchors" in data else "acceptance"
+    ordered = {}
+    for key, value in data.items():
+        ordered[key] = value
+        if key == after:
+            ordered["repo_anchors"] = merged
+    ordered.setdefault("repo_anchors", merged)
+    data.clear()
+    data.update(ordered)
+    return data
+
+
 def _parse_consolidates(raw) -> list:
-    """`new-phase --consolidates P26,P27` -> `["P26", "P27"]`: comma-separated, spaces tolerated,
+    """`new-phase --consolidates P26,P-7kq2` -> `["P26", "P-7kq2"]`: comma-separated, spaces tolerated,
     duplicates dropped in order. Refuses (before `new-phase` writes anything) when the flag names
     nothing, or names an id that is not an ACTIVE phase still owing doc consolidation -- a docs phase
     can only pay debt that stands. `None` (flag absent) is `[]`."""
@@ -3250,7 +5037,7 @@ def _parse_consolidates(raw) -> list:
         if part and part not in ids:
             ids.append(part)
     if not ids:
-        raise SystemExit("--consolidates needs at least one phase id (e.g. --consolidates P26,P27)")
+        raise SystemExit("--consolidates needs at least one phase id (e.g. --consolidates P26,P-7kq2)")
     active = {p["id"]: p for p in all_active_phases()}
     bad = []
     for pid in ids:
@@ -3263,13 +5050,27 @@ def _parse_consolidates(raw) -> list:
     return ids
 
 
-def new_phase(args: argparse.Namespace) -> None:
-    phase_id = args.phase
-    if not re.fullmatch(r"P[0-9]+", phase_id):
-        raise SystemExit("phase must look like P1, P2, P3")
-    pdir = ACTIVE / phase_id
-    if pdir.exists():
+def explicit_phase_id(phase_id: str) -> str:
+    """An explicit `new-phase --phase` id, checked before anything is written: either shape (`P12`, or a
+    `P-` token as minted), never one that exists active or archived (an archived id is spent), and a
+    token only as the mint would draw it (`id_token_refusal`). SystemExit otherwise."""
+    if not PHASE_ID_RE.fullmatch(phase_id):
+        raise SystemExit(f"phase must look like P12 or P-7kq2 (got {phase_id!r}); omit --phase and the engine mints one")
+    if (ACTIVE / phase_id).exists():
         raise SystemExit(f"phase already exists: {phase_id}")
+    if phase_id in archived_phase_ids():
+        raise SystemExit(f"phase already exists (archived): {phase_id}; an archived id is spent -- omit --phase and the engine mints one")
+    token = _id_token(phase_id)
+    reason = id_token_refusal(token) if token else None
+    if reason:
+        raise SystemExit(f"phase id {phase_id} refused: {reason}; omit --phase and the engine mints one")
+    return phase_id
+
+
+def new_phase(args: argparse.Namespace) -> None:
+    raw = getattr(args, "phase", None)
+    phase_id = mint_phase_id() if raw is None else explicit_phase_id(raw)
+    pdir = ACTIVE / phase_id
     consolidates = _parse_consolidates(getattr(args, "consolidates", None))  # refuses before anything is written
     order = _clean_order(args.order) if args.order is not None else max([read_json(p / "phase.json").get("order", 0) for p in phase_dirs()], default=0) + 1
     phase_data = {
@@ -3287,6 +5088,23 @@ def new_phase(args: argparse.Namespace) -> None:
         # The nested repo never sees the host's commits, so phase-scope's base is the host HEAD now
         # (null while the host has no commit). At root this key is never written.
         phase_data = _with_host_anchors(phase_data, {"created": head_commit() or None})
+    repo_stamp_lines = []
+    repos = nested_repos()
+    if repos:
+        # P40 multi-repo: each registered repo's own range starts at its HEAD now (null while it has
+        # no commit); `branch` lets phase-scope note a repo later switched to another branch.
+        stamped = {}
+        for repo in repos:
+            rpath, why = _phase_repo_path(repo, phase_data)
+            if rpath is None:
+                repo_stamp_lines.append(f"repo_anchors: {repo['name']} not stamped ({why}) -- phase-scope reports it 'no anchor'")
+                continue
+            head = _rev_parse("HEAD", cwd=rpath)
+            stamped[repo["name"]] = {"created": head, "branch": _repo_current_branch(rpath), "review_pass": None, "review_base": None}
+        if stamped:
+            phase_data = _with_repo_anchors(phase_data, stamped)
+            repo_stamp_lines.insert(0, "repo_anchors=" + ", ".join(
+                f"{n}@{(e['created'] or 'none')[:7]} ({e['branch'] or 'detached'})" for n, e in stamped.items()) + " -- phase-scope's base per repo")
     write_json(pdir / "phase.json", phase_data)
     # Seed the notebook from the template: fixed sections plus an empty generated ## Slices
     # block, which the rebuild at the end of this function fills immediately.
@@ -3297,6 +5115,8 @@ def new_phase(args: argparse.Namespace) -> None:
     append_event("phase_created", phase=phase_id)
     rebuild_index_and_state()
     print(f"created phase {phase_id}: {shown(pdir)}")
+    for line in repo_stamp_lines:
+        print(line)
     if consolidates:
         print(f"consolidates={', '.join(consolidates)} (docs phase: pays the doc debt of those phases; docs-debt shows it as 'paid by {phase_id}')")
     # v43: a phase runs on this stream unless the operator asks for a worktree, so creation
@@ -3326,11 +5146,59 @@ def _auto_order(pdir: Path, explicit):
 
 def new_slice(args: argparse.Namespace) -> None:
     pdir = require_phase(args.phase)
+    args.slice = full_slice_id(args.phase, args.slice)  # v73: a bare suffix (S1) names a slice of --phase
     order = _auto_order(pdir, args.order)
-    sdir = create_slice(args.phase, args.slice, args.name, args.kind, order, args.risk, source={"type": "manual", "id": None}, depends_on=args.depends_on or [])
+    deps = declared_dependencies(args.phase, args.slice, order, args.depends_on)  # None: undeclared, as before
+    sdir = create_slice(args.phase, args.slice, args.name, args.kind, order, args.risk, source={"type": "manual", "id": None}, depends_on=deps or [], declared=deps is not None)
     append_event("slice_created", phase=args.phase, slice=args.slice)
     rebuild_index_and_state()
     print(f"created slice {args.slice}: {shown(sdir)}")
+    for line in declared_slice_lines(args.kind, deps):
+        print(line)
+
+
+def set_slice_deps(args: argparse.Namespace) -> None:
+    """Declare an existing slice (v77): write its `depends_on` and the declared marker, under the same rules
+    as `new-slice --depends-on`. Refused for a barrier kind (it runs alone) and a `done` slice (no effect)."""
+    sdir = require_slice(args.slice)
+    data = read_json(sdir / "slice.json")
+    phase_id = sdir.parents[1].name
+    if data.get("kind") in BARRIER_KINDS:
+        raise SystemExit(f"set-slice-deps {args.slice}: kind {data.get('kind')} is a barrier that runs alone; refused, nothing was written")
+    if data.get("status") == "done":
+        raise SystemExit(f"set-slice-deps {args.slice}: the slice is done, so a declaration has no effect; refused, nothing was written")
+    deps = declared_dependencies(phase_id, args.slice, _order_of(data), args.depends_on)
+    if data.get(DEPENDS_DECLARED) is True and (data.get("depends_on") or []) == deps:
+        print(f"unchanged {args.slice}")
+    else:
+        data["depends_on"], data[DEPENDS_DECLARED] = deps, True
+        write_json(sdir / "slice.json", data)
+        append_event("slice_declared", slice=args.slice, depends_on=deps)
+        rebuild_index_and_state()
+        print(f"declared {args.slice}")
+    for line in declared_slice_lines(data.get("kind"), deps):
+        print(line)
+
+
+def cmd_parallel_plan(args: argparse.Namespace) -> None:
+    """Print what the engine lets run together in a phase (v77): its open slices in rounds, the undeclared
+    middle slices a decomposition must still declare, and, for an explain phase, that it stays sequential.
+    Read-only: the decomposition runs it before it returns, and finish-slice prints the same plan."""
+    pdir = require_phase(args.phase)
+    phase = _active_phase(pdir.name) or {}
+    lines = parallel_plan_lines(phase)
+    if not lines:
+        print(f"parallel_plan={pdir.name}: no open slice")
+        return
+    for line in lines:
+        print(line)
+    if explain_phase(pdir):
+        print("note: an explain phase's chapters stay undeclared and run one at a time")
+        return
+    loose = undeclared_middle_slices(phase)
+    if loose:
+        print(f"undeclared={', '.join(str(s.get('id')) for s in loose)} (each runs alone; a decomposition cannot finish "
+              f"until it declares them: {WORKFLOW_CMD} set-slice-deps <slice> --depends-on <id>|none)")
 
 
 def _set_slice_status(sdir: Path, status: str, pending=None) -> str:
@@ -3381,12 +5249,30 @@ def cmd_set_slice_status(args: argparse.Namespace) -> None:
 
 
 def start_slice(args: argparse.Namespace) -> None:
+    warning = start_warning(args.slice)  # P42.F1: declared phases only; read before the start changes the state
     set_slice_status(args.slice, "in_progress")
     print(f"started {args.slice}")
+    if warning:
+        print(warning)
+    step = notebook_step(args.slice.split(".", 1)[0])  # §6: a warning, never a refusal
+    if step:
+        todo = ("required: run the notebook_move lines `next` prints before dispatching" if step["form"] == "required"
+                else "advisory: nothing left to move (`next` names what remains)")
+        print(f"warning: notebook {step['phase']} is over budget ({step['bytes']} of {PHASE_MD_BUDGET} B) -- {todo}")
 
 
 def finish_slice(args: argparse.Namespace) -> None:
     sdir = require_slice(args.slice)
+    pdir = sdir.parents[1]  # .../<phase>/slices/<slice> -> <phase>
+    decomposition = read_json(sdir / "slice.json").get("kind") == "decomposition"
+    if decomposition and not explain_phase(pdir):  # v77: the cut decides parallelism, never the default
+        loose = undeclared_middle_slices(_active_phase(pdir.name) or {})
+        if loose:
+            ids = ", ".join(str(s.get("id")) for s in loose)
+            raise SystemExit(f"finish-slice {args.slice}: refused, nothing was written -- a decomposition declares every middle slice "
+                             f"it leaves open, and these are undeclared: {ids}. Declare each one: {WORKFLOW_CMD} set-slice-deps <slice> "
+                             "--depends-on <an earlier slice of this phase> (repeatable) or --depends-on none, then finish again; "
+                             f"{WORKFLOW_CMD} parallel-plan {pdir.name} shows the rounds that follow")
     outcome = (getattr(args, "outcome", None) or "").strip()
     if outcome:  # stored before the status change, so the rebuild it triggers renders the row
         data = read_json(sdir / "slice.json")
@@ -3396,12 +5282,18 @@ def finish_slice(args: argparse.Namespace) -> None:
     if not outcome:  # a warning, never an error: the slice is still finished
         print(f"warning: no --outcome recorded for {args.slice}; the ## Slices row will be blank")
     print(f"finished {args.slice}")
+    if decomposition:  # v77: the engine's determination of what runs together, for the orchestrator to relay
+        for line in parallel_plan_lines(_active_phase(pdir.name) or {}):
+            print(line)
     lines_n, bytes_n = phase_md_size(sdir.parents[1])  # .../<phase>/slices/<slice> -> <phase>
     if lines_n or bytes_n:  # the notebook is where the next slice reads its state; keep it in view
         over = " \u2014 OVER BUDGET" if bytes_n > PHASE_MD_BUDGET else ""  # bytes judge; lines are informational
         print(f"phase.md: {lines_n} lines / {bytes_n} bytes (budget {PHASE_MD_BUDGET} bytes){over}")
         if bytes_n > PHASE_MD_BUDGET:
             print(f"  {notebook_sections_hint(sdir.parents[1])}")
+        report = notebook_report(pdir.name, (pdir / "phase.md").read_text(encoding="utf-8"))
+        for section in report["flagged"]:  # a section over its own budget or holding long entries
+            print(f"  {notebook_section_line(section)}")
 
 
 def _set_phase_status(pdir: Path, status: str) -> str:
@@ -3476,6 +5368,9 @@ def review_phase(args: argparse.Namespace) -> None:
     if args.verdict == "pass" and NESTED is not None:
         # The end of the phase's host range: phase-scope reads base..review_pass in the host.
         _with_host_anchors(data, {"review_pass": head_commit() or None})
+        _freeze_host_review_base(data)
+        if nested_repos():
+            _freeze_repo_anchors(data)
     write_json(pdir / "phase.json", data)
     # Drive the phase's REVIEW slice from the same verdict so the phase and its
     # review slice never diverge (a pass no longer leaves REVIEW stuck in_progress).
@@ -3747,7 +5642,7 @@ def _phases_at_ref(ref: str):
             continue
         data.setdefault("path", entry)
         phases.append(data)
-    phases.sort(key=lambda d: d.get("order", 999999))
+    phases.sort(key=lambda d: (d.get("order", 999999), id_sort_key(d.get("id", ""), d.get("created_at"))))  # phase_dirs' order
     return phases
 
 
@@ -3812,6 +5707,18 @@ def parallel_start(args: argparse.Namespace) -> None:
                              "at root the phase branch is the only branch -- nothing was written")
     elif not (host_branch or "").strip():
         raise SystemExit(NESTED_HOST_BRANCH_REQUIRED)
+    repo_args = getattr(args, "repo", None) or []
+    repo_base_args = getattr(args, "repo_base", None) or []
+    set_repos = []
+    if repo_args or repo_base_args:  # P40.S6: a worktree set's repos, multi-repo hosts only
+        if NESTED is None:
+            raise SystemExit("--repo and --repo-base are for a multi-repo host only (a nested install whose registry lists repos); "
+                             "at root the phase branch is the only branch -- nothing was written")
+        repos = nested_repos()
+        if not repos:
+            raise SystemExit("--repo and --repo-base are for a multi-repo host only; this nested install registers no repos (the host is the one repo, "
+                             f"and the pair is all there is; register repos with {WORKFLOW_CMD} nested-repos --add <path>) -- nothing was written")
+        set_repos = _parse_set_repo_args(repo_args, repo_base_args, repos)
     pdir = require_phase(args.phase)
     data = read_json(pdir / "phase.json")
     if data.get("status") != "planned":
@@ -3836,7 +5743,7 @@ def parallel_start(args: argparse.Namespace) -> None:
         if execution and execution.get("branch") == branch:
             raise SystemExit(f"branch {branch} is already stamped on phase {p['id']}")
     if NESTED is not None:
-        _parallel_start_nested(args, pdir, data, branch, host_branch.strip(), host_base)
+        _parallel_start_nested(args, pdir, data, branch, host_branch.strip(), host_base, set_repos)
         return
     if args.worktree:
         worktree = Path(os.path.abspath(str(Path(args.worktree).expanduser())))
@@ -3881,8 +5788,13 @@ def parallel_start(args: argparse.Namespace) -> None:
 def _worktree_entries(cwd=None) -> list:
     """`[(path, ref-or-None)]` for every worktree git registers in the repo at `cwd` (ROOT by default),
     from `git worktree list --porcelain`; `ref` is `refs/heads/<name>`, or None when detached/bare."""
+    return _parse_worktree_list(_git(["worktree", "list", "--porcelain"], cwd=cwd).stdout)
+
+
+def _parse_worktree_list(text: str) -> list:
+    """`git worktree list --porcelain` output -> `[(path, ref-or-None)]` (see `_worktree_entries`)."""
     entries, path, ref = [], None, None
-    for line in _git(["worktree", "list", "--porcelain"], cwd=cwd).stdout.splitlines() + [""]:
+    for line in text.splitlines() + [""]:
         if line.startswith("worktree "):
             path, ref = line[len("worktree "):], None
         elif line.startswith("branch "):
@@ -3926,7 +5838,179 @@ def _resolve_host_base(host: Path, explicit):
     return ref, sha
 
 
-def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, branch: str, host_branch: str, host_base_arg) -> None:
+def _parse_set_repo_args(repo_args: list, base_args: list, repos: list) -> list:
+    """`parallel-start --repo <name>=<branch> ... --repo-base <name>=<ref> ...` (P40.S6, S2 §15) ->
+    `[(registry entry, branch, base ref or None)]` in `--repo` order. Refuses, nothing written: a
+    malformed value (the branch is required: the engine never invents a name), a name the registry
+    does not list, a duplicate `--repo` or `--repo-base`, a `--repo-base` naming no `--repo`."""
+    refused = "parallel-start: refused -- nothing was written"
+    registry = {r["name"]: r for r in repos}
+    wanted = {}
+    for raw in repo_args:
+        name, sep, value = raw.partition("=")
+        name, value = name.strip(), value.strip()
+        if not sep or not name or not value:
+            raise SystemExit(f"{refused}: --repo {raw!r} needs the form <name>=<branch>; the branch is required -- name it by that repo's "
+                             f"convention ({WORKFLOW_CMD} nested-convention --repo <name>) and let the operator confirm it")
+        if name not in registry:
+            raise SystemExit(f"{refused}: no registered repo is named {name} (registered: {', '.join(registry)})")
+        if name in wanted:
+            raise SystemExit(f"{refused}: --repo {name} is given twice (one branch per repo)")
+        wanted[name] = value
+    bases = {}
+    for raw in base_args:
+        name, sep, value = raw.partition("=")
+        name, value = name.strip(), value.strip()
+        if not sep or not name or not value:
+            raise SystemExit(f"{refused}: --repo-base {raw!r} needs the form <name>=<ref>")
+        if name not in wanted:
+            raise SystemExit(f"{refused}: --repo-base {name}={value} names a repo not given with --repo (add --repo {name}=<branch>)")
+        if name in bases:
+            raise SystemExit(f"{refused}: --repo-base {name} is given twice")
+        bases[name] = value
+    return [(registry[name], value, bases.get(name)) for name, value in wanted.items()]
+
+
+def _set_repo_plan(repo: dict, branch: str, base_arg, host: Path, host_wt: Path, adopt: bool = False, single_base: bool = False):
+    """One repo of a worktree set, checked and planned (P40.S6, S2 §15): `(plan, [])`, or `(None,
+    problems)` -- every problem for this repo, so the caller can print one combined refusal before it
+    writes anything. Each `git -C` runs against the repo's MAIN checkout (`nested_repo_path`), behind
+    `_git_work_tree_root`. The guards: a valid branch name; the branch checked out nowhere; the base
+    resolving locally (`base_arg`, else the registry's `default_branch` as `refs/heads/<D>`; never
+    fetched); the target `<host_wt>/<path>` absent and not registered; `<path>/` ignored by the host
+    (else the worktree shows as untracked in the host worktree and blocks its removal). Reuse is the
+    host branch's (P35 Decision 22): an existing branch checked out nowhere is reused, anchored at
+    merge-base(base, branch). `plan` is what `_stamp_set_repo` stamps and the worktree step runs.
+    Shared with `parallel-add-repo` (S7), which passes the live host worktree as both `host` and
+    `host_wt` and `single_base` (its `--repo-base REF` names no repo). With `adopt` (S7, OQ3) the
+    target must instead be an EXISTING worktree of this repo, its own work tree root, on `branch`
+    (not detached); the branch may be held by no OTHER worktree; `branch_created` is False (the
+    branch is the operator's, teardown keeps it) and the anchor is merge-base(base, branch)."""
+    name, rel = repo["name"], repo["path"]
+    main = nested_repo_path(repo)
+    target = host_wt / rel
+    label = f"repo {name}"
+
+    def base_flag(ref):
+        return f"--repo-base {ref}" if single_base else f"--repo-base {name}={ref}"
+    if not _git_work_tree_root(main):
+        return None, [f"{label}: its main checkout {main} is not a git work tree root (missing, or a plain directory); fix the registry "
+                      f"({WORKFLOW_CMD} nested-repos) first"]
+    problems = []
+    if branch.startswith("-") or _git(["check-ref-format", "--branch", branch], cwd=main, check=False).returncode != 0:
+        problems.append(f"{label}: --repo {name}={branch}: {branch!r} is not a valid branch name in {name}")
+        branch_ok = False
+    else:
+        branch_ok = True
+    entries = _worktree_entries(cwd=main)
+    target_real = os.path.realpath(str(target))
+    if branch_ok:
+        # --adopt: the adopted worktree itself holds the branch; only ANOTHER holder is refused
+        holder = next((path for path, ref in entries if ref == f"refs/heads/{branch}" and not (adopt and os.path.realpath(path) == target_real)), None)
+        if holder:
+            problems.append(f"{label}: branch {branch} is checked out in {holder}; a branch lives in one worktree at a time, so pick another "
+                            f"branch or switch that checkout off it")
+    if adopt:
+        problems += _adopt_target_problems(label, name, main, target, branch, entries)
+    elif os.path.lexists(str(target)):
+        problems.append(f"{label}: the target path {target} already exists")
+    elif target_real in {os.path.realpath(path) for path, _ref in entries}:
+        problems.append(f"{label}: {target} is still registered as a git worktree of {name} (a stale entry); run git -C {main} worktree prune first")
+    if _git(["check-ignore", "-q", f"{rel}/"], cwd=host, check=False).returncode != 0:
+        problems.append(f"{label}: {rel}/ is not ignored by the host, so its worktree would show as untracked in the host worktree and block "
+                        f"that worktree's removal; add /{rel}/ to the host's .git/info/exclude")
+    default = repo.get("default_branch")
+    if base_arg is not None:
+        base, base_from = base_arg, "repo-base"
+        base_sha = _rev_parse(base_arg, cwd=main)
+        if not base_sha:
+            problems.append(f"{label}: {base_flag(base_arg)} does not resolve to a commit in {name} (the engine never fetches: fetch first if the ref is remote)")
+    elif default:
+        base, base_from = default, "default"
+        base_sha = _rev_parse(f"refs/heads/{default}", cwd=main)
+        if not base_sha:
+            problems.append(f"{label}: its default_branch {default} is not a local branch in {main} (the engine never fetches); create or fetch it there, "
+                            f"or pass {base_flag('<ref>')}")
+    else:
+        base, base_from, base_sha = None, None, None
+        problems.append(f"{label}: no {base_flag('<ref>')} and no default_branch in the registry; pass {base_flag('<ref>')}")
+    branch_exists = branch_ok and _git(["rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"], cwd=main, check=False).returncode == 0
+    branch_created = False if adopt else not branch_exists
+    if adopt and not branch_exists and not problems:
+        problems.append(f"{label}: --adopt: branch {branch} has no commit yet in {name}; commit on it first (an adopted branch is anchored at its merge-base with the base)")
+    anchor = base_sha
+    if base_sha and branch_exists and not branch_created:
+        proc = _git(["merge-base", base_sha, f"refs/heads/{branch}"], cwd=main, check=False)
+        anchor = proc.stdout.strip()
+        if proc.returncode != 0 or not anchor:
+            problems.append(f"{label}: branch {branch} shares no history with the base {base} ({base_sha}); pass another {base_flag('<ref>')}")
+    if problems:
+        return None, problems
+    return {"name": name, "path": rel, "main": main, "target": target, "branch": branch, "base": base, "base_sha": base_sha,
+            "base_from": base_from, "branch_created": branch_created, "anchor": anchor, "adopted": adopt}, []
+
+
+def _adopt_target_problems(label: str, name: str, main: Path, target: Path, branch: str, entries: list) -> list:
+    """`parallel-add-repo --adopt`'s target rows (P40.S7, S2 §15 and §25): `<host-wt>/<path>` must
+    exist, be its own work tree root (`git -C` on a plain dir answers for the host worktree), be one
+    of the repo's registered worktrees (`git -C <main> worktree list --porcelain`), and have its HEAD
+    on `branch`. One row for the first that fails: each later check presumes the earlier ones."""
+    hint = f"--adopt stamps a worktree of {name} that already sits there"
+    if not os.path.lexists(str(target)):
+        return [f"{label}: --adopt: the target {target} does not exist; {hint} (drop --adopt to cut a new one)"]
+    if not _git_work_tree_root(target):
+        return [f"{label}: --adopt: {target} is not a git work tree root (a plain directory, or inside another repo); {hint}"]
+    ref = next((ref for path, ref in entries if os.path.realpath(path) == os.path.realpath(str(target))), False)
+    if ref is False:
+        return [f"{label}: --adopt: {target} is a git work tree, but not a worktree of {name} (git -C {main} worktree list does not list it); {hint}"]
+    if ref is None:
+        return [f"{label}: --adopt: {target} has a detached HEAD; check out {branch} there first (git -C {target} switch {branch})"]
+    if ref != f"refs/heads/{branch}":
+        on = ref[len("refs/heads/"):] if ref.startswith("refs/heads/") else ref
+        return [f"{label}: --adopt: {target} is on {on}, not {branch}; adopt it as --repo {name}={on}, or check out {branch} there first"]
+    return []
+
+
+def _stamp_set_repo(data: dict, plan: dict) -> dict:
+    """Stamp one planned repo into phase `data` (P40.S6, S2 §18): `execution.repos.<name>` = {worktree,
+    branch, base, base_sha, branch_created}, and the re-stamped `repo_anchors.<name>`: `created` = the
+    plan's anchor (the base for a created branch, merge-base(base, branch) for a reused one), `branch`
+    = the branch, the review keys kept. `data["execution"]` must already exist. THE one stamp writer,
+    shared by `parallel-start --repo` and `parallel-add-repo` (S7)."""
+    execution = data["execution"]
+    repos = execution.get("repos") if isinstance(execution.get("repos"), dict) else {}
+    repos[plan["name"]] = {"worktree": str(plan["target"]), "branch": plan["branch"], "base": plan["base"],
+                           "base_sha": plan["base_sha"], "branch_created": plan["branch_created"]}
+    execution["repos"] = repos
+    anchors = data.get("repo_anchors") if isinstance(data.get("repo_anchors"), dict) else {}
+    prev = anchors.get(plan["name"]) if isinstance(anchors.get(plan["name"]), dict) else {}
+    entry = {key: prev.get(key) for key in REPO_ANCHOR_KEYS}
+    entry.update(created=plan["anchor"], branch=plan["branch"])
+    return _with_repo_anchors(data, {plan["name"]: entry})
+
+
+def _set_repo_add_cmd(plan: dict) -> list:
+    """The `git -C <main> worktree add ...` that cuts one planned repo's worktree."""
+    add = (["worktree", "add", "-b", plan["branch"], str(plan["target"]), plan["base_sha"]] if plan["branch_created"]
+           else ["worktree", "add", str(plan["target"]), plan["branch"]])
+    return ["git", "-C", str(plan["main"]), *add]
+
+
+def _set_repo_line(plan: dict, by: str = "parallel-start") -> str:
+    """parallel-start's (and parallel-add-repo's, `by`) one output line for a repo of the set."""
+    if plan.get("adopted"):  # P40.S7: --adopt
+        how = "adopted: the operator's own worktree and branch, branch_created=false, so teardown keeps the branch"
+        anchor = "merge-base of the base and the adopted branch"
+    else:
+        how = f"created by {by}" if plan["branch_created"] else "reused: it existed and was not checked out"
+        anchor = "the base" if plan["branch_created"] else "merge-base of the base and the reused branch"
+    src = ("--repo-base" if plan["base_from"] == "repo-base"
+           else f"local -- fetch in {plan['name']} first if your custom branches from a fresh default")
+    return (f"repo {plan['name']}: worktree={plan['target']} branch={plan['branch']} ({how}) base={plan['base']} ({plan['base_sha']}, {src}) "
+            f"repo_anchors.{plan['name']}.created={plan['anchor']} ({anchor})")
+
+
+def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, branch: str, host_branch: str, host_base_arg, set_repos=()) -> None:
     """`parallel-start` in a nested personal install (P35): a host worktree with the nested worktree inside.
 
     The pair is `<host>/.claude/worktrees/P<N>-<slug>` on `host_branch` (the operator names it, by the
@@ -3936,7 +6020,13 @@ def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, bra
     host worktree; the nested worktree; the copied `CLAUDE.local.md`. Nothing is ever created under
     `<host-wt>/.claude/` (Claude Code reads skills, agents and settings.local.json through from the main
     checkout), and nothing is fetched. A failure after the stamp commit prints the exact remaining
-    commands. `execution.worktree` is the NESTED worktree, so removal stays in the repo that owns it."""
+    commands. `execution.worktree` is the NESTED worktree, so removal stays in the repo that owns it.
+
+    P40.S6: on a multi-repo host, `set_repos` (`[(registry entry, branch, base ref)]` from `--repo` /
+    `--repo-base`) makes the pair a SET: every repo's guards run after the host's, in one combined
+    refusal; the stamp adds `execution.repos` and re-stamps each named repo's `repo_anchors` through
+    `_stamp_set_repo`; each repo worktree is cut at `<host-wt>/<path>` after the nested worktree.
+    Without `set_repos` every step and line is exactly the pair's."""
     host = HOST_ROOT
     if host is None or not _git_available(cwd=host):
         raise SystemExit(f"the nested install's host {host} is not a git work tree; parallel-start cuts a host worktree, so it needs one -- nothing was written")
@@ -3974,6 +6064,14 @@ def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, bra
         if proc.returncode != 0 or not anchor:
             raise SystemExit(f"host branch {host_branch} shares no history with the base {base_ref} ({base_sha}); pass another --host-base -- nothing was written")
     base_branch = git_current_branch()
+    plans, problems = [], []
+    for repo, repo_branch, repo_base in set_repos:  # P40.S6: every repo's guards, one combined refusal
+        plan, repo_problems = _set_repo_plan(repo, repo_branch, repo_base, host, host_wt)
+        problems += repo_problems
+        if plan:
+            plans.append(plan)
+    if problems:
+        raise SystemExit(f"parallel-start {args.phase} refused -- nothing was written:\n" + "\n".join(f"{i}. {p}" for i, p in enumerate(problems, 1)))
 
     # Every guard is above this line. The exclude line is not repo content and is idempotent.
     _ensure_worktrees_excluded(cwd=host)
@@ -3987,9 +6085,15 @@ def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, bra
     # phase-scope's base must be where the host worktree starts, not the host HEAD at new-phase
     # (P35.S2 (f)); stamped before the commit so both branches carry it.
     data = _with_host_anchors(data, {"created": anchor})
+    for plan in plans:  # P40.S6: execution.repos + the repo_anchors re-stamp, before the commit like the host's
+        data = _stamp_set_repo(data, plan)
     write_json(pdir / "phase.json", data)
-    append_event("phase_parallel_started", phase=args.phase, branch=branch, worktree=str(nested_wt),
-                 host_branch=host_branch, host_worktree=str(host_wt))
+    if plans:
+        append_event("phase_parallel_started", phase=args.phase, branch=branch, worktree=str(nested_wt),
+                     host_branch=host_branch, host_worktree=str(host_wt), repos={p["name"]: p["branch"] for p in plans})
+    else:
+        append_event("phase_parallel_started", phase=args.phase, branch=branch, worktree=str(nested_wt),
+                     host_branch=host_branch, host_worktree=str(host_wt))
     rebuild_index_and_state()
     stamp_paths = [str(pdir.relative_to(ROOT)), *STAMP_WORKS_FILES]
     _git(["add", "--", *stamp_paths])
@@ -4002,6 +6106,7 @@ def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, bra
         (["git", "-C", str(host), *host_add], host),
         (["git", "-C", str(ROOT), "worktree", "add", "-b", branch, str(nested_wt), "HEAD"], ROOT),
     ]
+    steps += [(_set_repo_add_cmd(plan), plan["main"]) for plan in plans]  # P40.S6: repo worktrees, inside the host worktree
     local_md = host / "CLAUDE.local.md"
     copy_cmd = f"cp {q(str(local_md))} {q(str(host_wt / 'CLAUDE.local.md'))}"
 
@@ -4035,14 +6140,133 @@ def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, bra
     print(f"host_branch={host_branch} ({'created by parallel-start' if host_branch_created else 'reused: it existed and was not checked out'})")
     print(f"host_base={base_ref} ({base_sha})")
     print(f"host_anchors.created={anchor} ({'the base' if host_branch_created else 'merge-base of the base and the reused branch'}) -- phase-scope's base")
+    for plan in plans:
+        print(_set_repo_line(plan))
+    if nested_repos():  # P40.S6: multi-repo only
+        outside = [r["name"] for r in nested_repos() if r["name"] not in {p["name"] for p in plans}]
+        if outside:
+            print(f"not in this set: {', '.join(outside)} -- inside the set phase-scope skips them, never reading their main checkouts")
     print(f"stamp committed in the nested repo: chore(works): opt {args.phase} into parallel execution -- only {shown(pdir)}/ plus the regenerated works/ files; "
           f"everything else dirty or staged stayed behind, uncommitted")
     print(f"the nested worktree starts from that commit (HEAD); /{WORKTREES_DIR}/ is excluded via the host's .git/info/exclude")
     print("CLAUDE.local.md copied into the host worktree" if copied else f"note: no {local_md} to copy -- a session in the host worktree loads no workspace contract")
     print(f"next: enter the host worktree in this session (Claude Code: EnterWorktree with path={host_wt}) or open a session there, run "
           f"{WORKFLOW_CMD} next (it prints stream={branch}), and drive the phase from that checkout")
-    print(f"there: product commits go to {host_branch} in the host worktree; workflow commits go to git -C {rel.as_posix()} (the nested worktree, on {branch})")
+    if plans:
+        print(f"there: product commits go to each repo's branch in its worktree (git -C <repo path>); workflow commits go to git -C {rel.as_posix()} "
+              f"(the nested worktree, on {branch}); {host_branch} carries only the host's own files")
+    else:
+        print(f"there: product commits go to {host_branch} in the host worktree; workflow commits go to git -C {rel.as_posix()} (the nested worktree, on {branch})")
     print(f"this stream's pointer now skips {args.phase}; the host branch is integrated by the host's own custom (nested-convention), never merged by the engine")
+
+
+def parallel_add_repo(args: argparse.Namespace) -> None:
+    """`parallel-add-repo <P> --repo <name>=<branch> [--repo-base <ref>] [--adopt]` (P40.S7, S2 §15,
+    §18, §25): add one registered repo to a phase's worktree set MID-PHASE, run from INSIDE that set.
+
+    Not a re-run of `parallel-start`: mid-phase the phase's `phase.json` advances on its phase branch,
+    so the stamp is written and committed HERE, in the set's nested worktree, never on the default
+    stream (a default-stream stamp would diverge from the branch copy and conflict at merge). Create
+    mode cuts `<host-wt>/<path>` (S6's guards, `_set_repo_plan`); `--adopt` (OQ3) stamps a worktree of
+    the repo already sitting there, on `<branch>` -- glide P29's hand-made ones -- so teardown knows
+    it; it keeps the operator's branch (`branch_created: false`) and cuts nothing. Order: every guard
+    (nothing written on a refusal) -> the stamp (`_stamp_set_repo`: `execution.repos.<n>` plus the
+    `repo_anchors` re-stamp) -> the nested commit `chore(works): add <repo> to <P>'s worktree set`
+    (`--only` phase.json plus the regenerated works/ files: mid-phase the phase folder may hold the
+    running slice's uncommitted files, which stay behind) -> create mode's `worktree add`; a failure
+    after the commit prints the remaining command. Refused at root, on a single-repo nested install,
+    outside a set, for another phase, for a name the SET's registry lacks, for a repo already stamped."""
+    q = shlex.quote
+    if NESTED is None:
+        raise SystemExit("parallel-add-repo is for a multi-repo host only (a nested install whose registry lists repos), run inside a phase's worktree set; "
+                         "at root the phase branch is the only branch -- nothing was written")
+    repos = nested_repos()
+    if not repos:
+        raise SystemExit("parallel-add-repo is for a multi-repo host only; this nested install registers no repos (the host is the one repo, "
+                         f"and the pair is all there is; register repos with {WORKFLOW_CMD} nested-repos --add <path>) -- nothing was written")
+    if not _in_worktree_set():
+        raise SystemExit(f"parallel-add-repo runs inside the phase's worktree set (its host worktree, under {HOST_ROOT}/{WORKTREES_DIR}/), never on the "
+                         f"default stream: mid-phase the phase's phase.json advances on its phase branch, so a stamp written here would diverge from the "
+                         f"branch copy and conflict at merge. Open a session in the set and run it there; a phase with no set yet takes its repos at the "
+                         f"start: {WORKFLOW_CMD} parallel-start {args.phase} --host-branch <name> --repo <name>=<branch> -- nothing was written")
+    _require_git_repo()
+    pdir = require_phase(args.phase)
+    data = read_json(pdir / "phase.json")
+    execution = phase_execution(data)
+    phases = all_active_phases()
+    stream = current_stream(phases)
+
+    def same(a, b):
+        return isinstance(a, str) and os.path.realpath(a) == os.path.realpath(str(b))
+
+    if not (execution and stream and execution.get("branch") == stream and same(execution.get("worktree"), ROOT)
+            and same(execution.get("host_worktree"), HOST_ROOT)):
+        mine = next((p.get("id") for p in phases if stream and (phase_execution(p) or {}).get("branch") == stream), None)
+        where = f"this set runs {mine}, on {stream}" if mine else "this checkout is on no phase's stream"
+        raise SystemExit(f"phase {args.phase} is not this worktree set's phase ({where}); run parallel-add-repo inside {args.phase}'s own set "
+                         f"-- nothing was written")
+    name, sep, branch = (args.repo or "").partition("=")
+    name, branch = name.strip(), branch.strip()
+    refused = f"parallel-add-repo {args.phase} refused -- nothing was written"
+    if not sep or not name or not branch:
+        raise SystemExit(f"{refused}: --repo {args.repo!r} needs the form <name>=<branch>; the branch is required -- name it by that repo's "
+                         f"convention ({WORKFLOW_CMD} nested-convention --repo <name>) and let the operator confirm it")
+    registry = {r["name"]: r for r in repos}
+    rel = Path(os.path.relpath(ROOT, HOST_ROOT)).as_posix()
+    base_branch = execution.get("base_branch") or "<the default branch>"
+    if name not in registry:
+        raise SystemExit(f"{refused}: no repo named {name} is registered in this set's registry (the marker this nested worktree tracks on {stream}; "
+                         f"registered: {', '.join(registry)}). Register it on the default stream ({WORKFLOW_CMD} nested-repos --add <path>, in the "
+                         f"main host checkout {MAIN_HOST}), commit it there, then merge that into this phase branch: git -C {rel} merge {base_branch}")
+    stamped = execution.get("repos") if isinstance(execution.get("repos"), dict) else {}
+    if name in stamped:
+        prev = stamped[name] if isinstance(stamped[name], dict) else {}
+        if prev.get("worktree"):
+            raise SystemExit(f"{refused}: repo {name} is already in {args.phase}'s worktree set (worktree={prev.get('worktree')}, "
+                             f"branch={prev.get('branch')}); one stamp per repo")
+        raise SystemExit(f"{refused}: repo {name} is already stamped in {args.phase}'s worktree set and its worktree was torn down "
+                         f"(branch={prev.get('branch')}, worktree=null); one stamp per repo, including a torn-down one, so the stamp stays as history")
+    busy = _git_operation_in_progress()
+    if busy:
+        raise SystemExit(f"{refused}: a {busy} is in progress in the nested worktree {ROOT}; finish or abort it first -- the stamp commit must be an "
+                         f"ordinary commit on {stream}")
+    plan, problems = _set_repo_plan(registry[name], branch, args.repo_base, HOST_ROOT, HOST_ROOT, adopt=args.adopt, single_base=True)
+    if problems:
+        raise SystemExit(f"{refused}:\n" + "\n".join(f"{i}. {p}" for i, p in enumerate(problems, 1)))
+
+    # Every guard is above this line.
+    data = _stamp_set_repo(data, plan)
+    write_json(pdir / "phase.json", data)
+    append_event("phase_parallel_repo_added", phase=args.phase, repo=name, branch=branch, worktree=str(plan["target"]), adopted=bool(args.adopt))
+    rebuild_index_and_state()
+    message = f"chore(works): add {name} to {args.phase}'s worktree set"
+    stamp_paths = [str((pdir / "phase.json").relative_to(ROOT)), *STAMP_WORKS_FILES]
+    _git(["add", "--", *stamp_paths])
+    _git(["commit", "--only", "-m", message, "--", *stamp_paths])
+    commit = (_rev_parse("HEAD") or "HEAD")[:7]
+    if not args.adopt:
+        cmd = _set_repo_add_cmd(plan)
+        proc = _git(cmd[3:], cwd=plan["main"], check=False)
+        if proc.returncode != 0:
+            detail = (proc.stderr or proc.stdout).strip() or f"exit {proc.returncode}"
+            raise SystemExit(
+                f"git worktree add failed: {detail}\n"
+                f"the stamp for {name} is already committed in the nested worktree ({commit} {message}); fix the cause and finish by hand:\n"
+                f"  {' '.join(q(part) for part in cmd)}\n"
+                f"or drop {name} from the set: git -C {q(rel)} revert --no-edit {commit}")
+    print(f"repo {name} {'adopted into' if args.adopt else 'added to'} {args.phase}'s worktree set")
+    print(_set_repo_line(plan, by="parallel-add-repo"))
+    if args.adopt:
+        log = _git(["log", "--oneline", f"{plan['base_sha']}..refs/heads/{branch}"], cwd=plan["main"], check=False).stdout.splitlines()
+        print(f"commits on {branch} beyond the base {plan['base']}: {len(log)} -- they come into {args.phase}'s scope (phase-scope reads {name} "
+              f"from {plan['anchor'][:7]})")
+        for line in log[:5]:
+            print(f"  {line}")
+        if len(log) > 5:
+            print(f"  ... {len(log) - 5} more: git -C {q(str(plan['target']))} log --oneline {plan['base_sha'][:7]}..{branch}")
+    print(f"stamp committed in the nested worktree, on {stream}: {commit} {message} -- only {shown(pdir)}/phase.json plus the regenerated "
+          f"works/ files; everything else dirty or staged stayed behind, uncommitted")
+    print(f"there: product commits for {name} go to {branch} in its worktree (git -C {plan['path']}); phase-scope now reads {name} from it")
 
 
 def parallel_skip(args: argparse.Namespace) -> None:
@@ -4142,6 +6366,231 @@ def _ignored_worktree_files(path, skip=()) -> list:
             if not (entry.endswith("/") and any(other != entry and other.startswith(entry) for other in entries))]
 
 
+def _detached_orphans(worktree, base_sha):
+    """`(short HEAD, count)` when the checkout at `worktree` is detached with commits beyond `base_sha`
+    that no branch, tag or remote ref holds -- removing it would orphan them -- else None. The host
+    worktree's orphan rule (P35), shared with each repo worktree of a set (P40.S8)."""
+    if _git(["symbolic-ref", "-q", "HEAD"], cwd=worktree, check=False).returncode == 0:
+        return None
+    keep = [base_sha] if base_sha else []
+    proc = _git(["rev-list", "--count", "HEAD", "--not", *keep, "--branches", "--tags", "--remotes"], cwd=worktree, check=False)
+    orphans = int(proc.stdout.strip() or 0) if proc.returncode == 0 else 0
+    if not orphans:
+        return None
+    return _git(["rev-parse", "--short", "HEAD"], cwd=worktree, check=False).stdout.strip(), orphans
+
+
+def _unstamped_worktrees(host_wt, execution: dict) -> list:
+    """P40.S8 (S2 §19's scan): every git work tree inside the host worktree `host_wt` that the phase's
+    stamp does not name, as `[{"path", "main", "name", "branch", "standalone"}]` sorted by path; [] when
+    there is none, or when git cannot run (it never raises: `validate` calls it too). Removing the host
+    worktree would delete such a tree with everything in it, uncommitted work included, so
+    `parallel-teardown` refuses each one always (`--discard-ignored` never covers it) and `validate`
+    warns. Shared by both, and it runs in single-repo nested installs too. The union of two sources:
+
+    * the host worktree's ignored entries (`ls-files --others --ignored --directory`), minus the nested
+      worktree, each walked for a `.git` file or dir: the entry itself, else each of its subdirectories
+      -- two levels at most, enough for a repo at `<path>` or `<dir>/<path>`; symlinks never followed
+      (an UNignored one shows as untracked and is already refused as the host worktree's uncommitted work);
+    * every registered repo's `git worktree list` paths under the host worktree that exist on disk
+      (multi-repo only; a stale registration holds no files).
+
+    Excluded: the nested worktree and every stamped `execution.repos.<n>.worktree`. Per tree: `main` is
+    the checkout it belongs to (`git -C <main> worktree remove <path>`), `name` the registry name when
+    that is a registered repo, `branch` its branch (None when detached), and `standalone` marks a
+    repository of its own (a `.git` directory), which no `worktree remove` applies to."""
+    host_wt = Path(host_wt)
+    host_real = os.path.realpath(str(host_wt))
+    repos = execution.get("repos") if isinstance(execution.get("repos"), dict) else {}
+    exclude = {os.path.realpath(value["worktree"]) for value in repos.values()
+               if isinstance(value, dict) and isinstance(value.get("worktree"), str)}
+    if isinstance(execution.get("worktree"), str):
+        exclude.add(os.path.realpath(execution["worktree"]))
+    nested_rel = f"{Path(os.path.relpath(ROOT, HOST_ROOT)).as_posix()}/" if HOST_ROOT is not None else None
+    found = {}
+
+    def add(path, **known):
+        real = os.path.realpath(str(path))
+        if real in exclude or not real.startswith(host_real + os.sep):
+            return
+        entry = found.setdefault(real, {"path": str(path), "main": None, "name": None, "branch": None, "standalone": False})
+        entry.update({key: value for key, value in known.items() if value is not None})
+
+    proc = _repo_git(host_wt, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory")
+    if proc is not None and proc.returncode == 0:
+        for entry in proc.stdout.split("\0"):
+            if not entry.endswith("/") or entry == nested_rel:
+                continue
+            top = host_wt / entry.rstrip("/")
+            if top.is_symlink() or not top.is_dir():
+                continue
+            if os.path.lexists(str(top / ".git")):
+                add(top)
+                continue
+            try:
+                children = sorted(child for child in top.iterdir() if child.is_dir() and not child.is_symlink())
+            except OSError:
+                continue
+            for child in children:
+                if os.path.lexists(str(child / ".git")):
+                    add(child)
+    mains = {}
+    for repo in nested_repos():
+        if not (isinstance(repo, dict) and isinstance(repo.get("path"), str)):
+            continue
+        main = nested_repo_path(repo)
+        if not _git_work_tree_root(main):
+            continue
+        mains[os.path.realpath(str(main))] = repo.get("name")
+        listing = _repo_git(main, "worktree", "list", "--porcelain")
+        if listing is None or listing.returncode != 0:
+            continue
+        for path, ref in _parse_worktree_list(listing.stdout):
+            if os.path.lexists(path):
+                branch = ref[len("refs/heads/"):] if ref and ref.startswith("refs/heads/") else None
+                add(path, main=main, name=repo.get("name"), branch=branch)
+    for entry in found.values():
+        if entry["main"] is not None:
+            continue
+        path = Path(entry["path"])
+        main = _main_host_checkout(path)
+        if (path / ".git").is_dir() or os.path.realpath(str(main)) == os.path.realpath(str(path)):
+            entry["standalone"] = True
+            continue
+        entry["main"] = main
+        entry["name"] = mains.get(os.path.realpath(str(main)))
+        head = _repo_git(path, "symbolic-ref", "-q", "--short", "HEAD")
+        entry["branch"] = (head.stdout.strip() or None) if head is not None and head.returncode == 0 else None
+    return sorted(found.values(), key=lambda entry: entry["path"])
+
+
+def _unstamped_refusal(phase_id: str, host_wt, found: list, execution: dict, branch: str, branch_exists: bool) -> str:
+    """`parallel-teardown`'s refusal item for `_unstamped_worktrees` (P40.S8, S2 §19): each tree named,
+    with its ways out -- removed by hand against its own repo after its branch is integrated, or, in a
+    multi-repo host, adopted into the set (`parallel-add-repo --adopt`, from inside the set) when it
+    sits at a registered repo's path and that repo is not stamped yet."""
+    q = shlex.quote
+    stamped = execution.get("repos") if isinstance(execution.get("repos"), dict) else {}
+    registry = {repo.get("name"): repo for repo in nested_repos() if isinstance(repo, dict)}
+    lines = [f"the host worktree {host_wt} holds {len(found)} git work tree(s) {phase_id}'s stamp does not name; removing the host worktree "
+             f"would delete each with everything in it, uncommitted work included, so parallel-teardown refuses them always "
+             f"(--discard-ignored does not cover them):"]
+    for tree in found:
+        path = tree["path"]
+        if tree["standalone"]:
+            lines.append(f"      {path}: a git repository of its own, not a worktree")
+            lines.append(f"        move it out of the host worktree first (after pushing or integrating its work)")
+            continue
+        on = f"on {tree['branch']}" if tree["branch"] else "detached"
+        lines.append(f"      {path}: a worktree of {tree['main']}, {on}")
+        after = f"after integrating {tree['branch']}" if tree["branch"] else "after putting its commits on a branch"
+        lines.append(f"        remove it by hand {after}: git -C {q(str(tree['main']))} worktree remove {q(path)}")
+        repo = registry.get(tree["name"]) if tree["name"] else None
+        if (repo is not None and tree["name"] not in stamped and isinstance(repo.get("path"), str)
+                and os.path.realpath(path) == os.path.realpath(os.path.join(str(host_wt), repo["path"]))):
+            lines.append(f"        or adopt it into the set, from inside the set: cd {q(str(host_wt))} && {WORKFLOW_CMD} parallel-add-repo {phase_id} "
+                         f"--repo {tree['name']}={tree['branch'] or '<branch>'} --adopt (then merge the phase branch again and re-run this teardown)")
+    if not branch_exists:
+        lines.append(f"    note: the phase branch {branch} is gone, so a repo stamped on it after its last merge (parallel-add-repo) is missing from "
+                     f"this copy of phase.json and is refused here as unstamped -- the safe outcome")
+    return "\n".join(lines)
+
+
+def _unstamped_set_warning(phase_id: str, execution: dict):
+    """`validate`'s row for `_unstamped_worktrees` (P40.S8, S2 §18): the warning text, or None. Only for
+    a LIVE host worktree (`host_worktree` set and on disk), nested only. A warning, never an error:
+    `--update` runs `validate` with check=True after its writes, and glide's P29 trips it. The phase
+    branch's stamp counts too: a mid-phase `parallel-add-repo` commits its stamp there only, so the
+    default stream's copy lacks it until the merge (teardown runs after the merge and reads its own)."""
+    host_wt = execution.get("host_worktree")
+    if NESTED is None or not isinstance(host_wt, str) or not Path(host_wt).is_dir():
+        return None
+    found = _unstamped_worktrees(host_wt, execution)
+    if found and isinstance(execution.get("branch"), str) and execution["branch"].strip():
+        try:
+            branch_copy = _phase_json_at_ref(f"refs/heads/{execution['branch']}", phase_id)
+        except SystemExit:  # no git binary: keep what the local stamp says
+            branch_copy = None
+        repos = ((branch_copy or {}).get("execution") or {}).get("repos") if isinstance(branch_copy, dict) else None
+        on_branch = {os.path.realpath(value["worktree"]) for value in (repos.values() if isinstance(repos, dict) else ())
+                     if isinstance(value, dict) and isinstance(value.get("worktree"), str)}
+        found = [tree for tree in found if os.path.realpath(tree["path"]) not in on_branch]
+    if not found:
+        return None
+    listed = ", ".join(tree["path"] for tree in found)
+    if nested_repos():
+        return (f"{phase_id}'s host worktree holds git worktrees it did not stamp: {listed} -- parallel-teardown will refuse them; adopt them from "
+                f"inside the set (parallel-add-repo {phase_id} --repo <name>=<branch> --adopt) or remove them by hand after integrating their branches")
+    return (f"{phase_id}'s host worktree holds git worktrees it did not stamp: {listed} -- parallel-teardown will refuse them; remove them by hand "
+            f"after integrating their branches (git -C <repo> worktree remove <path>)")
+
+
+def _teardown_set_repos(execution: dict) -> list:
+    """P40.S8: a worktree set's stamped repos as `parallel-teardown` handles them, one dict per
+    `execution.repos.<name>` in stamp order: `name`; `wt`, the stamped worktree (None once torn down);
+    `live` (on disk); `main`, its repo's MAIN checkout -- the registry path under the main host checkout,
+    else (a name the registry dropped) the checkout a live worktree's common git dir names, else None;
+    `entries`, `main`'s `worktree list`; and the stamp's `branch`, `base`, `base_sha`, `created`. [] when
+    the block has no `repos`, as in every single-repo and at-root phase."""
+    repos = execution.get("repos")
+    if not isinstance(repos, dict):
+        return []
+    registry = {repo.get("name"): repo for repo in nested_repos() if isinstance(repo, dict)}
+    out = []
+    for name, value in repos.items():
+        if not isinstance(value, dict):
+            continue
+        wt = value.get("worktree") if isinstance(value.get("worktree"), str) and value.get("worktree") else None
+        live = bool(wt) and Path(wt).exists()
+        main = None
+        repo = registry.get(name)
+        if repo is not None and isinstance(repo.get("path"), str) and _git_work_tree_root(nested_repo_path(repo)):
+            main = nested_repo_path(repo)
+        elif live and _git_work_tree_root(Path(wt)):
+            candidate = _main_host_checkout(Path(wt))
+            if os.path.realpath(str(candidate)) != os.path.realpath(wt):
+                main = candidate
+        listing = _repo_git(main, "worktree", "list", "--porcelain") if main is not None else None
+        branch, sha = value.get("branch"), value.get("base_sha")
+        out.append({"name": name, "wt": wt, "live": live, "main": main,
+                    "entries": _parse_worktree_list(listing.stdout) if listing is not None and listing.returncode == 0 else [],
+                    "branch": branch if isinstance(branch, str) and branch.strip() else None, "base": value.get("base"),
+                    "base_sha": sha if isinstance(sha, str) and sha else None, "created": value.get("branch_created") is True})
+    return out
+
+
+def _set_repo_teardown_problems(repo: dict, ignored: list) -> list:
+    """The guards on one live stamped repo worktree (P40.S8, S2 §19), the host worktree's own: it must be
+    a worktree of its repo (else no `worktree remove` applies, and removing the host worktree would delete
+    it); uncommitted work; a detached HEAD holding commits no ref keeps. Its ignored, worktree-only files
+    are appended to `ignored`, for the one combined list `--discard-ignored` covers."""
+    q = shlex.quote
+    name, wt, main = repo["name"], repo["wt"], repo["main"]
+    label = f"repo {name}"
+    if not _git_work_tree_root(Path(wt)):
+        return [f"{label}: its stamped worktree {wt} is not a git work tree root (its .git is gone, or it is a plain directory), so no git worktree "
+                f"remove applies, and removing the host worktree would delete it with everything in it -- move what it holds out of the host "
+                f"worktree, or delete it by hand, then re-run"]
+    if main is None:
+        return [f"{label}: its main checkout cannot be found (no registered repo is named {name}, and {wt} names no other checkout), so its "
+                f"worktree cannot be removed against it -- re-register it ({WORKFLOW_CMD} nested-repos --add <path> --name {name}), then re-run"]
+    if not any(os.path.realpath(path) == os.path.realpath(wt) for path, _ref in repo["entries"]):
+        return [f"{label}: {wt} is a git work tree, but not a worktree of {name} (git -C {main} worktree list does not list it), so it cannot be "
+                f"removed against {name}, and removing the host worktree would delete it -- move it out of the host worktree first, then re-run"]
+    problems = []
+    dirty = _git(["status", "--porcelain", "--untracked-files=normal"], cwd=wt).stdout.splitlines()
+    if dirty:
+        problems.append(f"{label}: its worktree {wt} has uncommitted work (commit it on {repo['branch']}, or move or discard it):\n"
+                        + "\n".join(f"      {line}" for line in dirty))
+    ignored += [(wt, entry) for entry in _ignored_worktree_files(wt)]
+    orphan = _detached_orphans(wt, repo["base_sha"])
+    if orphan:
+        problems.append(f"{label}: its worktree {wt} is detached at {orphan[0]} with {orphan[1]} commit(s) beyond the base that no branch, tag or "
+                        f"remote ref holds; removing it would orphan them -- put them on a branch first "
+                        f"(git -C {q(wt)} switch -c <name>, or switch {repo['branch']} to them)")
+    return problems
+
+
 def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, execution: dict,
                               branch: str, branch_exists: bool, discard_ignored: bool) -> None:
     """`parallel-teardown` in a nested personal install (P35): retire the host + nested worktree pair.
@@ -4164,7 +6613,21 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
 
     `worktree` and `host_worktree` become null; the other host keys and `base_branch` stay as
     history. A failure after the first removal prints the exact remaining commands; a re-run of
-    this command resumes too, since every step skips what is already gone."""
+    this command resumes too, since every step skips what is already gone.
+
+    A worktree SET (P40.S8, S2 §19) adds its repo half, gated on the stamp's `execution.repos`, so a
+    single-repo pair runs exactly the steps above: each stamped repo worktree is guarded like the host
+    worktree (uncommitted work, ignored files, detached orphans) and removed FIRST, before the nested
+    worktree, with `git -C <main> worktree remove`, against its repo's main checkout (no `--force`: a
+    plain remove deletes ignored files, as the host's does; the guards cover the rest); one gone from
+    disk but still registered is pruned there before any branch step (a stale registration holds its
+    branch). A repo branch is deleted (`-D`, against its `base_sha`) only when the set created it, it
+    has 0 commits beyond `base_sha` and no other worktree holds it; reused and adopted branches are the
+    operator's and stay. Each `execution.repos.<n>.worktree` becomes null with the host keys. In EVERY
+    nested teardown, single-repo too, a git work tree inside the host worktree that the stamp does not
+    name (`_unstamped_worktrees`) is refused, `--discard-ignored` or not: removing the host worktree
+    would delete it with its uncommitted work. The stamp read is this copy of phase.json, merged from
+    the phase branch, so a repo `parallel-add-repo` stamped after the last merge is refused as unstamped."""
     q = shlex.quote
     host = HOST_ROOT
     nested_wt = execution.get("worktree")
@@ -4178,9 +6641,16 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
     if (host_live or host_branch) and not host_git:
         raise SystemExit(f"the nested install's host {host} is not a git work tree; the paired teardown needs it to retire the host worktree "
                          f"and branch -- nothing was removed")
+    set_repos = _teardown_set_repos(execution)  # P40.S8: [] unless a multi-repo set stamped repos
 
     # 1. Every guard, before anything is removed.
     problems, ignored = [], []
+    unstamped = _unstamped_worktrees(host_wt, execution) if host_live else []
+    if unstamped:
+        problems.append(_unstamped_refusal(args.phase, host_wt, unstamped, execution, branch, branch_exists))
+    for repo in set_repos:
+        if repo["live"]:
+            problems += _set_repo_teardown_problems(repo, ignored)
     if nested_live:
         dirty = _git(["status", "--porcelain", "--untracked-files=normal"], cwd=nested_wt).stdout.splitlines()
         if dirty:
@@ -4190,20 +6660,20 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
     if host_live:
         rel = os.path.relpath(ROOT, host)
         skip = {"CLAUDE.local.md", f"{Path(rel).as_posix().rstrip('/')}/"}  # the engine's copy; the nested worktree (step 2)
+        # P40.S8: never a git work tree as a plain ignored path -- the stamped repo worktrees are guarded
+        # and removed on their own (step 1), the unstamped ones refused above
+        skip |= {f"{Path(os.path.relpath(os.path.realpath(path), os.path.realpath(host_wt))).as_posix()}/"
+                 for path in [repo["wt"] for repo in set_repos if repo["wt"]] + [tree["path"] for tree in unstamped]}
         ignored += [(host_wt, entry) for entry in _ignored_worktree_files(host_wt, skip)]
         dirty = _git(["status", "--porcelain", "--untracked-files=normal"], cwd=host_wt).stdout.splitlines()
         if dirty:
             problems.append(f"the host worktree {host_wt} has uncommitted work (commit it on {host_branch}, or move or discard it):\n"
                             + "\n".join(f"      {line}" for line in dirty))
-        if _git(["symbolic-ref", "-q", "HEAD"], cwd=host_wt, check=False).returncode != 0:
-            keep = [base_sha] if base_sha else []
-            proc = _git(["rev-list", "--count", "HEAD", "--not", *keep, "--branches", "--tags", "--remotes"], cwd=host_wt, check=False)
-            orphans = int(proc.stdout.strip() or 0) if proc.returncode == 0 else 0
-            if orphans:
-                head = _git(["rev-parse", "--short", "HEAD"], cwd=host_wt, check=False).stdout.strip()
-                problems.append(f"the host worktree {host_wt} is detached at {head} with {orphans} commit(s) beyond the base that no branch, tag or "
-                                f"remote ref holds; removing it would orphan them -- put them on a branch first "
-                                f"(git -C {q(host_wt)} switch -c <name>, or switch {host_branch} to them)")
+        orphan = _detached_orphans(host_wt, base_sha)
+        if orphan:
+            problems.append(f"the host worktree {host_wt} is detached at {orphan[0]} with {orphan[1]} commit(s) beyond the base that no branch, tag or "
+                            f"remote ref holds; removing it would orphan them -- put them on a branch first "
+                            f"(git -C {q(host_wt)} switch -c <name>, or switch {host_branch} to them)")
     if ignored and not discard_ignored:
         problems.append("ignored, worktree-only files would be deleted with the worktrees (git worktree remove does not ask):\n"
                         + "\n".join(f"      {os.path.join(where, entry)}" for where, entry in ignored)
@@ -4212,6 +6682,38 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
         lines = [f"parallel-teardown {args.phase} refused -- nothing was removed:"]
         lines += [f"{i}. {problem}" for i, problem in enumerate(problems, 1)]
         raise SystemExit("\n".join(lines))
+
+    # P40.S8: each repo branch's fate, decided before any removal like the host branch's below:
+    # `(repo, delete, keep reason, exists)`. Deleted only when the set created it, it has 0 commits
+    # beyond the stamped base_sha and no worktree but the stamped one (removed first) holds it.
+    repo_fates = []
+    for repo in set_repos:
+        rbranch, main = repo["branch"], repo["main"]
+        if not rbranch:
+            continue
+        if main is None:
+            repo_fates.append((repo, False, f"its repo's main checkout cannot be found (no registered repo is named {repo['name']})", True))
+            continue
+        if _git(["rev-parse", "--verify", "--quiet", f"refs/heads/{rbranch}"], cwd=main, check=False).returncode != 0:
+            repo_fates.append((repo, False, None, False))
+            continue
+        holders = [path for path, ref in repo["entries"] if ref == f"refs/heads/{rbranch}"
+                   and not (repo["wt"] and os.path.realpath(path) == os.path.realpath(repo["wt"]))]
+        ahead = None
+        if repo["base_sha"]:
+            proc = _git(["rev-list", "--count", f"{repo['base_sha']}..refs/heads/{rbranch}"], cwd=main, check=False)
+            ahead = int(proc.stdout.strip()) if proc.returncode == 0 and proc.stdout.strip().isdigit() else None
+        if holders:
+            reason = f"it is checked out in {holders[0]}"
+        elif not repo["created"]:
+            reason = "branch_created is false: it existed before the set took it (reused, or adopted with parallel-add-repo --adopt), so it is the operator's"
+        elif ahead is None:
+            reason = f"its commits beyond the base {repo['base_sha']} could not be counted"
+        elif ahead:
+            reason = f"it has {ahead} commit(s) beyond its base {repo['base']} ({repo['base_sha'][:12]})"
+        else:
+            reason = None
+        repo_fates.append((repo, reason is None, reason, True))
 
     # The host branch's fate is decided before any removal (its commits do not change).
     delete_host_branch, keep_reason = False, None
@@ -4242,6 +6744,13 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
         return any(os.path.realpath(p) == os.path.realpath(path) for p, _ref in _worktree_entries(cwd=repo))
 
     steps = []
+    for repo in set_repos:  # P40.S8: the repo worktrees first, each against its repo's main checkout
+        if not repo["wt"] or repo["main"] is None:
+            continue
+        if repo["live"]:
+            steps.append((f"repo {repo['name']} worktree {repo['wt']}", ["worktree", "remove", repo["wt"]], repo["main"]))
+        elif registered(repo["main"], repo["wt"]):
+            steps.append((f"the stale registration of {repo['wt']} (git worktree prune in {repo['main']})", ["worktree", "prune"], repo["main"]))
     if nested_live:
         steps.append((f"nested worktree {nested_wt}", ["worktree", "remove", str(nested_wt)], ROOT))
     elif nested_wt and registered(ROOT, nested_wt):
@@ -4250,6 +6759,10 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
         steps.append((f"host worktree {host_wt}", ["worktree", "remove", str(host_wt)], host))
     elif host_wt and host_git and registered(host, host_wt):
         steps.append((f"the stale registration of {host_wt} (git worktree prune in {host})", ["worktree", "prune"], host))
+    for repo, delete, _reason, _exists in repo_fates:
+        if delete:
+            steps.append((f"repo {repo['name']} branch {repo['branch']} (created for the set, no commits beyond its base)",
+                          ["branch", "-D", repo["branch"]], repo["main"]))
     if delete_host_branch:
         steps.append((f"host branch {host_branch} (created by parallel-start, no commits beyond its base)",
                       ["branch", "-D", host_branch], host))
@@ -4259,6 +6772,10 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
     def command(git_args, cwd):
         return f"git -C {q(str(cwd))} " + " ".join(q(part) for part in git_args)
 
+    null_fields = "execution.worktree and execution.host_worktree"
+    repo_fields = [f"execution.repos.{repo['name']}.worktree" for repo in set_repos if repo["wt"]]
+    if repo_fields:  # P40.S8: a set's repo worktrees are nulled with the host keys
+        null_fields = ", ".join(["execution.worktree", "execution.host_worktree", *repo_fields[:-1]]) + f" and {repo_fields[-1]}"
     removed = []
     for i, (label, git_args, cwd) in enumerate(steps):
         proc = _git(git_args, cwd=cwd, check=False)
@@ -4269,11 +6786,12 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
             raise SystemExit(
                 f"{command(git_args, cwd)} failed: {detail}{done}\n"
                 f"fix the cause, then re-run {WORKFLOW_CMD} parallel-teardown {args.phase} (it resumes), or finish by hand, in this order:\n{rest}\n"
-                f"  then set execution.worktree and execution.host_worktree to null in {shown(pdir)}/phase.json")
+                f"  then set {null_fields} to null in {shown(pdir)}/phase.json")
         removed.append(label)
 
     pruned = []  # a registration a successful `worktree remove` still left behind
-    for repo, path in ((ROOT, nested_wt), (host, host_wt)):
+    left = [(repo["main"], repo["wt"]) for repo in set_repos if repo["main"] is not None]
+    for repo, path in (*left, (ROOT, nested_wt), (host, host_wt)):
         if not path or (repo is host and not host_git):
             continue
         if registered(repo, path):
@@ -4282,8 +6800,13 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
 
     data["execution"]["worktree"] = None
     data["execution"]["host_worktree"] = None
+    stamped_repos = data["execution"].get("repos")
+    for value in (stamped_repos.values() if isinstance(stamped_repos, dict) else ()):
+        if isinstance(value, dict):
+            value["worktree"] = None
     write_json(pdir / "phase.json", data)
-    append_event("phase_parallel_torndown", phase=args.phase, branch=branch, host_branch=host_branch)
+    event = {"repos": [repo["name"] for repo in set_repos]} if set_repos else {}
+    append_event("phase_parallel_torndown", phase=args.phase, branch=branch, host_branch=host_branch, **event)
     rebuild_index_and_state()
     print(f"phase {args.phase} parallel checkout pair retired (nested install)")
     for item in removed:
@@ -4294,6 +6817,18 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
         print(f"pruned a stale worktree registration in {repo}")
     if ignored:
         print(f"deleted {len(ignored)} ignored, worktree-only path(s) with the worktrees (--discard-ignored)")
+    kept_repo_branch = False
+    for repo, delete, reason, exists in repo_fates:  # P40.S8
+        if delete:
+            continue
+        if exists:
+            kept_repo_branch = True
+            print(f"kept repo {repo['name']}'s branch {repo['branch']}: {reason}")
+        else:
+            print(f"repo {repo['name']}'s branch {repo['branch']} is already gone; nothing to keep")
+    if kept_repo_branch:
+        print(f"each repo branch follows its repo's own custom (nested-convention --repo <name>): integrate it there; "
+              f"the engine pushed, opened and merged nothing")
     if host_branch and not delete_host_branch:
         if host_branch_exists:
             print(f"kept host branch {host_branch}: {keep_reason}")
@@ -4303,6 +6838,9 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
             print(f"host branch {host_branch} is already gone; nothing to keep")
     print(f"execution.worktree=null, execution.host_worktree=null; mode/branch/consolidation and host_branch/host_base/host_base_sha/"
           f"host_branch_created/base_branch kept as history (branch={branch}, host_branch={host_branch}, consolidation={phase_consolidation(data)})")
+    if set_repos:
+        print(f"execution.repos.<name>.worktree=null for {', '.join(repo['name'] for repo in set_repos)}; branch/base/base_sha/branch_created "
+              f"kept as history")
     if phase_consolidation(data) == "pending":
         print(f"warning: {args.phase} doc consolidation is still 'pending' -- run the post-merge consolidation on this stream (teardown does not gate on it)")
     print("phase.json changed -- commit it in the nested repo with the rest of the merge cleanup")
@@ -4532,7 +7070,7 @@ def docs_debt(args: argparse.Namespace) -> None:
     for doc in docs_hit + ([UNASSIGNED_DOC] if UNASSIGNED_DOC in per_doc else []):
         by_phase = per_doc[doc]
         count = sum(by_phase.values())
-        print(f"  {doc}: {count} note(s) from {', '.join(sorted(by_phase))}")
+        print(f"  {doc}: {count} note(s) from {', '.join(sort_phase_ids(by_phase, phases))}")
     if UNASSIGNED_DOC in per_doc:
         print(f"  {UNASSIGNED_DOC} = the note names no doc from the known set; read it in the notebook and decide")
     print()
@@ -4620,8 +7158,8 @@ def _parallel_verdict_pair(phase_id: str, status, review, slices, consolidation,
 def parallel_status(args: argparse.Namespace) -> None:
     """Read-only cross-stream view: this checkout's pointer plus every parallel phase's real state.
 
-    A parallel phase's slice progress lives on its own branch, so the default stream's
-    `works/backlog.md` stands still until the merge. This reads each phase's truth straight out of
+    A parallel phase's slice progress lives on its own branch, so the default stream's copy of it
+    stands still until the merge (`works/backlog.md` reads it from the branch too). This reads each phase's truth straight out of
     its branch with `git show` / `git ls-tree` -- no checkout switching, no fetching, and (unlike
     every other command here) no rebuild: nothing on disk is written.
     """
@@ -4694,6 +7232,18 @@ def parallel_status(args: argparse.Namespace) -> None:
                 print(f"  host_worktree={execution.get('host_worktree') or '- (already torn down)'}")
             else:
                 print("  host_branch=- (no host half stamped: an execution block written at root, before the nested pair)")
+            # P40.F1: the set's repos come from the copy `data` came from -- a mid-phase `parallel-add-repo` commits its stamp
+            # on the phase branch only, so the default stream's own copy lacks it until the merge. The local block is the
+            # fallback only when no other copy was read (or the copy carries no execution block).
+            copy_execution = data.get("execution") if isinstance(data, dict) else None
+            set_repos = (copy_execution if isinstance(copy_execution, dict) else execution).get("repos")
+            if isinstance(set_repos, dict):  # P40.S6: the worktree set's repos, one line each
+                for name, value in set_repos.items():
+                    value = value if isinstance(value, dict) else {}
+                    # branch_created=false is all the stamp records of a branch that pre-existed: parallel-add-repo's reuse of an
+                    # existing branch and --adopt of an existing worktree stamp identically, so the label names both
+                    print(f"  repo {name}: branch={value.get('branch') or '-'} ({'created' if value.get('branch_created') else 'reused or adopted'}) "
+                          f"base={value.get('base') or '-'} ({value.get('base_sha') or '-'}) worktree={value.get('worktree') or '- (torn down)'}")
         print(f"  consolidation={phase_consolidation(phase) or '-'}")
         print(f"  source={source}")
         if note:
@@ -4845,6 +7395,205 @@ def _status_product_files(cwd=None, pathspec=PRODUCT_PATHSPEC) -> list:
     return files
 
 
+# ---------------------------------------------------------------------------
+# P40: per-repo anchors and the base rule. A nested install's phase range is read from the product
+# repo(s) the nested repo never sees: the host (single-repo) or each registered repo (multi-repo).
+# ---------------------------------------------------------------------------
+
+NOT_IN_SET = "not in this worktree set"
+
+
+def _in_worktree_set() -> bool:
+    """P40: True when this engine runs inside a parallel set -- HOST_ROOT is a host worktree, not the
+    main host checkout (nested only; both resolved, since git may print a symlink-free path)."""
+    if HOST_ROOT is None or MAIN_HOST is None:
+        return False
+    return os.path.realpath(str(HOST_ROOT)) != os.path.realpath(str(MAIN_HOST))
+
+
+def _phase_repo_path(repo: dict, phase_data: dict):
+    """`(path, None)` for where phase `phase_data` reads registered repo `repo`, or `(None, why)` when
+    it cannot be read there. THE one resolver every per-repo anchor and scope read goes through. On
+    the default stream it is the registry path under the main host checkout (`nested_repo_path`),
+    guarded by `_git_work_tree_root` (on a plain dir `git -C` answers for the host). Inside a worktree
+    set (P40.S6, S2 §17) it is the set's repo worktree, `HOST_ROOT / path`, when that is its own work
+    tree root; otherwise the repo is NOT IN THIS SET and is skipped -- never read from the main
+    checkout, whose HEAD and working tree are another stream's. `phase_data` is unused."""
+    if _in_worktree_set():
+        path = HOST_ROOT / repo["path"]
+        if _git_work_tree_root(path):
+            return path, None
+        return None, f"{NOT_IN_SET} (its main checkout {nested_repo_path(repo)} is another stream's working state)"
+    path = nested_repo_path(repo)
+    if not path.exists():
+        return None, f"{repo['path']}/ is missing from the host"
+    if not _git_work_tree_root(path):
+        return None, f"{repo['path']}/ is not a git work tree root"
+    return path, None
+
+
+def _repo_current_branch(path: Path):
+    """The branch checked out in `path`, or None (detached HEAD, or git cannot say)."""
+    proc = _git(["symbolic-ref", "-q", "--short", "HEAD"], cwd=path, check=False)
+    return proc.stdout.strip() if proc.returncode == 0 and proc.stdout.strip() else None
+
+
+def _is_ancestor(path: Path, older: str, newer: str) -> bool:
+    return _git(["merge-base", "--is-ancestor", older, newer], cwd=path, check=False).returncode == 0
+
+
+def _repo_default_branch(path: Path, configured=None):
+    """D, the repo's integration branch NAME: the registry's `default_branch`, else `origin/HEAD`'s
+    target, else a local `main`/`master`, else None."""
+    if configured:
+        return configured
+    proc = _git(["symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD"], cwd=path, check=False)
+    target = proc.stdout.strip() if proc.returncode == 0 else ""
+    if target.startswith("origin/") and len(target) > len("origin/"):
+        return target[len("origin/"):]
+    for cand in ("main", "master"):
+        if _git(["rev-parse", "--verify", "--quiet", f"refs/heads/{cand}"], cwd=path, check=False).returncode == 0:
+            return cand
+    return None
+
+
+def _default_merge_base(path: Path, name: str, head: str):
+    """merge-base(D, HEAD), D read as `origin/<name>` and as the local `<name>` (whichever exist):
+    the newest of the two merge-bases, so a rebase onto a teammate's pushed commits and one onto a
+    local-only default both count. None when neither ref exists or the histories are unrelated."""
+    best = None
+    for ref in (f"refs/remotes/origin/{name}", f"refs/heads/{name}"):
+        if not _rev_parse(ref, cwd=path):
+            continue
+        proc = _git(["merge-base", ref, head], cwd=path, check=False)
+        mb = proc.stdout.strip() if proc.returncode == 0 else ""
+        if mb and (best is None or (mb != best and _is_ancestor(path, best, mb))):
+            best = mb
+    return best
+
+
+def _patch_ids(path: Path, *revs: str) -> list:
+    """`[(commit, patch-id)]`, newest first, for `git log -p <revs>` (merges skipped), via
+    `git patch-id --stable`. Bytes in and out: a binary or non-UTF-8 diff must not break the read."""
+    try:
+        log = subprocess.run(["git", "log", "-p", "--no-color", "--no-ext-diff", "--no-merges", "--format=commit %H", *revs],
+                             cwd=str(path), capture_output=True, timeout=120)
+        if log.returncode != 0 or not log.stdout:
+            return []
+        pid = subprocess.run(["git", "patch-id", "--stable"], cwd=str(path), input=log.stdout, capture_output=True, timeout=120)
+    except Exception:  # noqa: BLE001 - no patch-id means no recovered copy: the rule falls back to its note
+        return []
+    pairs = []
+    for line in pid.stdout.decode("utf-8", "replace").splitlines():
+        parts = line.split()
+        if len(parts) == 2:
+            pairs.append((parts[1], parts[0]))
+    return pairs
+
+
+def resolve_repo_base(path: Path, created, default_branch=None, label: str = "created", branch=None, hint: str = "--base <sha>") -> dict:
+    """The base rule (P40 S1 §7; answers D35): where a repo's phase range starts. Returns
+    `{"base", "rule", "kind", "note"}` -- `base` a commit sha, the empty tree, or None (unmeasurable);
+    `rule` 1-5 (which step fired); `kind` the text phase-scope prints in `base=... (...)`; `note` a
+    caveat to print, or None. With D = `_repo_default_branch(path, default_branch)` and
+    mb = merge-base(D, HEAD):
+
+    1. `created` null -> the empty tree when the repo now has commits;
+    2. no D, or mb == HEAD (the work sits on the default branch) -> `created`;
+    3. mb an ancestor of `created` (the branch carried pre-phase commits) -> `created`;
+    4. `created` an ancestor of mb (the branch was rebased onto, or merged with, a newer default) -> mb;
+    5. neither (a rebase rewrote `created` itself) -> the commit in mb..HEAD whose `patch-id --stable`
+       equals `created`'s, else mb with a note. A `created` that is a merge commit (no patch-id) or no
+       longer exists (pruned) takes the note path. Never raises."""
+    head = _rev_parse("HEAD", cwd=path)
+    if not created:
+        if head:
+            return {"base": EMPTY_TREE, "rule": 1, "kind": f"the empty tree: {label} is null (no commit at new-phase)", "note": None}
+        return {"base": None, "rule": 1, "kind": None, "note": "no commit at new-phase, and still none"}
+    commit = _rev_parse(created, cwd=path)
+    name = _repo_default_branch(path, default_branch)
+    mb = _default_merge_base(path, name, head) if name and head else None
+    if commit:
+        if mb is None or mb == head:
+            who = "host" if label.startswith("host_anchors") else "repo"
+            return {"base": commit, "rule": 2, "kind": f"the {who} HEAD at new-phase: {label}", "note": None}
+        if mb == commit:  # P40.S6: a set's branch cut at (or reused from) its anchor -- rule 3's base, said plainly
+            return {"base": commit, "rule": 3, "kind": f"{label}: where the branch leaves {name}", "note": None}
+        if _is_ancestor(path, mb, commit):
+            return {"base": commit, "rule": 3, "kind": f"{label}; the branch carried pre-phase commits", "note": None}
+        if _is_ancestor(path, commit, mb):
+            return {"base": mb, "rule": 4, "kind": f"merge-base with {name}: the branch moved past {label} {commit[:7]}, by a rebase onto or a merge of a newer {name}", "note": None}
+    elif mb is None:
+        return {"base": None, "rule": 5, "kind": None,
+                "note": f"{label} {created} is not a commit here (rewritten and pruned?) and there is no default branch to fall back to"}
+    if commit:
+        own = dict(_patch_ids(path, "-1", commit)).get(commit)
+        if own:
+            copies = [c for c, p in _patch_ids(path, f"{mb}..{head}") if p == own]
+            if copies:
+                return {"base": copies[-1], "rule": 5, "kind": f"the rebased copy of {label} {commit[:7]}, matched by patch-id", "note": None}
+    return {"base": mb, "rule": 5, "kind": f"merge-base with {name}: {label} {str(created)[:7]} was rewritten",
+            "note": f"the phase's base commit was rewritten; the range may include pre-phase commits on {branch or 'HEAD'} -- pass {hint}"}
+
+
+def _freeze_host_review_base(data: dict) -> None:
+    """At a passing review: `host_anchors.review_base` = the base rule's answer, written ONLY when it
+    differs from `created` (a rebased branch, D35) -- absent means `created`, so a non-rebased phase's
+    phase.json is exactly today's. A stale one from an earlier pass is dropped when it no longer differs."""
+    anchors = data.get("host_anchors")
+    if HOST_ROOT is None or not isinstance(anchors, dict) or not anchors.get("created") or not _git_available(cwd=HOST_ROOT):
+        return
+    res = resolve_repo_base(HOST_ROOT, anchors["created"], None, "host_anchors.created")
+    if res["base"] and res["rule"] in (4, 5) and res["base"] != EMPTY_TREE:
+        anchors["review_base"] = res["base"]
+    else:
+        anchors.pop("review_base", None)
+
+
+def _freeze_repo_anchors(data: dict) -> None:
+    """At a passing review (multi-repo): per repo holding an anchor, `review_pass` = its HEAD and
+    `review_base` = what the base rule resolves now, so both ends freeze (after the branch merges and
+    is deleted the rule would otherwise drift). A repo that cannot be read keeps its entry as it is."""
+    anchors = data.get("repo_anchors")
+    if not isinstance(anchors, dict):
+        return
+    registry = {r["name"]: r for r in nested_repos()}
+    for name, entry in anchors.items():
+        repo = registry.get(name)
+        if repo is None or not isinstance(entry, dict):
+            continue
+        path, _why = _phase_repo_path(repo, data)
+        if path is None:
+            continue
+        res = resolve_repo_base(path, entry.get("created"), repo.get("default_branch"), f"repo_anchors.{name}.created")
+        entry["review_pass"] = _rev_parse("HEAD", cwd=path)
+        entry["review_base"] = res["base"] if res["base"] and res["base"] != EMPTY_TREE else None
+
+
+def _repo_anchor_problems(p: dict, errors: list, warnings: list) -> None:
+    """validate's `repo_anchors` rows (multi-repo only): a malformed block or entry is an error,
+    mirroring `host_anchors`; an entry naming an unregistered repo is a warning (glide's P29 has no
+    `repo_anchors`, so nothing here can fail its `--update`)."""
+    anchors = p.get("repo_anchors")
+    if not isinstance(anchors, dict):
+        errors.append(f"phase {p['id']} has a non-object repo_anchors block: {anchors!r}")
+        return
+    registered = {r["name"] for r in nested_repos()}
+    for name, entry in anchors.items():
+        if not isinstance(entry, dict) or set(entry) != set(REPO_ANCHOR_KEYS):
+            got = ", ".join(sorted(entry)) if isinstance(entry, dict) else repr(entry)
+            errors.append(f"phase {p['id']} has a malformed repo_anchors.{name} ({got}); expected exactly the keys {', '.join(REPO_ANCHOR_KEYS)}")
+        else:
+            for key in ("created", "review_pass", "review_base"):
+                value = entry[key]
+                if value is not None and not (isinstance(value, str) and re.fullmatch(r"[0-9a-f]{7,64}", value)):
+                    errors.append(f"phase {p['id']} has invalid repo_anchors.{name}.{key} {value!r}; expected a commit sha of {name} or null")
+            if entry["branch"] is not None and not isinstance(entry["branch"], str):
+                errors.append(f"phase {p['id']} has invalid repo_anchors.{name}.branch {entry['branch']!r}; expected a branch name or null")
+        if name not in registered:
+            warnings.append(f"phase {p['id']} holds repo_anchors.{name}, but no registered repo is named {name} -- phase-scope skips it (re-register it with: {WORKFLOW_CMD} nested-repos --add <path> --name {name})")
+
+
 def _phase_review_commit(phase_id: str, base: str, tip: str):
     """The first commit in base..tip whose recorded phase.json says `review.status == "pass"`.
 
@@ -4884,6 +7633,8 @@ def phase_scope(args: argparse.Namespace) -> None:
                 print(ln)
 
     header = [f"phase={args.phase} status={data.get('status')} archived={str(archived).lower()}"]
+    if NESTED is None and args.repo:
+        raise SystemExit("phase-scope --repo: refused -- a multi-repo host only; an at-root workspace's repo is its one product repo")
     if NESTED is not None:
         _phase_scope_nested(args, data, out, header, emit)
         return
@@ -4991,7 +7742,17 @@ def _phase_scope_nested(args: argparse.Namespace, data: dict, out: dict, header:
     anchors `new-phase` and the passing review stamped into phase.json: base = `--base`, else
     `host_anchors.created` (the host HEAD at creation, so base..head with no `^`); head = `--head`,
     else `host_anchors.review_pass` once the review passed, else the host HEAD. A phase with no
-    usable anchor lists the host working tree only, mirroring the uncommitted-phase path at root."""
+    usable anchor lists the host working tree only, mirroring the uncommitted-phase path at root.
+
+    P40: with no `--base` and no passing review, the base rule (`resolve_repo_base`) runs on the
+    host; it changes the answer only for a rebased branch (rules 4-5, D35). A multi-repo host reads
+    one range per registered repo instead (`_phase_scope_multi`)."""
+    repos = nested_repos()
+    if repos:
+        _phase_scope_multi(args, data, out, header, emit, repos)
+        return
+    if args.repo:
+        raise SystemExit("phase-scope --repo: refused -- single-repo install: the host is the one repo; drop --repo")
     host = HOST_ROOT
     spec = _host_pathspec()
     nested_dir = spec[1].split(")", 1)[1]
@@ -5012,11 +7773,29 @@ def _phase_scope_nested(args: argparse.Namespace, data: dict, out: dict, header:
             raise SystemExit(f"--base {args.base}: not a commit in the host repo {host}")
         base_kind = f"from --base {args.base}"
     elif created:
-        base = _rev_parse(created, cwd=host)
-        if base:
-            base_kind = "the host HEAD when the phase was created (or the host worktree's base after parallel-start): phase.json host_anchors.created"
-        else:
-            missing = f"host_anchors.created {created} is not a commit in the host repo (rewritten history, or a shallow clone)"
+        passed = (data.get("review") or {}).get("status") == "pass"
+        frozen = anchors.get("review_base") if passed else None
+        if frozen:  # P40: the base the rule resolved at the passing review (written only when != created)
+            base = _rev_parse(frozen, cwd=host)
+            if base:
+                base_kind = "the base the rule resolved when the review passed (the branch moved past the anchor, by a rebase onto or a merge of a newer default): phase.json host_anchors.review_base"
+            else:
+                out["notes"].append(f"host_anchors.review_base {frozen} is not a commit in the host repo -- measured from host_anchors.created instead")
+        if base is None:
+            base = _rev_parse(created, cwd=host)
+            rule = None
+            if not passed:
+                # P40 (D35): the base rule. Rules 2-3 resolve to `created`, the output is exactly
+                # today's; only a rebased branch (rules 4-5) moves the base.
+                rule = resolve_repo_base(host, created, None, "host_anchors.created", _repo_current_branch(host), "--base <host-sha>")
+            if rule is not None and rule["rule"] in (4, 5) and rule["base"]:
+                base, base_kind = rule["base"], rule["kind"]
+                if rule["note"]:
+                    out["notes"].append(rule["note"])
+            elif base:
+                base_kind = "the host HEAD when the phase was created (or the host worktree's base after parallel-start): phase.json host_anchors.created"
+            else:
+                missing = f"host_anchors.created {created} is not a commit in the host repo (rewritten history, or a shallow clone)"
     elif "created" in anchors:  # recorded as null: the host had no commit yet when the phase was created
         if _rev_parse("HEAD", cwd=host):
             base, base_kind = EMPTY_TREE, "the empty tree: the host had no commit when the phase was created"
@@ -5079,6 +7858,225 @@ def _phase_scope_nested(args: argparse.Namespace, data: dict, out: dict, header:
     emit(lines)
 
 
+def _scope_file_lines(files: list, prefix: str = "", indent: str = "  ") -> list:
+    return [f"{indent}{f['status']} {prefix}{f['from']} -> {prefix}{f['path']}" if f.get("from") else f"{indent}{f['status']} {prefix}{f['path']}"
+            for f in files]
+
+
+def _prefixed(files: list, prefix: str) -> list:
+    """Scope file entries with `prefix` (`<repo path>/`) on every path, for the union and the JSON."""
+    out = []
+    for f in files:
+        g = dict(f, path=prefix + f["path"])
+        if f.get("from"):
+            g["from"] = prefix + f["from"]
+        out.append(g)
+    return out
+
+
+def _phase_scope_multi(args: argparse.Namespace, data: dict, out: dict, header: list, emit, repos: list) -> None:
+    """phase-scope on a multi-repo host (P40 S1 §8): the phase's boundary is its commits in EACH
+    registered repo, so one block per repo, read through `_phase_repo_path`.
+
+    Per repo: base = per-repo `--base` (with exactly one `--repo`), else `repo_anchors.<name>.review_base`
+    once the review passed, else the base rule; head = per-repo `--head`, else `review_pass` once the
+    review passed, else the repo's HEAD. A repo with no anchor prints `base=none` and its working tree
+    only -- never the empty tree, which would list the whole repo. The host's own block (every registered
+    path excluded from its pathspec) prints only when it has a product file; without `--repo`,
+    `--base`/`--head` still mean the host."""
+    host = HOST_ROOT
+    names = [r["name"] for r in repos]
+    wanted = list(dict.fromkeys(args.repo or []))
+    unknown = [n for n in wanted if n not in names]
+    if unknown:
+        raise SystemExit(f"phase-scope --repo: refused -- no registered repo is named {', '.join(unknown)} (registered: {', '.join(names)})")
+    if wanted and (args.base or args.head) and len(wanted) != 1:
+        raise SystemExit("phase-scope: refused -- with --repo, --base/--head set ONE repo's range, so they need exactly one --repo "
+                         f"(got {len(wanted)}: {', '.join(wanted)}); without --repo they set the host's range")
+    per_repo_override = bool(wanted)
+    selected = [r for r in repos if not wanted or r["name"] in wanted]
+    passed = (data.get("review") or {}).get("status") == "pass"
+    anchors = data.get("repo_anchors") if isinstance(data.get("repo_anchors"), dict) else {}
+    out["mode"] = "nested-multi"
+    blocks, union, union_unc, total_commits, touched = [], [], [], 0, 0
+
+    for repo in selected:
+        name, rel = repo["name"], repo["path"]
+        prefix = f"{rel}/"
+        entry = {"name": name, "path": rel, "branch": None, "base": None, "base_kind": None, "head": None, "head_kind": None,
+                 "range": None, "commits": 0, "files": [], "uncommitted": [], "notes": []}
+        out.setdefault("repos", []).append(entry)
+        path, why = _phase_repo_path(repo, data)
+        if path is None and why.startswith(NOT_IN_SET) and per_repo_override and (args.base or args.head):
+            # P40.S6: the explicit override S2 §17 names -- `--repo <name> --base/--head` reads a repo
+            # outside this set from its main checkout, said so in a note (Decision 27).
+            main = nested_repo_path(repo)
+            if _git_work_tree_root(main):
+                path, why = main, None
+                entry["notes"].append(f"{name}: read from its main checkout {main} ({NOT_IN_SET}): another stream's working state, "
+                                      f"measured only because --repo {name} --base/--head asked for it")
+        if path is None:
+            if why.startswith(NOT_IN_SET):
+                line = f"repo={name} path={prefix} {why} -- pass --repo {name} --base/--head to read it"
+                entry["notes"].append(line)
+                blocks.append([line])
+                continue
+            entry["notes"].append(f"{name} skipped: {why}")
+            blocks.append([f"repo={name} path={prefix} skipped ({why})"])
+            continue
+        branch_now = _repo_current_branch(path)
+        entry["branch"] = branch_now
+        branch_txt = branch_now or "(detached)"
+        anchor = anchors.get(name) if isinstance(anchors.get(name), dict) else None
+        repo_head = _rev_parse("HEAD", cwd=path)
+        base = base_kind = None
+        why_none = None
+        if per_repo_override and args.base:
+            base = _rev_parse(args.base, cwd=path)
+            if not base:
+                raise SystemExit(f"--base {args.base}: not a commit in {name} ({path})")
+            base_kind = f"from --base {args.base}"
+        elif anchor is None:
+            why_none = f"no repo_anchors.{name} -- pass --repo {name} --base <sha>"
+        else:
+            frozen = anchor.get("review_base") if passed else None
+            if frozen:
+                base = _rev_parse(frozen, cwd=path)
+                if base:
+                    base_kind = f"frozen at the passing review: repo_anchors.{name}.review_base"
+                else:
+                    entry["notes"].append(f"repo_anchors.{name}.review_base {frozen} is not a commit in {name} -- the base rule decides instead")
+            if base is None:
+                res = resolve_repo_base(path, anchor.get("created"), repo.get("default_branch"), f"repo_anchors.{name}.created",
+                                        branch_now, f"--repo {name} --base <sha>")
+                base, base_kind = res["base"], res["kind"]
+                if res["note"] and base:
+                    entry["notes"].append(f"{name}: {res['note']}")
+                elif not base:
+                    why_none = f"{res['note']} -- pass --repo {name} --base <sha>"
+        if base is None:
+            unc = _prefixed(_status_product_files(cwd=path, pathspec=["."]), prefix)
+            entry["uncommitted"] = unc
+            union_unc += unc
+            touched += bool(unc)
+            block = [f"repo={name} path={prefix} branch={branch_txt} base=none ({why_none})"]
+            if unc:
+                block.append(f"  uncommitted_product_files={len(unc)} (working tree)")
+                block += _scope_file_lines(unc, indent="    ")
+            blocks.append(block)
+            out["notes"] += entry["notes"]
+            continue
+        if per_repo_override and args.head:
+            head = _rev_parse(args.head, cwd=path)
+            if not head:
+                raise SystemExit(f"--head {args.head}: not a commit in {name} ({path})")
+            head_kind = f"from --head {args.head}"
+        else:
+            head = head_kind = None
+            frozen_head = anchor.get("review_pass") if (anchor and passed) else None
+            if frozen_head:
+                head = _rev_parse(frozen_head, cwd=path)
+                if head:
+                    head_kind = f"{name}'s HEAD when the review passed: repo_anchors.{name}.review_pass; pass --repo {name} --head HEAD to read to the tip"
+                else:
+                    entry["notes"].append(f"repo_anchors.{name}.review_pass {frozen_head} is not a commit in {name} -- read to its tip instead")
+            if not head:
+                head, head_kind = repo_head, f"the tip of {name}'s HEAD"
+                recorded = anchor.get("branch") if anchor else None
+                if recorded and branch_now != recorded:
+                    entry["notes"].append(f"{name} is on {branch_txt}, the phase recorded {recorded} -- pass --repo {name} --head {recorded}")
+        if not head:
+            raise SystemExit(f"cannot resolve {name}'s HEAD to a commit in {path}")
+        rng = head if base == EMPTY_TREE else f"{base}..{head}"
+        count = int(_git(["rev-list", "--count", rng], cwd=path, check=False).stdout.strip() or "0")
+        files = _diff_product_files(base, head, cwd=path, pathspec=["."])
+        uncommitted = _status_product_files(cwd=path, pathspec=["."]) if head == repo_head else []
+        pfiles, punc = _prefixed(files, prefix), _prefixed(uncommitted, prefix)
+        entry.update({"base": base, "base_kind": base_kind, "head": head, "head_kind": head_kind,
+                      "range": f"{base[:7]}..{head[:7]}", "commits": count, "files": pfiles, "uncommitted": punc})
+        union += pfiles
+        union_unc += punc
+        total_commits += count
+        out["notes"] += entry["notes"]
+        if not (count or files or uncommitted):
+            blocks.append([f"repo={name} path={prefix} commits=0 product_files=0 (untouched)"])
+            continue
+        touched += 1
+        tally = {k: sum(1 for f in files if f["status"] == k) for k in ("A", "M", "D", "R")}
+        block = [f"repo={name} path={prefix} branch={branch_txt} base={base[:7]} ({base_kind}) head={head[:7]} ({head_kind}) commits={count}",
+                 f"  product_files={len(files)} (added {tally['A']}, modified {tally['M']}, deleted {tally['D']}, renamed {tally['R']})"]
+        block += _scope_file_lines(pfiles, indent="    ")
+        if uncommitted:
+            block.append(f"  uncommitted_product_files={len(uncommitted)} (working tree, not in the range above)")
+            block += _scope_file_lines(punc, indent="    ")
+        blocks.append(block)
+
+    # The host's own block: never with a --repo filter; printed only when it has a product file
+    # (a multi-repo host tracks nothing), or when --base/--head asked for its range.
+    host_block = []
+    host_anchors = data.get("host_anchors") if isinstance(data.get("host_anchors"), dict) else {}
+    out["creation_commit"] = host_anchors.get("created")
+    if not wanted and host is not None and _git_available(cwd=host):
+        spec = _host_pathspec() + [f":(exclude){r['path']}" for r in repos]
+        base = base_kind = None
+        if args.base:
+            base = _rev_parse(args.base, cwd=host)
+            if not base:
+                raise SystemExit(f"--base {args.base}: not a commit in the host repo {host}")
+            base_kind = f"from --base {args.base}"
+        elif passed and host_anchors.get("review_base") and _rev_parse(host_anchors["review_base"], cwd=host):
+            base, base_kind = _rev_parse(host_anchors["review_base"], cwd=host), "frozen at the passing review: host_anchors.review_base"
+        elif "created" in host_anchors:
+            res = resolve_repo_base(host, host_anchors.get("created"), None, "host_anchors.created", _repo_current_branch(host), "--base <host-sha>")
+            base, base_kind = res["base"], res["kind"]
+        host_head = _rev_parse("HEAD", cwd=host)
+        head, head_kind = None, None
+        if args.head:
+            head = _rev_parse(args.head, cwd=host)
+            if not head:
+                raise SystemExit(f"--head {args.head}: not a commit in the host repo {host}")
+            head_kind = f"from --head {args.head}"
+        elif passed and host_anchors.get("review_pass"):
+            head = _rev_parse(host_anchors["review_pass"], cwd=host)
+            head_kind = "the host HEAD when the review passed: host_anchors.review_pass" if head else None
+        if not head:
+            head, head_kind = host_head, "the tip of the host's HEAD"
+        files, count = [], 0
+        if base and head:
+            rng = head if base == EMPTY_TREE else f"{base}..{head}"
+            count = int(_git(["rev-list", "--count", rng], cwd=host, check=False).stdout.strip() or "0")
+            files = _diff_product_files(base, head, cwd=host, pathspec=spec)
+            out.update({"base": base, "base_kind": base_kind, "head": head, "head_kind": head_kind, "range": f"{base[:7]}..{head[:7]}"})
+        uncommitted = _status_product_files(cwd=host, pathspec=spec) if head == host_head else []
+        union += files
+        union_unc += uncommitted
+        if files or uncommitted or args.base or args.head:
+            total_commits += count
+            tally = {k: sum(1 for f in files if f["status"] == k) for k in ("A", "M", "D", "R")}
+            if base and head:
+                host_block.append(f"repo=. (host) base={base[:7]} ({base_kind}) head={head[:7]} ({head_kind}) commits={count}")
+            else:
+                host_block.append("repo=. (host) base=none (no usable host_anchors.created -- pass --base <host-sha>)")
+            host_block.append(f"  product_files={len(files)} (added {tally['A']}, modified {tally['M']}, deleted {tally['D']}, renamed {tally['R']}; "
+                              f"{_nested_dir_name()}/ and the {len(repos)} repos excluded)")
+            host_block += _scope_file_lines(files, indent="    ")
+            if uncommitted:
+                host_block.append(f"  uncommitted_product_files={len(uncommitted)} (host working tree, not in the range above)")
+                host_block += _scope_file_lines(uncommitted, indent="    ")
+            if files or uncommitted:
+                out["notes"].append("the multi-repo host has product files of its own -- product belongs in the repos")
+
+    out.update({"commits": total_commits, "files": union, "uncommitted": union_unc})
+    lines = header + [f"mode=nested-multi repos={len(selected)} touched={touched}"]
+    for block in blocks:
+        lines += block
+    lines += host_block
+    if not union:
+        lines.append(f"product_files=0 across {len(selected)} repos")
+    lines += [f"note: {n}" for n in out["notes"]] + [SCOPE_HINT]
+    emit(lines)
+
+
 def _one_line(text) -> str:
     """A stored free-text value collapsed onto one printable line."""
     return " ".join(str(text).split())
@@ -5099,7 +8097,117 @@ def nested_next_lines() -> list:
         inferred = _one_line(conv.get("inferred")) if conv.get("inferred") else "nothing"
         lines.append(f"host_commit_convention=UNCONFIRMED (inferred: {inferred}) -- confirm the host's conventions (commits, branches and pull requests) with the operator before the first product commit, "
                      f"then: {WORKFLOW_CMD} nested-convention --confirm --text \"<conventions>\" --trailers allowed|forbidden")
+    repos = nested_repos()
+    if repos:  # P40 multi-repo: one summary line; a single-repo install prints exactly the two above
+        lines.append(_repo_conventions_line(repos))
     return lines
+
+
+def effective_repo_convention(repo: dict, host_conv=None) -> dict:
+    """P40 (Decision 12): repo X's effective convention on a multi-repo host, where the top-level
+    `commit_convention` is "the rules for every repo" and X's own (null = inherit) is more specific.
+
+    - text: the host-level text, then X's own, each labelled (both shown);
+    - confirmed: X's own `confirmed`, or the host-level one when X's convention is null;
+    - trailers: `forbidden` if either forbids, else X's own when it records allowed/forbidden, else the host's.
+
+    `state` is what `nested-repos`, `nested-convention` and `next`'s `repo_conventions=` all print:
+    `UNCONFIRMED` whenever the effective `confirmed` is false (an inherited convention under an
+    unconfirmed host included), else `inherited` for a null convention, else `confirmed`.
+    `host_conv` defaults to the loaded marker's; `nested-convention --confirm` passes the one it just wrote."""
+    if host_conv is None:
+        host_conv = NESTED.get("commit_convention") if NESTED is not None else None
+    host = host_conv if isinstance(host_conv, dict) else {}
+    own = repo.get("commit_convention")
+    host_trailers = host.get("coauthor_trailers") or "unknown"
+    parts = [f"every repo: {host['text']}"] if host.get("text") else []
+    if own is None:
+        confirmed = host.get("confirmed") is True
+        trailers = host_trailers
+    else:
+        confirmed = own.get("confirmed") is True
+        own_trailers = own.get("coauthor_trailers")
+        if "forbidden" in (host_trailers, own_trailers):
+            trailers = "forbidden"
+        else:
+            trailers = own_trailers if own_trailers in ("allowed", "forbidden") else host_trailers
+        if own.get("text"):
+            parts.append(f"{repo['name']}: {own['text']}")
+    state = "UNCONFIRMED" if not confirmed else ("inherited" if own is None else "confirmed")
+    return {"state": state, "confirmed": confirmed, "coauthor_trailers": trailers, "text": "\n".join(parts) or None,
+            "inferred": None if own is None else own.get("inferred"), "inherits": own is None}
+
+
+def _repo_convention_lines(repo: dict, host_conv=None) -> list:
+    """One registry entry's block in `nested-convention` (bare multi-repo, and `--repo`): its effective values."""
+    eff = effective_repo_convention(repo, host_conv)
+    lines = [f"repo={repo['name']} path={repo['path']}/ commit_convention={eff['state']} coauthor_trailers={eff['coauthor_trailers']}",
+             "inferred:",
+             "(inherits the host-level convention, the rules for every repo)" if eff["inherits"] else (eff["inferred"] or "(nothing inferred)"),
+             "text:",
+             eff["text"] or "(none -- not confirmed yet)"]
+    if eff["state"] == "UNCONFIRMED" and eff["inherits"]:
+        lines.append(f"{repo['name']} inherits the unconfirmed host-level conventions: confirm those (the rules for every repo) with the operator before its first product commit, "
+                     f"then: {WORKFLOW_CMD} nested-convention --confirm --text \"<conventions>\" --trailers allowed|forbidden "
+                     f"(or record {repo['name']}'s own: --confirm --repo {repo['name']} ...)")
+    elif eff["state"] == "UNCONFIRMED":
+        lines.append(f"confirm {repo['name']}'s conventions (commits, branches and pull requests) with the operator before its first product commit, "
+                     f"then: {WORKFLOW_CMD} nested-convention --confirm --repo {repo['name']} --text \"<conventions>\" --trailers allowed|forbidden")
+    return lines
+
+
+def _repo_conventions_line(repos: list) -> str:
+    """`next`'s one multi-repo summary line (S1 §5): the count by effective state with the UNCONFIRMED
+    names and the command that confirms them, or that nothing needs confirming."""
+    states = [(repo["name"], effective_repo_convention(repo)["state"]) for repo in repos]
+    unconfirmed = [name for name, state in states if state == "UNCONFIRMED"]
+    if not unconfirmed:
+        return f"repo_conventions={len(repos)} (all confirmed or inherited) -- per repo: {WORKFLOW_CMD} nested-convention --repo <name>"
+    confirmed = sum(1 for _, state in states if state == "confirmed")
+    inherited = sum(1 for _, state in states if state == "inherited")
+    return (f"repo_conventions={len(repos)} (confirmed {confirmed}, inherited {inherited}, UNCONFIRMED {len(unconfirmed)}: {', '.join(unconfirmed)}) "
+            f"-- confirm each UNCONFIRMED repo's conventions before its first product commit: "
+            f"{WORKFLOW_CMD} nested-convention --confirm --repo <name> --text \"<conventions>\" --trailers allowed|forbidden")
+
+
+def _nested_convention_repo(args: argparse.Namespace, path: Path) -> None:
+    """`nested-convention --repo <name>` on a multi-repo host (P40): show that repo's effective block,
+    `--confirm` its own convention, or `--inherit` (set it back to null). Validate-then-write, one event."""
+    repos = nested_repos()
+    names = [repo["name"] for repo in repos]
+    if args.repo not in names:
+        raise SystemExit(f"nested-convention: refused -- no registered repo named {args.repo!r} (registered: {', '.join(names)}; "
+                         f"list them with: {WORKFLOW_CMD} nested-repos)")
+    if not (args.confirm or args.inherit):
+        print("\n".join(_repo_convention_lines(repos[names.index(args.repo)])))
+        return
+    data = read_json(path)
+    entries = data.get("repos") if isinstance(data.get("repos"), list) else []
+    entry = next((e for e in entries if isinstance(e, dict) and e.get("name") == args.repo), None)
+    if entry is None:  # the marker changed under us; never write a guess
+        raise SystemExit(f"nested-convention: refused -- {shown(path)} no longer registers {args.repo!r}")
+    previous = entry.get("commit_convention")
+    if args.inherit:
+        if previous is None:
+            print(f"nested-convention: {args.repo} already inherits the host-level convention -- nothing written")
+            print("\n".join(_repo_convention_lines(entry, data.get("commit_convention"))))
+            return
+        entry["commit_convention"] = None
+    else:
+        base = dict(previous) if isinstance(previous, dict) else {"inferred": None, "confirmed": False, "text": None, "coauthor_trailers": "unknown"}
+        entry["commit_convention"] = dict(base, text=args.text, confirmed=True, coauthor_trailers=args.trailers)
+    problems = nested_marker_problems(data)
+    if problems:  # never write a marker validate would reject
+        raise SystemExit(f"nested-convention: refused -- the result would be malformed: {'; '.join(problems)}")
+    write_json(path, data)
+    was_confirmed = isinstance(previous, dict) and previous.get("confirmed") is True
+    if args.inherit:
+        append_event("nested_convention_inherited", repo=args.repo, previously_confirmed=was_confirmed)
+        print(f"nested-convention: {args.repo} now inherits the host-level convention (its own was {'confirmed' if was_confirmed else 'UNCONFIRMED'}) -- written to {shown(path)}")
+    else:
+        append_event("nested_convention_confirmed", repo=args.repo, coauthor_trailers=args.trailers, previously_confirmed=was_confirmed)
+        print(f"nested-convention: {args.repo} confirmed{' (replacing the earlier confirmation)' if was_confirmed else ''} -- written to {shown(path)}")
+    print("\n".join(_repo_convention_lines(entry, data.get("commit_convention"))))
 
 
 def cmd_nested_convention(args: argparse.Namespace) -> None:
@@ -5108,18 +8216,35 @@ def cmd_nested_convention(args: argparse.Namespace) -> None:
     The installer cannot ask (it runs non-interactively), so it records what it inferred from the
     host's git log and CONTRIBUTING with `confirmed: false`; the orchestrator asks the operator
     before the first product commit and records the answer here -- the convention text and whether
-    Claude `Co-Authored-By` trailers are allowed in the host repo. Writes only `.agentic-nested.json`."""
+    Claude `Co-Authored-By` trailers are allowed in the host repo. Writes only `.agentic-nested.json`.
+
+    On a multi-repo host (P40) the host-level convention is the rules for every repo, and each
+    registered repo may carry its own (`--repo <name>`; `--inherit` sets it back to null); a repo's
+    effective convention composes the two (`effective_repo_convention`)."""
     if NESTED is None:
         raise SystemExit(f"nested-convention: refused -- this is not a nested personal install (no {NESTED_MARKER} beside scripts/); "
                          "commits here follow the workspace's own Commit Convention")
+    if args.inherit and args.confirm:
+        raise SystemExit(f"nested-convention: --inherit and --confirm exclude each other: --inherit sets a repo's own convention back to null "
+                         f"({WORKFLOW_CMD} nested-convention --repo <name> --inherit)")
+    if args.inherit and args.repo is None:
+        raise SystemExit(f"nested-convention: --inherit needs --repo <name> (the host-level convention has nothing to inherit from): "
+                         f"{WORKFLOW_CMD} nested-convention --repo <name> --inherit")
     if (args.text is not None or args.trailers is not None) and not args.confirm:
         raise SystemExit(f"--text and --trailers belong to --confirm: {WORKFLOW_CMD} nested-convention --confirm --text \"...\" --trailers allowed|forbidden")
+    if args.repo is not None and not nested_repos():
+        raise SystemExit("nested-convention: refused -- single-repo install: the host is the one repo; drop --repo")
     path = ROOT / NESTED_MARKER
     if args.confirm:
+        whose = f"{args.repo}'s" if args.repo is not None else "the host's"
         if not (args.text or "").strip():
-            raise SystemExit("nested-convention --confirm needs --text \"<the host's conventions for commits, branches and pull requests, as the operator confirmed them>\"")
+            raise SystemExit(f"nested-convention --confirm needs --text \"<{whose} conventions for commits, branches and pull requests, as the operator confirmed them>\"")
         if args.trailers is None:
-            raise SystemExit("nested-convention --confirm needs --trailers allowed|forbidden (may Claude Co-Authored-By trailers appear in host commits?)")
+            raise SystemExit(f"nested-convention --confirm needs --trailers allowed|forbidden (may Claude Co-Authored-By trailers appear in {args.repo + ' commits' if args.repo is not None else 'host commits'}?)")
+    if args.repo is not None:
+        _nested_convention_repo(args, path)
+        return
+    if args.confirm:
         data = read_json(path)
         previous = dict(data["commit_convention"])
         data["commit_convention"] = dict(previous, text=args.text, confirmed=True, coauthor_trailers=args.trailers)
@@ -5132,7 +8257,10 @@ def cmd_nested_convention(args: argparse.Namespace) -> None:
         conv = data["commit_convention"]
     else:
         conv = NESTED["commit_convention"]
+    repos = nested_repos()
     print(f"nested_host={HOST_ROOT}")
+    if repos:  # P40 multi-repo: the host-level block is the rules for every repo
+        print("scope=every repo")
     print(f"commit_convention={'confirmed' if conv.get('confirmed') is True else 'UNCONFIRMED'}")
     print(f"coauthor_trailers={conv.get('coauthor_trailers')}")
     print("inferred:")
@@ -5141,9 +8269,356 @@ def cmd_nested_convention(args: argparse.Namespace) -> None:
     print(conv.get("text") or "(none -- not confirmed yet)")
     if conv.get("confirmed") is not True:
         print(f"confirm the host's conventions (commits, branches and pull requests) with the operator before the first product commit, then: {WORKFLOW_CMD} nested-convention --confirm --text \"<conventions>\" --trailers allowed|forbidden")
+    for repo in repos:
+        print()
+        print("\n".join(_repo_convention_lines(repo, conv)))
+
+
+# P40: the multi-repo registry's helpers, its `validate` rows and the `nested-repos` command. Every
+# path below resolves against the MAIN host checkout (`nested_repo_path`), and every per-repo git
+# call is preceded by `_git_work_tree_root`, because `git -C` on a plain directory answers for the host.
+NESTED_REPO_RULE_NAMES = ("AGENTS.md", "CLAUDE.md")
+
+
+def _repo_git(path: Path, *cmd: str):
+    """`git <cmd>` run in `path`; None when git cannot run at all (validate never fails on that)."""
+    try:
+        return subprocess.run(["git", *cmd], cwd=str(path), capture_output=True, text=True, timeout=60)
+    except Exception:  # noqa: BLE001 - no git binary or a vanished dir: the caller skips the check
+        return None
+
+
+def _detect_repo_rules(path: Path) -> list:
+    """A repo's own rules files, repo-relative and sorted: every tracked `AGENTS.md` / `CLAUDE.md` at
+    any depth, plus `.agents/skills/*/SKILL.md`. Tracked files only (`ls-files`), so build output and
+    ignored copies never count."""
+    proc = _repo_git(path, "ls-files", "-z")
+    if proc is None or proc.returncode != 0:
+        return []
+    found = []
+    for f in proc.stdout.split("\0"):
+        parts = f.split("/") if f else []
+        if parts and (parts[-1] in NESTED_REPO_RULE_NAMES
+                      or (len(parts) == 4 and parts[:2] == [".agents", "skills"] and parts[3] == "SKILL.md")):
+            found.append(f)
+    return sorted(found)
+
+
+def _repo_origin_head(path: Path):
+    """The branch a repo's `origin/HEAD` points at (`main`, `dev`, ...), or None."""
+    proc = _repo_git(path, "symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD")
+    target = proc.stdout.strip() if proc is not None and proc.returncode == 0 else ""
+    return target.split("/", 1)[1] if target.startswith("origin/") and len(target) > len("origin/") else None
+
+
+def _host_tracked_count(host: Path):
+    """How many files the host's git tracks; None when it cannot say (no git, not a work tree)."""
+    proc = _repo_git(host, "ls-files", "-z")
+    if proc is None or proc.returncode != 0:
+        return None
+    return len([f for f in proc.stdout.split("\0") if f])
+
+
+def _nested_dir_name() -> str:
+    """The nested workspace's dir, host-relative (normally `workflow`)."""
+    return Path(os.path.relpath(ROOT, HOST_ROOT)).as_posix()
+
+
+def _workspace_paths() -> list:
+    """The host-side workspace files that must never be tracked inside a product repo: the nested
+    dir, `CLAUDE.local.md`, `.claude/settings.local.json`, and the installed skill dirs and agent
+    files the marker's `installed` names."""
+    paths = [_nested_dir_name(), "CLAUDE.local.md", ".claude/settings.local.json"]
+    inst = NESTED.get("installed") if isinstance(NESTED.get("installed"), dict) else {}
+    paths += [f".claude/skills/{n}" for n in inst.get("skills") or []]
+    paths += [f".claude/agents/{n}.md" for n in inst.get("agents") or []]
+    return paths
+
+
+def _unregistered_child_repos(host: Path, repos: list) -> list:
+    """Depth-1 dirs of the host holding a `.git` (dir or file) that the registry does not list; the
+    nested workspace's own dir is never one."""
+    registered = {r["path"] for r in repos}
+    skip = {_nested_dir_name().split("/", 1)[0]}
+    try:
+        children = sorted(e.name for e in host.iterdir() if e.is_dir() and not e.is_symlink() and os.path.lexists(e / ".git"))
+    except OSError:
+        return []
+    return [c for c in children if c not in registered and c not in skip]
+
+
+def nested_repo_checks(errors: list, warnings: list) -> None:
+    """`validate`'s multi-repo rows (P40; D40's two ignore guarantees are the visible-repo and
+    tracked-workspace-file errors). Called only when `nested_repos()` is non-empty, so a single-repo
+    install never reaches it. Errors: a registered repo missing or not a git work tree root, visible
+    to the host's git, or tracking a workspace file. Warnings (anything a live parallel set such as
+    glide's P29 could trip, since the installer's `--update` runs validate with check=True): an
+    unregistered depth-1 child repo, a missing rules file, a host that tracks files."""
+    host = MAIN_HOST or HOST_ROOT
+    repos = nested_repos()
+    workspace = _workspace_paths()
+    for repo in repos:
+        name, rel = repo["name"], repo["path"]
+        path = nested_repo_path(repo)
+        if not path.exists():
+            errors.append(f"nested install: repo {name} ({rel}/) is missing from the host {host} -- restore it or run: {WORKFLOW_CMD} nested-repos --remove {name}")
+            continue
+        if not _git_work_tree_root(path):
+            errors.append(f"nested install: repo {name} ({rel}/) is not a git work tree root -- restore it or run: {WORKFLOW_CMD} nested-repos --remove {name}")
+            continue
+        ignored = _repo_git(host, "check-ignore", "-q", f"{rel}/")
+        if ignored is not None and ignored.returncode == 1:
+            errors.append(f"nested install: repo {name} ({rel}/) is visible to the host's git -- run the installer's --update to write its exclude line")
+        tracked = _repo_git(path, "ls-files", "-z", "--", *workspace)
+        if tracked is not None and tracked.returncode == 0:
+            files = [f for f in tracked.stdout.split("\0") if f]
+            hits = [w for w in workspace if any(f == w or f.startswith(w + "/") for f in files)]
+            if hits:
+                errors.append(f"nested install: repo {name} tracks workspace file(s) {', '.join(hits)} -- untrack them (git -C {rel} rm -r --cached -- {' '.join(hits)})")
+        for rule in repo.get("rules") or []:
+            if not os.path.lexists(path / rule):
+                warnings.append(f"nested install: repo {name} rules file {rule} is missing")
+    for child in _unregistered_child_repos(host, repos):
+        warnings.append(f"nested install: {child}/ is a git repo the registry does not list ({WORKFLOW_CMD} nested-repos --add {child}, or ignore it)")
+    count = _host_tracked_count(host)
+    if count:
+        warnings.append(f"nested install: the multi-repo host tracks {count} file(s); product belongs in the repos")
+
+
+def _repo_branch_now(path: Path) -> str:
+    if not path.exists():
+        return "(missing)"
+    if not _git_work_tree_root(path):
+        return "(not a git work tree root)"
+    proc = _repo_git(path, "symbolic-ref", "-q", "--short", "HEAD")
+    return proc.stdout.strip() if proc is not None and proc.returncode == 0 and proc.stdout.strip() else "(detached)"
+
+
+def _print_nested_repos(repos: list) -> None:
+    host = MAIN_HOST or HOST_ROOT
+    if not repos:
+        print(f"repos=none -- a single-repo nested install: the host {HOST_ROOT} is the one product repo "
+              f"(a host that tracks no files registers its repos with: {WORKFLOW_CMD} nested-repos --add <path>)")
+        return
+    print(f"nested_host={HOST_ROOT}")
+    if host != HOST_ROOT:
+        print(f"main_host={host} (registry paths resolve here, never in this worktree set)")
+    print(f"repos={len(repos)}")
+    for repo in repos:
+        path = nested_repo_path(repo)
+        print(f"repo={repo['name']} path={repo['path']}/ branch={_repo_branch_now(path)} "
+              f"default_branch={repo.get('default_branch') or 'none'} convention={effective_repo_convention(repo)['state']} rules={len(repo.get('rules') or [])}")
+
+
+def _repo_anchor_holders(name: str) -> list:
+    """Active phases whose phase.json holds `repo_anchors.<name>` (their phase-scope reads that repo).
+    Read defensively: the key is written from P40.S5 on, and absent means no hold."""
+    holders = []
+    for d in phase_dirs():
+        try:
+            anchors = read_json(d / "phase.json").get("repo_anchors")
+        except (OSError, ValueError):
+            continue
+        if isinstance(anchors, dict) and name in anchors:
+            holders.append(d.name)
+    return holders
+
+
+def cmd_nested_repos(args: argparse.Namespace) -> None:
+    """Show (bare) or edit a multi-repo host's registry of product repos: `--add`, `--remove`,
+    `--rules --set`, `--detect-rules` (P40).
+
+    The registry is the marker's optional `repos` list; a non-empty one makes the install multi-repo.
+    `--add` on a single-repo install is allowed only when the host tracks no files: a host that is
+    itself a product repo is not a multi-repo host. `--remove` is refused while an active phase holds
+    the repo's anchors. Writes only `.agentic-nested.json` (validated first, as `nested-convention`
+    does) plus one event per change; the exclude line and the CLAUDE.local.md block are the
+    installer's `--update`."""
+    if NESTED is None:
+        raise SystemExit(f"nested-repos: refused -- this is not a nested personal install (no {NESTED_MARKER} beside scripts/); "
+                         "an at-root workspace's repo is its one product repo")
+    if args.set is not None and args.rules is None:
+        raise SystemExit(f"--set belongs to --rules: {WORKFLOW_CMD} nested-repos --rules <name> --set a,b,c")
+    if args.rules is not None and args.set is None:
+        raise SystemExit(f"nested-repos --rules needs --set <comma-separated repo-relative paths> (or re-detect them: {WORKFLOW_CMD} nested-repos --detect-rules {args.rules})")
+    if (args.name is not None or args.default_branch is not None) and args.add is None:
+        raise SystemExit(f"--name and --default-branch belong to --add: {WORKFLOW_CMD} nested-repos --add <path> [--name N] [--default-branch B]")
+    path = ROOT / NESTED_MARKER
+    host = MAIN_HOST or HOST_ROOT
+    current = nested_repos()
+    if args.map_anchors is not None:
+        _map_repo_anchors(args.map_anchors, current)
+        return
+    if args.add is None and args.remove is None and args.rules is None and args.detect_rules is None:
+        _print_nested_repos(current)
+        return
+    data = read_json(path)
+    repos = [dict(r) for r in data.get("repos") or []]
+    if args.add is not None:
+        raw = args.add
+        rel = os.path.relpath(Path(raw).resolve(), host) if os.path.isabs(raw) else posixpath.normpath(raw.replace(os.sep, "/"))
+        rel = Path(rel).as_posix()
+        refused = "nested-repos --add: refused -- nothing was written"
+        if not repos:
+            count = _host_tracked_count(host)
+            if count is None or count > 0:
+                tracked = "is not a git work tree" if count is None else f"tracks {count} file(s)"
+                raise SystemExit(f"{refused}: the host {host} {tracked}, so it is not a multi-repo host -- a host that is itself a product repo "
+                                 "stays a single-repo nested install; only a host that tracks no files registers product repos")
+        bad = _repo_path_problem(rel, host, _nested_dir_name())
+        if bad:
+            raise SystemExit(f"{refused}: path {rel!r} {bad}")
+        holder = next((r for r in repos if r.get("path") == rel), None)
+        if holder is not None:
+            raise SystemExit(f"{refused}: {rel}/ is already registered as {holder.get('name')}")
+        target = host / rel
+        if not _git_work_tree_root(target):
+            raise SystemExit(f"{refused}: {target} is not the root of a git work tree "
+                             f"({'it does not exist' if not target.exists() else 'git there answers for an enclosing repo, or for none'})")
+        name = args.name if args.name is not None else rel.rsplit("/", 1)[-1]
+        if not NESTED_REPO_NAME.fullmatch(name):
+            raise SystemExit(f"{refused}: name {name!r} must match [A-Za-z0-9._-]+ (pass --name)")
+        if any(r.get("name") == name for r in repos):
+            raise SystemExit(f"{refused}: the name {name} is already registered (pass another --name)")
+        if args.default_branch is not None:
+            check = _repo_git(target, "check-ref-format", "--branch", args.default_branch)
+            if check is None or check.returncode != 0:
+                raise SystemExit(f"{refused}: --default-branch {args.default_branch!r} is not a valid branch name")
+            branch = args.default_branch
+        else:
+            branch = _repo_origin_head(target)
+        entry = {"name": name, "path": rel, "default_branch": branch, "commit_convention": None, "rules": _detect_repo_rules(target)}
+        repos.append(entry)
+        _write_nested_repos(path, data, repos)
+        append_event("nested_repo_added", name=name, path=rel, default_branch=branch, rules=entry["rules"], made_multi_repo=not current)
+        print(f"nested-repos: added {name} ({rel}/){' -- this install is now multi-repo' if not current else ''} -- written to {shown(path)}")
+        ignored = _repo_git(host, "check-ignore", "-q", f"{rel}/")
+        visible = ignored is not None and ignored.returncode == 1
+        print(f"next: run the installer's --update on this host: it writes the /{rel}/ exclude line and the multi-repo CLAUDE.local.md block"
+              + (f"; until then validate reports {name} as visible to the host's git" if visible else ""))
+    elif args.remove is not None:
+        name = args.remove
+        entry = next((r for r in repos if r.get("name") == name), None)
+        if entry is None:
+            raise SystemExit(f"nested-repos --remove: refused -- no registered repo is named {name} "
+                             f"(registered: {', '.join(r.get('name', '?') for r in repos) or 'none'}) -- nothing was written")
+        holders = _repo_anchor_holders(name)
+        if holders:
+            raise SystemExit(f"nested-repos --remove: refused -- active phase(s) {', '.join(holders)} hold repo_anchors.{name} (their phase-scope reads {entry['path']}/); "
+                             "finish and archive them first, then re-run -- nothing was written")
+        repos = [r for r in repos if r.get("name") != name]
+        _write_nested_repos(path, data, repos)
+        append_event("nested_repo_removed", name=name, path=entry["path"], made_single_repo=not repos)
+        print(f"nested-repos: removed {name} ({entry['path']}/) from the registry -- written to {shown(path)}; the repo and its files are untouched"
+              + ("; the registry is empty, so this is a single-repo nested install again" if not repos else ""))
+    else:
+        name = args.rules if args.rules is not None else args.detect_rules
+        entry = next((r for r in repos if r.get("name") == name), None)
+        verb = "--rules" if args.rules is not None else "--detect-rules"
+        if entry is None:
+            raise SystemExit(f"nested-repos {verb}: refused -- no registered repo is named {name} "
+                             f"(registered: {', '.join(r.get('name', '?') for r in repos) or 'none'}) -- nothing was written")
+        if args.rules is not None:
+            rules = []
+            for item in args.set.split(","):
+                item = item.strip()
+                if item and item not in rules:
+                    rules.append(item)
+        else:
+            target = host / entry["path"]
+            if not _git_work_tree_root(target):
+                raise SystemExit(f"nested-repos --detect-rules: refused -- {target} is not the root of a git work tree -- nothing was written")
+            rules = _detect_repo_rules(target)
+        entry["rules"] = rules
+        _write_nested_repos(path, data, repos)
+        append_event("nested_repo_rules_set", name=name, rules=rules, detected=args.detect_rules is not None)
+        print(f"nested-repos: {name} rules {'re-detected' if args.detect_rules is not None else 'set'} ({len(rules)}) -- written to {shown(path)}")
+        for rule in rules:
+            print(f"  {rule}")
+    _print_nested_repos(repos)
+
+
+def _map_repo_anchors(name: str, repos: list) -> None:
+    """`nested-repos --map-anchors <repo>` (P40 S2 §22 step 7, §25): a converted install's phases
+    carry `host_anchors` that are really commits of the old single repo, now registered as `<repo>`.
+    Per phase, active and archived: `repo_anchors.<repo>` = {created, branch: null, review_pass,
+    review_base} (review_base = the frozen `host_anchors.review_base` if any, else `created` once the
+    review passed, which reproduces the old `created..review_pass` exactly), and `host_anchors`
+    becomes {}. Skipped, untouched and said why: already mapped; in flight on its own branch (its
+    truth lives there); no host_anchors shas; shas that are not commits in `<repo>` (glide's P29: the
+    host's empty commit). Writes phase.json files only and never commits; a re-run maps nothing."""
+    refused = "nested-repos --map-anchors: refused -- nothing was written"
+    repo = next((r for r in repos if r.get("name") == name), None)
+    if repo is None:
+        raise SystemExit(f"{refused}: no registered repo is named {name} (registered: {', '.join(r.get('name', '?') for r in repos) or 'none'})")
+    rpath, why = _phase_repo_path(repo, {})
+    if rpath is None:
+        raise SystemExit(f"{refused}: {why}")
+    pdirs = [(d, False) for d in phase_dirs()]
+    if ARCHIVED.is_dir():
+        pdirs += [(d, True) for d in sorted(ARCHIVED.iterdir()) if d.is_dir() and (d / "phase.json").is_file()]
+    mapped, skipped = [], 0
+    for pdir, archived in pdirs:
+        try:
+            data = read_json(pdir / "phase.json")
+        except (OSError, ValueError) as exc:
+            print(f"{pdir.name}: skipped: phase.json cannot be read ({exc})")
+            skipped += 1
+            continue
+        pid = f"{data.get('id', pdir.name)}{' (archived)' if archived else ''}"
+        host = data.get("host_anchors") if isinstance(data.get("host_anchors"), dict) else {}
+        shas = {k: v for k, v in host.items() if k in HOST_ANCHOR_KEYS and isinstance(v, str) and v}
+        held = data.get("repo_anchors") if isinstance(data.get("repo_anchors"), dict) else {}
+        execution = data.get("execution") if isinstance(data.get("execution"), dict) else {}
+        reason = None
+        if name in held:
+            reason = f"already holds repo_anchors.{name}"
+        elif execution.get("worktree") or execution.get("host_worktree"):
+            reason = (f"in flight on its own branch ({execution.get('branch') or execution.get('worktree')}): "
+                      "its phase.json's truth lives there -- map it after it merges")
+        elif not shas:
+            reason = "holds no host_anchors shas"
+        else:
+            bad = [f"{k}={v[:7]}" for k, v in shas.items() if not _rev_parse(v, cwd=rpath)]
+            if bad:
+                reason = f"host_anchors {', '.join(bad)} not a commit in {name} (a host commit, or another repo's) -- left untouched"
+        if reason:
+            print(f"{pid}: skipped: {reason}")
+            skipped += 1
+            continue
+        created, passed = shas.get("created"), shas.get("review_pass")
+        entry = {"created": created, "branch": None, "review_pass": passed,
+                 "review_base": shas.get("review_base") or (created if passed else None)}
+        data["host_anchors"] = {}
+        _with_repo_anchors(data, {name: entry})
+        write_json(pdir / "phase.json", data)
+        mapped.append(data.get("id", pdir.name))
+        print(f"{pid}: mapped: repo_anchors.{name} = created {(created or 'null')[:7]}, review_pass {(passed or 'null')[:7]}, "
+              f"review_base {(entry['review_base'] or 'null')[:7]}; host_anchors = {{}}")
+    if mapped:
+        append_event("nested_repo_anchors_mapped", repo=name, phases=mapped)
+    print(f"nested-repos --map-anchors {name}: mapped {len(mapped)}, skipped {skipped} of {len(pdirs)} phase(s)"
+          + (" -- phase.json files written; commit them in the nested repo" if mapped else " -- nothing written"))
+
+
+def _write_nested_repos(path: Path, data: dict, repos: list) -> None:
+    """Write the registry back through the same validate-then-write path `nested-convention` uses;
+    an emptied registry drops the key, so the marker reads as the single-repo one it now is."""
+    if repos:
+        data["repos"] = repos
+    else:
+        data.pop("repos", None)
+    problems = nested_marker_problems(data)
+    if problems:  # never write a marker validate would reject
+        raise SystemExit(f"nested-repos: refused -- the result would be malformed: {'; '.join(problems)}")
+    write_json(path, data)
 
 
 def cmd_next(args: argparse.Namespace) -> None:
+    """Print this checkout's pointer. When the current phase is not done and its notebook is over
+    PHASE_MD_BUDGET, `notebook_over_budget=` (and up to 3 `notebook_move=` commands, the required form;
+    none, the advisory form) follows the pointer and wave lines, and in the WAITING block precedes its
+    `After the operator approves` line: run the moves before the next dispatch. Silent under budget."""
     rebuild_index_and_state()
     if getattr(args, "card", False):  # the resume card alone: what compact-resume prints after a compaction
         print(resume_card())
@@ -5197,10 +8672,14 @@ def cmd_next(args: argparse.Namespace) -> None:
             else:
                 print("stop_kind=untyped (set it with --stop-kind/--on-words)")
         print("Do not start, finish, or advance past it. Report what you need, then wait for the operator.")
+        for line in wave_lines(_active_phase(state.get("current_phase"))):  # P42: declared phases only
+            print(line)
         if gate:
             print(f"acceptance_gate=open (requested_at={gate.get('requested_at')}) -- the operator must walk the running product before this phase's review can pass.")
             print("WALKTHROUGH:")
             print(gate.get("walkthrough") or "(none recorded)")
+        for line in notebook_step_lines(waiting.split(".", 1)[0]):  # §6: a notebook write, not an advance
+            print(line)
         print(f"After the operator approves, clear it: {WORKFLOW_CMD} {clear}")
         if gate:
             print("Add --note \"...\" to record what the operator reported.")
@@ -5218,6 +8697,10 @@ def cmd_next(args: argparse.Namespace) -> None:
     print(f"current_slice={current_slice}")
     print(f"slice_path={shown(sdir)}")
     print(f"next_slice={state.get('next_slice') or 'none'}")
+    for line in wave_lines(_active_phase(state.get("current_phase"))):  # P42: declared phases only
+        print(line)
+    for line in notebook_step_lines(current_slice.split(".", 1)[0]):  # §6: silent under budget
+        print(line)
     hint = parallel_start_hint(state, index)
     if hint:
         print(hint)
@@ -5380,6 +8863,9 @@ def resume_card(transcript_path=None) -> str:
     if gate_open:
         lines.append(f"stop: phase {phase_id} acceptance gate open -- relay the walkthrough (`accept-gate {phase_id}` prints it); "
                      f"the operator's words clear it with accept-gate {phase_id} --clear")
+        if phase_parked(phase):  # informational only: the stop above stands for every plain session
+            lines.append(f"run: {phase_id} is parked; only a /do-whole-phases run passes it -- re-run `run-phases <the run's phases>` "
+                         "for that run's next target; outside such a run this is a stop")
     elif phase.get("status") == "pending":
         lines.append(f"stop: phase {phase_id} pending -- report what you need; the operator's words clear it with set-phase-status {phase_id} in_progress")
     elif phase.get("status") == "blocked":
@@ -5394,6 +8880,7 @@ def resume_card(transcript_path=None) -> str:
         lines.append(f"next action: {_card_next_action(sid, sdata, sdir, spans)}")
     else:
         lines.append("next action: no open slice -- review or archive the phase")
+    lines.extend(wave_card_lines(phase, sid))  # P42: declared phases only
     gates = []
     if acceptance is None:
         gates.append("acceptance=legacy (no gate)")
@@ -5405,6 +8892,14 @@ def resume_card(transcript_path=None) -> str:
     if execution:
         gates.append(f"parallel={execution.get('branch')} (merge only past parallel-gate {phase_id})")
     lines.append("gates: " + "; ".join(gates))
+    step = notebook_step(phase_id) if phase.get("status") != "done" else None  # §6: silent under budget
+    if step:
+        lines.append(f"notebook: over budget ({step['bytes']}/{PHASE_MD_BUDGET} B) -- "
+                     + ("run the notebook_move lines `next` prints before the next dispatch" if step["form"] == "required"
+                        else "advisory: nothing left to move (`next` names what remains)"))
+        notebook_at = len(lines) - 1
+    else:
+        notebook_at = None
     if spans is None:
         lines.append("running spans: unknown (no session transcript found)")
     elif not spans:
@@ -5419,6 +8914,8 @@ def resume_card(transcript_path=None) -> str:
         lines.append(f"result: {shown(result) if result.is_file() else 'not yet'}")
     lines.append(f"phase: {shown(pdir / 'phase.md')}")
     lines.append(f"intent: {shown(pdir / 'intent.md')}")
+    if notebook_at is not None and len("\n".join(lines).encode("utf-8")) > RESUME_CARD_MAX:
+        del lines[notebook_at]  # optional: it yields before the card's own lines are cut
     return _card_fit(lines)
 
 
@@ -5462,23 +8959,29 @@ def cmd_deferred(args: argparse.Namespace) -> None:
     print(f"dashboard={shown(WORKS / 'deferred.md')}")
 
 
-def next_deferred_id() -> str:
-    max_n = 0
-    for base in (DEFERRED_OPEN, DEFERRED_PROMOTED, DEFERRED_DROPPED):
-        if not base.exists():
-            continue
-        for p in base.iterdir():
-            m = re.fullmatch(r"D(\d+)", p.name)
-            if m:
-                max_n = max(max_n, int(m.group(1)))
-    return f"D{max_n + 1}"
+def mint_deferred_id() -> str:
+    """`D-<token>`: `defer-job` without `--id`. It supersedes v72's `max + 1` (`D<n>`), which two branches drew alike."""
+    return mint_id("D")
+
+
+def explicit_deferred_id(did: str) -> str:
+    """An explicit `defer-job --id`, checked before anything is written: either shape (`D12`, or a `D-`
+    token as minted), never an id with a folder in open/, promoted/ or dropped/, and a token only as
+    the mint would draw it (`id_token_refusal`). SystemExit otherwise."""
+    if not DEFERRED_ID_RE.fullmatch(did):
+        raise SystemExit(f"deferred id must look like D12 or D-m3xa (got {did!r}); omit --id and the engine mints one")
+    if did in deferred_folder_ids():
+        raise SystemExit(f"deferred job already exists: {did}")
+    token = _id_token(did)
+    reason = id_token_refusal(token) if token else None
+    if reason:
+        raise SystemExit(f"deferred id {did} refused: {reason}; omit --id and the engine mints one")
+    return did
 
 
 def defer_job(args: argparse.Namespace) -> None:
-    did = args.id or next_deferred_id()
+    did = explicit_deferred_id(args.id) if args.id else mint_deferred_id()
     ddir = DEFERRED_OPEN / did
-    if ddir.exists():
-        raise SystemExit(f"deferred job already exists: {did}")
     created = now_iso()
     data = {"id": did, "title": args.title, "status": "deferred", "source": args.source, "reason": args.reason, "trigger": args.trigger, "created_at": created, "promoted_to": None, "dropped_reason": None}
     write_json(ddir / "deferred.json", data)
@@ -5491,6 +8994,12 @@ def defer_job(args: argparse.Namespace) -> None:
     print(f"created deferred job {did}: {shown(ddir)}")
 
 
+def full_slice_id(phase_id: str, raw: str) -> str:
+    """`--slice` as stored: a bare suffix (`S1`, `F2`) is prefixed with its phase id (`P-7kq2.S1`), so a
+    slice of a phase the same command mints can be named before its id is known; a full id stays as is."""
+    return f"{phase_id}.{raw}" if re.fullmatch(SLICE_SUFFIX_PATTERN, raw) else raw
+
+
 def promote_deferred(args: argparse.Namespace) -> None:
     did = args.deferred_id
     ddir = DEFERRED_OPEN / did
@@ -5498,14 +9007,28 @@ def promote_deferred(args: argparse.Namespace) -> None:
         raise SystemExit(f"open deferred job not found: {did}")
     data = read_json(ddir / "deferred.json")
     require_slice_kind(args.kind)  # before --create-phase, so a bad kind leaves no half-created phase
-    if not (ACTIVE / args.phase / "phase.json").exists():
+    if args.phase is None and not args.create_phase:
+        raise SystemExit("promote-deferred needs --phase <id>, or --create-phase to create a phase (without --phase the engine "
+                         "mints its id; name the slice by its bare suffix, e.g. --slice S1); refused, nothing was written")
+    phase_id = args.phase if args.phase is not None else mint_phase_id()
+    slice_id = full_slice_id(phase_id, args.slice)
+    if not slice_id.startswith(f"{phase_id}."):  # before --create-phase, likewise
+        why = ("the phase --create-phase mints has no id yet, so name the slice by its bare suffix (e.g. --slice S1)" if args.phase is None
+               else f"a slice of {phase_id} is {phase_id}.<suffix>, or the bare suffix (e.g. --slice S1)")
+        raise SystemExit(f"--slice {args.slice}: {why}; refused, nothing was written")
+    if parse_depends_on(args.depends_on) and not (ACTIVE / phase_id / "phase.json").exists():  # P42, likewise
+        raise SystemExit(f"--depends-on: phase {phase_id} does not exist yet, so it has no slice to depend on (a new phase "
+                         "holds only its DECOMP and REVIEW, both barriers); use --depends-on none, or create the phase first; "
+                         "refused, nothing was written")
+    if not (ACTIVE / phase_id / "phase.json").exists():
         if not args.create_phase:
-            raise SystemExit(f"phase does not exist: {args.phase}. Use --create-phase to create it.")
-        ns = argparse.Namespace(phase=args.phase, name=args.phase_name or data["title"], objective=args.phase_objective or data["title"], order=None)
+            raise SystemExit(f"phase does not exist: {phase_id}. Use --create-phase to create it.")
+        ns = argparse.Namespace(phase=phase_id, name=args.phase_name or data["title"], objective=args.phase_objective or data["title"], order=None)
         new_phase(ns)
-    pdir = require_phase(args.phase)
+    pdir = require_phase(phase_id)
     order = _auto_order(pdir, args.order)
-    sdir = create_slice(args.phase, args.slice, args.name or data["title"], args.kind, order, args.risk, source={"type": "deferred", "id": did, "path": str(ddir.relative_to(ROOT))}, depends_on=args.depends_on or [])
+    deps = declared_dependencies(phase_id, slice_id, order, args.depends_on)  # None: undeclared, as before
+    sdir = create_slice(phase_id, slice_id, args.name or data["title"], args.kind, order, args.risk, source={"type": "deferred", "id": did, "path": str(ddir.relative_to(ROOT))}, depends_on=deps or [], declared=deps is not None)
     plan_path = sdir / "plan.md"
     # plan.md has no template, so it may not exist yet; only prepend a separator when it does.
     sep = "\n---\n\n" if plan_path.exists() and plan_path.read_text(encoding="utf-8").strip() else ""
@@ -5513,15 +9036,17 @@ def promote_deferred(args: argparse.Namespace) -> None:
         f.write(f"{sep}## Promoted Deferred Context\n\n")
         f.write((ddir / "brief.md").read_text(encoding="utf-8"))
     data["status"] = "promoted"
-    data["promoted_to"] = {"phase_id": args.phase, "slice_id": args.slice, "path": str(sdir.relative_to(ROOT))}
+    data["promoted_to"] = {"phase_id": phase_id, "slice_id": slice_id, "path": str(sdir.relative_to(ROOT))}
     write_json(ddir / "deferred.json", data)
     target = DEFERRED_PROMOTED / did
     if target.exists():
         raise SystemExit(f"promoted destination already exists: {shown(target)}")
     shutil.move(str(ddir), str(target))
-    append_event("deferred_promoted", deferred=did, phase=args.phase, slice=args.slice)
+    append_event("deferred_promoted", deferred=did, phase=phase_id, slice=slice_id)
     rebuild_index_and_state()
-    print(f"promoted {did} -> {args.slice}: {shown(sdir)}")
+    print(f"promoted {did} -> {slice_id}: {shown(sdir)}")
+    for line in declared_slice_lines(args.kind, deps):
+        print(line)
 
 
 def drop_deferred(args: argparse.Namespace) -> None:
@@ -5662,11 +9187,14 @@ def archive_all(args: argparse.Namespace) -> None:
 
 
 def _phase_range_label(ids: list) -> str:
-    """`P26`, the en-dash range `P26–P29` when the numbers run consecutively, else `P26, P28, P29`."""
+    """`P26`, the en-dash range `P26–P29` when EVERY id is numeric and the numbers run consecutively,
+    else `P26, P28, P29` (a minted token never joins a range: `P26, P27, P-7kq2`). For an all-numeric
+    list the label is byte-identical to v72's."""
     if len(ids) == 1:
         return ids[0]
-    numbers = [int(i[1:]) for i in ids]
-    if all(b - a == 1 for a, b in zip(numbers, numbers[1:])):
+    matches = [re.fullmatch(r"P([0-9]+)", str(i)) for i in ids]
+    numbers = [int(m.group(1)) for m in matches if m]
+    if len(numbers) == len(ids) and all(b - a == 1 for a, b in zip(numbers, numbers[1:])):
         return f"{ids[0]}\u2013{ids[-1]}"
     return ", ".join(ids)
 
@@ -5680,11 +9208,18 @@ def _shell_arg(text: str) -> str:
     return f'"{text}"'
 
 
-# v54 (P33): `rotate-backlog` is the one resumable step of the one-shot /rotate-backlog chain. These
-# are the boundary statuses its mid-flight check reads: a default-stream slice outside the first set,
-# or a phase in the second, is running or waiting on someone, and the docs phase never interleaves.
-ROTATE_BOUNDARY_SLICE_STATUSES = ("todo", "ready", "done")
-ROTATE_MIDFLIGHT_PHASE_STATUSES = ("pending", "blocked", "in_review")
+# v54 (P33): `rotate-backlog` is the one resumable step of the one-shot /rotate-backlog chain. v72
+# (P43) splits what is off a boundary in two. RUNNING work is a slice or a phase working right now:
+# the docs phase never interleaves with it, so it stops the run. PARKED work waits on the operator or
+# an outside party: the docs phase runs ahead of it and never touches it, so it does not stop the
+# run -- unless the product tree holds uncommitted edits a parked item may own (`stop_uncommitted`).
+# Everything else (todo, ready, done; a planned or in_progress phase) is at a boundary.
+ROTATE_RUNNING_SLICE_STATUSES = ("in_progress", "in_review")
+ROTATE_RUNNING_PHASE_STATUSES = ("in_review",)
+ROTATE_PARKED_SLICE_STATUSES = ("pending", "blocked", "changes_requested")
+ROTATE_PARKED_PHASE_STATUSES = ("pending", "blocked")
+# The uncommitted paths `stop_uncommitted` lists before it says how many more there are.
+ROTATE_UNCOMMITTED_SHOWN = 20
 
 
 def _live_docs_phases(phases: list) -> list:
@@ -5695,19 +9230,59 @@ def _live_docs_phases(phases: list) -> list:
     return [p for p in stream_phases(phases, None) if p.get("status") != "done" and phase_consolidates(p)]
 
 
-def _midflight(phases: list, live: list) -> list:
-    """`<id>:<status>` for everything on the default stream that is not at a boundary -- a phase that
-    is pending, blocked or in_review, then each of its slices whose status is not todo, ready or
-    done -- in phase order. The live docs phases and their slices are left out (resuming them IS the
-    run, and their own stops end it); parallel streams are never counted."""
+def _running_and_parked(phases: list, live: list) -> tuple:
+    """`(running, parked)` over the default stream, in phase order (a phase, then its slices).
+
+    running: `<id>:<status>` for a phase `in_review` and a slice `in_progress` or `in_review` -- bar
+    the `review`-kind slice of a phase whose acceptance gate is open: `accept-gate --open` never moves
+    that slice, so it stays `in_progress` while its phase is parked (`/do-whole-phases`' parked REVIEW).
+    parked: `(id, status, stop_kind or None)` for a phase `pending` or `blocked` and a slice `pending`,
+    `blocked` or `changes_requested`. The stop kind: `acceptance-gate` for a phase whose gate is open,
+    `untyped` for any other pending phase, a pending slice's typed record (else `untyped`), and none
+    for a blocked or changes_requested item, which is no operator stop. The live docs phases and their
+    slices are left out (resuming them IS the run, and their own stops end it); parallel streams are
+    never counted."""
     skip = {p["id"] for p in live}
-    found = []
+    running, parked = [], []
     for phase in stream_phases(phases, None):
         if phase["id"] in skip:
             continue
-        if phase.get("status") in ROTATE_MIDFLIGHT_PHASE_STATUSES:
-            found.append(f"{phase['id']}:{phase.get('status')}")
-        found.extend(f"{s['id']}:{s.get('status')}" for s in phase["slices"] if s.get("status") not in ROTATE_BOUNDARY_SLICE_STATUSES)
+        status = phase.get("status")
+        gate_open = acceptance_gate_is_open(phase)
+        if status in ROTATE_RUNNING_PHASE_STATUSES:
+            running.append(f"{phase['id']}:{status}")
+        elif status in ROTATE_PARKED_PHASE_STATUSES:
+            parked.append((phase["id"], status, "acceptance-gate" if gate_open else ("untyped" if status == "pending" else None)))
+        for s in phase["slices"]:
+            sstatus = s.get("status")
+            if sstatus in ROTATE_RUNNING_SLICE_STATUSES:
+                if not (gate_open and s.get("kind") == "review"):
+                    running.append(f"{s['id']}:{sstatus}")
+            elif sstatus in ROTATE_PARKED_SLICE_STATUSES:
+                record = s.get("pending") if sstatus == "pending" else None
+                kind = (record.get("kind") or "untyped") if isinstance(record, dict) else ("untyped" if sstatus == "pending" else None)
+                parked.append((s["id"], sstatus, kind))
+    return running, parked
+
+
+def _rotate_uncommitted() -> list:
+    """`[{status, path}]`: the uncommitted product changes (untracked included) in the repos
+    `phase-scope` reads, with its pathspecs -- at root this checkout without works/ and docs/; nested,
+    the host without the nested repo's folder; multi-repo, each registered repo (its paths prefixed
+    with its folder) and then the host without them. A repo git cannot read adds nothing, so without
+    git nothing is dirty: there is no commit that could take anything. Read only while work is parked."""
+    if NESTED is None:
+        return _status_product_files() if _git_available() else []
+    found = []
+    repos = nested_repos()
+    spec = _host_pathspec()
+    for repo in repos:
+        path, _ = _phase_repo_path(repo, {})
+        if path is not None:
+            found += _prefixed(_status_product_files(cwd=path, pathspec=["."]), f"{repo['path']}/")
+        spec.append(f":(exclude){repo['path']}")
+    if HOST_ROOT is not None and _git_available(cwd=HOST_ROOT):
+        found += _status_product_files(cwd=HOST_ROOT, pathspec=spec)
     return found
 
 
@@ -5749,20 +9324,64 @@ def _docs_debt_split(phases: list) -> tuple:
     """`(covered_by, uncovered)` over the CURRENT active set, from the phases held back ONLY by doc
     debt (`_debt_only`): `{covering docs phase id: [the debt-only ids it pays]}` -- every not-`done`
     phase whose `consolidates` names one, whatever its stream -- and the debt-only phases no such
-    docs phase covers yet, sorted by number."""
+    docs phase covers yet, in `_debt_sort_key` order."""
     debt_only = [p for p in phases if _debt_only(ROOT / p["path"])]
     cover = consolidation_cover(phases)
     covered_by = {}
     for p in debt_only:
         for docs_phase in cover.get(p["id"], []):
             covered_by.setdefault(docs_phase["id"], []).append(p["id"])
-    uncovered = sorted((p for p in debt_only if not cover.get(p["id"])), key=lambda p: int(p["id"][1:]))
+    uncovered = sorted((p for p in debt_only if not cover.get(p["id"])), key=lambda p: _debt_sort_key(p["id"], phases))
     return covered_by, uncovered
+
+
+def _debt_sort_key(phase_id: str, phases: list):
+    """The order a docs phase's ids are listed in (`_docs_debt_split`'s uncovered list, a proposal's
+    `consolidates`): `id_sort_key`, a token's `created_at` read from `phases` -- numeric ids by number,
+    exactly v72's order, then minted tokens by creation. The one place `rotate-backlog` turns an id
+    into a sort key."""
+    return id_sort_key(phase_id, next((p.get("created_at") for p in phases if p.get("id") == phase_id), None))
 
 
 def _print_docs_phase_covered(covered_by: dict) -> None:
     for docs_phase_id, pays in covered_by.items():
         print(f"docs_phase_covered={docs_phase_id} (pays {', '.join(pays)})")
+
+
+def _docs_phase_draft(ids: list, phases: list) -> tuple:
+    """`(name, objective)` the engine drafts for a docs phase paying `ids`, the docs listed from the
+    owed `## Doc impact` notes of `phases`. The one drafting code: the proposal prints it."""
+    docs = sorted(d for d in stale_docs(phases) if d != UNASSIGNED_DOC)
+    name = f"Consolidate the doc impact of {_phase_range_label(ids)}"
+    objective = (f"consolidate the '## Doc impact' notes from {', '.join(ids)} into new versions of "
+                 f"{', '.join(docs) if docs else 'the docs their notes name'}")
+    return name, objective
+
+
+def _docs_phase_unstarted(docs_phase: dict) -> bool:
+    """True when a live docs phase has written nothing yet, so rotate-backlog replaces it (v78): the
+    phase is neither parked, in review nor done, its REVIEW and every middle slice are still todo or
+    ready, and its DECOMP is todo, ready or done (a done cut wrote only a plan, which the replacement
+    cuts again over the wider debt). A docs phase with any docs slice past ready has started and
+    finishes first."""
+    if docs_phase.get("status") in STOP_STATUSES + ("in_review", "done"):
+        return False
+    for s in docs_phase.get("slices", []):
+        allowed = ("todo", "ready", "done") if s.get("kind") == "decomposition" else ("todo", "ready")
+        if s.get("status") not in allowed:
+            return False
+    return True
+
+
+def _replace_docs_phase(docs_phase: dict) -> list:
+    """Remove an unstarted docs phase's folder (v78; the workspace's git history keeps it), log
+    `docs_phase_replaced` and rebuild, so the debt it covered stands uncovered and the proposal that
+    follows covers it together with the new debt. Returns the ids it covered."""
+    pays = phase_consolidates(docs_phase)
+    shutil.rmtree(ROOT / docs_phase["path"])
+    append_event("docs_phase_replaced", phase=docs_phase["id"], consolidates=pays)
+    rebuild_index_and_state()
+    return pays
 
 
 def _print_docs_phase_proposal(uncovered: list, order) -> None:
@@ -5771,12 +9390,9 @@ def _print_docs_phase_proposal(uncovered: list, order) -> None:
     route), so the `create:` line is the whole command, its `--order` the queue jump (omitted when no
     other phase is open), written before `--consolidates`. Prints, never writes."""
     ids = [p["id"] for p in uncovered]
-    docs = sorted(d for d in stale_docs(uncovered) if d != UNASSIGNED_DOC)
     listing = ", ".join(ids)
-    name = f"Consolidate the doc impact of {_phase_range_label(ids)}"
-    objective = (f"consolidate the '## Doc impact' notes from {listing} into new versions of "
-                 f"{', '.join(docs) if docs else 'the docs their notes name'}")
-    phase_id = next_phase_id()
+    name, objective = _docs_phase_draft(ids, uncovered)
+    phase_id = mint_phase_id()  # v73: a minted token, passed to new-phase as --phase (the create: line runs as is)
     order_arg = f" --order {order}" if order is not None else ""
     print(f"docs_phase_proposal={listing}")
     print(f"phase={phase_id}")
@@ -5816,19 +9432,46 @@ def _rotate_sweep() -> None:
         print(f"left {len(blocked)} phase(s) active: {', '.join(p for p, _ in blocked)}")
 
 
+def _rotate_sweep_quiet() -> list:
+    """The early sweep (v72): archive every phase that is cleanly archivable right now -- the same
+    whole phases, never forced, that `_rotate_sweep` takes, so no phase that owes docs is archived --
+    and rebuild once, only when it archived something. Returns the archived ids and prints nothing:
+    `rotate-backlog` prints them as one `archived=` line. `_rotate_sweep` stays `--archive-only`'s and
+    `rotate=archive`'s, unchanged."""
+    archived = []
+    for pdir in phase_dirs():
+        if not _phase_blockers(pdir):
+            archived.append(read_json(pdir / "phase.json")["id"])
+            _archive_one(pdir, forced=False)
+    if archived:
+        rebuild_index_and_state()
+    return archived
+
+
 def rotate_backlog(args: argparse.Namespace) -> None:
-    # v54 (P33): the one resumable step of the one-shot /rotate-backlog chain. The doc debt is
-    # checked FIRST and nothing is archived while it stands; the skill branches on the first stdout
-    # line, `rotate=<branch>`, chosen in this precedence:
-    #   refused         a parallel-stream checkout: writes nothing, exits non-zero.
-    #   archive         nothing owes (no uncovered debt-only phase, no live docs phase): the sweep,
-    #                   then `docs_phase=none`. Archiving interleaves with nothing, so mid-flight work
-    #                   does not hold it.
-    #   stop_midflight  debt stands and default-stream work is off a boundary: writes nothing.
-    #   resume          a live docs phase exists (it beats create: uncovered debt waits for it);
-    #                   re-asserts its queue-jump order, the only write outside the sweep.
-    #   create          the docs-phase proposal, its `create:` line carrying the queue-jump --order;
-    #                   writes nothing -- the skill runs that line as is.
+    # v54 (P33), v72 (P43): the one resumable step of the one-shot /rotate-backlog chain. The skill
+    # branches on the first stdout line, `rotate=<branch>`, chosen in this precedence:
+    #   refused           a parallel-stream checkout: writes nothing, exits non-zero.
+    #   archive           nothing owes (no uncovered debt-only phase, no live docs phase): the verbose
+    #                     sweep, then `docs_phase=none`.
+    #   (the early sweep) every other branch first archives each cleanly archivable phase, quietly: a
+    #                     phase that owes docs is never one, so no unpaid debt moves. `archived=` names
+    #                     them, omitted when there are none.
+    #   stop_midflight    RUNNING default-stream work (a slice in_progress or in_review, a phase
+    #                     in_review; a gate-open phase's review slice is parked, not running): the
+    #                     docs phase never interleaves with it. `midflight=` lists running items only.
+    #   stop_uncommitted  PARKED work (a phase pending or blocked; a slice pending, blocked or
+    #                     changes_requested) beside uncommitted product edits, which a parked item
+    #                     may own and the run's commits would take: `uncommitted=<n>` and the paths.
+    #   replace           (v78) every live docs phase is unstarted and new debt stands uncovered: each is
+    #                     removed, and one proposal covers all the debt, its `create:` line run as is.
+    #   resume            a live docs phase has started (a docs slice past ready), or nothing new owes:
+    #                     it runs as it is, re-asserting its queue jump; new debt waits for it.
+    #   create            the docs-phase proposal, its `create:` line carrying the queue-jump --order;
+    #                     writes nothing -- the skill runs that line as is.
+    # Parked work no longer stops the run: the docs phase runs ahead of it and never touches it. After
+    # the first line come `archived=`, one `parked=<id> status=<status>[ stop_kind=<kind>]` line per
+    # parked item, then the branch's own lines. A stop creates, replaces and reorders nothing.
     # --archive-only is the sweep alone, output unchanged since v51 (no rotate= line, no docs line).
     if getattr(args, "archive_only", False):
         _rotate_sweep()
@@ -5849,17 +9492,60 @@ def rotate_backlog(args: argparse.Namespace) -> None:
             print(f"docs_phase_elsewhere={docs_phase_id} (pays {', '.join(pays)}; on another stream, not resumed here)")
         print("docs_phase=none")
         return
+    archived = _rotate_sweep_quiet()
+    if archived:
+        # Only done phases moved, so the branch inputs are the same; re-read them from disk anyway.
+        phases = all_active_phases()
+        live = _live_docs_phases(phases)
+        covered_by, uncovered = _docs_debt_split(phases)
     owing = ", ".join(p["id"] for p in uncovered)
-    midflight = _midflight(phases, live)
-    if midflight:
-        print(f"rotate=stop_midflight midflight={', '.join(midflight)}")
+    running, parked = _running_and_parked(phases, live)
+    dirty = _rotate_uncommitted() if parked and not running else []
+
+    def report() -> None:
+        if archived:
+            print(f"archived={', '.join(archived)}")
+        for item_id, status, kind in parked:
+            print(f"parked={item_id} status={status}" + (f" stop_kind={kind}" if kind else ""))
+
+    def stopped() -> None:
         print(f"stopped_before=resume docs_phase={live[0]['id']}" if live else f"stopped_before=create owing={owing}")
-        print("nothing was archived, created or reordered: the docs phase never interleaves with running work -- "
-              "re-run rotate-backlog once every listed slice is todo, ready or done and no listed phase is pending, blocked or in_review")
+
+    if running:
+        print(f"rotate=stop_midflight midflight={', '.join(running)}")
+        report()
+        stopped()
+        print("nothing was created, replaced or reordered (only the clean-phase archive sweep ran): the docs phase never "
+              "interleaves with running work -- re-run rotate-backlog once no listed slice is in_progress or in_review "
+              "and no listed phase is in_review")
+        return
+    if dirty:
+        print(f"rotate=stop_uncommitted uncommitted={len(dirty)}")
+        report()
+        for line in _scope_file_lines(dirty[:ROTATE_UNCOMMITTED_SHOWN]):
+            print(line)
+        if len(dirty) > ROTATE_UNCOMMITTED_SHOWN:
+            print(f"  ... and {len(dirty) - ROTATE_UNCOMMITTED_SHOWN} more")
+        stopped()
+        print("nothing was created, replaced or reordered (only the clean-phase archive sweep ran): work is parked and the "
+              "product tree holds uncommitted edits, which a parked item may own and the docs phase's commits would take -- "
+              "the operator commits or stashes them, then re-run rotate-backlog")
+        return
+    if live and uncovered and all(_docs_phase_unstarted(p) for p in live):
+        print(f"rotate=replace replaced={', '.join(p['id'] for p in live)}")
+        report()
+        for docs_phase in live:
+            pays = _replace_docs_phase(docs_phase)
+            print(f"docs_phase_replaced={docs_phase['id']} (paid {', '.join(pays)}; unstarted, so its folder is removed and git keeps it)")
+        phases = all_active_phases()
+        covered_by, uncovered = _docs_debt_split(phases)
+        _print_docs_phase_covered(covered_by)
+        _print_docs_phase_proposal(uncovered, _queue_jump_order(phases))
         return
     if live:
-        docs_phase = live[0]
+        docs_phase = next((p for p in live if not _docs_phase_unstarted(p)), live[0])
         print(f"rotate=resume docs_phase={docs_phase['id']}")
+        report()
         moved = _reassert_queue_jump(docs_phase, phases)
         if moved:
             print(f"docs_phase_order={docs_phase['id']} {moved[0]} -> {moved[1]}")
@@ -5868,6 +9554,7 @@ def rotate_backlog(args: argparse.Namespace) -> None:
             print(f"docs_debt_waiting={owing} (no docs phase pays it yet; rotate-backlog proposes one once {docs_phase['id']} is done)")
         return
     print("rotate=create")
+    report()
     _print_docs_phase_covered(covered_by)
     _print_docs_phase_proposal(uncovered, _queue_jump_order(phases))
 
@@ -5970,7 +9657,7 @@ DESIGN_SLUG = r"[a-z0-9]+(?:-[a-z0-9]+)*"
 DESIGN_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,62}$")
 DESIGN_SLUG_RE = re.compile(rf"^{DESIGN_SLUG}$")
 DESIGN_NN_RE = re.compile(rf"^(\d{{2,}})-({DESIGN_SLUG})$")  # a job folder or a round folder
-DESIGN_SLICE_RE = re.compile(r"^P\d+\.[A-Z][A-Z0-9]*$")
+DESIGN_SLICE_RE = re.compile(rf"^{PHASE_ID_PATTERN}\.{SLICE_SUFFIX_PATTERN}$")
 # An Artifact address as the Artifact tool takes it: https, claude.ai or claude.com (preview. allowed),
 # /artifact/<id> or /code/artifact/<id>, and nothing after the id (the type's "cut after its id").
 DESIGN_ARTIFACT_RE = re.compile(r"^https://(?:preview\.)?claude\.(?:ai|com)/(?:code/)?artifact/[A-Za-z0-9_-]+$")
@@ -9420,7 +13107,7 @@ def main(argv=None) -> int:
     p.set_defaults(func=cmd_docs)
 
     p = sub.add_parser("doc-new-version", help="Create a new durable doc version from the latest version")
-    p.add_argument("--doc", required=True, choices=sorted(DOC_TYPES))
+    p.add_argument("--doc", required=True, help=f"one of {', '.join(sorted(DOC_TYPES))} (a retired doc is refused and names its successor)")
     p.add_argument("--summary", required=True)
     p.add_argument("--source", required=True)
     p.set_defaults(func=new_doc_version)
@@ -9428,16 +13115,16 @@ def main(argv=None) -> int:
     p = sub.add_parser("validate", help="Validate workflow and docs structure")
     p.set_defaults(func=lambda args: sys.exit(validate()))
 
-    p = sub.add_parser("sync-agents", help="Write the route table's rows (engine defaults overlaid by the repo-root executors.toml) into the model/effort frontmatter of the five managed agent files: slice-executor-mid, slice-executor-high, design-drafter (its own design row), design-critic (the critic row; the judge row runs it with its model passed per call) and Explore (the explore row)")
+    p = sub.add_parser("sync-agents", help="Write the route table's rows (engine defaults overlaid by the repo-root executors.toml) into the model/effort frontmatter of the four managed agent files: slice-executor (the mid row; high and research run it with their model and effort passed per dispatch), design-drafter (its own design row), design-critic (the critic row; the judge row runs it with its model passed per call) and Explore (the explore row)")
     p.add_argument("--check", action="store_true", help="Report drift without writing; exit 1 if out of sync")
     p.set_defaults(func=sync_agents)
 
-    p = sub.add_parser("executor-route", help="Print the executor routing decision, one key=value per line, writing nothing: bare, the resolved route table (high, research, design, critic, judge, mid, cheap, explore) and the agent files' sync state; with a slice id, the route, tier, subagent_type, model, effort and attribution its dispatch uses (kind first, then risk, then attempt); --drafter / --critic / --judge / --explore, a non-slice agent's dispatch; plus fallback=, skip= and warning= lines for the environment. --critic and --judge exit 1 when their row is the design row's model")
+    p = sub.add_parser("executor-route", help="Print the executor routing decision, one key=value per line, writing nothing: bare, the resolved route table (high, research, design, critic, judge, mid, explore), the agent files' sync state and an override= line per row executors.toml sets (its value against the default); with a slice id, the route, subagent_type (slice-executor for every slice row), model, effort and attribution its dispatch uses (kind first, then risk, then attempt); --drafter / --critic / --judge / --explore, a non-slice agent's dispatch; plus fallback=, skip= and warning= lines for the environment. The critic and the judge may share the design row's model (v75)")
     p.add_argument("slice", nargs="?", help="the slice to route; omit for the table")
     p.add_argument("--retry", action="store_true", help="the slice's second attempt (an escalation, a failed or empty return, a fix of mid-row work): always the high row")
-    p.add_argument("--drafter", action="store_true", help="the design-drafter's dispatch (its own design row, [claude.design]; not a slice tier)")
-    p.add_argument("--critic", action="store_true", help="the design-critic's dispatch in critic mode (the critic row, [claude.critic]); exit 1 when it is the drafter's model")
-    p.add_argument("--judge", action="store_true", help="the design-critic's dispatch in judge mode (the judge row, [claude.judge], alias only); exit 1 when it is the drafter's model; skip=yes behind a loopback proxy that serves no Fable")
+    p.add_argument("--drafter", action="store_true", help="the design-drafter's dispatch (its own design row, [claude.design]; not a slice route)")
+    p.add_argument("--critic", action="store_true", help="the design-critic's dispatch in critic mode (the critic row, [claude.critic]); it may share the drafter's model")
+    p.add_argument("--judge", action="store_true", help="the design-critic's dispatch in judge mode (the judge row, [claude.judge], alias only); never refused for sharing the drafter's model; skip=yes only when the judge row is overridden to Fable behind a loopback proxy that serves no Fable")
     p.add_argument("--explore", action="store_true", help="the read-only Explore lookup agent's dispatch (the explore row)")
     p.set_defaults(func=cmd_executor_route)
 
@@ -9450,16 +13137,21 @@ def main(argv=None) -> int:
         p.add_argument(flag, dest=dest, help=argparse.SUPPRESS)
     p.set_defaults(func=cmd_record_dispatch)
 
-    p = sub.add_parser("dispatch-summary", help="Read-only: what a phase really cost -- the main thread beside its subagent spans per slice and per phase (requests, context, output, list-price $, minutes, limit hits, verdicts) metered from Claude Code's transcripts, the means a DECOMP estimates from, then the recorded verdicts; no transcripts found prints one line and the recorded tables")
-    p.add_argument("--phase", help="one phase: its slices, read from the sessions overlapping its slice windows")
+    p = sub.add_parser("dispatch-summary", help="Read-only: what a phase really cost -- the main thread beside its subagent spans per slice and per phase (requests, context, output, list-price $, minutes, limit hits, verdicts) metered from Claude Code's transcripts, the means a DECOMP estimates time from, then the recorded verdicts; no transcripts found prints one line and the recorded tables")
+    p.add_argument("--phase", help="one phase (a brief id: 7kq2, P-7kq2, 12 or P12): its slices, read from the sessions overlapping its slice windows")
     p.add_argument("--slice", help="one slice: its metered rows and its recorded attempts, one per line")
     p.add_argument("--json", action="store_true", help="print everything as one JSON object")
     p.add_argument("--transcripts", action="append", metavar="DIR", help="read this projects/<slug> directory instead of discovering the session root's (repeatable)")
     p.set_defaults(func=cmd_dispatch_summary)
 
-    p = sub.add_parser("next", help="Print the current phase/slice selection")
+    p = sub.add_parser("next", help="Print the current phase/slice selection; when the phase's notebook is over 40,960 B, also notebook_over_budget= with up to 3 notebook_move= commands to run before the next dispatch (required form), or none when nothing can move (advisory form)")
     p.add_argument("--card", action="store_true", help="print the resume card instead: the pointer, the next action or the typed stop, the open gates, the running spans (from the newest session's subagents/*.meta.json) and the slice's file paths, computed from state, at most 2,048 bytes -- what compact-resume prints after a compaction")
     p.set_defaults(func=cmd_next)
+
+    run_help = "Read-only, writes nothing: the phase list and the next target of a /do-whole-phases run, recomputed from disk on every call (re-run it at each phase boundary and after a compaction). Prints run=, stream=, queue= (this stream's non-done phases of the run, in order), skipped=<P> reason=done | done (archived) | other-stream stream=<branch or default>, parked=<P> (pending, its acceptance gate open, no slice pending or blocked: the run passes it), then target_phase= / target_slice= / slice_path= / next_slice= (plus notebook_over_budget= / notebook_move= when the target phase's notebook is over 40,960 B: run the moves before the dispatch; plus gate_cleared= when a cleared gate's review awaits its recorded pass), or halt=<item> status= with stop_kind= / on_words= for a pending slice and halt_reason= (any other pending or blocked phase, or a pending or blocked current slice: the whole run stops), or run_done=yes. Phase tokens are brief ids: 7kq2 / P-7kq2 (minted) or 12 / P12 (numbered), any case. Exits 2 with refused= lines and nothing else for a token that is not a phase id or names no phase. The plain pointer (next, works/state.json, the resume card's stop) is unchanged and still halts at a parked phase"
+    p = sub.add_parser("run-phases", help=run_help, description=run_help)
+    p.add_argument("tokens", nargs="*", metavar="PHASE", help="a phase id in any brief form: 7kq2 or P-7kq2 (a minted id), 12 or P12 (a numbered one), any case, separated by commas and/or spaces; the given order is kept and duplicates are dropped; none = every non-done phase on this stream, by order. Ranges, mode words, `worktree` and a minted id without its dash (P7kq2) are refused")
+    p.set_defaults(func=cmd_run_phases)
 
     p = sub.add_parser("compact-resume", help="The SessionStart hook (matcher compact): after a compaction, print compaction=done source=compact and the resume card (next --card; the running spans from the hook's transcript_path session), falling back to the plain pointer on any error; never fails, always exits 0")
     p.set_defaults(func=cmd_compact_resume)
@@ -9468,24 +13160,25 @@ def main(argv=None) -> int:
     p.set_defaults(func=cmd_deferred)
 
     p = sub.add_parser("new-phase", help="Create a new phase with DECOMP and REVIEW slices")
-    p.add_argument("--phase", required=True)
+    p.add_argument("--phase", help="the phase id; omit it and the engine mints one (P-7kq2), printed on the created line. "
+                   "Given, either shape (P12 or P-7kq2; 12 and 7kq2 are read as those); refused when it exists active or archived")
     p.add_argument("--name", required=True)
     p.add_argument("--objective", required=True)
     p.add_argument("--order", type=float, help="sort position among phases; a fractional value (e.g. 4.5) inserts between two neighbors without renumbering")
     p.add_argument("--on-main", action="store_true", dest="on_main",
                    help="no-op since v43 (the default stream is the default); accepted so v42 habits and scripts keep working")
     p.add_argument("--consolidates", metavar="P26,P27",
-                   help="docs phase: the comma-separated ids of active phases whose doc consolidation debt this phase pays; refused (nothing written) for an id that is not an active phase owing consolidation. Stored as `consolidates` in phase.json -- the only docs-phase marker; `docs-debt` shows it as 'paid by' and `rotate-backlog` proposes no second docs phase for what it covers")
+                   help="docs phase: the comma-separated ids (any brief form: P26, 26, P-7kq2, 7kq2) of active phases whose doc consolidation debt this phase pays; refused (nothing written) for an id that is not an active phase owing consolidation. Stored as `consolidates` in phase.json -- the only docs-phase marker; `docs-debt` shows it as 'paid by' and `rotate-backlog` proposes no second docs phase for what it covers")
     p.set_defaults(func=new_phase)
 
     p = sub.add_parser("new-slice", help="Create a new slice folder with slice.json + markdown files")
-    p.add_argument("--phase", required=True)
-    p.add_argument("--slice", required=True)
+    p.add_argument("--phase", required=True, help="the phase, in any brief form (7kq2, P-7kq2, 12 or P12)")
+    p.add_argument("--slice", required=True, help="the slice id (P-7kq2.S1), or its bare suffix (S1)")
     p.add_argument("--name", required=True)
-    p.add_argument("--kind", default="implementation", help="one of implementation, review, decomposition, research, fix, docs, qa, co-work (closed set; unknown kinds are rejected). research is findings-only: no product code, findings land in phase.md, and it always routes to the research row on slice-executor-high")
-    p.add_argument("--risk", default="high", help="low (the mid row for implementation and fix, the cheap row for docs and qa -- both on slice-executor-mid, the default tier since v46, real code included) or high (the high row on slice-executor-high: only for a named trigger -- open design, a core invariant, an unlocated root cause, a wide blast radius -- or a fix to mid-row work); unset or unrecognized values route to high; kind decomposition, review, co-work and research route by kind whatever this says; `executor-route <slice>` prints the decision")
+    p.add_argument("--kind", default="implementation", help="one of implementation, review, decomposition, research, fix, docs, qa, co-work (closed set; unknown kinds are rejected). research is findings-only: no product code, findings land in phase.md, and it always routes to the research row")
+    p.add_argument("--risk", default="high", help="low (the mid row for implementation, fix, docs and qa -- the default since v46, real code included) or high (the high row: only for a named trigger -- open design, a core invariant, an unlocated root cause, a wide blast radius -- or a fix to mid-row work); unset or unrecognized values route to high; kind decomposition, review, co-work and research route by kind whatever this says; `executor-route <slice>` prints the decision")
     p.add_argument("--order", type=float, help="sort position within the phase; a fractional value (e.g. 4.5) inserts between two neighbors without renumbering (default: 10 past the last non-review slice)")
-    p.add_argument("--depends-on", action="append", help="advisory: validate checks only that the named slice exists; selection still follows --order")
+    p.add_argument("--depends-on", action="append", metavar="ID|none", help=DEPENDS_ON_HELP)
     p.set_defaults(func=new_slice)
 
     p = sub.add_parser("start-slice", help="Mark a slice in_progress")
@@ -9497,6 +13190,15 @@ def main(argv=None) -> int:
     p.add_argument("--outcome", help="one line recorded in slice.json and rendered in the phase's generated ## Slices table")
     p.set_defaults(func=finish_slice)
 
+    p = sub.add_parser("set-slice-deps", help="Declare an existing slice's dependencies (v77), under new-slice --depends-on's rules: a decomposition cannot finish while a middle slice it leaves open is undeclared")
+    p.add_argument("slice")
+    p.add_argument("--depends-on", action="append", required=True, metavar="ID|none", help=DEPENDS_ON_HELP)
+    p.set_defaults(func=set_slice_deps)
+
+    p = sub.add_parser("parallel-plan", help="Print the rounds a phase's open slices run in, as the engine determines them from the declarations (v77), and any middle slice still undeclared; read-only")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
+    p.set_defaults(func=cmd_parallel_plan)
+
     p = sub.add_parser("set-slice-status", help="Set any valid slice status; a pending stop is typed with --stop-kind and --on-words (stored in slice.json as pending: {kind, on_words, since}, printed by next and the resume card, cleared when the slice leaves pending)")
     p.add_argument("slice")
     p.add_argument("status")
@@ -9506,19 +13208,19 @@ def main(argv=None) -> int:
     p.set_defaults(func=cmd_set_slice_status)
 
     p = sub.add_parser("set-phase-status", help="Set any valid phase status")
-    p.add_argument("phase")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
     p.add_argument("status")
     p.set_defaults(func=set_phase_status)
 
     p = sub.add_parser("review-phase", help="Record a phase review verdict (pass/changes_requested/blocked)")
-    p.add_argument("phase")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
     p.add_argument("--verdict", required=True, choices=sorted(REVIEW_VERDICTS))
     p.add_argument("--reviewer", default=None)
     p.add_argument("--note", default=None)
     p.set_defaults(func=review_phase)
 
     p = sub.add_parser("accept-gate", help="Operator acceptance gate for a phase: declare (--require/--waive), open it at the review (--open), clear it (--clear), or show it (bare). Orchestrator/operator command -- executors never run it")
-    p.add_argument("phase")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
     g = p.add_mutually_exclusive_group()
     g.add_argument("--require", action="store_true", help="declare the phase operator-visible: review-phase --verdict pass refuses until the gate is opened and cleared (creates the gate block on a legacy phase). No status change")
     g.add_argument("--waive", action="store_true", help="declare the phase NOT operator-visible; --note is mandatory and records why")
@@ -9532,26 +13234,35 @@ def main(argv=None) -> int:
     p.set_defaults(func=docs_debt)
 
     p = sub.add_parser("docs-consolidated", help="Record that a phase's deferred durable-doc consolidation landed (run after a docs phase creates the versions; also unblocks archiving)")
-    p.add_argument("phase")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
     p.set_defaults(func=docs_consolidated)
 
     p = sub.add_parser("parallel-start", help="Ask for a worktree: move a planned phase out of the default stream into its own -- stamp it, commit the stamp (phase folder + works/ files only; a dirty tree is fine), cut phase/P<N>-<slug> and .claude/worktrees/P<N>-<slug>")
-    p.add_argument("phase")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
     p.add_argument("--worktree", default=None, help="worktree path (default: <repo>/.claude/worktrees/P<N>-<slug>, which EnterWorktree can enter in the same session; elsewhere means opening a second session there)")
     p.add_argument("--slug", default=None, help="branch slug override (default: slugified phase name); branch is phase/<phase>-<slug>")
     p.add_argument("--host-branch", default=None, help="nested install only, and required there: the host repo's branch for this phase's product commits, named by the host's convention (no workspace IDs); reused when it exists and no host worktree has it checked out. In nested the pair is <host>/.claude/worktrees/P<N>-<slug> on this branch, with the nested worktree inside it (--worktree overrides the host worktree's path)")
     p.add_argument("--host-base", default=None, help="nested install only: the host ref the host branch starts from (default: origin/HEAD, else init.defaultBranch if it exists locally, else main, then master; never fetched)")
+    p.add_argument("--repo", action="append", default=None, metavar="NAME=BRANCH", help="multi-repo host only, repeatable: also cut a worktree for registered repo NAME at <host worktree>/<its path> on BRANCH (required, named by that repo's convention: nested-convention --repo NAME); reused when it exists and is checked out nowhere. A registered repo not named here is not in this set: inside it, phase-scope skips it")
+    p.add_argument("--repo-base", action="append", default=None, dest="repo_base", metavar="NAME=REF", help="multi-repo host only, repeatable: the ref repo NAME's branch starts from (default: its registry default_branch as a local branch; never fetched); NAME must also be given with --repo")
     p.set_defaults(func=parallel_start)
 
+    p = sub.add_parser("parallel-add-repo", help="Multi-repo host only, run INSIDE a phase's worktree set: add one registered repo mid-phase -- cut its worktree at <host worktree>/<its path> on BRANCH, or with --adopt stamp the worktree of it already there -- and commit the stamp on the phase branch")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
+    p.add_argument("--repo", required=True, metavar="NAME=BRANCH", help="the registered repo (in this set's registry) and its branch, named by that repo's convention (nested-convention --repo NAME); without --adopt, reused when it exists and is checked out nowhere")
+    p.add_argument("--repo-base", default=None, dest="repo_base", metavar="REF", help="the ref the branch starts from (default: the registry default_branch as a local branch; never fetched); with --adopt, what its anchor is the merge-base with")
+    p.add_argument("--adopt", action="store_true", help="stamp the existing worktree of NAME at <host worktree>/<its path> (registered in that repo, HEAD on BRANCH) instead of cutting one; its branch stays the operator's (branch_created=false), so teardown keeps it")
+    p.set_defaults(func=parallel_add_repo)
+
     p = sub.add_parser("parallel-skip", help="No-op since v43 (the default stream is the default, so there is nothing to pin): reports where the phase runs and writes nothing")
-    p.add_argument("phase")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
     p.set_defaults(func=parallel_skip)
 
     p = sub.add_parser("parallel-status", help="Read-only cross-stream view: this checkout's pointer plus every parallel phase's branch-side slice state (never writes anything)")
     p.set_defaults(func=parallel_status)
 
     p = sub.add_parser("parallel-gate", help="Quiet-point gate: is this parallel phase's branch mergeable now (branch done+pass, default stream quiet)? Exit 0 = open")
-    p.add_argument("phase")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
     p.add_argument("--branch-ref", default=None, help="git ref holding the phase branch's state (default: the phase's stamped execution.branch; e.g. HEAD or origin/phase/P2-x in CI)")
     p.add_argument("--main-ref", default=None, help="git ref holding the default stream's state (default: this working tree; e.g. origin/main when running from a PR checkout)")
     p.set_defaults(func=parallel_gate)
@@ -9560,11 +13271,11 @@ def main(argv=None) -> int:
     p.set_defaults(func=parallel_merge_finish)
 
     p = sub.add_parser("parallel-consolidated", help="Mark a merged parallel phase's deferred doc consolidation done (run on the default stream, after the doc versions land)")
-    p.add_argument("phase")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
     p.set_defaults(func=parallel_consolidated)
 
     p = sub.add_parser("parallel-teardown", help="Retire a merged parallel phase's worktree and branch; run from the default stream")
-    p.add_argument("phase")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
     p.add_argument("--discard-ignored", action="store_true", help="nested install only: delete the ignored, worktree-only files the paired teardown lists (it refuses without this flag)")
     p.set_defaults(func=parallel_teardown)
 
@@ -9572,24 +13283,51 @@ def main(argv=None) -> int:
     p.add_argument("--confirm", action="store_true", help="record the operator-confirmed conventions (needs --text and --trailers)")
     p.add_argument("--text", default=None, help="the host's conventions as the operator confirmed them: commit subjects and trailers; branch naming and base (e.g. from fresh main); PR shape (one per ticket or per phase) and who merges")
     p.add_argument("--trailers", default=None, choices=("allowed", "forbidden"), help="may Claude Co-Authored-By trailers appear in host product commits")
+    p.add_argument("--repo", default=None, metavar="NAME", help="multi-repo host only: show one registered repo's effective conventions (the host-level ones, the rules for every repo, composed with its own), or with --confirm record its own; without --repo, --confirm records the host-level ones")
+    p.add_argument("--inherit", action="store_true", help="with --repo: set that repo's own conventions back to null, so it inherits the host-level ones")
     p.set_defaults(func=cmd_nested_convention)
 
+    p = sub.add_parser("nested-repos", help="Nested personal install only: show the multi-repo host's registry of product repos (bare: name, path, the branch checked out now, default branch, convention state, rules count), or edit it -- --add <path>, --remove <name>, --rules <name> --set a,b,c, --detect-rules <name>; writes only .agentic-nested.json; --add on a single-repo install only when the host tracks no files; refuses outside a nested install")
+    action = p.add_mutually_exclusive_group()
+    action.add_argument("--add", default=None, metavar="PATH", help="register the git repo whose work tree root is PATH (relative to the host root), under the host; its rules files are detected and its convention inherits the host's")
+    action.add_argument("--remove", default=None, metavar="NAME", help="drop a repo from the registry (its files are untouched); refused while an active phase holds repo_anchors.NAME")
+    action.add_argument("--rules", default=None, metavar="NAME", help="set a repo's rules files by hand (needs --set)")
+    action.add_argument("--detect-rules", default=None, metavar="NAME", dest="detect_rules", help="re-detect a repo's rules files: every tracked AGENTS.md / CLAUDE.md, plus .agents/skills/*/SKILL.md")
+    action.add_argument("--map-anchors", default=None, metavar="NAME", dest="map_anchors", help="converted install: move every phase's host_anchors (shas that are commits of repo NAME) to repo_anchors.NAME, active and archived phases alike; skips phases in flight on their own branch; writes phase.json files only")
+    p.add_argument("--set", default=None, metavar="A,B,C", help="with --rules: the comma-separated repo-relative paths of the repo's own rules files (empty clears them)")
+    p.add_argument("--name", default=None, help="with --add: the repo's name in the registry (default: the path's last segment; [A-Za-z0-9._-]+)")
+    p.add_argument("--default-branch", default=None, dest="default_branch", help="with --add: the repo's integration branch (default: its origin/HEAD target, else none)")
+    p.set_defaults(func=cmd_nested_repos)
+
     p = sub.add_parser("phase-scope", help="Read-only: the phase's boundary from git -- creation commit, base..head range and the product files it changed (works/ and docs/ excluded); advisory, exit 0 without git")
-    p.add_argument("phase")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
     p.add_argument("--base", default=None, help="use this ref as the range base verbatim (skips creation-commit / merge-base detection)")
     p.add_argument("--head", default=None, help="use this ref as the range head (default: HEAD, or the commit that recorded a passing review on a done phase)")
     p.add_argument("--json", action="store_true", help="print the same answer as one JSON object")
+    p.add_argument("--repo", action="append", default=None, metavar="NAME", help="multi-repo host only: measure only this registered repo (repeatable); with exactly one --repo, --base/--head set that repo's range instead of the host's")
     p.set_defaults(func=phase_scope)
 
-    p = sub.add_parser("phase-section", help="Read or write ONE `## ` section of a phase's phase.md: no name = the index (a line per heading with its bytes), a name prints that section, --replace / --append write one section (stdin or --file), --resolve OQ<n> --pointer <ref> collapses an Operator Questions entry; every other byte of the notebook stays identical",
-                       description="phase.md is an index: read one section, write one section, never the whole file. Put the section name BEFORE the flags: phase-section P1 Now --replace --file now.md. Names match case-insensitively (Now, Decisions, 'Doc impact', 'Operator Questions', 'Notes for later slices', Objective, Slices). Slices is generated and refused; Doc impact and Operator Questions are append-only (--append, or --resolve to collapse an answered entry).")
-    p.add_argument("phase")
+    p = sub.add_parser("phase-section", help="Read or write ONE `## ` section of a phase's phase.md, or one entry of it: no name = the index (a line per heading with its bytes; with its budget and over/long flags, then the move commands, when a section is over its budget or holds long entries), a name prints that section (paged: --page N), --list its entries, --entry K one entry; --replace / --append write one section (stdin or --file), --entry K --replace / --remove write one entry, --resolve OQ<n> --pointer <ref> collapses an Operator Questions entry, --to-topic <slug> moves entries verbatim to topics/<slug>.md behind one gist line each, --topic <slug> reads that file; every other byte of the notebook stays identical",
+                       description="phase.md is an index: read one section or one entry, write one section or one entry, never the whole file. Put the section name BEFORE the flags: phase-section P1 Now --replace --file now.md. Names match case-insensitively (Now, Decisions, 'Doc impact', 'Operator Questions', 'Notes for later slices', Objective, Slices). Slices is generated and refused; Doc impact and Operator Questions are append-only (--append, or --resolve to collapse an answered entry). "
+                                   "Entries are a section's column-0 list items (- , * , + , 1. , 1) ) with their continuation and nested lines: --list numbers them (position, own label, bytes, flags long/nested/pointer, lead), and --entry K names one by position, OQ<n> or a unique case-insensitive piece of its first line. --entry K --replace swaps that entry alone (text without a marker keeps the old one); --entry K --remove deletes a consumed one (Notes for later slices, Now, Objective, custom sections; a superseded decision is replaced, never removed). "
+                                   "--to-topic <slug> [--entry K] [--gist TEXT] [--dry-run] moves the section's entries (or K's, where ranges and lists like 1-8,10 work) to topics/<slug>.md: each is appended there as a `## <Section> <label>` block byte for byte and verified, then replaced in phase.md by one pointer line, `<marker><gist> → [topics/<slug>.md](topics/<slug>.md) § <block>`, its gist a verbatim excerpt of at most 160 characters; Decisions, Notes for later slices, Objective and custom sections only, never the slug breakdown, and a gist under 24 characters of plain text (a bare link) is refused. --topic <slug> [<block>] reads a topic: its index of blocks with bytes, or one block. "
+                                   "Budgets: the index prints each section's bytes; when one is over its budget (Decisions 12 KB, Operator Questions 8 KB, Notes for later slices 6 KB, Now 2 KB, Objective 2 KB, any other 6 KB; none for Slices and Doc impact, which still count to the 40 KB total) or holds long entries (over 512 B or nested, named in movable sections only), every line shows bytes, budget, flags (over, long:N) and the heading last, then the total, then one `move: phase-section <P> \"<Section>\" --to-topic <slug> --entry <ranges>` per section. "
+                                   "Paging: a section or topic block over 24 KB prints page 1 of it; --page N prints page N. Pages break only between entries (an entry bigger than a page gets its own page) and open with `<!-- page i of n · <Section> · entries a–b of m · next: ... --page i+1 -->` (`last page` on the last); drop those header lines, concatenate the pages, and you have the section byte for byte.")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
     p.add_argument("name", nargs="*", help="section heading (quote it when it has spaces); omit for the index")
     p.add_argument("--replace", action="store_true", help="replace the section's body (the heading and the rest of the file are kept byte-identical)")
     p.add_argument("--append", action="store_true", help="add text at the end of the section")
     p.add_argument("--resolve", metavar="OQ<n>", help="collapse that Operator Questions entry to one line (entries are never deleted)")
     p.add_argument("--pointer", help="with --resolve: where the answer landed (a Decisions line, a deferred job, a slice)")
     p.add_argument("--file", help="read the new text from this file (default: stdin)")
+    p.add_argument("--list", action="store_true", help="with a section name: one line per entry (position, own label, bytes, flags long/nested/pointer, its lead cut at 80 characters)")
+    p.add_argument("--entry", metavar="K", help="one entry of the section: its position (1-based), OQ<n>, or a unique case-insensitive piece of its first line; alone it prints that entry, with --replace / --remove it writes only it, with --to-topic it may also be ranges and lists (1-8,10)")
+    p.add_argument("--remove", action="store_true", help="with --entry K: delete that entry and its trailing blank lines (Notes for later slices, Now, Objective, custom sections; refused in Decisions, Doc impact, Operator Questions and Slices)")
+    p.add_argument("--to-topic", metavar="SLUG", dest="to_topic", help="move the section's entries (or --entry K's) verbatim to topics/SLUG.md, verify them there, then leave one pointer line each carrying a verbatim gist; Decisions, Notes for later slices, Objective and custom sections; the slug breakdown is refused")
+    p.add_argument("--gist", help="with --to-topic and exactly one entry: the pointer line's gist (default: derived, a verbatim excerpt of at most 160 characters)")
+    p.add_argument("--dry-run", action="store_true", dest="dry_run", help="with --to-topic: print the pointer lines and the bytes saved, and write nothing")
+    p.add_argument("--topic", metavar="SLUG", help="read topics/SLUG.md beside phase.md instead: no name prints its index (its ## blocks with bytes), a name prints that block (paged like a section)")
+    p.add_argument("--page", type=int, metavar="N", help=f"with a section or topic block name: print page N of it ({PAGE_BYTES // 1024} KB pages that break only between entries, each opening with a `<!-- page i of n ... -->` header); a plain read over {PAGE_BYTES // 1024} KB prints page 1; refused with any write flag, --list or --entry")
     p.set_defaults(func=phase_section)
 
     # The design contract, schema 2 (v60): the on-disk layout lives in design-cowork/reference/record.md "The design record".
@@ -9700,7 +13438,8 @@ def main(argv=None) -> int:
     p.set_defaults(func=design_migrate)
 
     p = sub.add_parser("defer-job", help="Create a deferred job folder")
-    p.add_argument("--id")
+    p.add_argument("--id", help="the deferred id; omit it and the engine mints one (D-m3xa). Given, either shape (D12 or D-m3xa; 12 and m3xa are read as those); "
+                   "refused when any deferred folder holds it")
     p.add_argument("--title", required=True)
     p.add_argument("--reason", required=True)
     p.add_argument("--trigger", required=True)
@@ -9708,26 +13447,26 @@ def main(argv=None) -> int:
     p.set_defaults(func=defer_job)
 
     p = sub.add_parser("promote-deferred", help="Promote an open deferred job into an active slice")
-    p.add_argument("deferred_id")
-    p.add_argument("--phase", required=True)
-    p.add_argument("--slice", required=True)
+    p.add_argument("deferred_id", help="the deferred job, in any brief form (m3xa, D-m3xa, 12 or D12)")
+    p.add_argument("--phase", help="the target phase, in any brief form (7kq2, P-7kq2, 12 or P12); omit it with --create-phase and the engine mints the new phase's id")
+    p.add_argument("--slice", required=True, help="the new slice's id (P-7kq2.S1), or its bare suffix (S1) -- the only way to name it in a phase being minted")
     p.add_argument("--name")
-    p.add_argument("--kind", default="implementation", help="one of implementation, review, decomposition, research, fix, docs, qa, co-work (closed set; unknown kinds are rejected). research is findings-only: no product code, findings land in phase.md, and it always routes to the research row on slice-executor-high")
-    p.add_argument("--risk", default="high", help="low (the mid row for implementation and fix, the cheap row for docs and qa -- both on slice-executor-mid, the default tier since v46, real code included) or high (the high row on slice-executor-high: only for a named trigger -- open design, a core invariant, an unlocated root cause, a wide blast radius -- or a fix to mid-row work); unset or unrecognized values route to high; kind decomposition, review, co-work and research route by kind whatever this says; `executor-route <slice>` prints the decision")
+    p.add_argument("--kind", default="implementation", help="one of implementation, review, decomposition, research, fix, docs, qa, co-work (closed set; unknown kinds are rejected). research is findings-only: no product code, findings land in phase.md, and it always routes to the research row")
+    p.add_argument("--risk", default="high", help="low (the mid row for implementation, fix, docs and qa -- the default since v46, real code included) or high (the high row: only for a named trigger -- open design, a core invariant, an unlocated root cause, a wide blast radius -- or a fix to mid-row work); unset or unrecognized values route to high; kind decomposition, review, co-work and research route by kind whatever this says; `executor-route <slice>` prints the decision")
     p.add_argument("--order", type=float, help="sort position within the phase; a fractional value (e.g. 4.5) inserts between two neighbors without renumbering (default: 10 past the last non-review slice)")
-    p.add_argument("--depends-on", action="append", help="advisory: validate checks only that the named slice exists; selection still follows --order")
+    p.add_argument("--depends-on", action="append", metavar="ID|none", help=DEPENDS_ON_HELP)
     p.add_argument("--create-phase", action="store_true")
     p.add_argument("--phase-name")
     p.add_argument("--phase-objective")
     p.set_defaults(func=promote_deferred)
 
     p = sub.add_parser("drop-deferred", help="Drop an open deferred job")
-    p.add_argument("deferred_id")
+    p.add_argument("deferred_id", help="the deferred job, in any brief form (m3xa, D-m3xa, 12 or D12)")
     p.add_argument("--reason", required=True)
     p.set_defaults(func=drop_deferred)
 
     p = sub.add_parser("archive-phase", help="Archive a single review-passed phase (first-class; use when only some phases are done)")
-    p.add_argument("phase")
+    p.add_argument("phase", help=PHASE_ARG_HELP)
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=archive_phase)
 
@@ -9735,7 +13474,7 @@ def main(argv=None) -> int:
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=archive_all)
 
-    p = sub.add_parser("rotate-backlog", help="The one resumable step of /rotate-backlog: checks the doc debt FIRST and prints its decision as the first line, rotate=<refused|archive|stop_midflight|resume|create>. archive: nothing owes, so archive every currently-done phase (whole phases, the partial archive-all) and rebuild. While debt stands it archives nothing: stop_midflight when default-stream work is off a boundary, resume the live docs phase (re-asserting its queue-jump order), or print the docs phase to create, its create: line carrying the queue-jump --order. refused (writes nothing, non-zero exit) on a parallel stream")
+    p = sub.add_parser("rotate-backlog", help="The one resumable step of /rotate-backlog: checks the doc debt FIRST and prints its decision as the first line, rotate=<refused|archive|stop_midflight|stop_uncommitted|replace|resume|create>. archive: nothing owes, so archive every currently-done phase (whole phases, the partial archive-all) and rebuild. While debt stands it first archives the cleanly archivable phases (never one that owes docs; archived=<ids>), goes around parked work -- a phase pending or blocked, a slice pending, blocked or changes_requested, one parked=<id> status=<status>[ stop_kind=<kind>] line each -- and then: stop_midflight for running default-stream work (a slice in_progress or in_review, a phase in_review; a gate-open phase's review slice is parked), stop_uncommitted when work is parked and the product tree holds uncommitted edits (uncommitted=<n> and the paths), replace (v78) every live docs phase when all are unstarted and new debt stands uncovered (each folder removed, docs_phase_replaced=, then one proposal covering all the debt), resume a started live docs phase (re-asserting its queue-jump order; new debt waits for it), or print the docs phase to create, its create: line carrying the queue-jump --order. A stop creates, replaces and reorders nothing. refused (writes nothing, non-zero exit) on a parallel stream")
     p.add_argument("--archive-only", action="store_true", dest="archive_only",
                    help="archive only: the sweep of every currently-done phase and its report, with no rotate= line and no docs-phase line (unchanged since v51)")
     p.set_defaults(func=rotate_backlog)
@@ -9745,6 +13484,7 @@ def main(argv=None) -> int:
         # Never fall back to at-root mode on a broken marker: refuse, and let validate list it all.
         raise SystemExit(f"{shown(ROOT / NESTED_MARKER)} is malformed, so this nested install cannot run {args.cmd}: "
                          f"{'; '.join(NESTED_PROBLEMS)} -- fix the file (run: {WORKFLOW_CMD} validate)")
+    normalize_id_args(args)  # v73: every typed phase / deferred-id argument becomes its stored id here, once
     result = args.func(args)
     if isinstance(result, tuple):
         return 0

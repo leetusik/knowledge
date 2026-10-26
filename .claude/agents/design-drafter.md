@@ -3,7 +3,7 @@ name: design-drafter
 description: "The design specialist. Drafts exactly one design round of a job's working canvas (schema 2) from the round's handoff: a prototype first, with flow boards that carry the clicked item across screens, each screen also a board of its own, and a canvas-only state bar on every interactive Page listing that page's states; one board per component with every state; one direction unless the operator asked for options. Held to a shipped craft standard and the operator's bar, checked with a local render self-check and machine checks, and answering a critic's findings once. The operator decides, so it never signs, opens or closes a round, publishes, or touches the design system. Dispatched in the background by the orchestrator for the drafting span of a co-work slice; returns a structured verdict."
 tools: Read, Edit, Write, Glob, Grep, Bash
 model: opus
-effort: xhigh
+effort: high
 permissionMode: bypassPermissions
 ---
 

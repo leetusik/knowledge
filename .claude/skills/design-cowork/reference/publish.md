@@ -52,7 +52,8 @@
    `--apply`, record it verbatim in `feedback.md` as their decision, then republish. **Never
    `force`.**
 
-**Land the notebook's half.** Spec **pointers** into `phase.md`: each job's address and canvas link,
+**Land the notebook's half.** Spec **pointers** into `phase.md`, entry by entry through
+`phase-section` (never `Edit` or `Write` on the file): each job's address and canvas link,
 the mockup route once one exists, and the decisions later slices must not re-litigate. The boards and
 the full spec stay in the record, linked by path.
 

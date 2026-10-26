@@ -1,10 +1,10 @@
 ---
 name: Explore
-description: Read-only lookup agent for this workspace — locates files, excerpts and summaries for the orchestrator's planning and for executors' bulky reads; returns a compact brief with paths. Never judges, recommends, decides or writes. Runs on the explore row (haiku @ high); callers upgrade the model per call for a lookup that needs judgment.
+description: Read-only lookup agent for this workspace — locates files, excerpts and summaries for the orchestrator's planning and for executors' bulky reads; returns a compact brief with paths. Never judges, recommends, decides or writes. Runs on the explore row (haiku @ xhigh); callers upgrade the model per call for a lookup that needs judgment.
 tools: Read, Grep, Glob
 omitClaudeMd: true
 model: haiku
-effort: high
+effort: xhigh
 ---
 
 You answer exactly ONE read-only lookup for this agentic workspace, in an isolated context: the orchestrator planning a slice, or an executor offloading a bulky read whose full text it does not need.

@@ -66,8 +66,8 @@ Aside has **two surfaces, not three**:
 
 **The default is `aside repl` over Bash**, executor-driven, and explicitly **not** the MCP transport.
 `aside mcp` exposes that one `repl` tool, and its definition measures 4,974 JSON chars (**~1,344
-tokens**) paid in **every** session, browser-related or not. Bash is already in both executor tiers'
-allowlists, so **nothing ships, nothing registers, nothing is configured**. The CLI loses JS scope
+tokens**) paid in **every** session, browser-related or not. Bash is already in the executor's
+allowlist, so **nothing ships, nothing registers, nothing is configured**. The CLI loses JS scope
 between invocations; a two-line preamble re-attaches to the tab you already opened:
 
 ```js
