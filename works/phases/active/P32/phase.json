@@ -2,7 +2,7 @@
   "id": "P32",
   "name": "Thorough research and critic in the explain pipeline",
   "objective": "make research a separate multi-agent stage (plan, parallel researchers, claim ledger, independent verification, gap rounds) that every chapter is written from and checked against, for both the single document and the book; quality over efficiency",
-  "status": "in_progress",
+  "status": "pending",
   "order": 12,
   "created_at": "2026-10-22T22:03:27+09:00",
   "started_at": null,
@@ -15,8 +15,8 @@
   },
   "acceptance": {
     "required": true,
-    "walkthrough": null,
-    "requested_at": null,
+    "walkthrough": "**P32: explain researches first, verifies on another model, writes for the reader.** \"accept\" signs everything here.\n\n1. **Release plugin 0.6.0.** Push `main` (`plugin/**`, version 0.6.0) and deploy the web, so `/SKILL.md` and the landing's \"2,635 lines\" ship together. Nothing has been pushed or deployed. Your word.\n2. **Rotate the KB API token** (OQ6 + OQ9). Recommended:\n   - it sits in six old transcripts (two glide-ilab, one glide, one changple5, one knowledge subagent, one bootstrap);\n   - scrubbing them is unreliable, and rotating kills every copy;\n   - mint a new ingest key at knowledge.hi2vi.com, put it in `~/.config/knowledge-kb/config.json`, and revoke the old one.\n3. **Run it once yourself, interactively,** on a small private subject:\n   - `/knowledge:explain <subject> quick`; leave it open 15 minutes (no second run), then send the same words again: it should ask once, a v2 or nothing;\n   - `/knowledge:explain <a big subject> book` outside a workspace, to see §9.1's ask.\n4. **Read one rehearsal pair** (OQ10): `works/phases/active/P32/rehearsal/r1/chapters/c-old.md` against `works/phases/active/P32/rehearsal/r1b/chapters/c-new-v2.md`.\n5. **After the release, relay** `works/phases/active/P32/handoff.md` to the bootstrap.\n\nDecided as drawn:\n\n- The verifier refuses to run on its researchers' model. A Sonnet lead that forgets `model: opus` gets `blocked` and re-sends. This was probed live: a correct `full` dispatch still runs.\n- The skill is ≈ 158 KB, about 13 KB over OQ5's ≈ 145 KB. The shrink is D70.\n- Sonnet leaves `run.md`'s bookkeeping unwritten (the search total, the dossier line, sometimes `state: done`) and often writes its `quick` plan after the research. The files exist. The fixes are D72 and D75.\n- Under `claude -p`, a background batch is stopped at 10 idle minutes. This is D73; interactive runs wait.\n- Scratch session folders sit in `~/.claude/projects/`, with names ending `-f4a-work`, `-f4c-work`, `-f4e-work`, `-rv3a-work`, `-f5p-work`, `-f5q-work` and `-r4p-work` (plus an empty `-rv2a-work`). They hold only scratch tokens or stubs; delete them at will.\n- The landing's ticks and lede stay as written. `executors.toml`'s xhigh rows stay (d03). `create-phase` gives a book's cost in words.",
+    "requested_at": "2026-10-26T10:09:55+09:00",
     "cleared_at": null,
     "note": null
   },

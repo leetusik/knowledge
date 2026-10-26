@@ -1,5 +1,55 @@
 # P32.REVIEW — Review "Thorough research and critic in the explain pipeline"
 
+## Re-review (round 4, after P32.F5)
+
+Round 3 returned `changes_requested` with one finding: nothing enforced `quick`'s verifier model. The operator
+said "go" (d73), and P32.F5 fixed it. See `slices/P32.F5/result.md` and `rehearsal/f5/evidence.md`.
+
+This round is **focused**: re-check F5's change and the guards. Rounds 1–3 stand otherwise.
+
+1. **Validate again:**
+   - `skills_parity.py`, `plugin_parity.py` and `claude plugin validate plugin`;
+   - `python3 scripts/workflow.py validate`;
+   - the size: 157,738 B, 2,635 lines. It is under D70's ≈ 160 KB trigger, so it is an observation;
+   - the landing's two strings equal `wc -l web/public/SKILL.md`.
+2. **F5's text.** Read B4's "Your model" paragraph and its dispatch line, D3v, D5, §3.3's `verifier:` line,
+   §3.9, §9.3's top-up and the card's wait bullet. Check:
+   - B4 and B5 use one pattern;
+   - every verifier dispatch names `researchers_model:`;
+   - nothing contradicts §4.9 or B4's other rules.
+
+   **Above all, check that the guard cannot block a correct dispatch.** In `full` on a Sonnet lead, the
+   researchers run on Opus and the verifier correctly runs on Sonnet. In `full` on an Opus lead, the verifier
+   runs on its default, Sonnet. Read exactly what "its family" means in B4, and say whether a model could read
+   it as "any Claude model".
+3. **The running product.** Run direct probes of `knowledge:verifier` from a `claude -p` main thread, on 2–3
+   claims from `rehearsal/f5/` or `rehearsal/review/r3/`. Use round 2's harness at `scratchpad/review2/` under
+   the same isolation: scratch `XDG_*` and `KB_*` checked with §2's resolver, `--setting-sources project`, the
+   deny rules, `--plugin-dir plugin`, `watchdog2.py`, and never a permission-skipping flag. Persist no
+   session.
+   - **a.** On Sonnet, with `researchers_model: claude-opus-5-5` (the `full`-on-Sonnet case): it must **run**
+     and write a verify file, not block.
+   - **b.** On Sonnet, with `researchers_model: claude-sonnet-5-5`: it must block.
+   - **c.** On Sonnet, with `researchers_model: claude-sonnet-5-5 · same-model: accepted`: it must run, and
+     record the degraded verifier.
+
+   **Cap: $5**, appended to `rehearsal/review/spend.md`. Run the leak scan after each probe (the six known
+   hits). Never use `:8766`, `:3030`, `:8777`, `:8797` or production. Stop only your own PIDs.
+4. **On pass:**
+   - **Write the qa `## Regression Checklist` gate-section version.** Round 3's lines are in `result.md`; add
+     one for the verifier's same-model guard. Use `doc-new-version --doc qa --summary "..." --source
+     P32.REVIEW`, edit only the returned `edit_path`, then `rebuild-docs`.
+   - **Return the walkthrough.** Round 3's draft, updated, under the stop rules: about 2k characters, at most
+     about 5 decisions, and one "decided as drawn" list.
+     - OQ6 and OQ9 go in as one decision: rotate the token.
+     - Add F5's two scratch-session folders (`-runs-f5p-work`, `-runs-f5q-work`) to the list of folders the
+       operator may delete.
+   - **List any deferred-job candidates.** D69–D75 are filed.
+
+Put round 4 above round 3 in `result.md`, its verdict block first. No state command, no commit, and no source
+edits; the qa gate-section version is the one exception. Remove the round-4 note from `phase.md`, and rewrite
+`## Now`.
+
 ## Re-review (round 3, after P32.F4)
 
 Round 2 returned `changes_requested` with two findings, and P32.F4 fixed both. See `slices/P32.F4/result.md`

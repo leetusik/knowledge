@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `56`
+- Open: `58`
 - Promoted: `5`
 - Dropped: `14`
 
@@ -67,6 +67,8 @@
 | `D73` | `deferred` | explain: verifier batches and waves in the foreground under claude -p | P32.REVIEW | a headless run whose batch runs past 10 minutes, or a harness that runs the skill headless | `works/deferred/open/D73` |
 | `D74` | `deferred` | Landing: derive the skill pane's line count from the served SKILL.md | P32.REVIEW | the next SKILL.md edit that changes its line count after P32 | `works/deferred/open/D74` |
 | `D75` | `deferred` | explain: close the run mechanically at publish (run.md state and report.md) | P32.REVIEW | D72's job, or a resume that picks an already-published run | `works/deferred/open/D75` |
+| `D76` | `deferred` | explain: name 'family' in the verifier's and critic's same-model guards; give a missing researchers_model line its own block | P32.REVIEW | a cross-family block seen in a run, a lead 'correcting' model: for a missing line, or the next B4/B5 edit (e.g. D70's shrink) | `works/deferred/open/D76` |
+| `D77` | `deferred` | explain book: the outline gate's report runs ~3.7k chars against the ~2k stop rule | P32.REVIEW | the next bootstrap update that touches explain-decomposition.md | `works/deferred/open/D77` |
 | `D8` | `deferred` | usage_events retention/cleanup job | P11.DECOMP | usage_events growth becomes material / before onboarding high-volume non-#1 tenants | `works/deferred/open/D8` |
 
 ## Promoted

@@ -96,3 +96,35 @@ are all stopped: the scratch stack (PID 79100, :8923), rv3a (79175) and rv3b (80
 Kept in `r3/`: `run.md`, `brief.md`, `plan.md`, `outline.md`, `trace.md`, `report.md`, `ledger.md`,
 `gaps-final.md`, `verify-r1-b1.md`, `body.md` (the published source), `files.txt`, `resume-rv3b.txt` and
 `evidence.md`. No `pages/`.
+
+## Round 4 (after P32.F5)
+
+Cap: **$5** for round 4. The rule is the same: the session's last `result` event's `total_cost_usd`, or the
+watchdog's estimate, whichever is higher. Three direct probes of `knowledge:verifier`, in one session, were planned.
+
+Isolation: round 2's harness, used as it is in `scratchpad/review2/` (token `rv2-token`). Only these changed: one
+new spec (`harness/spec-r4p.json`), its own `KB_ROOT` (`runs/r4p/kb`) and an unused port, **:8953**, with no stack
+behind it (a verifier publishes nothing). The scratch `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `KB_ROOT`,
+`KB_API_BASE_URL` and `KB_API_TOKEN` were checked with the skill's §2 resolver right before the session: `ok`, the
+scratch API and the scratch token. The rest:
+
+- `--setting-sources project`;
+- `--permission-mode manual --permission-prompts none`;
+- the deny rules on `//Users/sugang/.config/knowledge-kb/**`;
+- `--plugin-dir plugin`;
+- Claude Code 2.1.309;
+- `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`;
+- `watchdog2.py` (r4p at $3);
+- `--no-session-persistence`, no `--max-budget-usd`, and no permission-skipping flag.
+
+| # | Run | Main thread | Cost | Running total |
+|---|---|---|---|---|
+| 6 | r4p (three foreground `knowledge:verifier` calls with no `model:`, on rv3a's C-r1-all-02 and -03: a with `researchers_model: claude-opus-5-5`, b with `claude-sonnet-5-5`, c with `claude-sonnet-5-5 · same-model: accepted`). 4 turns, 108 s, 2026-10-26 09:57–09:59. a ran and wrote a verify file; b blocked before any check; c ran and headed its file `(same model, degraded)`, then stopped on its own off-path converter call. See `r4/evidence.md` | sonnet | **0.33** (the last `result` event; the watchdog estimated 0.26) | **0.33** |
+
+**Round 4 total: $0.33 of $5.** No watchdog fired, and nothing was re-run. The leak scan ran before and after the
+session over `scratchpad/review2/`, `~/.claude/projects` and (after) this folder: the six known files each time. A
+wider pass over `/private/tmp/claude-502` also listed a symlink to known hit 2 (`r4/evidence.md`). My own PIDs are
+all stopped: r4p (99536) and its watchdog. Nothing listened on :8953.
+
+Kept in `r4/`: `evidence.md`, `probe-returns.txt` (the three calls and returns, verbatim), `probe-bash.txt` (every
+subagent `Bash` command and its result's first line), `verify-r4-a.md` and `verify-r4-c.md`. No `pages/`.

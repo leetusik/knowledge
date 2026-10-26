@@ -6,16 +6,16 @@
 ## Pointer
 
 - Current phase: `P32`
-- Current slice: `P32.REVIEW`
+- Current slice: `none`
 - Next slice: `none`
-- Waiting on operator: `none`
-- Open deferred jobs: `56`
+- Waiting on operator: `P32`
+- Open deferred jobs: `58`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P32` | in_progress | `P32.REVIEW` | 17/18 | - | working tree |
+| `default` | `P32` | pending | `none` | 17/18 | - | working tree |
 
 ## Active Phases
 
@@ -32,7 +32,7 @@
 | [x] `P29` | `done` | `pass` | Learning reader — book model, chapter format + reader surfaces (design) | `none` | `works/phases/active/P29` |
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
 | [x] `P31` | `done` | `pass` | Explain phase route | `none` | `works/phases/active/P31` |
-| [ ] `P32` | `in_progress` | `changes_requested` | Thorough research and critic in the explain pipeline | `P32.REVIEW` | `works/phases/active/P32` |
+| [~] `P32` | `pending` | `changes_requested` | Thorough research and critic in the explain pipeline | `P32.REVIEW` | `works/phases/active/P32` |
 
 ## Phase P21: Web document deletion
 
@@ -225,4 +225,4 @@
 | [x] `P32.F3` | `done` | Landing: the skill pane's line count matches the served SKILL.md | `fix` | `works/phases/active/P32/slices/P32.F3` |
 | [x] `P32.F4` | `done` | explain waits only by ending its turn, never re-runs itself; the verifier-defect clause matches B4 | `fix` | `works/phases/active/P32/slices/P32.F4` |
 | [x] `P32.F5` | `done` | The verifier refuses to run on the researchers' model, as the critic does with the writer's | `fix` | `works/phases/active/P32/slices/P32.F5` |
-| [ ] `P32.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P32/slices/P32.REVIEW` |
+| [ ] `P32.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P32/slices/P32.REVIEW` |

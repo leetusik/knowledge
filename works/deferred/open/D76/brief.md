@@ -1,0 +1,14 @@
+# Deferred: D76 explain: name 'family' in the verifier's and critic's same-model guards; give a missing researchers_model line its own block
+
+## Context
+
+## Why Deferred
+
+B4/B5 say 'its family' without defining it; a misreading (any Claude model) would block a correct full dispatch. A missing researchers_model: line returns the same words as a model block, while D3v's remedy is 'correct model:'. Fix (~80 B): 'or the same family (Opus, Sonnet or Haiku)' in B4 and B5; 'blocked: no researchers_model line' answered in D3v by adding the line; regenerate verifier.md and explain-critic.md.
+
+## Trigger to Promote
+
+a cross-family block seen in a run, a lead 'correcting' model: for a missing line, or the next B4/B5 edit (e.g. D70's shrink)
+
+## Notes
+

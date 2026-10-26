@@ -1399,3 +1399,10 @@
 {"ts": "2026-10-25T00:45:07+09:00", "type": "slice_status_changed", "slice": "P32.F5", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-10-25T01:25:50+09:00", "type": "executor_dispatched", "slice": "P32.F5", "phase": "P32", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": "B4 same-model guard (researchers_model), lead re-sends once; probe 3/3, Sonnet quick run verified on Opus, 0 wakeups ($2.71 of $10)"}
 {"ts": "2026-10-25T01:25:50+09:00", "type": "slice_status_changed", "slice": "P32.F5", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-25T01:26:09+09:00", "type": "slice_status_changed", "slice": "P32.REVIEW", "old_status": "changes_requested", "new_status": "in_progress"}
+{"ts": "2026-10-26T10:06:08+09:00", "type": "doc_version_created", "doc": "qa", "version": "v0021_p32.review_round_4_gate_regression_checklist_gains_the_explain_skill_and_plugin_parity_quick-run_dossier_no-wakeup_and_repeat_verifier_same-model_guard_book_suggestion_and_landing_line-count_lines", "source": "P32.REVIEW"}
+{"ts": "2026-10-26T10:09:54+09:00", "type": "executor_dispatched", "slice": "P32.REVIEW", "phase": "P32", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": "round 4: pass; F5's verifier same-model guard holds in text and three live probes; qa v0021 written"}
+{"ts": "2026-10-26T10:09:55+09:00", "type": "phase_status_changed", "phase": "P32", "old_status": "in_progress", "new_status": "pending"}
+{"ts": "2026-10-26T10:09:55+09:00", "type": "acceptance_opened", "phase": "P32"}
+{"ts": "2026-10-26T10:10:02+09:00", "type": "deferred_created", "deferred": "D76", "source": "P32.REVIEW"}
+{"ts": "2026-10-26T10:10:02+09:00", "type": "deferred_created", "deferred": "D77", "source": "P32.REVIEW"}

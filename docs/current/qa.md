@@ -1,11 +1,11 @@
 ---
 doc_id: qa
-version: v0020
-created_at: 2026-10-22T12:31:03+09:00
-commit: 3c9983aec083f56b17f4ffbd547befda76df61a2
-source: P31.REVIEW
-summary: P31.REVIEW round 2: Regression Checklist gains the knowledge check dry-run line (valid chapter exits 0 and writes nothing; invalid exits 1 with the line list)
-previous: v0019_p30.review_round_3_regression_checklist_gains_f6_s_chapter-navigation_line_next_opens_the_next_chapter_at_its_top_not_finished_and_f5_s_reader-chrome_line
+version: v0021
+created_at: 2026-10-26T10:06:08+09:00
+commit: 62e1e57af95146f56bb46f59468bae7e78250d09
+source: P32.REVIEW
+summary: P32.REVIEW round 4 gate: Regression Checklist gains the explain skill and plugin parity, quick-run dossier, no-wakeup and repeat, verifier same-model guard, book suggestion and landing line-count lines
+previous: v0020_p31.review_round_2_regression_checklist_gains_the_knowledge_check_dry-run_line_valid_chapter_exits_0_and_writes_nothing_invalid_exits_1_with_the_line_list
 ---
 
 # QA
@@ -323,6 +323,35 @@ apply there; use *In-app graph label focus (P22)* instead._
 - [ ] CLI/API publish dry run: `knowledge check` on a valid chapter exits 0
       and writes nothing (no file, row or commit); on an invalid one it exits
       1 with the `line N: [code]` list (P31)
+- [ ] Explain skill parity: `python3 scripts/skills_parity.py` and
+      `python3 scripts/plugin_parity.py` PASS: the three explain-skill copies
+      in body parity (the web copy byte-identical) and the five
+      `plugin/agents/*.md` bodies equal to Part B (P32)
+- [ ] A `quick` single document under `claude -p` (scratch `XDG_*`/`KB_*`, a
+      scratch stack, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`), on an Opus and
+      on a Sonnet lead: `run.md` shows `path: plugin`; the dossier holds
+      `plan.md`, `findings/`, `library.md`, a `verify/` file whose `verifier:`
+      model differs from the lead's, `gaps/final.md`, `outline.md` opening
+      `## Reader's task` (absent from the published chapter) and `trace.md`
+      (P32)
+- [ ] The same session, held 15 minutes after `state: done`: the lead made no
+      `ScheduleWakeup`, `CronCreate` or `Monitor` call, one run id exists and
+      the document stays at v1; resumed with the same words, it prints that
+      run's report line and URL and starts no run (P32)
+- [ ] The verifier's same-model guard: from a Sonnet `claude -p` main thread,
+      `knowledge:verifier` sent with no `model:` and `researchers_model:
+      claude-sonnet-5-5` returns `blocked: same model as the researchers`
+      with no check and no file; with `researchers_model: claude-opus-5-5` it
+      runs and writes its verify file; with `· same-model: accepted` added to
+      the Sonnet line it runs and heads the file `verifier: <id> (same model,
+      degraded)` (P32)
+- [ ] `/knowledge:explain <a subject> book` under `claude -p` in a folder that
+      is not a workflow workspace: one document with every stage of its run
+      kept, and the report carries the book suggestion; no phase or book is
+      created (P32)
+- [ ] The landing's skill pane: the line count in
+      `web/src/content/marketing/content.ts` (`lede`, `pane.meta`) equals
+      `wc -l web/public/SKILL.md` (P32)
 
 ## Verifying the Guard Itself (negative-test pattern)
 

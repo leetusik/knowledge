@@ -1,0 +1,22 @@
+[pQq2Qk] $ grep -n -x -F -e '### C-r1-all-02' -e '### C-r1-all-03' <EXPLAIN_STATE>/20261025-r4-probe/findings/r1-all.md
+    -> 62:### C-r1-all-02
+[pQq2Qk] $ grep -n -x -F -e '### S-r1-all-01' <EXPLAIN_STATE>/20261025-r4-probe/findings/r1-all.md
+    -> 9:### S-r1-all-01
+[pQq2Qk] $ curl -sS --max-time 30 -L --create-dirs -A "Mozilla/5.0 (compatible; knowledge-explain)" -o <EXPLAIN_STATE>/20261025-r4-probe/pages/r4-a/S-r1-all-01.html -w '%{http_code} %{content_type}\n' 'https://hyperphysics.gsu.edu/hbase/thermo/precook.html'
+    -> 200 text/html; charset=ISO-8859-1
+[pQq2Qk] $ python3 -I <EXPLAIN_STATE>/tools/pagetext.py <EXPLAIN_STATE>/20261025-r4-probe/pages/r4-a/S-r1-all-01.html <EXPLAIN_STATE>/20261025-r4-probe/pages/r4-a/S-r1-all-01.txt
+    -> <EXPLAIN_STATE>/20261025-r4-probe/pages/r4-a/S-r1-all-01.txt: 9 lines, 122 words; little text: the page may be built by script (use WebFetch)
+[pQq2Qk] $ python3 -I <EXPLAIN_STATE>/tools/pagetext.py --find <EXPLAIN_STATE>/20261025-r4-probe/pages/r4-a/S-r1-all-01.txt <EXPLAIN_STATE>/20261025-r4-probe/findings/r1-all.md S-r1-all-01/P2
+    -> found: line 3 · § "Pressure Cooker"
+[pQq2Qk] $ python3 -I <EXPLAIN_STATE>/tools/pagetext.py --find <EXPLAIN_STATE>/20261025-r4-probe/pages/r4-a/S-r1-all-01.txt <EXPLAIN_STATE>/20261025-r4-probe/findings/r1-all.md S-r1-all-01/P3
+    -> found: line 4 · § "Pressure Cooker"
+[pQq2Qk] $ python3 -I <EXPLAIN_STATE>/tools/pagetext.py --check <EXPLAIN_STATE>/20261025-r4-probe/verify/r4-a.md <EXPLAIN_STATE>/20261025-r4-probe/pages/r4-a
+    -> nothing to check: no exact-quote passages in the file
+[pYWhtj] $ grep -n -x -F -e '### C-r1-all-02' -e '### C-r1-all-03' <EXPLAIN_STATE>/20261025-r4-probe/findings/r1-all.md
+    -> 62:### C-r1-all-02
+[pYWhtj] $ grep -n -F -e '### S-r1-all-01' <EXPLAIN_STATE>/20261025-r4-probe/findings/r1-all.md
+    -> 9:### S-r1-all-01
+[pYWhtj] $ curl -sS --max-time 30 -L --create-dirs -A "Mozilla/5.0 (compatible; knowledge-explain)" -o <EXPLAIN_STATE>/20261025-r4-probe/pages/r4-c/S-r1-all-01.html -w '%{http_code} %{content_type}\n' 'https://hyperphysics.gsu.edu/hbase/thermo/precook.html'
+    -> 200 text/html; charset=ISO-8859-1
+[pYWhtj] ERR $ python3 -I <EXPLAIN_STATE>/20261025-r4-probe/tools/pagetext.py <EXPLAIN_STATE>/20261025-r4-probe/pages/r4-c/S-r1-all-01.html <EXPLAIN_STATE>/20261025-r4-probe/pages/r4-c/S-r1-all-01.txt
+    -> Permission for this tool use was denied. It requires approval, and this session has no approval surface — nobody can answer a permission prompt here — so it was denied automatically. The action was NOT performed; do not claim it succeeded, and do not retry it: this action, and anything else that req
