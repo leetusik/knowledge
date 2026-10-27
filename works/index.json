@@ -157,13 +157,13 @@
       "order": 13,
       "path": "works/phases/active/P-9sz6",
       "review_status": "pending",
-      "current_slice": "P-9sz6.S1",
+      "current_slice": "P-9sz6.REVIEW",
       "slice_count": 3,
-      "done_slice_count": 1
+      "done_slice_count": 2
     }
   ],
   "deferred_open_count": 58,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-27T11:49:33+09:00"
+  "last_rebuilt_at": "2026-10-27T12:06:33+09:00"
 }

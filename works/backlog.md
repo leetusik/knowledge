@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P-9sz6`
-- Current slice: `P-9sz6.S1`
-- Next slice: `P-9sz6.REVIEW`
+- Current slice: `P-9sz6.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `58`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P-9sz6` | planned | `P-9sz6.S1` | 1/3 | - | working tree |
+| `default` | `P-9sz6` | planned | `P-9sz6.REVIEW` | 2/3 | - | working tree |
 
 ## Active Phases
 
@@ -33,7 +33,7 @@
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
 | [x] `P31` | `done` | `pass` | Explain phase route | `none` | `works/phases/active/P31` |
 | [x] `P32` | `done` | `pass` | Thorough research and critic in the explain pipeline | `none` | `works/phases/active/P32` |
-| [ ] `P-9sz6` | `planned` | `pending` | Explain as a phase: workflow handoff | `P-9sz6.S1` | `works/phases/active/P-9sz6` |
+| [ ] `P-9sz6` | `planned` | `pending` | Explain as a phase: workflow handoff | `P-9sz6.REVIEW` | `works/phases/active/P-9sz6` |
 
 ## Phase P21: Web document deletion
 
@@ -233,5 +233,5 @@
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P-9sz6.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P-9sz6/slices/P-9sz6.DECOMP` |
-| [ ] `P-9sz6.S1` | `todo` | Write the explain-as-a-phase handoff and bootstrap prompt | `research` | `works/phases/active/P-9sz6/slices/P-9sz6.S1` |
+| [x] `P-9sz6.S1` | `done` | Write the explain-as-a-phase handoff and bootstrap prompt | `research` | `works/phases/active/P-9sz6/slices/P-9sz6.S1` |
 | [ ] `P-9sz6.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P-9sz6/slices/P-9sz6.REVIEW` |

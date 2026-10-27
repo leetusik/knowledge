@@ -3,13 +3,13 @@
   "phase_id": "P-9sz6",
   "name": "Write the explain-as-a-phase handoff and bootstrap prompt",
   "kind": "research",
-  "status": "todo",
+  "status": "done",
   "order": 10,
   "depends_on": [],
   "depends_declared": true,
   "created_at": "2026-10-27T11:47:08+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-27T11:50:07+09:00",
+  "completed_at": "2026-10-27T12:06:33+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -19,7 +19,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Wrote handoff.md (decisions, document phase shape, extended ## Explain, ownership split, migration, 10 open items, 3 worktree-default blockers found) and prompt.md",
   "validation": {
     "required": [],
     "last_run": null,
