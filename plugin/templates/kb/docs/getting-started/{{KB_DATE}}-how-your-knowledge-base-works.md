@@ -68,7 +68,10 @@ itself.
 ## 3. How a new page arrives
 
 You do not edit these files by hand. You ask the `/knowledge:explain` skill to
-explain something, and it does three things for you:
+explain something. From a repository with a workflow workspace (v86 or later), it
+confirms the plan with you once, then researches, writes and checks the
+explainer as an explain phase and sends it to the document API, which does three
+things for you:
 
 1. Writes the explainer file with correct frontmatter under the right project.
 2. Adds a one-line bullet to the top of this site's home page, under the

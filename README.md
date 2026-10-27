@@ -37,6 +37,8 @@ with just a browser (no infra), or **Scaffold** to self-host your own. Scaffold
 mode needs Python 3.12+, Docker (optional — runs the local viewer + API), and a
 GitHub repository (optional — only to publish via Pages). Then run
 `/knowledge:explain <topic>` whenever you want something explained and kept.
+Explain runs as an explain phase, so it needs a workflow workspace (v86 or later)
+in the repository you run it from.
 Full details in [`plugin/README.md`](plugin/README.md).
 
 ## Command-line interface

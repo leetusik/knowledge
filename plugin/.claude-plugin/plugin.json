@@ -1,7 +1,7 @@
 {
   "name": "knowledge",
-  "version": "0.6.0",
-  "description": "Research a topic, a code change or a general subject and publish it as a native chapter — Markdown with typed blocks for diagrams, figures, callouts and a quiz, plus a cited best-practices section — into your own personal knowledge base, placed in a book when the work is a phase or a slice; connect to the hosted KB or scaffold a self-hosted one with one setup skill.",
+  "version": "0.7.0",
+  "description": "Explain a topic, a code change or a general subject as a native chapter — Markdown with typed blocks for diagrams, figures, callouts and a quiz, plus a cited best-practices section — in your own knowledge base. It runs as an explain phase in a workflow workspace (v86 or later): one confirmation, then research, write, check and a private publish. One setup skill connects the hosted KB or scaffolds your own.",
   "author": {
     "name": "leetusik"
   },

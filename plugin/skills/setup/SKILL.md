@@ -166,7 +166,9 @@ writes nothing), substituting the pasted key:
   and re-run connect mode. Do **not** fall back to anything.
 
 Connect mode is then done — suggest `/knowledge:explain <topic>` to file the first
-explainer to the hosted KB.
+explainer to the hosted KB. It runs as an explain phase, so the repository it is run from
+needs a workflow workspace (v86 or later): it asks one confirmation, then researches,
+writes, checks and publishes privately.
 
 ### Prefer the terminal? Use the standalone CLI instead
 
@@ -336,7 +338,7 @@ mutation) with exactly this shape, filling the **non-secret** params only:
 
     {
       "plugin": "knowledge",
-      "plugin_version": "0.3.0",
+      "plugin_version": "0.7.0",
       "rendered_at": "<YYYY-MM-DD>",
       "params": {
         "KB_SITE_NAME": "<site title>",
@@ -350,7 +352,7 @@ mutation) with exactly this shape, filling the **non-secret** params only:
       }
     }
 
-`plugin_version` is `0.3.0` — the current plugin version; it never contains a
+`plugin_version` is `0.7.0` — the current plugin version; it never contains a
 secret. (On re-render, overwrite the marker with the new params and today's
 `rendered_at`.)
 
@@ -454,4 +456,6 @@ Never push for the user — they run the `git push` themselves.
 — that rewrites `KB_SITE_URL` and the config, and you follow the GitHub steps
 above.
 
-Close with: try `/knowledge:explain <topic>` to write your first explainer.
+Close with: try `/knowledge:explain <topic>` to write your first explainer (from a
+repository with a workflow workspace v86 or later: it runs as an explain phase, one
+confirmation, then research, write, check and a private publish).
