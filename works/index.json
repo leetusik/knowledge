@@ -169,13 +169,13 @@
       "order": 14,
       "path": "works/phases/active/P-8jbf",
       "review_status": "pending",
-      "current_slice": "P-8jbf.DECOMP",
-      "slice_count": 2,
-      "done_slice_count": 0
+      "current_slice": "P-8jbf.S1",
+      "slice_count": 3,
+      "done_slice_count": 1
     }
   ],
-  "deferred_open_count": 59,
+  "deferred_open_count": 60,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-27T16:05:03+09:00"
+  "last_rebuilt_at": "2026-10-27T16:24:46+09:00"
 }

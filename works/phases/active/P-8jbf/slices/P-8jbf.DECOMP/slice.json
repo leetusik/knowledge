@@ -3,12 +3,12 @@
   "phase_id": "P-8jbf",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "in_progress",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-27T16:05:03+09:00",
   "started_at": "2026-10-27T16:05:42+09:00",
-  "completed_at": null,
+  "completed_at": "2026-10-27T16:24:45+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Re-targeted after OQ1: one mid-row implementation slice S1, the wide-screen rule in reader.css scoped to .rd-article above 100rem (column 36->44rem, sizes x10/9)",
   "validation": {
     "required": [],
     "last_run": null,

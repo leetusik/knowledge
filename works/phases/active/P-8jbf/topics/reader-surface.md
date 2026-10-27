@@ -86,7 +86,7 @@ Decided as drawn (if 1 and the recommendation are accepted): the 1600px step on 
 everything below it and print unchanged; the Display control unchanged in its UI; the notes
 rail follows the column; review, book, book-notes, legacy and archive pages untouched.
 
-## The cut once confirmed (provisional; the DECOMP re-run cuts it)
+## The cut once confirmed (provisional; superseded by breakdown.md § P-8jbf.S1, the re-run's cut)
 
 One implementation slice, `--risk low` (mid row): values pinned, one scoped viewport media
 block in the reader's sheet. Set: `web/src/app/reader.css` only (read-only checks:

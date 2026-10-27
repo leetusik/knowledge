@@ -1,56 +1,73 @@
 # P-8jbf.DECOMP — result
 
-- status: needs_operator
+- status: done
 - route: high
 - model: opus
 - effort: xhigh
-- summary: Halted before cutting. The confirmed rule describes the console `.kb-doc` view (`kb-docview.css`: 42rem text, 64rem article, 16px body, `?view=full`), which since P30.S13 renders only the unlinked archive page `/documents/{id}/versions/{v}`. Every document and book chapter opens in the signed `01-reader` (`reader.css`: one 36rem column for text, code and tables, 18px Literata in 5 sizes), so the rule as written would change nothing the operator reads. OQ1 asks the operator to re-target it; the recommendation is in `topics/reader-surface.md`.
-- files_changed: works/phases/active/P-8jbf/topics/reader-surface.md (new), works/phases/active/P-8jbf/topics/breakdown.md (new), works/phases/active/P-8jbf/phase.md (Operator Questions, Decisions, Notes for later slices, Now, through `phase-section`), works/phases/active/P-8jbf/slices/P-8jbf.DECOMP/result.md (new)
-- validation: `python3 scripts/workflow.py validate` passed (pre-existing warnings only); `python3 scripts/workflow.py parallel-plan P-8jbf` ran (DECOMP -> REVIEW, nothing cut)
-- deviations: no slices cut and no breakdown written, as the plan expected. The plan's pinned values target a surface no reading link opens, and moving them onto the reader takes visual decisions only the operator can make.
-- doc_impact: none
-- parallel: `parallel_plan=P-8jbf: DECOMP -> REVIEW`, `parallel_rounds=2 rounds for 2 open slices; a chain`. Nothing to run together yet because no middle slices are cut; the expected re-cut is one slice, which is a chain by nature.
-- operator_need: Answer OQ1. The phase's rule was written for the console `.kb-doc` view, but documents and chapters open in the signed `01-reader`. Should the phase re-target that reader? Recommended: above 1600px of window width, one wider column (36rem → 44rem, 576 → 704px), every text size one step larger (default 18px → 20px; spacing, headings and code/table text follow), code/tables/figures/diagrams staying in the column; below 1600px, print, the Display panel UI, and the review, book, book-notes, legacy and archive pages unchanged. Alternatives: B, wide blocks breaking out to ~64rem, reverses the signed one-column rule and collides with the margin-notes rail, so it needs a design round; C, widen only, gives ~79 characters per line; D, literal, changes only the archive page. On the answer the orchestrator refines intent.md's Confirmed Intent and re-runs DECOMP.
+- summary: Cut P-8jbf into one mid-row implementation slice, P-8jbf.S1, then the review. S1 builds the wide-screen reader rule in `web/src/app/reader.css`, scoped to `.rd-article`: above 1600px, the column goes from 36 to 44rem and the text one step larger. This re-run follows pass 1's OQ1 halt, which the operator resolved with "as your recommendation".
+- files_changed: works/phases/active/P-8jbf/slices/P-8jbf.S1/slice.json (new, via `new-slice`), works/phases/active/P-8jbf/topics/breakdown.md (rewritten), works/phases/active/P-8jbf/topics/reader-surface.md (pass 1, new; one heading now points at the breakdown), works/phases/active/P-8jbf/phase.md (Decisions, Notes for later slices, Now and pass 1's OQ1, all through `phase-section`), works/phases/active/P-8jbf/slices/P-8jbf.DECOMP/result.md
+- validation: `python3 scripts/workflow.py validate` passed (pre-existing warnings only); `python3 scripts/workflow.py parallel-plan P-8jbf` ran; `python3 scripts/workflow.py executor-route P-8jbf.S1` printed route=mid
+- deviations: none in the re-run. Pass 1 halted `needs_operator` on OQ1 before cutting; the orchestrator re-targeted intent.md and re-planned.
+- doc_impact: none. S1 owes its own note: the reader's wide-screen measure and text sizes, in product and qa.
+- parallel: `parallel_plan=P-8jbf: DECOMP -> S1 -> REVIEW` / `parallel_rounds=3 rounds for 3 open slices; a chain: no two slices run together`. The chain exists because there is a single middle slice. One file, one rule: splitting it would only put two slices on the same file.
+- deferred-job candidate (for the orchestrator to file): title "Retire or redirect the orphaned document archive page". Reason: `/documents/{id}/versions/{v}` still renders the old console `.kb-doc` view and its `?view=full` full view, but nothing links to it now that the reader reads old versions with `?v=N`, so it is a second document surface. Trigger: the next reader or documents phase.
 
-## What I found
+## Pass 1 (halted, `needs_operator`)
 
-1. **The routes.** `web/src/app/(public)/documents/[id]/page.tsx` renders `ReaderPage` (native/md) or
-   `LegacyReaderPage` (html explainer) since P30.S13/S25. The comments say: "opens in the READER (`01-reader`, the loose-document
-   variant: no book navigation, no app shell)". The pretty URL and the chapter URL use the same reader.
-2. **Where `.kb-doc` still renders.** `.kb-doc` / `.kb-prose` / `?view=full` appear only in
-   `documents/[id]/versions/[v]/page.tsx` (grep for `kb-doc`, `kb-prose`, `fullWidthHref`). Nothing links to
-   `/documents/{id}/versions/{v}`; the reader's version history uses `?v=N` (`reader-href.ts`).
-3. **The reader's widths** (`web/src/app/reader.css`):
-   - `--rd-measure: 36rem` (:142) and one `.rd-flow` track (:359-366) for every block. This is signed in `01-reader` round
-     02-revise (result.md:80-83, departure 2 at :360: "One column for every block … `--rd-wide` is gone").
-   - Text is `--rd-fs` 18px by default, in five sizes via `.rd-size-1..5` (:165-169).
-   - Gutters use viewport media at 40/90rem (:172-173).
-   - The margin-notes rail `.an-rail` is placed from `--rd-measure` (:1663-1666).
-   - `.rd-root` / `.rd-flow` / `--rd-measure` are shared with the review page (`review-app.tsx`, `review-static.tsx`), the book page
-     (`book-frame.tsx`), book notes (`book-notes.tsx`, `.an-page__main` :1761) and the legacy reader.
-4. **The legacy reader** (`legacy.css`) is a full-window iframe (`width: 100%`), so it already uses the width.
-5. **Live check.** Instrument: headless Google Chrome (`--headless=new --window-size=1920,1080 --screenshot`) on dev
-   `http://127.0.0.1:3030` (up, HTTP 200). I checked the public fixture `/documents/20`, which redirects with 307 to
-   `/@p28s2/research/focus-ring-floor-and-touch-targets`. At 1920 the column runs x=672 to x=1248 (576px = 36rem),
-   and the rest of the screen is empty. Screenshot (scratch, not in the repo):
-   `/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/64d8f545-b28e-4809-a0d4-9d2aac06f311/scratchpad/reader-1920.png`.
-   I did not use Aside: it is fixed at 1440×900, and this check needed 1920.
+The first confirmed rule (text 42→50rem, article 64→88rem, body text 16→18px, full view) described the console
+`.kb-doc` view in `kb-docview.css`. Since P30.S13 that view renders only the unlinked archive page. Documents and chapters open
+in the signed `01-reader` (`reader.css`): one 36rem column for every block, and 18px Literata text in five sizes. A live check
+in headless Chrome at 1920 on dev `:3030` showed a 576px column. I created no slices and asked OQ1. The evidence, the
+recommendation the operator accepted, the alternatives and the observation are in
+`works/phases/active/P-8jbf/topics/reader-surface.md`.
 
-The recommendation, the alternatives with their numbers (characters per line, the rail collision at 1920), the provisional S1
-set with its build gotchas, and an out-of-phase observation are all in
-`works/phases/active/P-8jbf/topics/reader-surface.md`. The gotchas: the shared `.rd-root` scope, and that a custom property
-cannot reference itself. The observation is the orphaned archive page, a deferred-job candidate. I do not restate them here.
+## The re-run (this cut)
+
+Re-checked against the code only for what the cut needs:
+
+- **Scope.** `.rd-article` is rendered only by `ReaderFrame` (`reader-frame.tsx:592`). That covers loose documents, chapters,
+  and the chapter loading, not-found and failed states (`ReaderStateBlock` inside `ReaderFrame`).
+  - `.rd-root` and `.rd-size-N` also sit on the review root (`review-app.tsx:723`, `review-static.tsx:33`), the book root
+    (`book-frame.tsx:27`), the book-notes root (`book-notes.tsx:213`) and the legacy root (`legacy-reader.tsx:769`).
+  - `.rd-page` also appears on the review page (`rd-page rd-flow rv-page`). The rule therefore scopes to `.rd-article`.
+  - The top bar, the chapter bar, the sheets and the Display panel all sit outside `.rd-article`, so they stay unchanged by
+    construction.
+- **Rail.** `.an-rail` is placed from `--rd-measure` (`reader.css:1663-1666`) and lives inside `.rd-article`
+  (`annotations.tsx:330, 541, 2698`), so it follows the column. At 1600px it runs from 1176px to 1432px.
+- **Calc chain.**
+  - `--rd-fs-s` is declared on `.rd-root` (`reader.css:141`). A custom property is computed where it is declared, so
+    `--rd-fs-s` must be re-declared in the scope.
+  - `--qz-nfs` is declared on `.kb-ch .qz`, inside the article, so it follows by itself.
+  - `--rd-fs` cannot reference itself, so S1 restates the five steps ×10/9 per `.rd-size-N .rd-article`. `--rd-k` gets the
+    same treatment.
+- **Step.** `@media screen and (min-width: 100rem)`. It measures the window, as the intent says, and has the same form as the
+  reader's other steps (`reader.css:172-173`). 1599px is unchanged and 1600px is wide. `screen` keeps print out.
+- **Room.** At every step the column holds 10% more em than it does today (44/36 × 9/10), so no em-based layout gets less
+  room than at today's same size.
+- **Gates.** There are no CSS tests in `web/tests`. The web gates are `lint`, `typecheck` and `build`; CLAUDE.md forbids style
+  tests.
+
+Risk is `low` (the mid row; `executor-route` prints route=mid). There is no named trigger: the change is CSS only, in one
+file, with pinned values. The shared `.rd-root` is not a wide blast radius once the rule is scoped to `.rd-article`.
 
 ## Notebook writes (by path, not restated)
 
-- `## Operator Questions`: OQ1.
-- `## Decisions`: `Breakdown (DECOMP): not cut, halted on OQ1 …` → `topics/breakdown.md`.
-- `## Notes for later slices`: one note for the DECOMP re-run (the reader's sheet, shared scope, wide-viewport instrument).
+- `## Decisions`:
+  - Entry 1 replaced with `Breakdown (DECOMP): …` (pass 1 halted, re-run cut S1).
+  - Appended `Wide rule's scope and step: …`.
+- `## Notes for later slices`:
+  - Removed the pass-1 note for this re-run (consumed).
+  - Appended one note for P-8jbf.S1 (calc-chain gotchas, instrument).
 - `## Now`: rewritten.
+- `topics/breakdown.md`: rewritten in place, with `## Passes`, `## Estimate`, `## Join-rebuilt artifact` (none) and a
+  `## P-8jbf.S1` block.
+
+## Estimate (from `dispatch-summary` means)
+
+- S1 (implementation): 28.9 span-minutes per slice. The mid row's mean is 20.6 minutes per span.
+- REVIEW: 369.5 span-minutes per slice. That mean is skewed by large phases.
+- Total: about 400 span-minutes. Spends money: no.
 
 ## Not done (deliberately)
 
-- I ran no `new-slice`, wrote no slice `plan.md`, ran no `accept-gate`, made no commit and moved no status.
-- I did not edit `intent.md`: re-confirming intent is the orchestrator's job, with the operator.
-- No estimate: nothing is cut. `topics/breakdown.md` § Estimate gives the `dispatch-summary` means for the provisional
-  shape: decomposition 7.4, implementation 28.9 and review 369.5 span-minutes per slice. Spends money: no.
+No `plan.md` for S1, no `accept-gate` (the orchestrator declares `--require`), no commit, no status moves, no `defer-job`.

@@ -1,0 +1,11 @@
+{
+  "id": "D-pzs7",
+  "title": "Retire or redirect the orphaned document archive page",
+  "status": "deferred",
+  "source": "P-8jbf.DECOMP",
+  "reason": "/documents/{id}/versions/{v} still renders the old .kb-doc view and its ?view=full, but nothing links to it since the reader shows old versions with ?v=N (found by P-8jbf.DECOMP)",
+  "trigger": "the next reader or documents phase",
+  "created_at": "2026-10-27T16:24:46+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
