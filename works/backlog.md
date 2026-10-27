@@ -5,10 +5,10 @@
 
 ## Pointer
 
-- Current phase: `P-8jbf`
+- Current phase: `none`
 - Current slice: `none`
 - Next slice: `none`
-- Waiting on operator: `P-8jbf`
+- Waiting on operator: `none`
 - Open deferred jobs: `64`
 - Workspace version: `v86`
 
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P-8jbf` | pending | `none` | 3/4 | - | working tree |
+| `default` | - | idle | - | - | - | working tree |
 
 ## Active Phases
 
@@ -35,8 +35,8 @@
 | [x] `P31` | `done` | `pass` | Explain phase route | `none` | `works/phases/active/P31` |
 | [x] `P32` | `done` | `pass` | Thorough research and critic in the explain pipeline | `none` | `works/phases/active/P32` |
 | [x] `P-9sz6` | `done` | `pass` | Explain as a phase: workflow handoff | `none` | `works/phases/active/P-9sz6` |
-| [~] `P-8jbf` | `pending` | `changes_requested` | Wide reader on big screens | `P-8jbf.REVIEW` | `works/phases/active/P-8jbf` |
-| [~] `P33-n3` | `pending` | `pending` | Explain front door | `P33-n3.REVIEW` | `works/phases/active/P33-n3` |
+| [x] `P-8jbf` | `done` | `pass` | Wide reader on big screens | `none` | `works/phases/active/P-8jbf` |
+| [x] `P33-n3` | `done` | `pass` | Explain front door | `none` | `works/phases/active/P33-n3` |
 
 ## Phase P21: Web document deletion
 
@@ -246,7 +246,7 @@
 | [x] `P-8jbf.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P-8jbf/slices/P-8jbf.DECOMP` |
 | [x] `P-8jbf.S1` | `done` | Wide-screen reader: 44rem column and one-step-larger text above 1600px | `implementation` | `works/phases/active/P-8jbf/slices/P-8jbf.S1` |
 | [x] `P-8jbf.F1` | `done` | Wide table fits the wide column without a scroller | `fix` | `works/phases/active/P-8jbf/slices/P-8jbf.F1` |
-| [ ] `P-8jbf.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P-8jbf/slices/P-8jbf.REVIEW` |
+| [x] `P-8jbf.REVIEW` | `done` | phase review | `review` | `works/phases/active/P-8jbf/slices/P-8jbf.REVIEW` |
 
 ## Phase P33-n3: Explain front door
 
@@ -255,4 +255,4 @@
 | [x] `P33-n3.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P33-n3/slices/P33-n3.DECOMP` |
 | [x] `P33-n3.S1` | `done` | Rewrite the explain skill as the explain-phase front door | `implementation` | `works/phases/active/P33-n3/slices/P33-n3.S1` |
 | [x] `P33-n3.S2` | `done` | Say it on the plugin's outer surface and bump it to 0.7.0 | `implementation` | `works/phases/active/P33-n3/slices/P33-n3.S2` |
-| [ ] `P33-n3.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P33-n3/slices/P33-n3.REVIEW` |
+| [x] `P33-n3.REVIEW` | `done` | phase review | `review` | `works/phases/active/P33-n3/slices/P33-n3.REVIEW` |

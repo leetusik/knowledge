@@ -1,8 +1,8 @@
 {
-  "current_phase": "P-8jbf",
+  "current_phase": null,
   "current_slice": null,
   "next_slice": null,
-  "waiting_on_operator": "P-8jbf",
-  "mode": "waiting",
-  "updated_at": "2026-10-27T19:59:05+09:00"
+  "waiting_on_operator": null,
+  "mode": "idle",
+  "updated_at": "2026-10-27T22:47:53+09:00"
 }
