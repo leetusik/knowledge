@@ -172,10 +172,22 @@
       "current_slice": "P-8jbf.REVIEW",
       "slice_count": 4,
       "done_slice_count": 3
+    },
+    {
+      "id": "P33-n3",
+      "name": "Explain front door",
+      "objective": "Rewrite the knowledge plugin's explain skill into the explain-phase front door: /knowledge:explain parses its flags, finds a ready v86+ workspace, drafts and asks the one confirmation, and hands the request to create-phase's explain route; the skill's own run-state machinery goes, its research, writing and publish method stays, and the plugin version is bumped (P-9sz6 handoff §7)",
+      "status": "planned",
+      "order": 15,
+      "path": "works/phases/active/P33-n3",
+      "review_status": "pending",
+      "current_slice": "P33-n3.DECOMP",
+      "slice_count": 3,
+      "done_slice_count": 0
     }
   ],
-  "deferred_open_count": 62,
-  "deferred_promoted_count": 5,
+  "deferred_open_count": 61,
+  "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-27T19:59:05+09:00"
+  "last_rebuilt_at": "2026-10-27T20:00:05+09:00"
 }

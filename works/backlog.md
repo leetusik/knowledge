@@ -9,7 +9,7 @@
 - Current slice: `none`
 - Next slice: `none`
 - Waiting on operator: `P-8jbf`
-- Open deferred jobs: `62`
+- Open deferred jobs: `61`
 - Workspace version: `v86`
 
 ## Streams
@@ -36,6 +36,7 @@
 | [x] `P32` | `done` | `pass` | Thorough research and critic in the explain pipeline | `none` | `works/phases/active/P32` |
 | [x] `P-9sz6` | `done` | `pass` | Explain as a phase: workflow handoff | `none` | `works/phases/active/P-9sz6` |
 | [~] `P-8jbf` | `pending` | `changes_requested` | Wide reader on big screens | `P-8jbf.REVIEW` | `works/phases/active/P-8jbf` |
+| [ ] `P33-n3` | `planned` | `pending` | Explain front door | `P33-n3.DECOMP` | `works/phases/active/P33-n3` |
 
 ## Phase P21: Web document deletion
 
@@ -246,3 +247,11 @@
 | [x] `P-8jbf.S1` | `done` | Wide-screen reader: 44rem column and one-step-larger text above 1600px | `implementation` | `works/phases/active/P-8jbf/slices/P-8jbf.S1` |
 | [x] `P-8jbf.F1` | `done` | Wide table fits the wide column without a scroller | `fix` | `works/phases/active/P-8jbf/slices/P-8jbf.F1` |
 | [ ] `P-8jbf.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P-8jbf/slices/P-8jbf.REVIEW` |
+
+## Phase P33-n3: Explain front door
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P33-n3.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P33-n3/slices/P33-n3.DECOMP` |
+| [ ] `P33-n3.S1` | `todo` | Rewrite the explain skill as the explain-phase front door | `implementation` | `works/phases/active/P33-n3/slices/P33-n3.S1` |
+| [ ] `P33-n3.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P33-n3/slices/P33-n3.REVIEW` |
