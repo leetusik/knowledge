@@ -8,7 +8,7 @@
 - Current phase: `P-8jbf`
 - Current slice: `P-8jbf.DECOMP`
 - Next slice: `P-8jbf.REVIEW`
-- Waiting on operator: `none`
+- Waiting on operator: `P-8jbf.DECOMP`
 - Open deferred jobs: `59`
 
 ## Streams
@@ -241,5 +241,5 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P-8jbf.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P-8jbf/slices/P-8jbf.DECOMP` |
+| [~] `P-8jbf.DECOMP` | `pending` | decompose phase | `decomposition` | `works/phases/active/P-8jbf/slices/P-8jbf.DECOMP` |
 | [ ] `P-8jbf.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P-8jbf/slices/P-8jbf.REVIEW` |

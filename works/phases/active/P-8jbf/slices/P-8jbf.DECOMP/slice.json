@@ -3,11 +3,11 @@
   "phase_id": "P-8jbf",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "pending",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-27T16:05:03+09:00",
-  "started_at": null,
+  "started_at": "2026-10-27T16:05:42+09:00",
   "completed_at": null,
   "risk": "high",
   "source": {
@@ -28,5 +28,10 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "pending": {
+    "kind": "decision",
+    "on_words": "the operator's answer to OQ1 re-targets the phase onto the reader: intent.md's Confirmed Intent is refined to it and DECOMP re-runs and cuts the build slice",
+    "since": "2026-10-27T16:15:33+09:00"
   }
 }
