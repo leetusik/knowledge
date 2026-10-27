@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P-8jbf`
-- Current slice: `P-8jbf.S1`
-- Next slice: `P-8jbf.REVIEW`
+- Current slice: `P-8jbf.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `60`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P-8jbf` | planned | `P-8jbf.S1` | 1/3 | - | working tree |
+| `default` | `P-8jbf` | planned | `P-8jbf.REVIEW` | 2/3 | - | working tree |
 
 ## Active Phases
 
@@ -34,7 +34,7 @@
 | [x] `P31` | `done` | `pass` | Explain phase route | `none` | `works/phases/active/P31` |
 | [x] `P32` | `done` | `pass` | Thorough research and critic in the explain pipeline | `none` | `works/phases/active/P32` |
 | [x] `P-9sz6` | `done` | `pass` | Explain as a phase: workflow handoff | `none` | `works/phases/active/P-9sz6` |
-| [ ] `P-8jbf` | `planned` | `pending` | Wide reader on big screens | `P-8jbf.S1` | `works/phases/active/P-8jbf` |
+| [ ] `P-8jbf` | `planned` | `pending` | Wide reader on big screens | `P-8jbf.REVIEW` | `works/phases/active/P-8jbf` |
 
 ## Phase P21: Web document deletion
 
@@ -242,5 +242,5 @@
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P-8jbf.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P-8jbf/slices/P-8jbf.DECOMP` |
-| [ ] `P-8jbf.S1` | `todo` | Wide-screen reader: 44rem column and one-step-larger text above 1600px | `implementation` | `works/phases/active/P-8jbf/slices/P-8jbf.S1` |
+| [x] `P-8jbf.S1` | `done` | Wide-screen reader: 44rem column and one-step-larger text above 1600px | `implementation` | `works/phases/active/P-8jbf/slices/P-8jbf.S1` |
 | [ ] `P-8jbf.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P-8jbf/slices/P-8jbf.REVIEW` |

@@ -365,6 +365,24 @@ html:has(.rd-root) { scroll-behavior: auto; }
 }
 .rd-flow > * { grid-column: text; min-width: 0; }
 .rd-article { min-height: 60vh; }
+/* The wide screen (P-8jbf): from a 100rem (1600 px) window, a document's or chapter's column grows from 36rem to 44rem
+   and each of the five text sizes is 10/9 of its signed value (the default reads at 20 px). `--rd-k` follows, so the
+   column's spacing scales with the text; headings, the title, code and tables follow through the calc chain. Scoped to
+   `.rd-article`, which only the reader renders: the review, book, book-notes and legacy pages, the bars, the sheets and
+   print are untouched, and nothing below the step changes. */
+@media screen and (min-width: 100rem) {
+  .rd-article {
+    --rd-measure: 44rem;
+    --rd-fs: 1.25rem; --rd-k: 1.25;
+    /* Declared on `.rd-root`, it would arrive here already computed at the narrower size. */
+    --rd-fs-s: calc(var(--rd-fs) * 0.8333);
+  }
+  .rd-size-1 .rd-article { --rd-fs: 1.0416667rem; --rd-k: 1.0416667; }
+  .rd-size-2 .rd-article { --rd-fs: 1.1458333rem; --rd-k: 1.1458333; }
+  .rd-size-3 .rd-article { --rd-fs: 1.25rem; --rd-k: 1.25; }
+  .rd-size-4 .rd-article { --rd-fs: 1.3888889rem; --rd-k: 1.3888889; }
+  .rd-size-5 .rd-article { --rd-fs: 1.5277778rem; --rd-k: 1.5277778; }
+}
 
 /* Headings carry the offset that clears the bars when a link or the contents jumps to them; so does any other id'd block
    (a quiz, a figure, a code block), which an `#id` link can also name. */

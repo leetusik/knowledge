@@ -1439,3 +1439,6 @@
 {"ts": "2026-10-27T16:24:45+09:00", "type": "slice_status_changed", "slice": "P-8jbf.DECOMP", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-10-27T16:24:45+09:00", "type": "acceptance_required", "phase": "P-8jbf"}
 {"ts": "2026-10-27T16:24:46+09:00", "type": "deferred_created", "deferred": "D-pzs7", "source": "P-8jbf.DECOMP"}
+{"ts": "2026-10-27T16:24:59+09:00", "type": "slice_status_changed", "slice": "P-8jbf.S1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-27T16:50:59+09:00", "type": "executor_dispatched", "slice": "P-8jbf.S1", "phase": "P-8jbf", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-27T16:50:59+09:00", "type": "slice_status_changed", "slice": "P-8jbf.S1", "old_status": "in_progress", "new_status": "done"}

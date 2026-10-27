@@ -3,13 +3,13 @@
   "phase_id": "P-8jbf",
   "name": "Wide-screen reader: 44rem column and one-step-larger text above 1600px",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 10,
   "depends_on": [],
   "depends_declared": true,
   "created_at": "2026-10-27T16:22:30+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-27T16:24:59+09:00",
+  "completed_at": "2026-10-27T16:50:59+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -19,7 +19,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "reader.css: from a 1600px window documents and chapters get a 44rem column and text sizes x10/9 (default 20px); below 1600px, print and other reader pages unchanged; verified live",
   "validation": {
     "required": [],
     "last_run": null,
