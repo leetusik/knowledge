@@ -5,9 +5,9 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P-9sz6`
+- Current slice: `P-9sz6.DECOMP`
+- Next slice: `P-9sz6.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `58`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | - | idle | - | - | - | working tree |
+| `default` | `P-9sz6` | planned | `P-9sz6.DECOMP` | 0/2 | - | working tree |
 
 ## Active Phases
 
@@ -33,6 +33,7 @@
 | [x] `P30` | `done` | `pass` | Learning reader — apply | `none` | `works/phases/active/P30` |
 | [x] `P31` | `done` | `pass` | Explain phase route | `none` | `works/phases/active/P31` |
 | [x] `P32` | `done` | `pass` | Thorough research and critic in the explain pipeline | `none` | `works/phases/active/P32` |
+| [ ] `P-9sz6` | `planned` | `pending` | Explain as a phase: workflow handoff | `P-9sz6.DECOMP` | `works/phases/active/P-9sz6` |
 
 ## Phase P21: Web document deletion
 
@@ -226,3 +227,10 @@
 | [x] `P32.F4` | `done` | explain waits only by ending its turn, never re-runs itself; the verifier-defect clause matches B4 | `fix` | `works/phases/active/P32/slices/P32.F4` |
 | [x] `P32.F5` | `done` | The verifier refuses to run on the researchers' model, as the critic does with the writer's | `fix` | `works/phases/active/P32/slices/P32.F5` |
 | [x] `P32.REVIEW` | `done` | phase review | `review` | `works/phases/active/P32/slices/P32.REVIEW` |
+
+## Phase P-9sz6: Explain as a phase: workflow handoff
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P-9sz6.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P-9sz6/slices/P-9sz6.DECOMP` |
+| [ ] `P-9sz6.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P-9sz6/slices/P-9sz6.REVIEW` |

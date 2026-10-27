@@ -1,0 +1,33 @@
+{
+  "id": "P-9sz6",
+  "name": "Explain as a phase: workflow handoff",
+  "objective": "Write a handoff document and a short prompt that let a session in the bootstrap workspace repo build the workflow version where every /knowledge:explain runs as its own explain phase: a standalone document by default, a book only when asked, one phase per publishable unit, run in its own worktree by default, workspace required.",
+  "status": "planned",
+  "order": 13,
+  "created_at": "2026-10-27T11:44:33+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "review": {
+    "status": "pending",
+    "reviewed_at": null,
+    "reviewer": null,
+    "note": null
+  },
+  "acceptance": {
+    "required": null,
+    "walkthrough": null,
+    "requested_at": null,
+    "cleared_at": null,
+    "note": null
+  },
+  "paths": {
+    "phase_md": "phase.md",
+    "intent_md": "intent.md",
+    "slices_dir": "slices"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

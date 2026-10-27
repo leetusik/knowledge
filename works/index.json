@@ -148,10 +148,22 @@
       "slice_count": 18,
       "done_slice_count": 18,
       "consolidation": "pending"
+    },
+    {
+      "id": "P-9sz6",
+      "name": "Explain as a phase: workflow handoff",
+      "objective": "Write a handoff document and a short prompt that let a session in the bootstrap workspace repo build the workflow version where every /knowledge:explain runs as its own explain phase: a standalone document by default, a book only when asked, one phase per publishable unit, run in its own worktree by default, workspace required.",
+      "status": "planned",
+      "order": 13,
+      "path": "works/phases/active/P-9sz6",
+      "review_status": "pending",
+      "current_slice": "P-9sz6.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
     }
   ],
   "deferred_open_count": 58,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-26T10:22:37+09:00"
+  "last_rebuilt_at": "2026-10-27T11:44:33+09:00"
 }
