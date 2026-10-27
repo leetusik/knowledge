@@ -3,12 +3,12 @@
   "phase_id": "P-9sz6",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-27T11:44:33+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-27T11:45:43+09:00",
+  "completed_at": "2026-10-27T11:49:33+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut one research slice, P-9sz6.S1, that writes handoff.md and prompt.md; chain DECOMP -> S1 -> REVIEW, ~2 h metered estimate",
   "validation": {
     "required": [],
     "last_run": null,

@@ -1,0 +1,33 @@
+{
+  "id": "P-9sz6.S1",
+  "phase_id": "P-9sz6",
+  "name": "Write the explain-as-a-phase handoff and bootstrap prompt",
+  "kind": "research",
+  "status": "todo",
+  "order": 10,
+  "depends_on": [],
+  "depends_declared": true,
+  "created_at": "2026-10-27T11:47:08+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": null,
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

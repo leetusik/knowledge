@@ -1412,3 +1412,8 @@
 {"ts": "2026-10-26T10:22:37+09:00", "type": "phase_reviewed", "phase": "P32", "verdict": "pass", "reviewer": "slice-executor-high"}
 {"ts": "2026-10-26T10:22:37+09:00", "type": "phase_consolidation_owed", "phase": "P32", "notes": 22}
 {"ts": "2026-10-27T11:44:33+09:00", "type": "phase_created", "phase": "P-9sz6"}
+{"ts": "2026-10-27T11:45:43+09:00", "type": "slice_status_changed", "slice": "P-9sz6.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-27T11:47:08+09:00", "type": "slice_created", "phase": "P-9sz6", "slice": "P-9sz6.S1"}
+{"ts": "2026-10-27T11:49:33+09:00", "type": "executor_dispatched", "slice": "P-9sz6.DECOMP", "phase": "P-9sz6", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-27T11:49:33+09:00", "type": "slice_status_changed", "slice": "P-9sz6.DECOMP", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-27T11:49:34+09:00", "type": "acceptance_required", "phase": "P-9sz6"}
