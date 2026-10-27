@@ -1,0 +1,11 @@
+{
+  "id": "D79-we",
+  "title": "Delete the vendored .claude/skills/explain/",
+  "status": "deferred",
+  "source": "P33-n3.REVIEW",
+  "reason": "A stale v61 copy of the old /explain: it shows as a second slash command and offers a run outside any phase.",
+  "trigger": "the operator's word, or the next /update-workspace",
+  "created_at": "2026-10-27T21:11:09+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

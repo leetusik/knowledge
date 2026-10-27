@@ -1471,3 +1471,12 @@
 {"ts": "2026-10-27T20:42:28+09:00", "type": "slice_status_changed", "slice": "P33-n3.S2", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-27T20:46:47+09:00", "type": "executor_dispatched", "slice": "P33-n3.S2", "phase": "P33-n3", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-27T20:46:47+09:00", "type": "slice_status_changed", "slice": "P33-n3.S2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-27T20:47:06+09:00", "type": "phase_status_changed", "phase": "P33-n3", "old_status": "planned", "new_status": "in_progress"}
+{"ts": "2026-10-27T20:47:06+09:00", "type": "slice_status_changed", "slice": "P33-n3.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-27T21:04:30+09:00", "type": "doc_version_created", "doc": "qa", "version": "v2610271204_p33-n3.review_gate_regression_checklist_replaces_three_p32_single-document-engine_explain_lines_with_front-door_lines_and_adds_the_book_confirmation_and_citation-check_lines", "source": "P33-n3.REVIEW"}
+{"ts": "2026-10-27T21:11:09+09:00", "type": "executor_dispatched", "slice": "P33-n3.REVIEW", "phase": "P33-n3", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-27T21:11:09+09:00", "type": "deferred_created", "deferred": "D78-rq", "source": "P33-n3.REVIEW"}
+{"ts": "2026-10-27T21:11:09+09:00", "type": "deferred_created", "deferred": "D79-we", "source": "P33-n3.REVIEW"}
+{"ts": "2026-10-27T21:11:09+09:00", "type": "deferred_created", "deferred": "D80-ch", "source": "P33-n3.REVIEW"}
+{"ts": "2026-10-27T21:11:22+09:00", "type": "phase_status_changed", "phase": "P33-n3", "old_status": "in_progress", "new_status": "pending"}
+{"ts": "2026-10-27T21:11:22+09:00", "type": "acceptance_opened", "phase": "P33-n3"}

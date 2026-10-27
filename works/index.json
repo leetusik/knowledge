@@ -177,7 +177,7 @@
       "id": "P33-n3",
       "name": "Explain front door",
       "objective": "Rewrite the knowledge plugin's explain skill into the explain-phase front door: /knowledge:explain parses its flags, finds a ready v86+ workspace, drafts and asks the one confirmation, and hands the request to create-phase's explain route; the skill's own run-state machinery goes, its research, writing and publish method stays, and the plugin version is bumped (P-9sz6 handoff §7)",
-      "status": "planned",
+      "status": "pending",
       "order": 15,
       "path": "works/phases/active/P33-n3",
       "review_status": "pending",
@@ -186,8 +186,8 @@
       "done_slice_count": 3
     }
   ],
-  "deferred_open_count": 61,
+  "deferred_open_count": 64,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-27T20:46:47+09:00"
+  "last_rebuilt_at": "2026-10-27T21:11:22+09:00"
 }

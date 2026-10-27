@@ -2,10 +2,10 @@
   "id": "P33-n3",
   "name": "Explain front door",
   "objective": "Rewrite the knowledge plugin's explain skill into the explain-phase front door: /knowledge:explain parses its flags, finds a ready v86+ workspace, drafts and asks the one confirmation, and hands the request to create-phase's explain route; the skill's own run-state machinery goes, its research, writing and publish method stays, and the plugin version is bumped (P-9sz6 handoff §7)",
-  "status": "planned",
+  "status": "pending",
   "order": 15,
   "created_at": "2026-10-27T20:00:05+09:00",
-  "started_at": null,
+  "started_at": "2026-10-27T20:47:06+09:00",
   "completed_at": null,
   "review": {
     "status": "pending",
@@ -15,8 +15,8 @@
   },
   "acceptance": {
     "required": true,
-    "walkthrough": null,
-    "requested_at": null,
+    "walkthrough": "Explain front door — plugin 0.7.0 committed, nothing pushed. TRY IT BEFORE PUSHING (this repo, interactive): (1) claude --plugin-dir ./plugin (loads 0.7.0 over your installed 0.6.0), then /knowledge:explain how phase-section edits one notebook entry. You get one confirmation: unit, subject, mode, run, lang, reader, project (private), prior, worktree and cost lines, the 17-line ## Explain block and a Why: line. Answer no: nothing is created (git status unchanged). Answer yes on a small subject for a real run: it creates an explain phase, runs it in its own worktree and publishes private. (2) Optional: /knowledge:explain P-8jbf, as a book (the stops line adds the outline and acceptance gates); /knowledge:explain resume (lists live explain phases). (3) Landing: http://127.0.0.1:3030/#skill reads '2,729-line skill' / '2,729 lines' with the new description. AFTER: push main, update knowledge to 0.7.0 from /plugin, deploy the web. DECISIONS: (1) OQ1, the landing's two framing lines ('Copy it straight into your agent ... offline'; 'ships for Codex under .agents/') overpromise now that explain needs a v86 workspace. Recommended: keep .agents/ in parity; reword both in a follow-up in your words (filed D78-rq). (2) Two wording gaps: the no-workspace refusal and plugin README name the workspace but do not link the installer; under claude -p the confirmation ends 'Reply yes...' without the nothing-was-created note. Recommended: fold into D78-rq and push 0.7.0 as is; say 'fix now' to fix before pushing. DECIDED AS DRAWN ('accept' signs these and both recommendations): headless prints the confirmation and stops; the repeat check reads phase folders, no workflow.py grant; asking from inside a worktree or for a public book is refused early; book=<slug> adds a chapter when the book exists, else starts a book; a trailing 'here' is dropped and 'resume' lists live phases; a lookup miss writes 'prior: none'; no critic confirm pass (the review decides a disputed must-fix); the converter stays in ~/.local/state/knowledge-kb/explain/tools/; the vendored .claude/skills/explain/ is left alone (D79-we); plugin descriptions drop 'placed in a book'. FILED: D78-rq (landing framing + wording), D79-we (delete the vendored explain skill), D80-ch (template page / setup L49 drift). Detail: works/phases/active/P33-n3/slices/P33-n3.REVIEW/result.md",
+    "requested_at": "2026-10-27T21:11:22+09:00",
     "cleared_at": null,
     "note": null
   },

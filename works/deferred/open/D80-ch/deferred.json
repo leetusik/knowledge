@@ -1,0 +1,11 @@
+{
+  "id": "D80-ch",
+  "title": "Plugin text drift outside the explain front door",
+  "status": "deferred",
+  "source": "P33-n3.REVIEW",
+  "reason": "The KB template getting-started page section 1 still promises a straight-to-file fallback the skill no longer has; plugin/skills/setup/SKILL.md L49 derives the project from the repo name, ignoring general mode's subject-slug project.",
+  "trigger": "the next touch of either file",
+  "created_at": "2026-10-27T21:11:09+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

@@ -1,11 +1,11 @@
 ---
 doc_id: qa
-version: v2610271051
-created_at: 2026-10-27T19:51:43+09:00
-commit: fbb13db62ea3160f390c3b0f09d79d44767910fa
-source: P-8jbf.REVIEW
-summary: P-8jbf.REVIEW: append the wide-step and wide-table smoke lines to the Regression Checklist
-previous: v0021_p32.review_round_4_gate_regression_checklist_gains_the_explain_skill_and_plugin_parity_quick-run_dossier_no-wakeup_and_repeat_verifier_same-model_guard_book_suggestion_and_landing_line-count_lines
+version: v2610271204
+created_at: 2026-10-27T21:04:30+09:00
+commit: 74fd0865ad7909cdd69fe90ae5617271787bf89e
+source: P33-n3.REVIEW
+summary: P33-n3.REVIEW gate: Regression Checklist replaces three P32 single-document-engine explain lines with front-door lines and adds the book confirmation and citation-check lines
+previous: v2610271051_p-8jbf.review_append_the_wide-step_and_wide-table_smoke_lines_to_the_regression_checklist
 ---
 
 # QA
@@ -327,17 +327,19 @@ apply there; use *In-app graph label focus (P22)* instead._
       `python3 scripts/plugin_parity.py` PASS: the three explain-skill copies
       in body parity (the web copy byte-identical) and the five
       `plugin/agents/*.md` bodies equal to Part B (P32)
-- [ ] A `quick` single document under `claude -p` (scratch `XDG_*`/`KB_*`, a
-      scratch stack, `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`), on an Opus and
-      on a Sonnet lead: `run.md` shows `path: plugin`; the dossier holds
-      `plan.md`, `findings/`, `library.md`, a `verify/` file whose `verifier:`
-      model differs from the lead's, `gaps/final.md`, `outline.md` opening
-      `## Reader's task` (absent from the published chapter) and `trace.md`
-      (P32)
-- [ ] The same session, held 15 minutes after `state: done`: the lead made no
-      `ScheduleWakeup`, `CronCreate` or `Monitor` call, one run id exists and
-      the document stays at v1; resumed with the same words, it prints that
-      run's report line and URL and starts no run (P32)
+- [ ] Explain front door, headless (replaces P32's `quick` single-document
+      line): `/knowledge:explain <a subject> quick` under `claude -p
+      --plugin-dir plugin` in this v86+ workspace prints one confirmation
+      (the unit line, `run: quick`, the seventeen-line `## Explain` block in
+      create-phase's order, a `Why:` line) and stops; `git status`,
+      `works/phases/active/` and `git worktree list` are unchanged: no phase,
+      commit or worktree (P33-n3)
+- [ ] Explain front door, a repeat (replaces P32's 15-minute repeat line):
+      `/knowledge:explain <the subject of a live explain phase>` (an
+      `^## Explain$` heading in its `intent.md`, `phase.json` not `done`) names
+      that phase and offers `/do-whole-phase <P>` or a new version, drafting no
+      confirmation and creating nothing; `/knowledge:explain resume` lists the
+      live explain phases and points at `/do-whole-phase <P>` (P33-n3)
 - [ ] The verifier's same-model guard: from a Sonnet `claude -p` main thread,
       `knowledge:verifier` sent with no `model:` and `researchers_model:
       claude-sonnet-5-5` returns `blocked: same model as the researchers`
@@ -345,13 +347,24 @@ apply there; use *In-app graph label focus (P22)* instead._
       runs and writes its verify file; with `· same-model: accepted` added to
       the Sonnet line it runs and heads the file `verifier: <id> (same model,
       degraded)` (P32)
-- [ ] `/knowledge:explain <a subject> book` under `claude -p` in a folder that
-      is not a workflow workspace: one document with every stage of its run
-      kept, and the report carries the book suggestion; no phase or book is
-      created (P32)
+- [ ] Explain front door, refusals (replaces P32's `book` outside a workspace
+      line): `/knowledge:explain <a subject>` in a folder with no workflow
+      workspace refuses with the installer pointer, and in a v85 workspace
+      (or a v86 whose create-phase explain route lists no `**unit**`) with
+      `/update-workspace`; neither runs nor writes anything (P33-n3)
 - [ ] The landing's skill pane: the line count in
       `web/src/content/marketing/content.ts` (`lede`, `pane.meta`) equals
       `wc -l web/public/SKILL.md` (P32)
+- [ ] Explain front door, a book: `/knowledge:explain <a phase id>, as a book`
+      under `claude -p` proposes `unit: book`, the phase's own book `p<N>`
+      titled "P<N>: <phase name>" (kind codebase), `run: full` and `outline
+      sign-off: on`, adds the outline and acceptance gates to its stops line,
+      and creates nothing (P33-n3)
+- [ ] Explain skill interface: P33-n3's citation check
+      (`topics/citations.md`, run from the repo root) exits 0 with
+      `missing=0`: every `§N *Heading*` the installed workspace cites, and
+      *The run, in one card*, is a heading of
+      `plugin/skills/explain/SKILL.md` (P33-n3)
 - [ ] Reader wide step: in a window 1600px or wider a document or chapter
       reads in a 44rem column with every text size one step larger (×10/9,
       default 20px); at 1599px and below, in print and on the book,

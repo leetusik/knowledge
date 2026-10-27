@@ -1218,7 +1218,7 @@
       ]
     },
     "qa": {
-      "latest": "v2610271051_p-8jbf.review_append_the_wide-step_and_wide-table_smoke_lines_to_the_regression_checklist",
+      "latest": "v2610271204_p33-n3.review_gate_regression_checklist_replaces_three_p32_single-document-engine_explain_lines_with_front-door_lines_and_adds_the_book_confirmation_and_citation-check_lines",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1403,6 +1403,15 @@
           "source": "P-8jbf.REVIEW",
           "summary": "P-8jbf.REVIEW: append the wide-step and wide-table smoke lines to the Regression Checklist",
           "previous": "v0021_p32.review_round_4_gate_regression_checklist_gains_the_explain_skill_and_plugin_parity_quick-run_dossier_no-wakeup_and_repeat_verifier_same-model_guard_book_suggestion_and_landing_line-count_lines"
+        },
+        {
+          "id": "v2610271204_p33-n3.review_gate_regression_checklist_replaces_three_p32_single-document-engine_explain_lines_with_front-door_lines_and_adds_the_book_confirmation_and_citation-check_lines",
+          "path": "docs/versions/qa/v2610271204_p33-n3.review_gate_regression_checklist_replaces_three_p32_single-document-engine_explain_lines_with_front-door_lines_and_adds_the_book_confirmation_and_citation-check_lines.md",
+          "created_at": "2026-10-27T21:04:30+09:00",
+          "commit": "74fd0865ad7909cdd69fe90ae5617271787bf89e",
+          "source": "P33-n3.REVIEW",
+          "summary": "P33-n3.REVIEW gate: Regression Checklist replaces three P32 single-document-engine explain lines with front-door lines and adds the book confirmation and citation-check lines",
+          "previous": "v2610271051_p-8jbf.review_append_the_wide-step_and_wide-table_smoke_lines_to_the_regression_checklist"
         }
       ]
     },
@@ -1581,5 +1590,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-10-27T19:51:43+09:00"
+  "last_rebuilt_at": "2026-10-27T21:04:30+09:00"
 }

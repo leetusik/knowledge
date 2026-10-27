@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `61`
+- Open: `64`
 - Promoted: `6`
 - Dropped: `14`
 
@@ -70,6 +70,9 @@
 | `D75` | `deferred` | explain: close the run mechanically at publish (run.md state and report.md) | P32.REVIEW | D72's job, or a resume that picks an already-published run | `works/deferred/open/D75` |
 | `D76` | `deferred` | explain: name 'family' in the verifier's and critic's same-model guards; give a missing researchers_model line its own block | P32.REVIEW | a cross-family block seen in a run, a lead 'correcting' model: for a missing line, or the next B4/B5 edit (e.g. D70's shrink) | `works/deferred/open/D76` |
 | `D77` | `deferred` | explain book: the outline gate's report runs ~3.7k chars against the ~2k stop rule | P32.REVIEW | the next bootstrap update that touches explain-decomposition.md | `works/deferred/open/D77` |
+| `D78-rq` | `deferred` | Explain front door: landing framing and wording follow-up | P33-n3.REVIEW | the operator's rewording, or the next plugin release (0.7.1) | `works/deferred/open/D78-rq` |
+| `D79-we` | `deferred` | Delete the vendored .claude/skills/explain/ | P33-n3.REVIEW | the operator's word, or the next /update-workspace | `works/deferred/open/D79-we` |
+| `D80-ch` | `deferred` | Plugin text drift outside the explain front door | P33-n3.REVIEW | the next touch of either file | `works/deferred/open/D80-ch` |
 | `D-pzs7` | `deferred` | Retire or redirect the orphaned document archive page | P-8jbf.DECOMP | the next reader or documents phase | `works/deferred/open/D-pzs7` |
 | `D-19n8` | `deferred` | Quiz Show answer button overflows a 390 phone at 200% root text | P-8jbf.REVIEW | the next reader or quiz phase, or a QA sweep | `works/deferred/open/D-19n8` |
 | `D-6pf9` | `deferred` | A long table's box state depends on resize history | P-8jbf.F1 | the next reader-tables phase or a QA sweep | `works/deferred/open/D-6pf9` |
