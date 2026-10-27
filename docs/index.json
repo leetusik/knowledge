@@ -1218,7 +1218,7 @@
       ]
     },
     "qa": {
-      "latest": "v0021_p32.review_round_4_gate_regression_checklist_gains_the_explain_skill_and_plugin_parity_quick-run_dossier_no-wakeup_and_repeat_verifier_same-model_guard_book_suggestion_and_landing_line-count_lines",
+      "latest": "v2610271051_p-8jbf.review_append_the_wide-step_and_wide-table_smoke_lines_to_the_regression_checklist",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1394,6 +1394,15 @@
           "source": "P32.REVIEW",
           "summary": "P32.REVIEW round 4 gate: Regression Checklist gains the explain skill and plugin parity, quick-run dossier, no-wakeup and repeat, verifier same-model guard, book suggestion and landing line-count lines",
           "previous": "v0020_p31.review_round_2_regression_checklist_gains_the_knowledge_check_dry-run_line_valid_chapter_exits_0_and_writes_nothing_invalid_exits_1_with_the_line_list"
+        },
+        {
+          "id": "v2610271051_p-8jbf.review_append_the_wide-step_and_wide-table_smoke_lines_to_the_regression_checklist",
+          "path": "docs/versions/qa/v2610271051_p-8jbf.review_append_the_wide-step_and_wide-table_smoke_lines_to_the_regression_checklist.md",
+          "created_at": "2026-10-27T19:51:43+09:00",
+          "commit": "fbb13db62ea3160f390c3b0f09d79d44767910fa",
+          "source": "P-8jbf.REVIEW",
+          "summary": "P-8jbf.REVIEW: append the wide-step and wide-table smoke lines to the Regression Checklist",
+          "previous": "v0021_p32.review_round_4_gate_regression_checklist_gains_the_explain_skill_and_plugin_parity_quick-run_dossier_no-wakeup_and_repeat_verifier_same-model_guard_book_suggestion_and_landing_line-count_lines"
         }
       ]
     },
@@ -1572,5 +1581,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-10-26T10:06:27+09:00"
+  "last_rebuilt_at": "2026-10-27T19:51:43+09:00"
 }

@@ -1452,3 +1452,8 @@
 {"ts": "2026-10-27T19:02:03+09:00", "type": "executor_dispatched", "slice": "P-8jbf.F1", "phase": "P-8jbf", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-27T19:02:03+09:00", "type": "slice_status_changed", "slice": "P-8jbf.F1", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-10-27T19:02:13+09:00", "type": "deferred_created", "deferred": "D-6pf9", "source": "P-8jbf.F1"}
+{"ts": "2026-10-27T19:02:40+09:00", "type": "slice_status_changed", "slice": "P-8jbf.REVIEW", "old_status": "changes_requested", "new_status": "in_progress"}
+{"ts": "2026-10-27T19:51:43+09:00", "type": "doc_version_created", "doc": "qa", "version": "v2610271051_p-8jbf.review_append_the_wide-step_and_wide-table_smoke_lines_to_the_regression_checklist", "source": "P-8jbf.REVIEW"}
+{"ts": "2026-10-27T19:59:04+09:00", "type": "executor_dispatched", "slice": "P-8jbf.REVIEW", "phase": "P-8jbf", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": "round 2 pass"}
+{"ts": "2026-10-27T19:59:05+09:00", "type": "phase_status_changed", "phase": "P-8jbf", "old_status": "in_progress", "new_status": "pending"}
+{"ts": "2026-10-27T19:59:05+09:00", "type": "acceptance_opened", "phase": "P-8jbf"}

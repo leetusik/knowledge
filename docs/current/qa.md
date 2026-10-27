@@ -1,11 +1,11 @@
 ---
 doc_id: qa
-version: v0021
-created_at: 2026-10-26T10:06:08+09:00
-commit: 62e1e57af95146f56bb46f59468bae7e78250d09
-source: P32.REVIEW
-summary: P32.REVIEW round 4 gate: Regression Checklist gains the explain skill and plugin parity, quick-run dossier, no-wakeup and repeat, verifier same-model guard, book suggestion and landing line-count lines
-previous: v0020_p31.review_round_2_regression_checklist_gains_the_knowledge_check_dry-run_line_valid_chapter_exits_0_and_writes_nothing_invalid_exits_1_with_the_line_list
+version: v2610271051
+created_at: 2026-10-27T19:51:43+09:00
+commit: fbb13db62ea3160f390c3b0f09d79d44767910fa
+source: P-8jbf.REVIEW
+summary: P-8jbf.REVIEW: append the wide-step and wide-table smoke lines to the Regression Checklist
+previous: v0021_p32.review_round_4_gate_regression_checklist_gains_the_explain_skill_and_plugin_parity_quick-run_dossier_no-wakeup_and_repeat_verifier_same-model_guard_book_suggestion_and_landing_line-count_lines
 ---
 
 # QA
@@ -352,6 +352,16 @@ apply there; use *In-app graph label focus (P22)* instead._
 - [ ] The landing's skill pane: the line count in
       `web/src/content/marketing/content.ts` (`lede`, `pane.meta`) equals
       `wc -l web/public/SKILL.md` (P32)
+- [ ] Reader wide step: in a window 1600px or wider a document or chapter
+      reads in a 44rem column with every text size one step larger (×10/9,
+      default 20px); at 1599px and below, in print and on the book,
+      book-notes, legacy and review pages it reads as before (36rem, 18px)
+      (P-8jbf)
+- [ ] Reader wide table: in a window 1600px or wider an 8+ column table that
+      fits the 44rem column shows whole, with no scroller, hint or fade and
+      no tab stop; one whose content is wider still scrolls in its box with
+      the hint and fade; below 1600px every 8+ column table scrolls as before
+      (P-8jbf)
 
 ## Verifying the Guard Itself (negative-test pattern)
 

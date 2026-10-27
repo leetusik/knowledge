@@ -165,7 +165,7 @@
       "id": "P-8jbf",
       "name": "Wide reader on big screens",
       "objective": "On PC-width screens the reader uses more of the width: from a 1600px window, documents and book chapters get a wider column (36rem to 44rem) and every text size one step larger (x10/9, default 18px to 20px), with code, tables and figures staying in the column; below 1600px, print and the other reader pages stay as they are (re-targeted after OQ1).",
-      "status": "in_progress",
+      "status": "pending",
       "order": 14,
       "path": "works/phases/active/P-8jbf",
       "review_status": "changes_requested",
@@ -177,5 +177,5 @@
   "deferred_open_count": 62,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-27T19:02:13+09:00"
+  "last_rebuilt_at": "2026-10-27T19:59:05+09:00"
 }

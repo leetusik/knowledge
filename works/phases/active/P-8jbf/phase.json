@@ -2,7 +2,7 @@
   "id": "P-8jbf",
   "name": "Wide reader on big screens",
   "objective": "On PC-width screens the reader uses more of the width: from a 1600px window, documents and book chapters get a wider column (36rem to 44rem) and every text size one step larger (x10/9, default 18px to 20px), with code, tables and figures staying in the column; below 1600px, print and the other reader pages stay as they are (re-targeted after OQ1).",
-  "status": "in_progress",
+  "status": "pending",
   "order": 14,
   "created_at": "2026-10-27T16:05:03+09:00",
   "started_at": null,
@@ -15,8 +15,8 @@
   },
   "acceptance": {
     "required": true,
-    "walkthrough": null,
-    "requested_at": null,
+    "walkthrough": "Wide reader on big screens — review round 2 passed. WHERE: dev http://127.0.0.1:3030 now (production https://knowledge.hi2vi.com once you deploy); a window at least 1600px wide (an external monitor, or Chrome at 80% zoom on the 1440 laptop = 1800px). STEPS: (1) Open a book chapter, then a loose document: column 44rem, text one step larger (20px default). Narrow below 1600px or zoom back to 100%: it returns to 36rem/18px live, no reload. (2) Display: try the five text sizes at both widths, each one step larger on the wide screen; Notes on: the rail stays beside the column. (3) A document with an 8+ column table (:3030's data has none; any markdown table of 8+ columns): wide screen + short cells shows whole with its right border, no hint, fade or Tab stop; cells too wide still scroll with hint and fade; below 1600px every such table scrolls as before; over 20 rows and fitting, it reads in the page with a sticky header. (4) Print / Export PDF: unchanged. DECISIONS: none open (OQ1 resolved). DECIDED AS DRAWN ('accept' signs these): (a) from 1600px an 8+ column table that fits the 44rem column shows without scroller, hint or fade and is not a Tab stop; one that does not fit still scrolls; (b) a wide and long table that fits reads in the page with its sticky header (the signed long-table fit form), where before it sat in a box set off by a 2px phantom overflow; (c) a wide table that scrolled below 1600px can fit the wider column there; (d) the step goes by window width only; print and the review, book, book-notes and legacy pages keep 36rem/18px. FILED: D-pzs7 (archive page), D-19n8 (quiz 'Show answer' at 390px/200%), D-6pf9 (long table's box after a resize). Detail: works/phases/active/P-8jbf/slices/P-8jbf.REVIEW/result.md",
+    "requested_at": "2026-10-27T19:59:05+09:00",
     "cleared_at": null,
     "note": null
   },
