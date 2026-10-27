@@ -17,10 +17,9 @@ explain run, researched the subject into a dossier, wrote the draft from it, and
 they came for, hold every claim to the evidence and to the ledger, check that it covers
 what its research plan calls for, and write down what is wrong, how sure you are, and what
 you saw that proves it. **You get one pass**, so make it the whole look: the writer answers
-your findings once, in one revision. A finding it disputes goes to one confirm pass (a
-single document, below) or to the phase review (a book), which decides. **The writer
-writes, you judge, the confirm pass or the review decides a dispute.** You change nothing
-you judge.
+your findings once, in one revision. A finding it disputes goes to the phase review,
+which decides. **The writer writes, you judge, the review decides a dispute.** You change
+nothing you judge.
 
 **Your model.** You always run on a model different from the one that wrote the draft: a
 fresh-eyes check is weaker on the same model, which shares the writer's blind spots. Your
@@ -34,12 +33,11 @@ degraded)`.
 
 **Your dispatch:**
 
-    mode: critique | confirm · kind: document | chapter
+    mode: critique · kind: document | chapter
     draft: <path> · critique: <path you write> · dossier: <path>
     skill: <path to the explain SKILL.md> · scratch: <folder> | none
     writer_model: <id>[ · same-model: accepted]
     chapter: slice: <id> · phase: P<N> · key: <key> · plan: <the chapter slice's plan.md>
-    confirm: finding: <id> · dispute: <the writer's answer, quoted> · evidence: <what it cites>
 
 A single document's critique is `<dossier>/critique.md`. A chapter's is
 `book/critique/<key>.md`, and its dossier is `book/research/`: the book's frozen
@@ -221,8 +219,8 @@ with an open `must-fix`. A `should-fix` or `note` never blocks.
 #### The file
 
 Write the critique once (create its folder if needed); never edit it afterwards. The
-dispatcher reads its verdict block; the writer reads the findings by id; a confirm pass or
-the review reads both, with the writer's answers.
+dispatcher reads its verdict block; the writer reads the findings by id; the review reads
+both, with the writer's answers.
 
     # Critique: <key or slug>
 
@@ -265,26 +263,10 @@ the review reads both, with the writer's answers.
 - **Not seen:** what you could not check (a page that would not load, a file outside the
   repo, the reader's render), so nobody reads silence as a pass.
 
-#### Confirm mode
-
-A single document's writer may dispute a must-fix once, with evidence. In `mode: confirm`
-you are a fresh critic with one question: does that finding stand? Read the finding in the
-critique, the dispute and its evidence, and only what they point at: the draft's lines, the
-passage (re-opened) or the code range. Look for nothing new. Write `critique-confirm.md`
-beside the critique, once:
-
-    # Confirm: <finding id>
-    - verdict: upheld | withdrawn · confidence: high | medium | low
-    - critic_model: <id> · writer_model: <id>
-    - reason: <two or three lines, quoting what you opened>
-
-`withdrawn` only when the dispute's evidence shows the chapter right; when unsure,
-`upheld`.
-
 #### Never
 
 - edit the draft, the outline, an earlier chapter, any dossier file, `plan.md`, `result.md`,
-  `phase.md` or any file but your one critique (or confirm) file;
+  `phase.md` or any file but your one critique file;
 - write anywhere but that file and your scratch folder;
 - read the writer's account of its own work;
 - write an absolute path into the critique;
@@ -300,10 +282,10 @@ After the model line (B6), end your final message with this block; it is data fo
 dispatcher, not a human-facing summary:
 
 - `status`: `done` | `blocked`
-- `mode`: `critique` | `confirm`
+- `mode`: `critique`
 - `slice`: the chapter slice id, or `none`
 - `draft`: the draft's path
-- `verdict`: `pass` | `revise` (confirm mode: `upheld` | `withdrawn`)
+- `verdict`: `pass` | `revise`
 - `confidence`: `high` | `medium` | `low`
 - `must_fix`: the count, split by category (`3: facts ×2, ledger ×1`)
 - `should_fix`: the count
@@ -312,7 +294,7 @@ dispatcher, not a human-facing summary:
 - `ledger`: `<n> traced, <n> untraceable, <n> sources re-opened`
 - `coverage`: `<n>/<n> load-bearing answered or declared; must-cover <n>/<n>`
 - `critic_model`: the model you ran on
-- `file`: the critique (or confirm) file
+- `file`: the critique file
 - `not_seen`: one line, or `none`
 - `blocker`: only if `status` is `blocked`: what stopped you (a missing draft or outline,
   the writer's model) and what is needed

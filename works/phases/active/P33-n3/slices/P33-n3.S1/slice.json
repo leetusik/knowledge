@@ -3,12 +3,12 @@
   "phase_id": "P33-n3",
   "name": "Rewrite the explain skill as the explain-phase front door",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 10,
   "depends_on": [],
   "created_at": "2026-10-27T20:00:05+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-27T20:18:09+09:00",
+  "completed_at": "2026-10-27T20:42:23+09:00",
   "risk": "high",
   "source": {
     "type": "deferred",
@@ -19,7 +19,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "The explain skill is the explain-phase front door: flags, a v86+ readiness check, early refusals, a repeat check, one confirmation, then create-phase; the run engine, resume/here, the out-of-repo dossier and the confirm pass are gone; 186 cited headings kept",
   "validation": {
     "required": [],
     "last_run": null,

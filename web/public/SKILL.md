@@ -1,8 +1,8 @@
 ---
 name: explain
-description: Research a topic, a code change in the current repo, or a general subject with a team of research agents — planned questions, sources opened and quoted, claims verified on a second model, gap rounds and an evidence gate — then write a native chapter from that evidence (Background, Intuition, Code or worked examples, a cited "Best practices & next steps" section and a quiz, with real diagrams, figures and callouts), have a critic on another model check it, and publish it into your own knowledge base (the one /knowledge:setup configured), placed in a book when the work is a phase or a slice; a request for a whole book is proposed as an explain phase in a workflow workspace. Use ONLY when the user wants an explanation persisted as a document (explain and document, write this up, document what we just changed, teach me X and save it) — NOT for ordinary questions that deserve a normal chat answer.
-argument-hint: [resume [<run-id>]] <topic or change-ref> [here] [quick|no-research] [book=<slug>] [lang=<xx>]
-allowed-tools: Read, Grep, Glob, Write, Edit, Bash(curl -sS --max-time 5:*), Bash(curl -sS --max-time 30:*), Bash(python3 -c:*), Bash(python3 -I *knowledge-kb/explain/tools/pagetext.py *), Bash(python3 -I *.knowledge-explain/tools/pagetext.py *), Bash(pdftotext:*), Bash(knowledge --base-url:*), Bash(knowledge --version:*), WebSearch, WebFetch, Bash(git diff:*), Bash(git log:*), Bash(git show:*), Bash(git grep:*), Bash(git blame:*), Bash(git status:*), Bash(shasum -a 256:*), Bash(sha256sum:*), Bash(mktemp -d:*)
+description: Explain a topic, a code change in the current repo, or a general subject as a researched document in your own knowledge base (the one /knowledge:setup configured). /knowledge:explain asks one confirmation (a standalone document by default; a book or a chapter of a book only when asked) and, on your yes, hands it to the workflow workspace's create-phase, which runs it as an explain phase in its own worktree: research agents (sources opened and quoted, claims verified on a second model, gap rounds, an evidence gate), a native chapter written from that evidence (diagrams, a cited "Best practices & next steps" section, a quiz), a critic's check, then a private publish. Needs a workflow workspace v86 or later; without one it refuses and runs nothing. Use ONLY when the user wants an explanation persisted as a document (explain and document, write this up, document what we just changed, teach me X and save it) — NOT for ordinary questions that deserve a normal chat answer.
+argument-hint: <topic or change-ref> [quick|no-research] [book=<slug>] [lang=<xx>]
+allowed-tools: Read, Grep, Glob, Write, Edit, Bash(curl -sS --max-time 5:*), Bash(curl -sS --max-time 30:*), Bash(python3 -c:*), Bash(python3 -I *knowledge-kb/explain/tools/pagetext.py *), Bash(pdftotext:*), Bash(knowledge --base-url:*), Bash(knowledge --version:*), WebSearch, WebFetch, Bash(git diff:*), Bash(git log:*), Bash(git show:*), Bash(git grep:*), Bash(git blame:*), Bash(git status:*), Bash(shasum -a 256:*), Bash(sha256sum:*), Bash(mktemp -d:*)
 ---
 
 # explain
@@ -19,15 +19,30 @@ There is one output format everywhere: **native**. You never write HTML, and the
 knowledge base never runs your code. Everything interactive (the quiz, the collapsible
 callouts, the diagrams) is declared in the chapter's text and drawn by the reader.
 
+**Every explain is an explain phase.** It runs in the current repository's workflow
+workspace (v86 or later), one phase per publishable unit: a standalone document by
+default, a book or a chapter of a book only when asked. The workspace creates it, runs
+it in its own worktree, and its executors research, write, check and publish it
+private. This file is both the phase's front door and the method those executors
+follow. **Where you start depends on how you got here:**
+
+- **Invoked as `/knowledge:explain`**, or loaded because the user asked for an
+  explanation to be saved: you are the **front door**. Go to §1 and follow it to its
+  end: it finds the workspace, drafts the one confirmation and, on the operator's
+  literal yes, hands the request to the workspace's `create-phase`. Nothing else in this
+  file runs in the front door: no research, no draft, no publish, no file written.
+- **Read by path as an explain phase's lead** (the workspace's `DECOMP` or chapter
+  executor, at the path its `plan.md` names): start at *The run, in one card*, then §2
+  and §3 (a book: §9.2 or §9.3). §1 is the front door; read it only where a citation
+  sends you (its MODE, its book and key rules).
+- **Read as the critic's yardstick** (B5): only the sections its *Inputs* name.
+
 ## The run, in one card
 
-**After a compaction, before your next action:** re-read this file
-(`${CLAUDE_SKILL_DIR}/SKILL.md` in Claude Code) down to Part B, then the run's `run.md`,
-and go on from the stage it records. Only the start of a skill survives a compaction;
-`run.md` holds where the run stands. Read Part B's sections only when you fill a dispatch.
-
-**The stages** of one document. §3 is your procedure; Part B is each role's method, and
-you cite it, never restate it.
+**The stages** of one research run, the lead's map. §3 is your procedure; Part B is each
+role's method, and you cite it, never restate it. The workspace runs the phase around it
+(its `explain-*` references): it dispatches you, the critic and the review, turns each
+stop below into its own stop, and re-dispatches a stopped span from disk.
 
 | Stage | Who | Writes | Stops when |
 |---|---|---|---|
@@ -42,10 +57,10 @@ you cite it, never restate it.
 | D5g evidence gate | you | its result in `run.md` | below the gate: stop before writing |
 | D6 the reader's path (§3.10) | you | `outline.md`, final | — |
 | D7 write (§4) | you, alone | `body.md`, `trace.md` | — (a writer gap is stated or dropped) |
-| D8 check, critic, revise, publish (§4.9–§5) | you; the critic (B5) | the dossier line; `critique.md`; the revised draft; the KB | the check or a refusal twice; the critic fails twice; a must-fix left open |
-| D9 report (§8) | you | `report.md`; `run.md` `state: done` | — |
+| D8 check, critic, revise, publish (§4.9–§5) | you; the critic (B5); the review publishes | the dossier line; `critique.md`; the revised draft; the KB | the check or a refusal twice; the critic fails twice; a must-fix left open |
+| D9 report (§8) | the review, then its orchestrator | the review's `## Report`; the closing report | — |
 
-**The run** (§1's RUN; the report's first line names it):
+**The run** (`## Explain`'s `run:`, §1's RUN; the report's first line names it):
 
 - **`full`**, the default: a research team in waves, verified on another model, up to 3
   gap rounds, counter-evidence on the main claims, the evidence gate, the critic.
@@ -54,33 +69,21 @@ you cite it, never restate it.
   §3.9 lists stays. No gap rounds, no counter-evidence, no critic; the gate still holds.
 - **`no-research`**: only when the operator asked for it; never your choice. No web and no
   team: the repository, or the user's own material, only (§3.9). The critic still runs.
-- **`resume [<run-id>]`**: continue a stopped run from its `run.md` (§3.3).
 
-**The dossier**, `<DOSSIER>` (§2), holds every file of the run, the drafts included. It is
-never deleted or published, and every report prints its path. **`run.md`** is the run's
-state (§3.3): the mode block, the stage, each wave's dispatched, returned and failed agents,
-the models that really ran, the entry counts, the stop reason and the gate. Update it at
-every stage boundary and every agent return, before your next action.
+**The dossier**, `<DOSSIER>` (§2), holds every file of the run, the drafts included (a
+book's drafts sit beside it, in `book/`). It is committed with its phase except the
+git-ignored `pages/`, never deleted or published, and every report prints its path.
+**`run.md`** is the run's state (§3.3): the mode block, the stage, each wave's
+dispatched, returned and failed agents, the models that really ran, the entry counts,
+the stop reason and the gate. Update it at every stage boundary and every agent return,
+before your next action.
 
-**The stop rules.** Fail loudly, never quietly: a stop says why in its first line, keeps the
-dossier, names its path and says how to resume.
+**The lead's rules.** Fail loudly, never quietly: a stop says why in its first line,
+keeps the dossier and names its path; the workspace turns it into its stop, and a
+re-dispatch goes on from `run.md` (§3.3).
 
-- Ask the user nothing during the run, except a repeat's question (below), §9.1's book
-  question and §5's 409, and those only in an interactive session. Never choose `quick` or
-  `no-research` yourself.
-- **`FAILED: permissions`**: a probe call, or later a role's call, was denied. Print the
-  rules (§3.2); the preflight writes nothing else.
-- **`FAILED: web research unavailable — no chapter written`**: a search or a fetch failed
-  twice at the preflight.
-- **`failed: search-limit`** from any role, or a limit notice on your own search: stop at
-  once; the run resumes after the limit refills or is raised. A search that did not run is
-  `not searched`, never `not found`.
-- A load-bearing angle, a verifier batch or a gap review failing twice: stop, resumable.
-- **`STOPPED: evidence gate`** (D5g): stop before writing, with the failing items, their
-  best sources, the queries run and two ways to resume.
-- **`STOPPED: critic`** (D8): the critic failed twice, or a must-fix is neither fixed nor
-  withdrawn. **`STOPPED: check`**: §4.9's same list twice. **`FAILED: publish`**: §5's
-  refusal twice, a 401, a 409 with nobody to ask, or no API (§6). Each keeps the draft.
+- Ask nobody anything during the run: decide, record the decision in `run.md`, and go
+  on. Never choose `quick` or `no-research` yourself.
 - Loop safety is the only bound: at most 3 gap rounds, the tier's dispatch ceiling, one
   re-dispatch per failed agent, one re-verification per claim. Overflow is queued, never
   dropped; evidence is never truncated; research never ends silently on an error.
@@ -89,12 +92,6 @@ dossier, names its path and says how to resume.
   `ScheduleWakeup`, no `CronCreate`, no monitor, no sleep or poll loop (a wakeup can fire
   after the report and re-send this request). A lead that is itself a subagent waits in
   the foreground (§3.2).
-- **A repeat is never a new run.** A request in the same words as a run this session
-  already finished (its report given or `state: done`; a wakeup or a re-sent prompt
-  brings one) starts nothing by itself. Interactive (§9.1's test): ask once whether the user wants a
-  re-explain (a v2) or nothing. Headless (`claude -p`): print that run's first report line
-  (§8: title, URL, version), then stop. A re-explain needs the user's own new words, or
-  that yes, and then runs as any other (§3.1's prior).
 - **Never skip or shorten a stage** to save time, tokens or money. A budget, usage or turn
   limit that would cut one short stops the run at the last stage boundary, resumable, and
   `run.md` says so.
@@ -102,26 +99,26 @@ dossier, names its path and says how to resume.
 
 ## 1. Resolve the topic, the mode and the placement
 
+This is the **front door**. It turns a request into one confirmation and, on the
+operator's literal yes, hands it to the workspace's `create-phase` explain route, which
+creates the explain phase and runs it. It reads, drafts and asks; it never researches,
+writes, publishes or creates anything itself. In order: the arguments, the mode, the unit
+and where it goes, then *The front door, step by step*.
+
 **Arguments** = the skill arguments: $ARGUMENTS.
 
-**Resume.** When the arguments are `resume` alone, or `resume` followed by a run id
-(`<YYYYMMDD-HHMM>-<slug>`) and optionally a note (`trust <a source or site>`,
-`drop <a must-cover item>`), this is a resume: run §2, then follow §3.3's resume. The
-topic, mode, placement and language come from the run's own files, not from these
-arguments. Any other use of the word `resume` is part of a topic.
+Strip any of these **trailing standalone words** (they compose — any combination, any
+order) and remember each:
 
-Otherwise, strip any of these **trailing standalone words** (they compose — any
-combination, any order) and remember each:
-
-- `here` → PROJECT_COPY=yes (also write a copy into the current project, step 7).
-- `quick` → RUN=`quick`: no research team, gap rounds, counter-evidence or critic; you
-  research the angles yourself, and every agent and file §3.9 lists stays.
+- `quick` → RUN=`quick`: no research team, gap rounds, counter-evidence or critic; the
+  lead researches the angles itself, and every agent and file §3.9 lists stays.
 - `no-research` → RUN=`no-research`: no web research and no research team; a repo-only
   chapter with no "Best practices & next steps" (§3.9). **Only the operator chooses it**,
   with this word or in their own words. You never pick it: not for a small subject, and
   not when the web fails (a failed preflight stops the run). The report labels the run.
 - `research` → nothing: research is the default. The word is accepted for old habits.
-- `book=<slug>` → BOOK: publish this as a chapter of that book (lowercase-kebab slug).
+- `book=<slug>` → BOOK: the operator asks for that book (lowercase-kebab slug): a
+  chapter of it when it exists, a new book of that slug when it does not (below).
 - `lang=<xx>` → LANG: the chapter's language as a lowercase two- or three-letter code
   (`en`, `ko`). Without it, LANG is **`en`**: the chapter, the dossier and the report are
   in English whatever language the request is written in. Another language only when the
@@ -130,6 +127,11 @@ combination, any order) and remember each:
 Strip every trailing flag word before using the rest as the topic. `quick` and
 `no-research` are mutually exclusive; if both appear, the last one wins. With neither,
 RUN is `full`: the research team, the verifier, the gap rounds and the critic.
+
+Two words of 0.6.0 are flags no more. A trailing `here` is dropped with one line: there
+is no project copy (§7). `resume`, alone or followed by a run id, is answered with the
+live explain phases (the front door's step 4) and `/do-whole-phase <P>`, which resumes
+one, and nothing more. Any other use of either word is part of the topic.
 
 **What remains after stripping is the TOPIC / change-ref.** Decide the MODE from it:
 
@@ -147,35 +149,171 @@ RUN is `full`: the research team, the verifier, the gap rounds and the critic.
 - **Empty and none fits** → ask the user what to explain, then continue.
 
 All three modes produce the **same kind of chapter**, with the same recommended outline
-(§4.2). Only the lens differs, and step 3 says how.
+(§4.2). Only the lens differs, and §3 says how. In `## Explain`, change and topic
+mode are `mode: codebase` and general mode is `mode: general`; the outline still sets
+this MODE per chapter.
 
-**Where it goes** (PLACEMENT) — decide it now, because step 3 reads the prior version
-from it and step 5 sends it:
+**The unit, and where it goes** (PLACEMENT). It is settled **once, at the start**, by the
+operator's yes to the one confirmation, and never asked again mid-run. Offered, never
+imposed:
 
-- **A whole phase** (change mode, "explain P8", a joint "P8 and P9") → a chapter of the
-  repo's **`phases`** book: book `phases`, kind `codebase`, book title
-  `"<project>, phase by phase"` (the book is created on first use); chapter key `p<N>` (a
-  joint explain → `p<N>-p<M>`), position `N`, chapter title `"P<N>: <phase name>"`, source
-  `phase=P<N>`.
-- **One slice** of a phase (change mode, "explain P8.S2") → a chapter of that phase's own
-  book: book `p<N>`, kind `codebase`, book title `"P<N>: <phase name>"`; chapter key = the
-  slice id lowercased (`s1`, `f1`), position = the slice's `order`, chapter title = the
-  slice's name, sources `phase=P<N>` and `slice=P<N>.S<k>`.
-- **A named book** (`book=<slug>`, or the user names one in words) → a chapter of that
-  book. The chapter key is a short lowercase-kebab name for the chapter. If the book does
-  not exist yet, it is created: a repo's book is kind `codebase`; a book about a general
-  subject is kind `subject` with `subject` set to its label (`Finance`).
-- **Anything else** (a PR, a commit, a topic of this repo, **every general-mode request
-  that names no book**) → a **loose document**, exactly as before. In general mode the
-  loose document carries `subject` — a short display label (`Finance`, `Linear algebra`) —
-  and its **project is the subject's slug** (`finance`, `linear-algebra`), not the
-  directory you happen to be standing in.
+- **A standalone document**, the default for every request, a phase or a slice included:
+  `unit: document`, a **loose document** (`book: none`, `chapter: none`, `depth: one
+  document`). In general mode the loose document carries `subject` — a short display
+  label (`Finance`, `Linear algebra`) — and its **project is the subject's slug**
+  (`finance`, `linear-algebra`), not the directory you happen to be standing in.
+- **A chapter of an existing book**, only when the operator asks for one (in their own
+  words, with `book=<slug>`, or at the confirmation): `unit: chapter`, `depth: one
+  chapter`. The book must exist (the front door's step 5 reads it); a book that does not
+  exist is offered as a new book instead (below), or the document. Its key and place, by
+  the subject:
+  - **a whole phase** (change mode, "explain P8", a joint "P8 and P9") → a chapter of the
+    repo's **`phases`** book (kind `codebase`, book title `"<project>, phase by phase"`):
+    chapter key `p<N>` (a joint explain → `p<N>-p<M>`), position `N`, chapter title
+    `"P<N>: <phase name>"`, source `phase=P<N>`;
+  - **one slice** of a phase (change mode, "explain P8.S2") → a chapter of that phase's
+    own book `p<N>`: chapter key = the slice id lowercased (`s1`, `f1`), position = the
+    slice's `order`, chapter title = the slice's name, sources `phase=P<N>` and
+    `slice=P<N>.S<k>`;
+  - **any other subject** → a chapter of the book the operator names: the chapter key is
+    a short lowercase-kebab name for the chapter, its position the next after the book's
+    last chapter unless the operator names one.
 
-Do **not** invent a book the user did not ask for and the rules above do not name.
+  For a phase or slice subject, the confirmation's unit line offers the chapter its rule
+  names when that book exists; the default stays the standalone document.
+- **A book**, only when the operator asks for one (a book, chapters, a course, a series
+  or a multi-part guide; or `book=<slug>` naming no existing book): `unit: book`, `run:
+  full`, `outline sign-off: on`, `depth: about <n> chapters`. Its slug, title and kind: a
+  **phase or slice subject** gets that phase's own book, `p<N>` titled
+  `"P<N>: <phase name>"` (a tailed or v73 id keeps its form: `P46-k2` suggests `p46-k2`,
+  titled `"P46-k2: <phase name>"`), kind `codebase`; **anything else** is a named book:
+  a repo's book is kind `codebase`; a book about a general subject is kind `subject`
+  with `subject` set to its label (`Finance`).
 
-**A whole book is a suggestion.** When the request asks for a book, chapters, a course, a
-series or a multi-part guide (`book=<slug>`, one chapter in a book, does not count), follow
-§9.1 before §2; D1 checks the plan's size the same way.
+Do **not** invent a book the user did not ask for and the rules above do not name. A
+topic too big for one document stays one document: its run scopes it down at D1 and the
+report suggests a book (§9.1); nothing asks mid-run.
+
+### The front door, step by step
+
+Read with Read, Glob and Grep; your only other calls are §2's resolver and one read of
+§3.1's prior lookup. Write nothing, anywhere.
+
+1. **Find the workspace** in the working folder, the repository's root (read with Read; a
+   missing file is an answer). A **nested** workspace has `workflow/.agentic-nested.json`
+   (its `renames.skills` may rename `create-phase` and `do-whole-phase`: use the names it
+   gives), its version in `workflow/works/.workspace-version.json` and its phases under
+   `workflow/works/phases/`. One **at the root** has `scripts/workflow.py` and `works/`,
+   its version in `works/.workspace-version.json` and its phases under `works/phases/`.
+   Both: ambiguous: say so, never guess, and stop. None: refuse (the next step).
+2. **Check that it is ready:** `workspace_version` in that version file is **86 or
+   later**, **and** its create-phase skill (`.claude/skills/<create-phase>/SKILL.md`) has
+   a `## The explain route` section that lists the `**unit**` field (the literal `unit`
+   line that route always writes). Refuse, and run nothing:
+   - **No workspace:** "Explain runs as an explain phase in a workflow workspace (v86 or
+     later), and this repository has none. Install one with the agentic workspace
+     bootstrap (`bootstrap_agentic_workspace.sh`), then ask again."
+   - **Too old** (an older version, or no `unit` field): "This workspace (v<N>) cannot run
+     explain phases from the knowledge plugin: they need v86 or later, whose create-phase
+     explain route writes a `unit` line. Run `/update-workspace`, then ask again." Never
+     run it yourself.
+3. **Refuse early** what the route would refuse (create-phase's *The explain route*, its
+   refusals before anything is written), so the operator never confirms what it then
+   turns down:
+   - **From inside a phase worktree** (the working folder's path runs through
+     `.claude/worktrees/`, where every phase worktree lives): say "start an explain from
+     the main checkout" and stop; a phase created here would land on another phase's
+     branch. The route checks again (`next` printing a `stream=` line).
+   - **A book, or a chapter of one, in a public project** (the operator says the project
+     is public): refuse at the confirmation and offer the two ways on: make the project
+     private for the run, or write a standalone private document instead.
+4. **Look for a live explain phase on the same subject.** Glob the workspace's
+   `phases/active/*/intent.md`, Grep them for a `## Explain` heading line (`^## Explain$`;
+   a mention in prose is not one), and read each hit's
+   `- subject:` and `- unit:` lines and its `phase.json`. A phase is **live** unless its
+   `status` is `done`. One stamped into its own worktree (`phase.json` has an `execution`
+   block with a `worktree` path) keeps its live status in that worktree's copy:
+   `<worktree>/works/phases/active/<P>/phase.json`. The same subject is the same phase or
+   slice id, or plainly the same topic (match on subject, not on words). One found:
+   draft nothing yet; say which phase it is and where it stands, and offer the two ways
+   on: **resume it** (`/do-whole-phase <P>`, which enters its worktree), or **a new
+   version** of the same subject, which goes on to step 5 (its `prior:` is what §3.1's
+   lookup finds: none while the live one has not published). Headless: print both and
+   stop.
+5. **The knowledge base and the prior.** Run §2's resolver (one call). `unconfigured` or
+   `error`: stop, as §2 says. Configured: one read-only call of §3.1's *prior version*
+   lookup for the placement drafted: a loose document's list call, or a chapter's book
+   (which also says whether the book exists, and its last position). A hit fills
+   `prior:` (`<rel_path> v<N>` for a document, `<book>/<key> v<N>` for a chapter); a miss
+   or an error (never fatal) leaves the `## Explain` line `prior: none`, and the
+   confirmation's sketch says which: `none found`, or `none (the knowledge base did not
+   answer)`. A new book has no prior (`prior: none`): the same book call on its slug
+   only checks that no book holds it yet; one that does is said so, with a chapter of it
+   or another slug offered.
+6. **Draft the proposal:** the phase name `Explain: <subject>`, a one-sentence objective
+   (the unit, its reader, published private), and the seventeen lines of `## Explain`,
+   each field on its own line, exactly as create-phase's route writes them:
+   - **unit** (above) · **subject**: a phase id (`P30`), a slice id (`P30.S4`) or the
+     topic, refined from the operator's words · **mode**: `codebase` or `general`;
+   - **book**: `none`; for a chapter, `<slug> — "<title>" (exists, <n> chapters, project
+     private)`; for a book, `<slug> — "<title>" (kind <codebase | subject>)` ·
+     **chapter**: `none`, or `<key> — "<title>" · position <n>` · **prior**: from step 5;
+   - **run**: RUN (a book is always `full`: a `quick` or `no-research` asked for a book is
+     said so, never applied) · **lang**: `<LANG> (translations: none)`;
+   - **reader**: who it is for, what they already know, and what they will do with it (a
+     novice unless the request says otherwise; a chapter: the book's reader) ·
+     **depth**: `one document`, `one chapter`, or `about <n> chapters`;
+   - **must-cover**, **leave-out**, **trusted sources**: what the request names, or
+     `none`;
+   - **project**: by §5's rule (repo modes: the repository's root folder name; general
+     mode: the subject's slug; a chapter: its book's project), shown as
+     `<name> (private)`: an existing private project of the operator's org, or a new
+     name, created private on its first publish · **visibility**: `private`, always;
+   - **outline sign-off**: `off` (a book: `on`, fixed; `on` for a document or a chapter
+     only when asked) · **worktree**: `yes`, or `no` when the operator says to run it
+     here.
+7. **Ask once**, in this shape; a changed line is folded in and the whole confirmation
+   shown again:
+
+       Explain — confirm once; then it runs to publish.
+       Phase: Explain: <subject> — <the objective>
+       - unit: document (standalone). Say "a chapter of <book>" or "a book" to change it
+       - subject: <subject> · mode: <codebase | general>
+       - run: full (research team, verifier, gap rounds, critic) · or quick / no-research
+       - lang: <LANG> · reader: <the reader> · must-cover: <items | none>
+       - project: <name> (private) · prior: <none found | the version>
+       - runs in its own worktree; stops only for the evidence gate, the critic, or a publish failure
+       - cost: tens of research agents; manual permission mode needs the preflight's rules (§3.2)
+
+       ## Explain
+
+       - unit: document
+       - subject: <subject>
+         … every field of step 6, one a line, in create-phase's order …
+       - worktree: yes
+
+       Why: <field — reason>; … (one clause for each value you chose; the rest are the request's words or the defaults)
+       Reply yes, or change any line.
+
+   A book's stops line adds its outline and acceptance gates, and its cost line says a
+   book is several runs' worth of research agents; with `worktree: no` the line says it
+   runs here, on this stream. Every web search, the agents' included, counts against the
+   session's cap (`CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`, 200 by default): say so for
+   a `full` run, and that a long one is best started in a session of its own.
+
+   **Ask only in an interactive session** (on Claude Code, `AskUserQuestion` is among
+   your tools; it is not under `claude -p` or in a subagent): show the confirmation and
+   end your turn; the operator's reply decides. **Headless**, with no way to ask: print
+   the confirmation, say that nothing was created and that the same request in an
+   interactive session asks it, and stop. Never create a phase without the operator's
+   literal yes.
+8. **Hand off on the literal yes:** invoke the workspace's `create-phase` (nested: the
+   name `renames.skills` gives) through the Skill tool with three things, verbatim: the
+   operator's request, the proposal as last shown (its `## Explain` block included), and
+   their reply. Its explain route takes it as *A confirmed proposal*: it checks it,
+   creates the phase, starts its worktree and runs it in `auto` to publish. Nothing else
+   runs here. No Skill tool: print `/create-phase` with the request, the proposal and the
+   reply, to paste. Anything but a literal yes, or a changed line, creates nothing.
 
 ## 2. Resolve the knowledge base configuration
 
@@ -251,21 +389,26 @@ Read the output:
   - `KB_ROOT` — the local KB checkout, or empty for a remote-only config.
   - `KB_SITE_BASE_URL` — the local MkDocs viewer base (used in step 8).
   - `KB_LOCAL_FALLBACK` — `yes` or `no`; kept for the report in step 6.
-  - `KB_EXPLAIN_STATE` — where runs keep their dossiers (below).
+  - `KB_EXPLAIN_STATE` — the plugin's state folder, beside the KB config; its `tools/`
+    holds the page converter (below).
   - `KB_NOW` — the local time, for the run's id.
 
 For reference, per key: the env var wins, then the config file `/knowledge:setup` writes
 (`kb_root`, `api.base_url`, `api.token`, `site.base_url`; `kb_root` may be absent), then the
 legacy `~/projects/personal/knowledge/mkdocs.yml` convention; nothing → unconfigured.
 
-**The run's dossier.** Every run keeps its files in one folder, `<DOSSIER>` =
-`<KB_EXPLAIN_STATE>/<run-id>/`, where `<run-id>` is `<KB_NOW>-<slug>` (`<slug>`: the topic
-in lowercase-kebab, at most 40 characters). It sits beside the KB config and outside every
-repository. The page converter lives in `<TOOLS>` = `<KB_EXPLAIN_STATE>/tools/`, shared by
-every run. If D0b cannot write there, both move under `<cwd>/.knowledge-explain/` (not to
-be committed), and the report says so. **The drafts live in the dossier too:** `<tmp>` in
-§4–§7 is `<DOSSIER>`, never `/tmp`, which a reboot clears. Nothing in a dossier is
-deleted, published or committed.
+**The run's dossier.** Every run keeps its files in one folder, `<DOSSIER>`: the folder
+its explain phase names, `doc/` in the phase folder for a document or a chapter
+(`works/phases/active/P<N>/doc/`), `book/research/` for a book (§9.2). The run's id,
+`<run-id>`, is `<KB_NOW>-<slug>` (`<slug>`: the topic in lowercase-kebab, at most 40
+characters; a book's, its slug). The dossier is committed with the phase except `pages/`,
+which git ignores (`pages/.gitignore`, written first: `*`, then `!.gitignore`). The page
+converter lives in `<TOOLS>` = `<KB_EXPLAIN_STATE>/tools/`, beside the KB config and
+outside every repository, shared by every run. If D0b cannot write there, `<TOOLS>` moves
+to `<DOSSIER>/pages/tools/`, and the report says so. **The drafts live in the dossier
+too:** `<tmp>` in §4–§6 is `<DOSSIER>`, never `/tmp`, which a reboot clears. Nothing in a
+dossier is deleted or published, and nothing of the run lands in the phase's checkout
+outside it: an untracked file there would block the worktree's teardown.
 
 ## 3. Research
 
@@ -291,11 +434,9 @@ D0b passes:
     - trusted sources: <names or sites> | none · lang: <LANG> · placement: loose | <book>/<key>
     - prior: none | <PRIOR_REL_PATH> v<PRIOR_VERSION> · open: <each dimension the request leaves unstated>
 
-Then look for an **unfinished run** of the same subject: a `run.md` under
-`<KB_EXPLAIN_STATE>` whose `state:` is not `done` (Glob `<KB_EXPLAIN_STATE>/*/run.md`; with no
-Glob, `find <KB_EXPLAIN_STATE> -maxdepth 2 -name run.md`, never a folder above it). If there is one, say so in one line
-("An unfinished run <run-id> exists for this subject; this is a new run.
-`/knowledge:explain resume <run-id>` continues the old one."), and go on.
+In an explain phase the brief's fields come from `intent.md`'s `## Explain`, and its
+`prior:` line, when it is not `none`, names the prior version; otherwise look for one as
+below.
 
 **The prior version: is this an update to an existing chapter or document?**
 
@@ -370,7 +511,7 @@ whole stage. **Permissions belong to the session, not to this skill:** the `allo
 grant ends at your next turn, and an agent's notification starts one, so every later call,
 yours and every agent's, runs on the session's own posture: auto mode (interactive Claude
 Code's default), bypass, or allow rules. A lead that read this file by path instead of
-loading it as a skill (a workspace's book executor, §9.2–§9.3) never had the grant: its own
+loading it as a skill (an explain phase's executor, §3 and §9.2–§9.3) never had the grant: its own
 calls run on the session's posture from the first, §2's resolver included, and the stop
 block below adds the lines it needs.
 
@@ -388,15 +529,15 @@ block below adds the lines it needs.
        python3 -c 'import os,sys; L=open(sys.argv[1]).read().split("\n"); i=L.index("<!-- part-b:begin pagetext -->"); j=L.index("<!-- part-b:end pagetext -->"); os.makedirs(os.path.dirname(sys.argv[2]), exist_ok=True); open(sys.argv[2], "w").write("\n".join(L[i+2:j-1]) + "\n"); print("ok")' <this file> <TOOLS>/pagetext.py
 
    It is also the write probe: if it fails for a reason other than a denied permission (a
-   read-only or sandboxed path), use `<cwd>/.knowledge-explain/` as the root for `<TOOLS>`
-   and `<DOSSIER>` instead. Run `which pdftotext` as its own call; without it, PDFs fall back to WebFetch
+   read-only or sandboxed path), use `<DOSSIER>/pages/tools/` as `<TOOLS>` instead (§2),
+   inside the dossier's git-ignored `pages/`. Run `which pdftotext` as its own call; without it, PDFs fall back to WebFetch
    (B11).
 3. **The two-agent probe** (plugin and generic paths), each agent a general subagent on a
    cheap model named on the call (`haiku` on Claude Code):
    - **A**, in the background: "Reply with the single word `ok`." End your turn and wait
      for its notification (the card's wait rule), so that the probe runs after one, as
      every wave will.
-     **A lead that is itself a subagent** (a workspace's book executor is one) never gets
+     **A lead that is itself a subagent** (an explain phase's executor is one) never gets
      that notification: ending its turn hands control back to whoever dispatched it. It
      sends A in the foreground instead, and every wave too (§3.5).
    - **B**, after A's notification: exactly these calls, as written, every one even when an
@@ -424,10 +565,11 @@ block below adds the lines it needs.
    - **All `ok`** → write `<DOSSIER>/brief.md` and `<DOSSIER>/run.md` (§3.3, with the
      path, the probe's results and the models) with Write, which creates the folder.
 
-The stop block, with the real absolute paths filled in. `<ROOT>` is `<KB_EXPLAIN_STATE>`
-(or the cwd fallback), never a folder above it, and `<SKILL_DIR>` the folder holding this
-file (the critic reads it), `<BOOK>` a book's `book/` folder (§9.2; drop those two lines
-otherwise); the rules' extra leading `/` makes `//…`, which Claude Code
+The stop block, with the real absolute paths filled in. `<ROOT>` is `<KB_EXPLAIN_STATE>`,
+the root of `<TOOLS>`, never a folder above it (with `<TOOLS>` in the dossier's `pages/`,
+§2, drop its two rules), `<SKILL_DIR>` the folder holding this file (the critic reads it),
+and `<UNIT>` the unit's folder in the phase: a document's or a chapter's `doc/`, a book's
+`book/` (§9.2); the rules' extra leading `/` makes `//…`, which Claude Code
 reads as the filesystem root. They cover the publish too (§5: the CLI, or the converter's
 `--payload` and `curl`):
 
@@ -435,7 +577,7 @@ reads as the filesystem root. They cover the publish too (§5: the CLI, or the c
     The research agents run on the session's permissions, not on this skill's. Use auto
     mode (interactive Claude Code's default) or bypass, or allow these (settings.json
     "permissions.allow"; under `claude -p`, the same strings after --allowedTools), then
-    run the same request again:
+    resume the run (the phase goes on from `run.md`):
       "WebSearch", "WebFetch",
       "Bash(curl -sS --max-time 30 *)", "Bash(curl -sS --max-time 5 *)",
       "Bash(python3 -I <TOOLS>/pagetext.py *)", "Bash(pdftotext *)",
@@ -443,15 +585,15 @@ reads as the filesystem root. They cover the publish too (§5: the CLI, or the c
       "Bash(git diff *)", "Bash(git status *)", "Bash(shasum -a 256 *)", "Bash(mktemp -d *)",
       "Bash(knowledge --base-url *)", "Bash(knowledge --version)",
       "Read(/<ROOT>/**)", "Edit(/<ROOT>/**)", "Read(/<SKILL_DIR>/**)"
-    A lead that read this skill by path (a workspace's book executor) also needs
+    A lead that read this skill by path (an explain phase's executor) also needs
     "Bash(python3 -c *)" (it lets any inline Python run; auto mode needs none of this),
-    "Bash(which pdftotext)", "Bash(find <ROOT> -maxdepth 2 -name run.md)", and for the
-    book's folder "Read(/<BOOK>/**)", "Edit(/<BOOK>/**)".
+    "Bash(which pdftotext)", and for the unit's folder "Read(/<UNIT>/**)",
+    "Edit(/<UNIT>/**)".
     On another host, allow the same commands and paths in its own terms.
 
 A role that returns `failed: permissions` later in the run stops it with the same block,
 when the call it names is in a form its brief gives, on a path the block names (`run.md`'s
-`dossier:` and `tools:`, `<SKILL_DIR>`, `<BOOK>`; a code researcher's `git` runs in the
+`dossier:` and `tools:`, `<SKILL_DIR>`, `<UNIT>`; a code researcher's `git` runs in the
 working folder). A call in another form (a `git -C`, a `$`, a brace) is the role's error,
 and one on another path your dispatch's (`tools:` is `<TOOLS>`), not the session's:
 dispatch it once more, the call named or the path corrected, like any other failure (§3.5).
@@ -492,21 +634,22 @@ role's return line `searches:`; §4.9 adds the dossier. `verifier: same model (d
 needs `same-model: accepted` (§3.6); the sequential path makes it `lead (degraded)`.
 An agent's "switched to" notice is recorded as a fallback.
 
-**Resume** (`/knowledge:explain resume [<run-id>] [trust <source> | drop <item>]`):
+**Resuming** is the workspace's to trigger: a span stopped by a usage limit, a crash or
+one of the run's stops is dispatched again on the same dossier, and its lead goes on from
+disk:
 
-1. **Find the dossier:** `<KB_EXPLAIN_STATE>/<run-id>/` (or the cwd fallback); without an
-   id, the newest `run.md` there whose `state:` is not `done`. None → say so and stop.
-2. **Read `run.md`**, then `brief.md` and `plan.md`; the run carries on with their
+1. **Read `run.md`**, then `brief.md` and `plan.md`; the run carries on with their
    subject, mode, placement and language.
-3. **Run D0b again**, the probe included: this is a new session, and its permissions may
+2. **Run D0b again**, the probe included: this is a new session, and its permissions may
    differ. Nothing in the dossier is rewritten.
-4. **Go on from the recorded stage.** In an unfinished wave or batch, dispatch again only
+3. **Go on from the recorded stage.** In an unfinished wave or batch, dispatch again only
    the agents whose output file is missing; merge the findings and verify files the
    indexes do not list yet; a question left `not searched` goes back to its angle.
-5. **The note:** `trust <a source or site>` joins the brief's trusted sources and buys one
-   more round, beyond the cap, on the items the gate failed; `drop <item>` takes it out of
-   must-cover, in `brief.md`. Then D5–D5g again.
-6. **Record** the resume in `run.md` under `## Resume`.
+4. **The resume note,** the operator's answer to an evidence-gate stop, which the
+   workspace passes on: `trust <a source or site>` joins the brief's trusted sources and
+   buys one more round, beyond the cap, on the items the gate failed; `drop <item>` takes
+   it out of must-cover, in `brief.md`. Then D5–D5g again.
+5. **Record** the resume in `run.md` under `## Resume`.
 
 ### 3.4 D1: the plan
 
@@ -571,7 +714,9 @@ An agent's "switched to" notice is recorded as a fallback.
    angle, the heaviest split by sub-area.
 6. **The query log,** empty until D3.
 
-Then hold the plan to §9.1's size test: a plan plainly over one document is a book.
+Then hold a document's plan to §9.1's size test: a plan plainly over one document is
+scoped down to the part one document carries, the cut recorded in `run.md` and, at D6, in
+the outline's `## Not used`; the report suggests a book for the rest (§8).
 
 ### 3.5 D2: a wave
 
@@ -697,8 +842,8 @@ when **every must-cover item** is `answered` or `contested`, and **at least two-
 the load-bearing questions** are. Record the counts and the result in `run.md`. Below it, a
 single document **stops before writing**. The report's first line is `STOPPED: evidence
 gate`; then each failing item or question with its best sources and the queries run, the
-dossier's path, and the two ways on: `/knowledge:explain resume <run-id> trust <a source
-or site>`, or `… drop <the item>`. Past the gate, a load-bearing claim below the bar stays
+dossier's path, and the two ways on, §3.3's resume note: `trust <a source or site>`, or
+`drop <the item>`. Past the gate, a load-bearing claim below the bar stays
 `unsupported`, and the chapter may carry it only hedged and attributed, or not at all (B8).
 
 ### 3.9 `quick` and `no-research`
@@ -726,7 +871,7 @@ the changed files and the code around them, and a phase's or slice's plan and re
 if the repository keeps them. **Topic mode:** the real code, configs, compose files and
 scripts that make the topic work here. **General mode:** only what the user gave you and
 what the conversation established. Write `brief.md` and `run.md` (`run: no-research`) to
-`<DOSSIER>` at once (§2's fallback if it cannot be written); the drafts follow there. The
+`<DOSSIER>` at once; the drafts follow there. The
 chapter has no "Best practices & next steps" section and no sources block unless the user
 gave you pages, and the report's first line says `no-research`.
 
@@ -1130,11 +1275,12 @@ Offline (§6): no check is possible; say so.
 
        mode: critique · kind: document
        draft: <DOSSIER>/body.md · critique: <DOSSIER>/critique.md · dossier: <DOSSIER>
-       skill: <this file> · scratch: <DOSSIER>/critic
+       skill: <this file> · scratch: <DOSSIER>/pages/critic
        writer_model: <your model id>
 
-   The scratch folder sits in the dossier, where §3.2's rules reach (a `mktemp -d` one is
-   outside them). A host that cannot pick another model adds `same-model: accepted`
+   The scratch folder sits in the dossier's git-ignored `pages/`, where §3.2's rules reach
+   (a `mktemp -d` one is outside them) and nothing it fetches is committed. A host that
+   cannot pick another model adds `same-model: accepted`
    (`critic: same model (degraded)`); on the sequential path you play it (`lead
    (degraded)`). Record its return, and its `model:` line as the mode block's `critic:`.
    `blocked` for the model: correct it, dispatch once more. Any failure twice → `STOPPED:
@@ -1143,13 +1289,11 @@ Offline (§6): no check is possible; say so.
    `## Critique` in `run.md`: `C01 · fixed | disputed | declined · <how, or why>`. Fix every
    must-fix or remove its sentence, and the should-fixes you agree with. No new evidence: a
    fix the ledger cannot support removes the sentence or states the point as open. You may
-   dispute **one** must-fix with evidence (a passage re-opened, a code range): a fresh
-   critic, same model choice, `mode: confirm` and `confirm: finding: <id> · dispute:
-   "<your answer>" · evidence: <…>`, writes `critique-confirm.md`. `withdrawn` keeps the
-   sentence; `upheld`, or a confirm that fails twice, means fix or remove it.
+   dispute a must-fix with evidence (a passage re-opened, a code range), recorded on its
+   line: the phase's review decides it, and the sentence stands until then.
 3. **One revision** with every fix, the trace updated for each changed sentence, then §4.8
-   and §4.9 again. A must-fix neither fixed nor withdrawn → `STOPPED: critic`, with its ids.
-   No second critique.
+   and §4.9 again. A must-fix neither fixed nor disputed with evidence → `STOPPED: critic`,
+   with its ids. No second critique.
 
 ## 5. Publish via the KB document API
 
@@ -1317,88 +1461,56 @@ landed: check the KB before publishing again), and nothing was written to the KB
 draft stays at `<tmp>/body.md` (with its images), path given, for the same publish later;
 with `KB_LOCAL_FALLBACK=yes`, `docker compose up -d` in `<KB_ROOT>` brings the API up.
 
-## 7. Optional copy in the current project
+## 7. No copy in the project
 
-Only when PROJECT_COPY=yes: also write the chapter — the **native source** as the server
-stored it (the `source` field of `GET /api/documents/by-path/<rel_path>`, header included,
-or your `<tmp>/body.md` if you cannot read it back) — to
-`<repo-root>/<TOPIC>_EXPLAINED.md` (topic in SCREAMING_SNAKE, e.g.
-`SHARED_NGINX_EXPLAINED.md`). The copy carries no images. Do not commit it; that repo
-belongs to the user.
+There is no separate copy in the current project. The draft is already committed in the
+explain phase's folder (a document's or a chapter's `doc/body.md`, a book's
+`book/<key>.md`), with its dossier, and is archived with the phase; the published chapter
+is in the knowledge base. Write nothing else into the repository: an untracked file would
+block the phase's worktree teardown.
 
 ## 8. D9: the report
 
-Write it to `<DOSSIER>/report.md`, show it to the user, and set `run.md`'s `state: done`. A
-stopped run reports the same way, its first line the stop (the card). In order:
+In an explain phase the report is the phase's: its review records these facts in its
+`## Report`, and its orchestrator shows them as the closing report once the phase has
+merged back; nothing is written twice. A stopped run's first line is its stop instead
+(§3.2, §3.8, §4.9, §4.10, §5). In order:
 
 1. `PUBLISHED (<full | quick | no-research>) — <title>`, the `url` and the version (`v1`, or
    the `previous_version` it superseded, whose body is kept).
-2. **The mode block** from `run.md`, its `searches:` line carrying §4.9's dossier line, then
-   each degraded mode on a line: a role played by the same model or by you (a defect while
-   its `knowledge:` agent was listed), `quote-match: approximate`, the cwd fallback, a
-   skipped check.
+2. **The mode block** from `run.md`, its `searches:` line carrying §4.9's dossier line, and
+   each degraded mode on a line: a role played by the same model or by the lead (a defect
+   while its `knowledge:` agent was listed), `quote-match: approximate`, the tools
+   fallback (§2), a skipped check.
 3. **The research:** tier, researchers, rounds and the stop reason; claims by status; the
-   counter-evidence found; each disagreement (`D-` id, one line); the gate's counts. `quick`
-   names what it skipped; `no-research` says it was the operator's choice, with no web
-   research and no "Best practices & next steps".
+   gate's counts. `quick` names what it skipped; `no-research` says it was the operator's
+   choice, with no web research and no "Best practices & next steps".
 4. **Declared gaps:** each `gaps/final.md` line and how the chapter treats it, or `none`.
-5. **The critic:** verdict, confidence, counts, your answers, the confirm pass; or
+5. **The critic:** verdict, the answers, and the review's ruling on each dispute; or
    `none (quick)`.
-6. **Where it landed:** loose, or the book, key and language, and whether the book or
-   chapter is new; a `commit_error` quoted. `pushed: false` with `push_pending: true` is the
-   normal 201: "saved and committed; publishing to the remote in the background", never a
-   failure. Warnings one line each; `migrated_from` (the html body kept as a version). §5.1's
-   recovered path: the fields from `verify.json`, and that the response was lost, a
-   follow-up read confirmed the save, and nothing was written twice.
-7. The dossier's path, and the project copy's (§7).
-8. **The book suggestion** (§9.1) when it applied unasked: the reason, then the proposal or
-   what the workspace needs.
+6. **Where it landed:** loose, or the book, key and language; how it was read back (in
+   the reader, or the API). `pushed: false` with `push_pending: true` is the normal 201:
+   "saved and committed; publishing to the remote in the background", never a failure.
+7. The dossier's path, in the phase folder.
+8. **A book suggested for a scoped-down topic** (§9.1): the reason and the part left out,
+   offered, never acted on: a book is a new explain, made on the operator's word.
 
 ## 9. A book
 
 ### 9.1 The book suggestion
 
-Offered, never imposed, when **(a)** the request asks for a book (§1), or **(b)** D1's plan
-is plainly over one document: over about 25 questions or 7 top-level sections, tier 3 on two
-or more axes, or over 10 researchers in wave 1.
-
-**The working folder,** read with Read (a missing file is an answer): a **nested** workspace
-has `workflow/.agentic-nested.json` (version in `workflow/works/.workspace-version.json`; its
-`renames.skills` may rename `create-phase`); one **at the root** has `scripts/workflow.py`
-and `works/` (version in `works/.workspace-version.json`). Both: ambiguous, never guess. It
-is **ready** when its `.claude/skills/<create-phase>/SKILL.md` has `## The explain route`
-and a `must-cover` field; the version is only for your message.
-
-- **No workspace:** "A book needs a workflow workspace (the agentic workspace bootstrap). I
-  can write one document now."
-- **Not ready:** "This workspace (v<N>) needs an update for research-first books: run
-  `/update-workspace`, then ask again. Meanwhile I can write a single document." Never run
-  it yourself.
-- **Ready:** one proposal, each field with a one-line reason; a change shows it again:
-
-      Proposed explain phase: <name>
-      Objective: <the book and its reader; the outline signed before chapters are written,
-        every chapter critic-checked, published private>
-      ## Explain
-      - subject: <…> · mode: codebase | general · book: <slug> — "<title>"
-      - lang: en (translations: none) · reader: <who, what they know> · depth: about <n> chapters
-      - must-cover: <items> | none · leave-out: <items> | none · trusted sources: <…> | none
-      - project: <name> (private) · visibility: private
-      Reply yes to create it, or change any field.
-
-**Ask only in an interactive session** (on Claude Code, `AskUserQuestion` is among your
-tools; it is not under `claude -p` or in a subagent): (a) before §2, "This looks like a book:
-<reason>. Shall I propose an explain phase, or write one document covering <the scoped
-part>?"; (b) after D1, noted in `run.md`. On a **literal yes** to a ready proposal, invoke
-the workspace's `create-phase` (Skill tool) with the request and the proposal verbatim (its
-explain route takes a proposal confirmed here), then stop (`run.md`, if any, `state:
-stopped: book phase`): "Run `/do-whole-phase` to research and write it." No Skill tool: print
-`/create-phase` with the proposal to paste. **Otherwise never ask:** write the single
-document, every stage of its run kept; §8 reports the suggestion.
+A book is offered, never imposed, and settled once, at the start. **(a)** When the request
+asks for a book, the front door's one confirmation proposes `unit: book` (§1). **(b)** When
+a document's D1 plan is plainly over one document — over about 25 questions or 7 top-level
+sections, tier 3 on two or more axes, or over 10 researchers in wave 1 — nothing asks: the
+run scopes the document down to what one document carries, records the part left out in
+`run.md` and in the outline's `## Not used`, and the report suggests a book for it (§8):
+the reason and the part left out. A book is a new explain, made only on the operator's
+word.
 
 ### 9.2 Research for a book (an explain phase)
 
-A workspace's explain phase runs §3–§4 with these differences. Its `DECOMP` executor leads
+A book's explain phase runs §3–§4 with these differences. Its `DECOMP` executor leads
 the whole-book research and writes the outline; each chapter executor leads its top-up and
 draft. Both dispatch the research agents as a lead does (§3.5); the orchestrator dispatches
 the critic, and the phase review publishes. Both are subagents that read this file by path:
@@ -1454,7 +1566,7 @@ The chapter executor, for chapter `<k>` (its position), key `<key>`, state in `r
    `outline-ch<k>.md`, the draft where the workspace says (`book/<key>.md`) with
    `trace-<key>.md`, then §4.8–§4.9.
 6. **D8:** the critic (`kind: chapter`) writes `book/critique/<key>.md`; answer it once (§4.10
-   steps 2–3, no confirm pass: the phase review decides a dispute). Nothing is published.
+   steps 2–3: the phase review decides a dispute). Nothing is published.
 
 ## Part B. The research roles
 
@@ -1797,10 +1909,9 @@ explain run, researched the subject into a dossier, wrote the draft from it, and
 they came for, hold every claim to the evidence and to the ledger, check that it covers
 what its research plan calls for, and write down what is wrong, how sure you are, and what
 you saw that proves it. **You get one pass**, so make it the whole look: the writer answers
-your findings once, in one revision. A finding it disputes goes to one confirm pass (a
-single document, below) or to the phase review (a book), which decides. **The writer
-writes, you judge, the confirm pass or the review decides a dispute.** You change nothing
-you judge.
+your findings once, in one revision. A finding it disputes goes to the phase review,
+which decides. **The writer writes, you judge, the review decides a dispute.** You change
+nothing you judge.
 
 **Your model.** You always run on a model different from the one that wrote the draft: a
 fresh-eyes check is weaker on the same model, which shares the writer's blind spots. Your
@@ -1814,12 +1925,11 @@ degraded)`.
 
 **Your dispatch:**
 
-    mode: critique | confirm · kind: document | chapter
+    mode: critique · kind: document | chapter
     draft: <path> · critique: <path you write> · dossier: <path>
     skill: <path to the explain SKILL.md> · scratch: <folder> | none
     writer_model: <id>[ · same-model: accepted]
     chapter: slice: <id> · phase: P<N> · key: <key> · plan: <the chapter slice's plan.md>
-    confirm: finding: <id> · dispute: <the writer's answer, quoted> · evidence: <what it cites>
 
 A single document's critique is `<dossier>/critique.md`. A chapter's is
 `book/critique/<key>.md`, and its dossier is `book/research/`: the book's frozen
@@ -2001,8 +2111,8 @@ with an open `must-fix`. A `should-fix` or `note` never blocks.
 #### The file
 
 Write the critique once (create its folder if needed); never edit it afterwards. The
-dispatcher reads its verdict block; the writer reads the findings by id; a confirm pass or
-the review reads both, with the writer's answers.
+dispatcher reads its verdict block; the writer reads the findings by id; the review reads
+both, with the writer's answers.
 
     # Critique: <key or slug>
 
@@ -2045,26 +2155,10 @@ the review reads both, with the writer's answers.
 - **Not seen:** what you could not check (a page that would not load, a file outside the
   repo, the reader's render), so nobody reads silence as a pass.
 
-#### Confirm mode
-
-A single document's writer may dispute a must-fix once, with evidence. In `mode: confirm`
-you are a fresh critic with one question: does that finding stand? Read the finding in the
-critique, the dispute and its evidence, and only what they point at: the draft's lines, the
-passage (re-opened) or the code range. Look for nothing new. Write `critique-confirm.md`
-beside the critique, once:
-
-    # Confirm: <finding id>
-    - verdict: upheld | withdrawn · confidence: high | medium | low
-    - critic_model: <id> · writer_model: <id>
-    - reason: <two or three lines, quoting what you opened>
-
-`withdrawn` only when the dispute's evidence shows the chapter right; when unsure,
-`upheld`.
-
 #### Never
 
 - edit the draft, the outline, an earlier chapter, any dossier file, `plan.md`, `result.md`,
-  `phase.md` or any file but your one critique (or confirm) file;
+  `phase.md` or any file but your one critique file;
 - write anywhere but that file and your scratch folder;
 - read the writer's account of its own work;
 - write an absolute path into the critique;
@@ -2080,10 +2174,10 @@ After the model line (B6), end your final message with this block; it is data fo
 dispatcher, not a human-facing summary:
 
 - `status`: `done` | `blocked`
-- `mode`: `critique` | `confirm`
+- `mode`: `critique`
 - `slice`: the chapter slice id, or `none`
 - `draft`: the draft's path
-- `verdict`: `pass` | `revise` (confirm mode: `upheld` | `withdrawn`)
+- `verdict`: `pass` | `revise`
 - `confidence`: `high` | `medium` | `low`
 - `must_fix`: the count, split by category (`3: facts ×2, ledger ×1`)
 - `should_fix`: the count
@@ -2092,7 +2186,7 @@ dispatcher, not a human-facing summary:
 - `ledger`: `<n> traced, <n> untraceable, <n> sources re-opened`
 - `coverage`: `<n>/<n> load-bearing answered or declared; must-cover <n>/<n>`
 - `critic_model`: the model you ran on
-- `file`: the critique (or confirm) file
+- `file`: the critique file
 - `not_seen`: one line, or `none`
 - `blocker`: only if `status` is `blocked`: what stopped you (a missing draft or outline,
   the writer's model) and what is needed
