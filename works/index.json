@@ -164,18 +164,18 @@
     {
       "id": "P-8jbf",
       "name": "Wide reader on big screens",
-      "objective": "On PC-width screens the document reader uses the width: above about 1600px the article (header, code, figures, tables) grows from 64rem toward the app's 88rem maximum and paragraph text from 42rem to about 50rem with body text at about 18px; phone, tablet, laptop and print stay as they are.",
-      "status": "planned",
+      "objective": "On PC-width screens the reader uses more of the width: from a 1600px window, documents and book chapters get a wider column (36rem to 44rem) and every text size one step larger (x10/9, default 18px to 20px), with code, tables and figures staying in the column; below 1600px, print and the other reader pages stay as they are (re-targeted after OQ1).",
+      "status": "in_progress",
       "order": 14,
       "path": "works/phases/active/P-8jbf",
-      "review_status": "pending",
-      "current_slice": "P-8jbf.REVIEW",
-      "slice_count": 3,
+      "review_status": "changes_requested",
+      "current_slice": "P-8jbf.F1",
+      "slice_count": 4,
       "done_slice_count": 2
     }
   ],
-  "deferred_open_count": 60,
+  "deferred_open_count": 61,
   "deferred_promoted_count": 5,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-27T16:50:59+09:00"
+  "last_rebuilt_at": "2026-10-27T17:41:32+09:00"
 }

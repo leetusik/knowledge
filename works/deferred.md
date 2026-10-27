@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `60`
+- Open: `61`
 - Promoted: `5`
 - Dropped: `14`
 
@@ -72,6 +72,7 @@
 | `D77` | `deferred` | explain book: the outline gate's report runs ~3.7k chars against the ~2k stop rule | P32.REVIEW | the next bootstrap update that touches explain-decomposition.md | `works/deferred/open/D77` |
 | `D-32rc` | `deferred` | Rewrite the knowledge plugin's explain skill as the explain-phase front door (P-9sz6 handoff §7) | P-9sz6.REVIEW | the new workflow version ships and /update-workspace brings it here | `works/deferred/open/D-32rc` |
 | `D-pzs7` | `deferred` | Retire or redirect the orphaned document archive page | P-8jbf.DECOMP | the next reader or documents phase | `works/deferred/open/D-pzs7` |
+| `D-19n8` | `deferred` | Quiz Show answer button overflows a 390 phone at 200% root text | P-8jbf.REVIEW | the next reader or quiz phase, or a QA sweep | `works/deferred/open/D-19n8` |
 
 ## Promoted
 
