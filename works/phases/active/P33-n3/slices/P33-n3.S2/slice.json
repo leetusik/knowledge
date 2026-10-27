@@ -1,0 +1,35 @@
+{
+  "id": "P33-n3.S2",
+  "phase_id": "P33-n3",
+  "name": "Say it on the plugin's outer surface and bump it to 0.7.0",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 20,
+  "depends_on": [
+    "P33-n3.S1"
+  ],
+  "depends_declared": true,
+  "created_at": "2026-10-27T20:12:24+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": null,
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

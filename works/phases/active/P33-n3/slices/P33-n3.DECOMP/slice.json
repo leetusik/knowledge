@@ -3,12 +3,12 @@
   "phase_id": "P33-n3",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-27T20:00:05+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-27T20:01:19+09:00",
+  "completed_at": "2026-10-27T20:17:51+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut a chain of two: S1 (high) rewrites the explain skill into the explain-phase front door with its parity copies; S2 (low) the plugin's outer surface and 0.7.0; the citation map pins 186 cited headings",
   "validation": {
     "required": [],
     "last_run": null,

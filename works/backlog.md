@@ -36,7 +36,7 @@
 | [x] `P32` | `done` | `pass` | Thorough research and critic in the explain pipeline | `none` | `works/phases/active/P32` |
 | [x] `P-9sz6` | `done` | `pass` | Explain as a phase: workflow handoff | `none` | `works/phases/active/P-9sz6` |
 | [~] `P-8jbf` | `pending` | `changes_requested` | Wide reader on big screens | `P-8jbf.REVIEW` | `works/phases/active/P-8jbf` |
-| [ ] `P33-n3` | `planned` | `pending` | Explain front door | `P33-n3.DECOMP` | `works/phases/active/P33-n3` |
+| [ ] `P33-n3` | `planned` | `pending` | Explain front door | `P33-n3.S1` | `works/phases/active/P33-n3` |
 
 ## Phase P21: Web document deletion
 
@@ -252,6 +252,7 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P33-n3.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P33-n3/slices/P33-n3.DECOMP` |
+| [x] `P33-n3.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P33-n3/slices/P33-n3.DECOMP` |
 | [ ] `P33-n3.S1` | `todo` | Rewrite the explain skill as the explain-phase front door | `implementation` | `works/phases/active/P33-n3/slices/P33-n3.S1` |
+| [ ] `P33-n3.S2` | `todo` | Say it on the plugin's outer surface and bump it to 0.7.0 | `implementation` | `works/phases/active/P33-n3/slices/P33-n3.S2` |
 | [ ] `P33-n3.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P33-n3/slices/P33-n3.REVIEW` |
