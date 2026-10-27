@@ -2,7 +2,7 @@
   "id": "P-9sz6",
   "name": "Explain as a phase: workflow handoff",
   "objective": "Write a handoff document and a short prompt that let a session in the bootstrap workspace repo build the workflow version where every /knowledge:explain runs as its own explain phase: a standalone document by default, a book only when asked, one phase per publishable unit, run in its own worktree by default, workspace required.",
-  "status": "planned",
+  "status": "pending",
   "order": 13,
   "created_at": "2026-10-27T11:44:33+09:00",
   "started_at": null,
@@ -15,8 +15,8 @@
   },
   "acceptance": {
     "required": true,
-    "walkthrough": null,
-    "requested_at": null,
+    "walkthrough": "Read two files, then accept (no product changed). 1) works/phases/active/P-9sz6/handoff.md: §2 today vs new, §3 your decisions, §4 the document phase, §9 the author's open list. 2) works/phases/active/P-9sz6/prompt.md: paste it into a Claude Code session in bootstrap_agentic_workspace.sh BEFORE P-9sz6 is archived (archiving moves the path). Decisions: (1) a book keeps its signed outline; outline sign-off off by default covers documents and chapters. (2) an added chapter's acceptance gate is waived like a document's. (3) a chapter for a book in a public project is refused at the confirmation (offer: make the project private, or a standalone private document). (4) 'merges back by itself' collides with today's engine three times, left to the workflow author with recommendations: (a) parallel-gate refuses while main is busy -> engine-checked exemption when the branch touches only its phase folder and works/; (b) every worktree phase owes consolidation even with no notes -> a no-notes pass clears it; (c) nested installs demand --host-branch -> a detached host worktree. 'accept' signs 1-4; the rest is decided as drawn (handoff §9).",
+    "requested_at": "2026-10-27T12:14:12+09:00",
     "cleared_at": null,
     "note": null
   },

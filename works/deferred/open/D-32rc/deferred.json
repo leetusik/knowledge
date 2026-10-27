@@ -1,0 +1,11 @@
+{
+  "id": "D-32rc",
+  "title": "Rewrite the knowledge plugin's explain skill as the explain-phase front door (P-9sz6 handoff §7)",
+  "status": "deferred",
+  "source": "P-9sz6.REVIEW",
+  "reason": "P-9sz6's intent leaves the plugin rewrite to a later phase in this repo",
+  "trigger": "the new workflow version ships and /update-workspace brings it here",
+  "created_at": "2026-10-27T12:14:13+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `58`
+- Open: `59`
 - Promoted: `5`
 - Dropped: `14`
 
@@ -70,6 +70,7 @@
 | `D75` | `deferred` | explain: close the run mechanically at publish (run.md state and report.md) | P32.REVIEW | D72's job, or a resume that picks an already-published run | `works/deferred/open/D75` |
 | `D76` | `deferred` | explain: name 'family' in the verifier's and critic's same-model guards; give a missing researchers_model line its own block | P32.REVIEW | a cross-family block seen in a run, a lead 'correcting' model: for a missing line, or the next B4/B5 edit (e.g. D70's shrink) | `works/deferred/open/D76` |
 | `D77` | `deferred` | explain book: the outline gate's report runs ~3.7k chars against the ~2k stop rule | P32.REVIEW | the next bootstrap update that touches explain-decomposition.md | `works/deferred/open/D77` |
+| `D-32rc` | `deferred` | Rewrite the knowledge plugin's explain skill as the explain-phase front door (P-9sz6 handoff §7) | P-9sz6.REVIEW | the new workflow version ships and /update-workspace brings it here | `works/deferred/open/D-32rc` |
 
 ## Promoted
 
