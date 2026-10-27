@@ -5,9 +5,9 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P-8jbf`
+- Current slice: `P-8jbf.DECOMP`
+- Next slice: `P-8jbf.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `59`
 
@@ -15,7 +15,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | - | idle | - | - | - | working tree |
+| `default` | `P-8jbf` | planned | `P-8jbf.DECOMP` | 0/2 | - | working tree |
 
 ## Active Phases
 
@@ -34,6 +34,7 @@
 | [x] `P31` | `done` | `pass` | Explain phase route | `none` | `works/phases/active/P31` |
 | [x] `P32` | `done` | `pass` | Thorough research and critic in the explain pipeline | `none` | `works/phases/active/P32` |
 | [x] `P-9sz6` | `done` | `pass` | Explain as a phase: workflow handoff | `none` | `works/phases/active/P-9sz6` |
+| [ ] `P-8jbf` | `planned` | `pending` | Wide reader on big screens | `P-8jbf.DECOMP` | `works/phases/active/P-8jbf` |
 
 ## Phase P21: Web document deletion
 
@@ -235,3 +236,10 @@
 | [x] `P-9sz6.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P-9sz6/slices/P-9sz6.DECOMP` |
 | [x] `P-9sz6.S1` | `done` | Write the explain-as-a-phase handoff and bootstrap prompt | `research` | `works/phases/active/P-9sz6/slices/P-9sz6.S1` |
 | [x] `P-9sz6.REVIEW` | `done` | phase review | `review` | `works/phases/active/P-9sz6/slices/P-9sz6.REVIEW` |
+
+## Phase P-8jbf: Wide reader on big screens
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P-8jbf.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P-8jbf/slices/P-8jbf.DECOMP` |
+| [ ] `P-8jbf.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P-8jbf/slices/P-8jbf.REVIEW` |

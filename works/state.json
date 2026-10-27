@@ -1,8 +1,8 @@
 {
-  "current_phase": null,
-  "current_slice": null,
-  "next_slice": null,
+  "current_phase": "P-8jbf",
+  "current_slice": "P-8jbf.DECOMP",
+  "next_slice": "P-8jbf.REVIEW",
   "waiting_on_operator": null,
-  "mode": "idle",
-  "updated_at": "2026-10-27T12:45:00+09:00"
+  "mode": "phase",
+  "updated_at": "2026-10-27T16:05:03+09:00"
 }
