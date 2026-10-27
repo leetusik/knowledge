@@ -11,27 +11,37 @@
 
 ## Confirmed Intent (refined + clarified)
 
-On a PC-width screen the document reader should use the width instead of leaving most of
-the screen empty. Today, on a 1920px screen, paragraph text stops at 42rem (~670px) and
-code, figures and tables at the article's 64rem (~1020px), and the rest is margin; even
-full view keeps text at 42rem.
+On a PC-width screen the reader should use more of the width instead of leaving most of the
+screen empty. Documents and book chapters open in the signed `01-reader`
+(`web/src/app/reader.css`): one 36rem (576px) column for text, code, tables and figures, and
+18px Literata text in five reader-chosen sizes. On a 1920px screen the rest is empty paper.
 
-The operator accepted this rule, in their words "as your recommendation":
+**Re-targeted after OQ1** (the first rule, below under *Superseded*, described the console
+`.kb-doc` view, which now renders only an unlinked archive page). The operator accepted, in
+their words "as your recommendation", this rule:
 
-- **Where:** the document reader only (the document view and its full view). Not the
-  library or other pages.
-- **When:** on wide screens only, above about **1600px** (100rem) of app width.
-- **The article** (the document's header and metadata, code, figures, diagrams, tables, the
-  explainer frame) grows from **64rem** toward the app's **88rem** maximum.
-- **Paragraph text** (the reading column) grows from **42rem to 50rem**, and the reader's
-  body text goes from 16px to **18px** (1.125rem), so the column is physically much wider
-  while a line still holds a comfortable number of characters. Headings keep their own
-  scale.
-- **Unchanged:** phone, tablet and laptop widths (below the 1600px step), and print.
+- **Where:** the reader, for loose documents **and** book chapters (one reader, one rule).
+- **When:** only above **1600px** (100rem) of window width.
+- **One wider column:** the reader's column (`--rd-measure`) grows from **36rem to 44rem**
+  (576 → 704px).
+- **Text one step larger:** every one of the five text sizes ×10/9, so the default reads at
+  **20px** instead of 18px (the steps become about 16.7 / 18.3 / 20 / 22.2 / 24.4px). The
+  column's spacing, headings, the title and the code/table text follow, as the reader already
+  computes them from the text size. About 71 characters per line at the default.
+- **Code, tables, figures and diagrams stay in the column**: the signed one-column rule holds;
+  they simply get the wider column. The margin-notes rail follows the column.
+- **Unchanged:** everything below 1600px, print, the Display panel's controls, the top and
+  chapter bars, and the review, book, book-notes, legacy html reader and archive pages.
+- **Not chosen:** the very-wide second step (≈2200px+), breaking code and tables out of the
+  column (needs a design round on `01-reader`), widening without larger text, and the literal
+  first rule.
 
-This supersedes, for wide screens only, design round 06's signed reading-column decision
-(the 42rem measure, "DECISION · question 1" in `web/src/app/kb-docview.css`); below the step
-that decision stands as signed.
+### Superseded (the first confirmed rule, kept for the record)
+
+Written against the console document view (`kb-docview.css`): above ~1600px the article grows
+from 64rem toward 88rem, paragraph text 42rem → 50rem, body text 16px → 18px, phone, tablet,
+laptop and print unchanged. P-8jbf.DECOMP found that view now renders only
+`/documents/{id}/versions/{v}`, which nothing links to (OQ1, `topics/reader-surface.md`).
 
 ## Clarifications Resolved
 
@@ -39,12 +49,13 @@ that decision stands as signed.
 - Q: How wide should text go: a wide page with moderately wider text, true full width, or a toggle? — A: the recommendation (wide page, text 42→~50rem with slightly bigger body text).
 - Q: A design round with a canvas, or a small phase with the rule decided in words? — A: a small phase. Not a design phase: the operator decided the visual rule here in words and declined a design round, so there is no co-work slice and no canvas; the build implements exactly the rule above.
 - Q: Start now? — A: yes, create and run `/do-whole-phase` right away.
+- Q (OQ1, P-8jbf.DECOMP): the rule targets the archive-only `.kb-doc` view; re-target it to the reader where documents and chapters open — the recommendation (column 36→44rem, text one step larger, 18→20px default, blocks stay in the column, above 1600px), the recommendation plus a very-wide second step, a code/table breakout (design round), or widen-only? — A (verbatim): "as your recommendation" — the recommendation, without the second step.
 
 ## Notes
 
-- Current tokens: `--kb-measure: 42rem` (`web/src/app/kb-tokens.css:66`), `--kb-app-read-w: 64rem`
-  (`:94`), `--kb-app-max-w: 88rem` (`:216`); the reading grid is `.kb-prose` in
-  `web/src/app/kb-docview.css`, full view is `.kb-app[data-kb-view="full"]` there. Print
-  (`kb-print.css`) reads the measure and must not change.
-- "About 1600px", "about 50rem" and "about 18px" were the recommendation's words; the values
-  above pin them so nothing is invented in the build.
+- The reader: `--rd-measure: 36rem` (`web/src/app/reader.css:142`), the `.rd-flow` grid
+  (`:359-366`), the five sizes `.rd-size-1..5` (`:165-169`), the margin-notes rail `.an-rail`.
+  Print (`kb-print.css`) sets `.rd-flow` to block and must not change. Detail and evidence:
+  `topics/reader-surface.md`.
+- (First pass, superseded) the console tokens `--kb-measure` 42rem, `--kb-app-read-w` 64rem,
+  `--kb-app-max-w` 88rem in `kb-tokens.css`; untouched by this phase.

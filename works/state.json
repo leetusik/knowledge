@@ -2,7 +2,7 @@
   "current_phase": "P-8jbf",
   "current_slice": "P-8jbf.DECOMP",
   "next_slice": "P-8jbf.REVIEW",
-  "waiting_on_operator": "P-8jbf.DECOMP",
-  "mode": "waiting",
-  "updated_at": "2026-10-27T16:15:33+09:00"
+  "waiting_on_operator": null,
+  "mode": "phase",
+  "updated_at": "2026-10-27T16:19:54+09:00"
 }
