@@ -1425,3 +1425,7 @@
 {"ts": "2026-10-27T12:14:12+09:00", "type": "phase_status_changed", "phase": "P-9sz6", "old_status": "planned", "new_status": "pending"}
 {"ts": "2026-10-27T12:14:12+09:00", "type": "acceptance_opened", "phase": "P-9sz6"}
 {"ts": "2026-10-27T12:14:13+09:00", "type": "deferred_created", "deferred": "D-32rc", "source": "P-9sz6.REVIEW"}
+{"ts": "2026-10-27T12:45:00+09:00", "type": "phase_status_changed", "phase": "P-9sz6", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-10-27T12:45:00+09:00", "type": "acceptance_cleared", "phase": "P-9sz6"}
+{"ts": "2026-10-27T12:45:00+09:00", "type": "slice_status_changed", "slice": "P-9sz6.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-27T12:45:00+09:00", "type": "phase_reviewed", "phase": "P-9sz6", "verdict": "pass", "reviewer": "slice-executor"}
