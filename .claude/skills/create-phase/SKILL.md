@@ -6,9 +6,9 @@ allowed-tools: Bash(python3 scripts/workflow.py:*), Read, Edit, Write, Glob, Gre
 
 # create-phase
 
-Turn an operator request for new work into one or more phases — or a deferred job — with the operator's intent captured first. **This skill creates phases; it never decomposes or implements them** (see *Making a phase ≠ executing it* in the contract — `CLAUDE.md`).
+Turn an operator request for new work into one or more phases — or a deferred job — with the operator's intent captured first. **This skill creates phases; it never decomposes or implements them** (see *Making a phase ≠ executing it* in the contract — `CLAUDE.md`), with one exception: *The explain route* creates **and** runs its explain phase after one confirmation.
 
-**Who may invoke it.** The operator, or **the agent when instructed** — by an approved plan that says to create a phase, or by a direct operator instruction. **Never on the agent's own initiative**: this is a narrower exception to the contract's "workflow command-skills are explicit-invocation only" than `design-cowork`, which does fire by itself. And invocation is not where the safety lives: **the confirmation gate at step 3 does not move**. Whoever started the intake, `new-phase` runs only after the operator has explicitly confirmed each phase's name and objective. **Invocation is not the gate; confirmation is.** One route is the exception: `/rotate-backlog`'s docs-phase route, where the operator's `/rotate-backlog` invocation *is* the confirmation of the engine-drafted name, objective and `docs-debt` scope (the proposal is still printed). Every other phase waits for the explicit yes.
+**Who may invoke it.** The operator, or **the agent when instructed** — by an approved plan that says to create a phase, or by a direct operator instruction. **Never on the agent's own initiative**: this is a narrower exception to the contract's "workflow command-skills are explicit-invocation only" than `design-cowork`, which does fire by itself. And invocation is not where the safety lives: **the confirmation gate at step 3 does not move**. Whoever started the intake, `new-phase` runs only after the operator has explicitly confirmed each phase's name and objective. **Invocation is not the gate; confirmation is.** One route is the exception: `/rotate-backlog`'s docs-phase route, where the operator's `/rotate-backlog` invocation *is* the confirmation of the engine-drafted name, objective and `docs-debt` scope (the proposal is still printed). The explain route is the other: its one confirmation is step 3's yes **and** the explicit `auto` that runs the phase to publish, so it creates, then runs (*The explain route*). Every other phase waits for the explicit yes and stops after creation.
 
 ## Procedure
 
@@ -28,9 +28,9 @@ Turn an operator request for new work into one or more phases — or a deferred 
 
    **If the request is "consolidate the docs" / "run a docs phase" — or the operator is clearing a `consolidation_owed=` line from `next` — the scope is already written down.** Run `python3 scripts/workflow.py docs-debt` and propose what it prints; see *The docs-phase route* below. It is an ordinary phase through this same procedure, confirmed at step 3 like any other.
 
-   **If the request is to explain something as a book** ("explain P30 as a book", "write a book on X", an explain phase), ask the `## Explain` fields: subject, mode, book, lang (`en` unless the operator names another), reader, depth, must-cover, leave-out, trusted sources, project (private) and visibility (`private`). A request that arrives from `/knowledge:explain` with a proposal the operator accepted with a literal yes is already confirmed: see *A confirmed proposal* in the route. See *The explain route* below. A single chapter is not a phase: that is the operator's own `/knowledge:explain`.
+   **If the request is to explain something** (`/knowledge:explain <topic>`, "explain P30", "write a book on X", "add a chapter on Y to book Z", an explain phase), every unit is a phase: a standalone **document** by default, a **book** or a **chapter** of one only when the operator asks. Follow *The explain route* below: it gathers the `## Explain` fields into **one confirmation** and, on the yes, creates and runs the phase. A request that arrives from `/knowledge:explain` with a proposal the operator accepted with a literal yes is already confirmed: *A confirmed proposal* in the route.
 
-3. **Confirm.** Present your refined understanding back to the operator — for each phase, the proposed **name** and **objective**; for deferred work, the title, reason, and trigger. Get explicit confirmation. Per the contract, do **not** run `new-phase` until the operator confirms. (An explain phase the plugin's `/knowledge:explain` proposed, and the operator accepted with a literal yes, arrives confirmed: *The explain route*, *A confirmed proposal*.)
+3. **Confirm.** Present your refined understanding back to the operator — for each phase, the proposed **name** and **objective**; for deferred work, the title, reason, and trigger. Get explicit confirmation. Per the contract, do **not** run `new-phase` until the operator confirms. (An explain phase is confirmed once, by *The explain route*'s one confirmation, which also covers its fields, its worktree and its run; one the plugin's `/knowledge:explain` proposed, and the operator accepted with a literal yes, arrives confirmed: *A confirmed proposal*.)
 
 4. **Route on the operator's choice:**
 
@@ -38,14 +38,14 @@ Turn an operator request for new work into one or more phases — or a deferred 
    ```
    python3 scripts/workflow.py defer-job --title "..." --reason "..." --trigger "..." [--source ...]
    ```
-   Leave out `--id`: the engine mints the job's id (`D-m3xa`) and prints it on the `created deferred job` line; never pick a number. This parks the job under `works/deferred/open/<DID>/` and never affects next-slice selection until promoted (the same command the `defer-job` skill wraps). Commit it as step 5 says, report and STOP.
+   Leave out `--id`: the engine mints the job's id (`D92-x4`: the next number and a random tail) and prints it on the `created deferred job` line; never pick a number. This parks the job under `works/deferred/open/<DID>/` and never affects next-slice selection until promoted (the same command the `defer-job` skill wraps). Commit it as step 5 says, report and STOP.
 
    **Make a phase (or several)** → for each phase, in operator-confirmed order:
    1. Create it, leaving out `--phase`:
       ```
       python3 scripts/workflow.py new-phase --name "..." --objective "..."
       ```
-      The engine mints the id (`P-7kq2`: `P-` and a 4-symbol token) and prints it on the `created phase` line; never pick a number, and use that printed id as `P<N>` in every step below. `new-phase` creates only `P<N>.DECOMP` and `P<N>.REVIEW`, scaffolds `intent.md`, and links it near the top of `phase.md`.
+      The engine mints the id (`P46-k2`: the next number and a random tail) and prints it on the `created phase` line; never pick it, and use that printed id as `P<N>` in every step below. `new-phase` creates only `P<N>.DECOMP` and `P<N>.REVIEW`, scaffolds `intent.md`, and links it near the top of `phase.md`.
    2. Fill `works/phases/active/P<N>/intent.md`:
       - leave **Origin** as `operator`;
       - paste the operator's request **word-for-word** under *Original Input (verbatim)* — do not fix grammar or wording;
@@ -70,8 +70,11 @@ Turn an operator request for new work into one or more phases — or a deferred 
       phase *could* run in parallel on its own branch. **Relay that hint; never act on it.** Only
       the operator's word starts a worktree, and it is `/do-next-slice` / `/do-whole-phase` that
       act on it later, never `create-phase`. See the `parallel-phase` skill.
+      **An explain phase is the one exception:** its route starts the phase's own worktree,
+      because its one confirmation (`worktree: yes`, the default) is the operator's word for it;
+      `worktree: no` keeps it on this stream.
 
-5. **Commit, then STOP and report.** Commit what the intake wrote, and only that: the new phase folders (or the deferred job's folder) and the regenerated `works/` files (`state.json`, `index.json`, `backlog.md`, `deferred.md`, `events.jsonl`), never other changes the tree holds. **(nested)** Commit in the nested repo, `git -C workflow …`, with paths relative to it. One commit for the whole intake, in the contract's Commit Convention: `chore(P<N>): create <name> and record the operator's intent` (a deferred job: `chore(D<N>): defer <title>`). Never push. Then list the phases created — IDs, names, and `intent.md` paths — or the deferred job created. Do **not** decompose into middle slices, write any slice's `plan.md`, or implement code. Decomposition is the `DECOMP` slice's own job, later, when the operator executes the phase (`/do-next-slice`, `/do-whole-phase`, `/do-whole-phases`) or explicitly tells you to.
+5. **Commit, then STOP and report** (an explain phase confirmed with a `unit:` field commits here, then runs on: *The explain route*). Commit what the intake wrote, and only that: the new phase folders (or the deferred job's folder) and the regenerated `works/` files (`state.json`, `index.json`, `backlog.md`, `deferred.md`, `events.jsonl`), never other changes the tree holds. **(nested)** Commit in the nested repo, `git -C workflow …`, with paths relative to it. One commit for the whole intake, in the contract's Commit Convention: `chore(P<N>): create <name> and record the operator's intent` (a deferred job: `chore(D<N>): defer <title>`). Never push. Then list the phases created — IDs, names, and `intent.md` paths — or the deferred job created. Do **not** decompose into middle slices, write any slice's `plan.md`, or implement code. Decomposition is the `DECOMP` slice's own job, later, when the operator executes the phase (`/do-next-slice`, `/do-whole-phase`, `/do-whole-phases`) or explicitly tells you to.
 
 ## The docs-phase route
 
@@ -80,7 +83,7 @@ Durable docs are versioned **in a docs phase the operator creates** — never pe
 1. **Read the debt** (read-only): `python3 scripts/workflow.py docs-debt`. It prints every owing phase with its `## Doc impact` notes, the docs those notes touch, and the command that pays each phase.
 2. **Propose that as the scope** in step 2 — the phases and the docs it names. The operator may narrow it; a phase left out simply keeps owing and stays in `active/`.
 3. **Confirm the name and objective at step 3, unchanged.** An objective that works: *"consolidate the `## Doc impact` notes from P12–P16 into new versions of architecture, operations and qa"* — name the phases, because they are what gets cleared at the end.
-4. **`new-phase`, fill `intent.md`, STOP.** Create it with `--consolidates <the confirmed phases>` (for example `--consolidates P12,P-7kq2`: any id form works) — that flag is what marks it a docs phase, so `rotate-backlog` and `docs-debt` see those phases' debt as being paid and never propose a second docs phase for them; it refuses, writing nothing, for an id that is not an active phase owing consolidation, and a phase left out of the list keeps owing. A docs phase runs on the default stream, like every phase (v43) — nothing to pass, nothing to pin. It has to: `doc-new-version`, `docs-consolidated` and `parallel-consolidated` only run there, so **never ask for a worktree on a docs phase**, whatever hint `new-phase` or `next` prints. Record the `docs-debt` scope in `intent.md`; decomposition is the docs phase's own `DECOMP` slice, later.
+4. **`new-phase`, fill `intent.md`, STOP.** Create it with `--consolidates <the confirmed phases>` (for example `--consolidates 46,P12,P-7kq2`: any brief form works) — that flag is what marks it a docs phase, so `rotate-backlog` and `docs-debt` see those phases' debt as being paid and never propose a second docs phase for them; it refuses, writing nothing, for an id that is not an active phase owing consolidation, and a phase left out of the list keeps owing. A docs phase runs on the default stream, like every phase (v43) — nothing to pass, nothing to pin. It has to: `doc-new-version`, `docs-consolidated` and `parallel-consolidated` only run there, so **never ask for a worktree on a docs phase**, whatever hint `new-phase` or `next` prints. Record the `docs-debt` scope in `intent.md`; decomposition is the docs phase's own `DECOMP` slice, later.
 
 **What that `DECOMP` will cut** (write it into `intent.md`; do not cut it here): **one slice per doc**, `--kind docs` — `doc-new-version` is per doc and one doc usually collects notes from several phases, so per-doc keeps each doc to a single new version. Risk by the normal rule. Each slice runs, per note it covers:
 
@@ -102,52 +105,91 @@ The phase review re-runs only the `## Regression Checklist` lines inside its pha
 
 ## The explain route
 
-Explaining one thing once stays the knowledge plugin's one-shot skill: `/knowledge:explain <topic>`, operator-invoked only, researches, writes and publishes one document. **A book is a phase, and this route makes one.** A book has several chapters: researched as a whole, outlined and signed, then each chapter's research topped up, drafted, checked and judged by a fresh-eyes critic, and the book read whole. "Explain P30 as a book", "write a book on X" and "make an explain phase for Y" all land here, and so does the plugin's own book suggestion (*A confirmed proposal*, below). Like every phase, it is created only on the operator's word, never on the agent's own initiative and never because a phase just finished. It follows the same procedure: refine, clarify, **confirm at step 3**, `new-phase`, stop. The plugin's explain skill owns every research and writing rule: the research run and its dossier, grammar, ids, quiz, sources, publish. The phase orchestrates that skill, and nothing here restates it. The phase needs the plugin at **0.6.0 or later**, for its research agents and its book section (§9).
+**Every explain is its own explain phase**, in this repo's workspace (nested or at root), one phase per publishable unit: a **document** (the default: one standalone document), a **book** (several chapters researched as a whole, outlined and signed, each chapter drafted, checked by a fresh-eyes critic and the book read whole), a **chapter** added to an existing book, or a v2 of a document or chapter (`prior:`). A book or a chapter is made only when the operator asks, in their own words or at the confirmation; the unit is settled **once, at the start**, never mid-run. `/knowledge:explain <topic>` lands here (the plugin calls this skill when instructed), and so do "explain P30", "write a book on X", "add a chapter on Y to book Z" and "make an explain phase for Y". Like every phase, it is created only on the operator's word, never on the agent's own initiative and never because a phase just finished. The plugin's explain skill owns every research and writing rule: the research run and its dossier, grammar, ids, quiz, sources, publish. The phase orchestrates that skill, and nothing here restates it. The phase needs the plugin at **0.6.0 or later**, for its research agents and §9 *A book*. Plugin sections are cited by number **and** heading, so a renumbering cannot silently point a phase at the wrong rule.
 
-1. **Ask the `## Explain` fields at step 2.** Suggest a value for each, with your reason; the operator confirms or overrides:
+**Refuse before anything is written:**
+- **From inside a phase worktree** (`python3 scripts/workflow.py next` prints a `stream=` line): say "start an explain from the main checkout" and stop, writing nothing; a phase created here would land on another phase's branch.
+- **A book, or a chapter of one, in a public project:** `visibility: private` is absolute. Refuse at the confirmation and offer the two ways on: make the project private for the run, or write a standalone private document instead.
+
+1. **Gather the `## Explain` fields** (step 2). Suggest a value for each, with your reason; the confirmation shows them all at once:
+   - **unit**: `document` (default), `book` or `chapter`. The literal `unit` line is what the plugin's front door tests for, so it is always written;
    - **subject**: a phase id (`P30`), a slice id (`P30.S4`) or a free topic;
-   - **mode**: `codebase` (the subject is this repo's code or its work records) or `general` (no repo behind it; the web and the operator's material are the evidence). This is the book's mode. It is not the skill's §1 mode (change, topic or general), which the outline sets for each chapter;
-   - **book**: its slug and title, placed by the skill's §1 rules. A phase or slice subject gets that phase's own book, `p<N>` titled `P<N>: <phase name>`, as §1 names it for a slice (§1 counts numbered phases; a minted id keeps its form, so `P-7kq2` suggests the book `p-7kq2`, titled `P-7kq2: <phase name>`); §1's `phases` book holds one chapter per phase, which is the one-shot's job. Anything else is a named book, of kind `codebase` or `subject`;
-   - **lang**: `en` (translations: none), unless the operator names another language for the chapters. The research is written in English either way. A translation names the published original's version (§5), so translations follow the accepted book: the review lists them as a deferred job for the orchestrator to file;
-   - **reader**: who it is for, what they already know, and what they will do with the book. The outline turns that into each chapter's reader tasks, and every chapter and the critic write for this reader;
-   - **depth**: about how many chapters;
-   - **must-cover**: the points the book must teach, or `none`. The research checks the evidence for each one, for the whole book and for each chapter;
-   - **leave-out**: what the book deliberately leaves out, or `none`. The research does not chase it, and the critic does not ask for it;
+   - **mode**: `codebase` (the subject is this repo's code or its work records) or `general` (no code behind it; the web and the operator's material are the evidence). It is not the skill's §1 *Resolve the topic, the mode and the placement* mode (change, topic or general), which the outline sets per chapter;
+   - **book**: `none` for a document. For a book, its slug and title, placed by §1's rules: a phase or slice subject gets that phase's own book, `p<N>` titled `P<N>: <phase name>` (a tailed or v73 id keeps its form: `P46-k2` suggests `p46-k2`, titled `P46-k2: <phase name>`); anything else is a named book, of kind `codebase` or `subject`. For a chapter, the existing book it joins;
+   - **chapter**: `none`, or for a chapter `<key> — "<title>" · position <n>`;
+   - **prior**: `none`, or the version a v2 supersedes: `<rel_path> v<N>` for a document, `<book>/<key> v<N>` for a chapter. Fill it when a lookup finds one;
+   - **run**: `full` (default; research team, verifier, gap rounds, critic), `quick`, or `no-research` (only in the operator's words). A book is always `full`;
+   - **lang**: `en` (translations: none), unless the operator names another language. The research is written in English either way. A translation names the published original's version (§5 *Publish via the KB document API*), so translations follow the accepted unit: the review lists them as a deferred job for the orchestrator to file;
+   - **reader**: who it is for, what they already know, and what they will do with it. Every chapter and the critic write for this reader (a chapter: the book's reader, as its outline states);
+   - **depth**: `one document`, `one chapter`, or for a book about how many chapters. A topic too big for one document is scoped down to what one carries, and the closing report suggests a book for the rest;
+   - **must-cover**: the points it must teach, or `none`. The research checks the evidence for each one;
+   - **leave-out**: what it deliberately leaves out, or `none`. The research does not chase it, and the critic does not ask for it;
    - **trusted sources**: the sources the operator wants used first (a spec, a paper, an internal page), or `none`. They are still checked like any source;
-   - **project**: the knowledge-base project the book is published into. It **must be private**: an existing private project of the operator's org, or a new name, which is created private on its first publish;
-   - **visibility**: always `private`. The operator makes the book public in the reader after accepting it, never through this phase.
+   - **project**: the knowledge-base project it is published into. It **must be private**: an existing private project of the operator's org, or a new name, created private on its first publish;
+   - **visibility**: always `private`. The operator makes it public in the reader after accepting it, never through this phase;
+   - **outline sign-off**: `off` (default) or `on`. A book is `on`, fixed;
+   - **worktree**: `yes` (default: the phase runs in its own worktree, so it never blocks product work) or `no`.
 
-   If the plugin is not installed, older than 0.6.0 or not set up, say so here, because the phase needs all three: `/plugin install knowledge@knowledge` (or update it), then `/knowledge:setup` once. Setup writes the org-level key the review publishes with. Say the cost too: a book runs the plugin's full research, tens of research agents before the outline and a top-up and a critic for each chapter, so it costs several one-shot runs, and its web searches can pass the session's cap (the plugin's README, *Explain: permissions and the search cap*).
-2. **Confirm the name and objective at step 3.** An objective that works: *"turn P30 into a book of about six chapters for a developer new to this repo; the research runs first, the operator signs the outline before chapters are written, every chapter is critic-checked, and the book is published private"*.
-3. **`new-phase`, fill `intent.md`, STOP.** Append the confirmed fields as their own section:
+   **The required set, per unit:** every unit writes all seventeen lines. A document has `book: none`, `chapter: none`, `depth: one document`; a book has `chapter: none`, `run: full`, `outline sign-off: on`; a chapter names an existing `book`, its `chapter` and `depth: one chapter`. A section with no `unit` line is a book from before the line existed, and its eleven fields (subject, mode, book, lang, reader, depth, must-cover, leave-out, trusted sources, project, visibility) are its whole set.
 
-   ```markdown
-   ## Explain
+   If the plugin is not installed, older than 0.6.0 or not set up, say so here: `/plugin install knowledge@knowledge` (or update it), then `/knowledge:setup` once, which writes the org-level key the review publishes with. Say the cost too: a full run dispatches tens of research agents (a book several runs' worth), manual permission mode needs the rules §3.2 *D0b: the preflight* prints, and web searches count against the session's cap (the plugin's README, *Explain: permissions and the search cap*).
 
-   - subject: P30
-   - mode: codebase
-   - book: p30 — "P30: native chapters"
-   - lang: en (translations: none)
-   - reader: a developer new to this repo who knows Python and HTTP, and will change the publish path
-   - depth: about 6 chapters
-   - must-cover: the publish path end to end; why chapters are versioned
-   - leave-out: the web reader's styling
-   - trusted sources: none
-   - project: team-notes (private)
-   - visibility: private
+2. **Show the one confirmation** (step 3). One literal yes signs the phase's name (`Explain: <subject>`), its objective, every field, the worktree and the run in `auto`; a changed line is folded in and the whole confirmation shown again:
+
+   ```
+   Explain — confirm once; then it runs to publish.
+   - unit: document (standalone). Say "a chapter of <book>" or "a book" to change it
+   - subject: how a re-explain versions a document in place · mode: codebase
+   - run: full (research team, verifier, gap rounds, critic) · or quick / no-research
+   - lang: en · reader: a developer new to this repo · must-cover: none
+   - project: knowledge (private) · prior: none found
+   - runs in its own worktree; stops only for the evidence gate, the critic, or a publish failure
+   - cost: tens of research agents; manual permission mode needs the preflight's rules
+   Reply yes, or change any line.
    ```
 
-   The section is added only to an explain phase, as `## Design Style` is added only to a design phase. The scaffold does not carry the heading, and every reader treats its absence as "not an explain phase". The section is the whole marker: there is no flag and no engine change.
+   A book's confirmation adds its outline and acceptance gates to the stops line.
+3. **On the yes, create and run**, in this order:
+   1. `python3 scripts/workflow.py new-phase --name "Explain: <subject>" --objective "..."`;
+   2. fill `intent.md` (step 4.2): under *Original Input (verbatim)* the operator's request, the confirmation and their reply, word for word; under *Confirmed Intent* the objective; then the `## Explain` section, one field a line:
 
-**A confirmed proposal.** The plugin's `/knowledge:explain` may find that a request is a book (its §9.1). In an interactive session it then shows the operator one proposal: the phase name, the objective and every `## Explain` field, each with its reason. Only on the operator's **literal yes** does it invoke this skill, with the operator's request and that proposal verbatim. That yes is step 3's confirmation of the name, the objective and the fields, so do not ask again:
-- check the proposal as step 2 would: all eleven fields present, `visibility: private`, the project private, the subject real. Anything missing or contradictory (a public project, a field the proposal left out) means the proposal is not confirmed: ask about that field in step 2 and confirm at step 3 as usual;
-- run `new-phase` with the proposal's name and objective, then fill `intent.md`: under *Original Input (verbatim)* the operator's request, the proposal and their reply, word for word; under *Confirmed Intent* the objective; and the `## Explain` section with one field a line (the proposal joins some fields with ` · `);
-- commit and STOP (step 5), and say "Run `/do-whole-phase` to research and write it."
+      ```markdown
+      ## Explain
+
+      - unit: document
+      - subject: how a re-explain publishes the next version of the same document
+      - mode: codebase
+      - book: none
+      - chapter: none
+      - prior: none
+      - run: full
+      - lang: en (translations: none)
+      - reader: a developer new to this repo who knows Python and HTTP, and will touch the publish path
+      - depth: one document
+      - must-cover: the 409 → new-version path; why heading and quiz ids survive a version
+      - leave-out: the web reader's styling
+      - trusted sources: none
+      - project: knowledge (private)
+      - visibility: private
+      - outline sign-off: off
+      - worktree: yes
+      ```
+
+      The section is added only to an explain phase, as `## Design Style` is added only to a design phase. The scaffold does not carry the heading, and every reader treats its absence as "not an explain phase". The section is the whole marker: there is no flag;
+   3. the intake commit (step 5);
+   4. unless `worktree: no`, `python3 scripts/workflow.py parallel-start <P>` (nested: with no `--host-branch`, which cuts a detached host worktree, since an explain makes no host commit), then `EnterWorktree` into the path it prints (nested: the host worktree). The `parallel-phase` skill carries the rest of the lifecycle, the merge back included;
+   5. `python3 scripts/workflow.py next`, then run the phase per the `do-whole-phase` skill in **`auto`**: the confirmation is the explicit `auto` the contract's decomposition carve-out requires, so `DECOMP` plans inline, as `/rotate-backlog`'s invocation is for its docs phase.
+
+   It runs to publish. Its only stops are the quality stops, each a typed `pending`: the **evidence gate** and a **critic stop** (failed twice) take `--stop-kind decision`, a **publish failure** (a refusal twice, a rejected key, a public project) `operator-action`; the research infrastructure returns `needs_operator` (permissions, the search cap) or `blocked` (a dead web) as the references say; and a book adds its outline gate and its acceptance gate.
+
+**A confirmed proposal.** The plugin's `/knowledge:explain` may show the operator its own proposal: the unit, the phase name, the objective and every `## Explain` field, each with its reason. Only on the operator's **literal yes** does it invoke this skill, with the operator's request and that proposal verbatim. That yes is the one confirmation, so do not ask again:
+- check the proposal as step 1 would: the required set for its unit present, `visibility: private`, the project private, the subject real, and the stream check. Anything missing or contradictory (a public project, a field the proposal left out) means the proposal is not confirmed: ask about that field and show the one confirmation as usual;
+- with a `unit` line, run step 3 as written, the proposal and the reply under *Original Input (verbatim)* (the proposal joins some fields with ` · `: write one a line);
+- **with no `unit` line** (plugin 0.6.0's §9.1 *The book suggestion*), create it as a book, its eleven fields as the whole set: steps 3.1–3.3, then STOP and say "Run `/do-whole-phase` to research and write it." That plugin's own text ends there, and its operator has not confirmed a run.
 
 **What that `DECOMP` will cut.** Do not cut it here; `DECOMP` reads the procedure from `do-whole-phase`'s references:
-- **`DECOMP`** (`reference/explain-decomposition.md`) leads the whole-book research (the skill's §9.2) into `book/research/` and writes `book/outline.md` from it: the reader; the order and prerequisites; and for each chapter its key, title, goal, reader tasks, sources, questions, claims, declared gaps, expected top-up, diagrams and figures, and quiz targets. It then cuts one bare chapter slice per chapter, `--kind implementation --risk high`: each chapter's executor leads a research run on the high row.
-- **The outline gate:** the first chapter slice stops `pending` until the operator signs the outline (`accept`), with `book/research/summary.md` beside it. The signature freezes the book's research indexes. On feedback, `DECOMP` runs again.
-- **Each chapter slice** (`reference/explain-chapter.md`) tops up its own research (§9.3), drafts from its reader tasks and checks, is judged by the plugin's `knowledge:explain-critic`, and is revised once.
-- **The review** (`reference/explain-review.md`) reads the whole book, publishes every chapter private, reads the book in the real reader, and returns the book's URL as the walkthrough.
+- **a book:** `DECOMP` (`reference/explain-decomposition.md`) leads the whole-book research (§9.2 *Research for a book (an explain phase)*) into `book/research/` and writes `book/outline.md` from it: the reader; the order and prerequisites; and for each chapter its key, title, goal, reader tasks, sources, questions, claims, declared gaps, expected top-up, diagrams and figures, and quiz targets. It then cuts one bare chapter slice per chapter, `--kind implementation --risk high`: each chapter's executor leads a research run on the high row. **The outline gate:** the first chapter slice stops `pending` until the operator signs the outline (`accept`), with `book/research/summary.md` beside it; the signature freezes the book's research indexes, and on feedback `DECOMP` runs again. **Each chapter slice** (`reference/explain-chapter.md`) tops up its own research (§9.3 *A chapter: its top-up, then the draft*), drafts from its reader tasks and checks, is judged by the plugin's `knowledge:explain-critic`, and is revised once;
+- **a document or a chapter:** the same shape with one chapter. `DECOMP` leads the unit's research run (§3 *Research*, through §3.10 *D6: the final outline, the reader's path*) into the phase's `doc/` dossier, writes `doc/outline.md`, and always cuts exactly one write slice `S1`; with `outline sign-off: on`, `S1` waits for the operator's `accept` first;
+- **the review** (`reference/explain-review.md`) publishes private, proves it private, reads it in the real reader, and returns the URL as the walkthrough.
 
-The acceptance gate is `--require`: the operator accepts by reading the book. An explain phase changes no product code and no durable truth, so it leaves no `## Doc impact` notes, owes no docs phase, and appends no `## Regression Checklist` line.
+**The acceptance gate, per unit:** a book's is `--require` (the operator accepts by reading the book); a document's and a chapter's are waived (published private; a v2 is cheap). An explain phase changes no product code and no durable truth, so it leaves no `## Doc impact` notes, owes no docs phase, and appends no `## Regression Checklist` line.

@@ -10,14 +10,21 @@ disable-model-invocation: true
 A phase can run on its own git branch in its own git worktree, driven from the same session that
 started it, while the default stream keeps `main` free for another phase. **Since v43 this is opt-in:
 a phase runs on the current checkout unless the operator asks for a worktree.** Nothing else moves it
-— not the engine, not `create-phase`, not the do-* skills on their own initiative. Asking looks like
-one of three things:
+— not the engine, not `create-phase` (bar its explain route, below), not the do-* skills on their own
+initiative. Asking looks like one of three things:
 
 - the **`worktree` mode word** on `/do-next-slice` or `/do-whole-phase` (or the same thing in their
   own words: "in a worktree", "in parallel", "on its own branch"), on a phase that is still `planned`;
 - **`parallel-start <P>` run by the operator's own hand**, after which execution enters the stamped
   worktree without asking again;
 - an explicit instruction to run two phases at once, which is the case the whole mechanism exists for.
+
+**One exception: an explain phase (v86).** `create-phase`'s explain route starts every explain phase in
+its own worktree unless its `## Explain` says `worktree: no`: the route's one confirmation is the
+operator's word for it, so nobody asks again. It buys stream isolation: the default stream's `next`
+skips the stamped phase, an explain's `pending` stops halt only its own stream, and product phases keep
+flowing on `main`. Its branch touches only its own phase folder and the `works/` files, so after its
+`pass` it merges back by itself (§5, *An explain phase merges back by itself*).
 
 v42 briefly made the worktree the default and v43 put it back, because one phase at a time is the
 normal shape of this workspace and a branch per phase made every ordinary run pay for parallelism it
@@ -39,12 +46,15 @@ the detail lives here.
 1. **When — only when asked** — a `planned` phase moves into its own worktree on the operator's
    word and nothing else (the three forms above). `do-next-slice` / `do-whole-phase` run
    `parallel-start <P>` when they are told to and never on their own initiative; `create-phase`
-   never does, and neither does `/do-whole-phases`. A phase already carrying the stamp is entered
-   without asking again.
+   never does (bar its explain route), and neither does `/do-whole-phases`. A phase already carrying
+   the stamp is entered without asking again. **The one exception is an explain phase:** the explain
+   route's confirmation is the operator's word, so it runs `parallel-start <P>` right after the intake
+   commit unless the phase's `## Explain` says `worktree: no`.
 2. **Where** — `<repo>/.claude/worktrees/P<N>-<slug>` on branch `phase/P<N>-<slug>` (`P<N>` is the
-   phase's id, `P12` or `P-7kq2`; `--worktree` overrides); the engine puts `.claude/worktrees/` in `.git/info/exclude` (common dir), never in
+   phase's id, `P46-k2`, `P12` or `P-7kq2`; `--worktree` overrides); the engine puts `.claude/worktrees/` in `.git/info/exclude` (common dir), never in
    `.gitignore`. **Nested install:** a pair — the host worktree `<host>/.claude/worktrees/P<N>-<slug>`
-   on the operator-confirmed host branch, with the nested worktree at its `workflow/` on
+   on the operator-confirmed host branch (an explain phase: **detached** at the host base, no branch),
+   with the nested worktree at its `workflow/` on
    `phase/P<N>-<slug>`; the engine adds `/.claude/worktrees/` to the host's `info/exclude`.
 3. **The stamp commit** — the engine's one fixed-message commit (the stamp must exist on both branches)
    contains exactly the phase folder plus the five regenerated `works/` files
@@ -54,8 +64,8 @@ the detail lives here.
 5. **What still refuses** — the phase is not `planned`; it already carries an `execution` block
    (parallel or pinned); no git repo; the checkout is on a parallel stream; a merge or rebase is in
    progress; the branch exists or is stamped on another phase; the worktree path exists; an overridden
-   path's parent is missing. **Nested install**, also: no `--host-branch` (nothing is written); the
-   host branch is checked out elsewhere; the host base cannot be resolved (pass `--host-base`).
+   path's parent is missing. **Nested install**, also: no `--host-branch` on a non-explain phase, or `--repo` /
+   `--repo-base` without one (nothing is written); the host branch is checked out elsewhere; the host base cannot be resolved (pass `--host-base`).
 6. **Enter and exit** — the orchestrator calls `EnterWorktree` with the printed path in the same
    session, re-runs `next` (`stream=phase/…`), and works there; background Agents dispatched from there
    run in the worktree. `ExitWorktree` `keep` returns to the default checkout for integration and never
@@ -66,9 +76,13 @@ the detail lives here.
    **In a nested install** `EnterWorktree` takes the printed **host** worktree path, and the engine
    runs from there as `python3 workflow/scripts/workflow.py …`. `CLAUDE.local.md` is copied into the
    host worktree; skills, agents and settings read through from the main checkout, so never create
-   `<host-wt>/.claude/`.
+   `<host-wt>/.claude/`. **Permissions in a worktree:** Claude Code (v2.1.211 and later) reads and
+   writes the main checkout's `.claude/settings.local.json` from a worktree session, so allow rules
+   added there (an explain's manual-mode research rules included) apply in every worktree; on Windows,
+   or where Claude Code does not use the repository root, the file stays per directory: put such rules
+   in user settings, or run in auto mode.
 7. **The merge** — after `parallel-gate <P>` is OPEN (branch phase `done` + review `pass`, default
-   stream not busy; never past a closed gate): `ExitWorktree keep` → `git pull --ff-only` only if
+   stream not busy, or the branch's own diff exempt from that, §5 step 1; never past a closed gate): `ExitWorktree keep` → `git pull --ff-only` only if
    `main` tracks a remote → if anything is staged, or a file the merge touches is uncommitted (typically
    the generated `works/` files, which a phase worktree refreshes here as it runs (v67) — commit that
    workflow state first), STOP and ask (git refuses both; never unstage or discard the operator's work)
@@ -106,7 +120,8 @@ python3 scripts/workflow.py parallel-start <P> [--worktree <path>] [--slug <slug
 ```
 
 Run it from the default stream, before the phase's first `start-slice`, and only on the operator's
-word (rule 1): when `next` prints the hint, the do-* skills relay it and run nothing. It refuses when:
+word (rule 1; for an explain phase, its route's confirmation): when `next` prints the hint, the do-*
+skills relay it and run nothing. It refuses when:
 the phase is not `planned`; it already carries an `execution` block (parallel or pinned); the
 checkout is not inside a git work tree; the checkout is on a parallel stream; a merge or rebase is in
 progress; the branch name exists or is stamped on another phase; the worktree path exists; an
@@ -154,6 +169,15 @@ stays policy-neutral:
    itself never fetches.
 6. Run `python3 scripts/workflow.py parallel-start <P> --host-branch <name> [--host-base <ref>]`, then
    `EnterWorktree` with the printed host worktree path.
+
+**An explain phase needs no host branch (v86).** It makes no host commit, so steps 1–3 are skipped:
+`parallel-start <P>` with no `--host-branch` cuts a **detached** host worktree at the resolved host
+base (step 4; `--host-base HEAD` reads the operator's current checkout) and stamps
+`execution.host_branch: null`, `host_branch_created: false`. The report prints `host_branch=- (detached
+host worktree …)` and says there is nothing to integrate on the host; `parallel-status` shows
+`host_branch=- (detached host worktree)` and the `## Streams` cell `detached`. A codebase explain reads
+the host code at that base. `--host-branch` is still honoured when given; `--repo` / `--repo-base`
+still need it, and a non-explain phase without it is still refused.
 
 ## 3. Work — in the worktree, as normal
 
@@ -254,7 +278,13 @@ closes the gate or turns a check red mid-sequence, STOP and report — never mer
    ```
    `GATE OPEN` (exit 0) → continue. `GATE CLOSED` (exit 1) prints numbered reasons: the branch's phase
    is not `done` with a `pass` review, or the default stream is busy (any default-stream phase
-   `in_progress` / `in_review` / `pending` / `blocked`). A busy main means wait, not merge. Run from
+   `in_progress` / `in_review` / `pending` / `blocked`). A busy main means wait, not merge — **unless
+   the engine exempts the branch (v86):** it diffs the branch since its merge-base with the default
+   side and always prints the result. `exemption=phase-folder-only (<n> paths)` — every path is under
+   `works/phases/active/<P>/`, one of the five `works/` files, or **added** under `works/deferred/open/`
+   — turns the busy reasons into a `note:` and the gate opens, since such a branch cannot conflict with
+   in-flight product work. `exemption=none: <path> (<status>)` (or no readable merge-base) leaves them
+   standing. The branch-side reasons (`done`, `pass`) are never exempt. Run from
    the worktree it reads the default stream from the local default branch; `--branch-ref` /
    `--main-ref` override where each side is read from (CI uses
    `--branch-ref HEAD --main-ref origin/<base>`).
@@ -299,7 +329,10 @@ closes the gate or turns a check red mid-sequence, STOP and report — never mer
 
 The rest of the debt is the docs phase's (`docs-debt` → `create-phase` docs-phase route), which records
 `parallel-consolidated <P>` — that flips the phase's `consolidation` to `"done"` (in both the general
-field and the `execution` block), which is also what unblocks archiving. `docs-consolidated <P>` is
+field and the `execution` block), which is also what unblocks archiving. **A phase with no debt settles
+itself (v86):** a passing `review-phase` with no `## Doc impact` note flips a worktree phase's
+`consolidation` from `"pending"` to `"done"` (both fields, a `phase_consolidation_settled` event), so it
+owes no docs phase and no `parallel-consolidated`. `docs-consolidated <P>` is
 the twin for a phase that never left the default stream.
 
 Afterwards the phase is `done` and archivable the normal way (`archive-phase <P>`, `rotate-backlog`,
@@ -327,11 +360,38 @@ never pushes, opens a PR or merges into the host's default branch.
      re-run the host's pre-merge checks on the combined commit; keep each phase's host branch until
      the PR merges (its review recorded host commit ranges by sha).
 8. `python3 scripts/workflow.py parallel-teardown <P>` (add `--discard-ignored` only to delete ignored
-   worktree-only files the refusal listed). It checks first and refuses in one report — uncommitted
+   worktree-only files the refusal listed; an explain phase passes it up front for its `pages/` cache). It checks first and refuses in one report — uncommitted
    work in either worktree, ignored worktree-only files, orphaned detached host commits — then removes
    the nested worktree, then the host worktree. The host branch is kept unless the engine created it
    and it holds no commits; a failed step prints the remaining commands, and a re-run resumes.
 9. `git -C workflow commit` the `phase.json` change.
+
+### An explain phase merges back by itself
+
+An explain branch touches only `works/phases/active/<P>/**` (notebook, slices, dossier, draft), the
+five `works/` files and the deferred jobs its review files: it writes no doc version, no `## Doc
+impact` note and no `## Regression Checklist` line, and no product file. So the explain run integrates
+it itself, with no stop, right after its `pass` — a document or chapter whose gate was waived, or a
+book once the operator's `accept-gate <P> --clear` let the pass be recorded:
+
+1. `parallel-gate <P>` from the worktree; a busy default stream does not close it when it prints
+   `exemption=phase-folder-only (<n> paths)` (step 1 above).
+2. The merge as above — at root steps 2–5 and 7; nested steps 2–4 and 6, with **no host side** for a
+   detached host worktree (step 7 is skipped: there is no host branch).
+3. `parallel-teardown <P>` — **nested:** `parallel-teardown <P> --discard-ignored`, which deletes the
+   ignored `pages/` cache (every passage used is quoted in the committed findings); **at root** no flag
+   (`git worktree remove` drops ignored files itself, and the flag is refused there). Then commit.
+4. The closing report, last, from the default checkout. The review left no `## Doc impact` note, so
+   consolidation is already `done`: nothing is owed and the phase is archivable.
+
+**When it cannot merge** — the gate closed for another reason, something staged, an uncommitted file
+the merge touches, a conflict outside the generated files — leave the branch `done` and unmerged, say
+so in the closing report, and never unstage or discard anyone's work (another session may own `main`'s
+state). `next` on the default stream then prints `merge_ready=<P>:<branch>` for every stamped phase
+that is `done` with a `pass` on its branch and not yet `done` here; whoever drives that stream merges it
+at its next slice boundary by this same sequence, from the default checkout. Several explain phases
+merge one at a time; two can conflict only in the generated files (take either side, regenerate), and
+`works/events.jsonl` merges as `union`.
 
 ### The remote variant — push → PR → CI → `gh pr merge`
 
@@ -420,7 +480,8 @@ inside the set, merge the phase branch again and re-run the teardown.
   on the default stream, after the merge.
 - Never hand-resolve a generated file's merge conflict by editing it; take either side and regenerate.
 - Never merge from inside the worktree — exit first.
-- Never `parallel-start` a phase the operator did not ask about, nor a pinned or in-flight one.
+- Never `parallel-start` a phase the operator did not ask about (an explain phase's confirmation is
+  the asking), nor a pinned or in-flight one.
 - Never enter a path the engine did not print / `git worktree list` does not show.
 - Slices running together inside a phase are `do-whole-phase`'s wave, in the phase's own checkout; never a worktree per slice.
 - The phase branch and the stamp commit are part of executing a phase; pushing is not — push only

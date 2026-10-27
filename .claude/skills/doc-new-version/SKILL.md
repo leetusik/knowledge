@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 # doc-new-version
 
-Run `python3 scripts/workflow.py doc-new-version $ARGUMENTS` (for example `--doc product --summary "..." --source P-7kq2.S1`). It creates `docs/versions/<doc>/v<yyMMddHHmm>_<slug>.md`, the minute in UTC (`v2610230243_first.md`); older `v0001`-style versions stay. Never choose the number: a second version of one doc within the minute takes the next minute.
+Run `python3 scripts/workflow.py doc-new-version $ARGUMENTS` (for example `--doc product --summary "..." --source P46-k2.S1`). It creates `docs/versions/<doc>/v<yyMMddHHmm>_<slug>.md`, the minute in UTC (`v2610230243_first.md`); older `v0001`-style versions stay. Never choose the number: a second version of one doc within the minute takes the next minute.
 
 **Where this belongs:** in a **docs phase** — the operator-created phase that consolidates the `## Doc impact` notes earlier phases left behind (`python3 scripts/workflow.py docs-debt` prints exactly which notes those are; the `create-phase` skill's *docs-phase route* starts the phase) — and on the **default stream** (a version copies the doc's whole body and writes the one shared `docs/index.json`, so two branches versioning at once would fork it). Not in an ordinary slice, and not at a phase review beyond its two named gate sections (`## Regression Checklist`, `## Operator Runtime`). When a phase's notes are all consolidated, record it: `python3 scripts/workflow.py docs-consolidated <P>`.
 

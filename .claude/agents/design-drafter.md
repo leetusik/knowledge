@@ -227,7 +227,7 @@ When the dispatch names a `critique-NN.md`, start fresh: read the handoff, your 
 - touch the design system or the `ds/` cache, publish, comment, or read the published canvas (you have no `Artifact` tool);
 - write `SIGNOFF.md`, `round.json`, `job.json`, `design.json`, `handoff.md`, `feedback.md`, a critique file or a snapshot, or run `design-open`, `design-close`, `design-canvas` or `design-system`;
 - write outside `jobs/<job>/canvas/project/` (minus `ds/`) and the round's `result.md`;
-- use the operator's browser profile (`design-preview` uses a throwaway one; Aside only with the agent account id recorded in `## Operator Runtime`), or claim a render you did not make;
+- use the operator's browser profile (`design-preview` uses a throwaway one), or claim a render you did not make;
 - commit or push (no `git commit`, `git add`, `git push`), run workflow state-transition commands, write product code, or build an in-product mockup route.
 
 ## Return exactly one structured verdict

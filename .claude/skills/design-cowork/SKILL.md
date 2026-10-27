@@ -79,7 +79,7 @@ requested.**
 - `reference/operator.md`: the operator's return (edits, comments, feedback, sign-off).
 - `reference/system.md`: syncing the Design System Artifact.
 - `reference/mockup.md`: a mockup the operator asked for.
-- `reference/build.md`: an implement or fidelity slice (RESPECT THE DESIGN, the sweep, Aside).
+- `reference/build.md`: an implement or fidelity slice (RESPECT THE DESIGN, the sweep, Claude in Chrome).
 - `reference/legacy.md`: a phase's first design slice (the tool), a legacy record, the review's cleanup.
 
 ## Never

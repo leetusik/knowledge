@@ -21,8 +21,9 @@ nothing.**
   the record.
 - **Verified in the operator's runtime**, the one `## Operator Runtime` names, plus the production
   build when they differ. Absent or `UNFILLED` → **`needs_operator`**, and the slice goes `pending`.
-  Driven with the same instrument *Verifying* prescribes (**Aside**, `repl` over Bash): the exemption
-  is from the sweep, never from the runtime or the tooling.
+  Driven with the same instrument *Verifying* prescribes (**Claude in Chrome**, the agent's profile
+  selected first, or the fallback the manifest names): the exemption is from the sweep,
+  never from the runtime or the tooling.
 - **Dispatched to `slice-executor`** (`executor-route <slice>`, the high row by kind), built from
   the round `result.md`'s `## Build` (a legacy round's `build-prompt.md`) and the job's record on disk,
   the canvas tree included. If it has to guess how to build something, `## Build` is what is short.

@@ -11,7 +11,7 @@ disable-model-invocation: true
 
 ## Arguments
 
-Strip the mode words (`auto`, `gate`, `plan only`) from the operator's words and pass the rest, untouched, to `python3 scripts/workflow.py run-phases <the rest>`: `P12, 13 p14 7kq2 P-m3xa` (a minted id with or without its `P-`, a numbered one with or without its `P`; any case; commas or spaces; order kept, duplicates dropped); none means every phase on this stream not done, in backlog order. **Exit 2: relay each `refused=` line and start nothing** (a range, `worktree` or a typo'd mode word is refused too).
+Strip the mode words (`auto`, `gate`, `plan only`) from the operator's words and pass the rest, untouched, to `python3 scripts/workflow.py run-phases <the rest>`: `46, P12 p14 46-k2 7kq2 P-7kq2` (a numbered id with or without its `P`, `46` naming the one P46 or P46-<tail> and refused when two share the number, so type the tail, `46-k2`; a v73 id with or without its `P-`; any case; commas or spaces; order kept, duplicates dropped); none means every phase on this stream not done, in backlog order. **Exit 2: relay each `refused=` line and start nothing** (a range, `worktree` or a typo'd mode word is refused too).
 
 The mode word applies to every phase in the run (`.claude/skills/do-whole-phase/reference/modes.md`). Without an explicit `auto`, each phase's `DECOMP` still waits in the session for the operator to approve its plan: that is a pause, and the run continues after it. `plan only` applies phase by phase, each with its own stop rule, in `queue=` order (the pointer does not advance past a readied slice); it never reaches a review, so it never parks.
 

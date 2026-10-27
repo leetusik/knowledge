@@ -57,7 +57,12 @@ NESTED_CONVERTED_KEYS = ("repo", "old_nested", "at")
 NESTED_HOST_BRANCH_REQUIRED = (
     "parallel-start in a nested install needs --host-branch <name>: the host repo's branch for this phase's product commits, "
     "named by the host's own convention for branches (see nested-convention), with no workspace phase/slice IDs in it; "
-    "an existing branch is reused when no host worktree has it checked out -- nothing was written")
+    "an existing branch is reused when no host worktree has it checked out (an explain phase may omit it: v86 cuts its host worktree "
+    "detached, since an explain makes no host commit) -- nothing was written")
+# v86 (§9.4): a worktree SET's repos ride beside a host BRANCH; only an explain phase's lone pair may be detached.
+NESTED_SET_NEEDS_HOST_BRANCH = (
+    "--repo and --repo-base need --host-branch <name>: a worktree set's host half is a branch the operator names; only an explain "
+    "phase's plain pair may omit it (a detached host worktree, no host branch) -- nothing was written")
 # phase.json `host_anchors` (nested only): the host HEAD at new-phase and at the passing review --
 # phase-scope's range in the host repo, whose commits the nested repo never sees. `review_base`
 # (P40, optional) is written at the passing review only when the base rule resolved something other
@@ -363,21 +368,30 @@ SLICE_STOP_KINDS = {
 }
 DEFERRED_STATUSES = {"deferred", "ready", "promoted", "done", "dropped"}
 REVIEW_VERDICTS = {"pass", "changes_requested", "blocked"}
-# Ids (v73, P44): an id minted on any branch or machine never collides at merge. New phase and
-# deferred ids are `P-` / `D-` plus a 4-symbol token, Crockford base32 in lowercase without the
-# look-alikes `i l o u` (32^4 values, drawn with `secrets`); the old `P<n>` / `D<n>` ids stay valid
-# and are never renamed. These patterns are the ONE predicate every reader of a stored id uses, and
-# `id_sort_key` the one order a listing uses (numeric ids first by number, tokens after by creation).
-# A token is re-drawn when it is all digits (so a bare `12` always means `P12`), a mode word the do-*
-# skills strip from the operator's words, or the token of any id this workspace can see (one pool for
-# phases and deferred jobs, so a bare token names exactly one thing). Slice ids keep their per-phase
-# suffixes: `P-7kq2.S1`.
+# Ids (readable ids, after v83): an id the operator can say. New phase and deferred ids are the next
+# NUMBER plus a two-symbol random tail -- `P46-k2`, `D92-x4`, slices `P46-k2.S1` -- the number one more than the highest
+# numbered id of that kind the workspace can see (old `P45` and tailed `P45-m9` alike, archived included),
+# the tail drawn with `secrets` from v73's alphabet (Crockford base32 in lowercase without the look-alikes
+# `i l o u`) and holding at least one letter, so `P46-12` never reads as a range. Two branches that each
+# make the next id draw the same number but (923 times in 924) different tails; a same-number same-tail
+# pair surfaces as a git add/add conflict on the phase folder at merge, never a silent mix (no engine
+# guard). Older ids are never renamed: v72's `P<n>` / `D<n>` and v73's minted `P-<token>` / `D-<token>`
+# (4 symbols) stay valid beside the new shape. These patterns are the ONE predicate every reader of a
+# stored id uses (a digit after `P` means numbered, with or without a tail; a dash after `P` means a v73
+# token), and `id_sort_key` the one order a listing uses (numbered ids by number, then v73 tokens by
+# creation). Slice ids keep their per-phase suffixes: `P46-k2.S1`, `P-7kq2.S1`, `P12.S1`.
 ID_TOKEN_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz"
-ID_TOKEN_LENGTH = 4
+ID_TOKEN_LENGTH = 4  # a v73 token: guards only an explicit `--phase P-7kq2` / `--id D-m3xa` now
 ID_TOKEN_PATTERN = "[0-9a-hjkmnp-tv-z]{4}"
+ID_TAIL_LENGTH = 2
+ID_TAIL_LETTERS = "abcdefghjkmnpqrstvwxyz"
+# Two alphabet symbols, at least one a letter (never all digits): 32^2 - 10^2 = 924 tails per number.
+ID_TAIL_PATTERN = "(?:[a-hjkmnp-tv-z][0-9a-hjkmnp-tv-z]|[0-9][a-hjkmnp-tv-z])"
 ID_MODE_WORDS = frozenset({"gate", "plan"})  # `auto` and `only` cannot be drawn: u, o and l are not in the alphabet
-PHASE_ID_PATTERN = rf"P(?:[0-9]+|-{ID_TOKEN_PATTERN})"
-DEFERRED_ID_PATTERN = rf"D(?:[0-9]+|-{ID_TOKEN_PATTERN})"
+PHASE_ID_PATTERN = rf"P(?:[0-9]+(?:-{ID_TAIL_PATTERN})?|-{ID_TOKEN_PATTERN})"
+DEFERRED_ID_PATTERN = rf"D(?:[0-9]+(?:-{ID_TAIL_PATTERN})?|-{ID_TOKEN_PATTERN})"
+# A numbered id, tailed or not, any prefix: group 1 the number, group 2 the tail (None when untailed).
+NUMBERED_ID_RE = re.compile(rf"[PD]([0-9]+)(?:-({ID_TAIL_PATTERN}))?")
 SLICE_SUFFIX_PATTERN = "[A-Z][A-Z0-9]*"
 PHASE_ID_RE = re.compile(PHASE_ID_PATTERN)
 DEFERRED_ID_RE = re.compile(DEFERRED_ID_PATTERN)
@@ -467,6 +481,15 @@ UNASSIGNED_DOC = "(unassigned)"
 # A default-stream phase in any of these states means main is mid-flight, so a phase
 # branch may not be merged into it yet (the quiet-point gate, `parallel-gate`).
 BUSY_PHASE_STATUSES = ("in_progress", "in_review", "pending", "blocked")
+# The quiet point's checked exemption (v86, §9.2): a branch whose diff since its merge-base with the
+# default side touches only its own phase folder, the STAMP_WORKS_FILES, or paths ADDED under this
+# folder (a deferred job filed on the branch: a new minted-id folder cannot conflict) cannot collide
+# with in-flight default-stream work, so `parallel-gate` drops the busy-default-stream reason for it.
+GATE_EXEMPT_ADDED_PREFIX = "works/deferred/open/"
+# An explain phase's publishable unit (`- unit:` in intent.md's `## Explain`); absent reads `book`,
+# the only unit before v86.
+EXPLAIN_UNITS = ("document", "book", "chapter")
+EXPLAIN_UNIT_DEFAULT = "book"
 # Regenerated from works/phases/** and docs/versions/** by `parallel-merge-finish`;
 # never merged by hand (see .gitattributes).
 GENERATED_FILES = ("works/state.json", "works/index.json", "works/backlog.md", "works/deferred.md", "docs/current/*.md")
@@ -1161,7 +1184,7 @@ PRICES = {
 # is over the threshold pays the second row, cache hit or not.
 PRICES_LONG_PROMPT = {"claude-haiku-5-5": (100_000, (0.50, 0.625, 1.0, 0.05, 2.50))}
 METER_PRICES_SOURCE = "https://platform.claude.com/docs/en/about-claude/pricing, fetched 2026-10-20"
-# Composed from the id block's patterns (v73), so a minted `P-7kq2.S1` attributes beside `P12.S1`.
+# Composed from the id block's patterns, so a tailed `P46-k2.S1` and a v73 `P-7kq2.S1` attribute beside `P12.S1`.
 METER_SLICE_ID_RE = re.compile(rf"\b{PHASE_ID_PATTERN}\.{SLICE_SUFFIX_PATTERN}\b")
 METER_SLICE_LINE_RE = re.compile(rf"(?im)^[\s>*`-]*slice[`*]*\s*:\s*[`*]*({PHASE_ID_PATTERN}\.[A-Za-z][A-Za-z0-9]*)")
 METER_ROUND_RE = re.compile(r"\b(\d{2}-[a-z0-9][a-z0-9-]*)/(\d{2}-[a-z0-9][a-z0-9-]*)\b")
@@ -2275,14 +2298,15 @@ def _created_sort_stamp(created_at) -> str:
 
 
 def id_sort_key(value, created_at=None) -> tuple:
-    """The ONE order of phase and deferred ids in a listing (v73): numeric ids first, by number --
-    `(0, n, "")`, exactly the order v72 gave an all-numeric list -- then minted tokens, by creation
-    time and then token -- `(1, created_at, token)`; an id of neither shape sorts last, as written.
-    Phases still SELECT by `order`; this key lists them, and breaks a tie in `order`."""
+    """The ONE order of phase and deferred ids in a listing: numbered ids first, tailed or not, by number
+    and then tail -- `(0, n, tail or "")`, so `P46` before `P46-k2` before `P46-x4` and an all-numeric
+    list sorts exactly as v72 sorted it -- then v73's minted tokens, by creation time and then token --
+    `(1, created_at, token)`; an id of neither shape sorts last, as written. Deterministic: a numbered
+    id reads no record. Phases still SELECT by `order`; this key lists them, and breaks a tie in `order`."""
     text = str(value)
-    numeric = re.fullmatch(r"[PD]([0-9]+)", text)
+    numeric = NUMBERED_ID_RE.fullmatch(text)
     if numeric:
-        return (0, int(numeric.group(1)), "")
+        return (0, int(numeric.group(1)), numeric.group(2) or "")
     token = re.fullmatch(rf"[PD]-({ID_TOKEN_PATTERN})", text)
     if token:
         return (1, _created_sort_stamp(created_at), token.group(1))
@@ -2346,7 +2370,7 @@ def deferred_jobs() -> dict:
             data = read_json(djson)
             data["path"] = str(ddir.relative_to(ROOT))
             groups[label].append(data)
-        # v73: in id order (D2 before D10, then minted D- tokens by creation), not folder-name order.
+        # In id order (D2 before D10 before D10-x4, then v73's minted D- tokens by creation), not folder-name order.
         groups[label].sort(key=lambda d: id_sort_key(Path(d["path"]).name, d.get("created_at")))
     return groups
 
@@ -2440,6 +2464,17 @@ def phase_in_flight(data) -> bool:
 
 
 NESTED_EXECUTION_HOST_KEYS = ("host_worktree", "host_branch", "host_base", "host_base_sha", "host_branch_created")
+HOST_DETACHED = object()  # v86: the ## Streams Host branch cell of a detached host worktree (never a branch name)
+
+
+def _host_branch_cell(execution: dict):
+    """The Host branch cell's value: the stamped branch, `HOST_DETACHED` for an explain phase's detached
+    host worktree (`host_branch` stamped null beside the other host keys, v86), else None (`-`)."""
+    if execution.get("host_branch"):
+        return execution["host_branch"]
+    if "host_branch" in execution and "host_worktree" in execution:
+        return HOST_DETACHED
+    return None
 
 
 def _nested_execution_problems(phase_id: str, execution: dict) -> list:
@@ -2450,7 +2485,9 @@ def _nested_execution_problems(phase_id: str, execution: dict) -> list:
     -- plus `base_branch` (the nested repo's branch at start). The five appear together, and only in a
     nested install; `base_branch` comes with them there, and is otherwise only type-checked (a root
     stamp of it is additive). `worktree` is the nested worktree: `<host_worktree>/<workflow>` while
-    both are set. A block without any of them (every at-root block, and a legacy one) is untouched."""
+    both are set. A block without any of them (every at-root block, and a legacy one) is untouched.
+    v86 (§9.4): `host_branch` may be null -- a DETACHED host worktree (an explain phase's) -- and then
+    `host_branch_created` must be false and the block carries no `repos` (a set needs a host branch)."""
     problems = []
     present = [k for k in NESTED_EXECUTION_HOST_KEYS if k in execution]
     if "base_branch" in execution:
@@ -2467,8 +2504,18 @@ def _nested_execution_problems(phase_id: str, execution: dict) -> list:
         problems.append(f"phase {phase_id} has a partial nested execution block: missing {', '.join(missing)} (parallel-start writes all six together)")
     for key in ("host_branch", "host_base"):
         value = execution.get(key)
+        if key == "host_branch" and value is None:
+            continue  # v86: a detached host worktree; its consistency is checked below
         if key in execution and not (isinstance(value, str) and value.strip()):
-            problems.append(f"phase {phase_id} has invalid execution.{key} {value!r}; expected a non-empty string")
+            problems.append(f"phase {phase_id} has invalid execution.{key} {value!r}"
+                            + ("; expected a non-empty string, or null for a detached host worktree" if key == "host_branch" else "; expected a non-empty string"))
+    if "host_branch" in execution and execution.get("host_branch") is None:
+        if execution.get("host_branch_created") is not False:
+            problems.append(f"phase {phase_id} has execution.host_branch null (a detached host worktree) but host_branch_created "
+                            f"{execution.get('host_branch_created')!r}; a detached host worktree creates no branch, so it must be false")
+        if "repos" in execution:
+            problems.append(f"phase {phase_id} has execution.host_branch null (a detached host worktree) with execution.repos; "
+                            f"a worktree set needs a host branch (parallel-start --host-branch)")
     sha = execution.get("host_base_sha")
     if "host_base_sha" in execution and not (isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{7,64}", sha)):
         problems.append(f"phase {phase_id} has invalid execution.host_base_sha {sha!r}; expected a host commit sha")
@@ -2694,16 +2741,16 @@ def deferred_folder_ids() -> set:
 
 
 def _id_token(value):
-    """The lowercase token of a `P-`/`D-` id, any case, or None for any other shape."""
+    """The lowercase token of a v73 `P-`/`D-` id, any case, or None for any other shape (a numbered id,
+    tailed or not, has no token)."""
     match = re.fullmatch(r"[PDpd]-([0-9A-Za-z]+)", str(value))
     return match.group(1).lower() if match else None
 
 
-def visible_id_tokens() -> set:
-    """The tokens of every phase and deferred id this workspace can see -- ONE pool for both kinds:
-    active phases (folder and `phase.json` id), archived phases (`archived_phase_ids`) and every
-    deferred folder. A minted token is drawn outside it, so a bare token names exactly one thing."""
-    ids = set(archived_phase_ids()) | deferred_folder_ids()
+def visible_phase_ids() -> set:
+    """Every phase id this workspace can see: each active folder's name and its `phase.json` id, and every
+    archived id (`archived_phase_ids`: an archived id is spent)."""
+    ids = set(archived_phase_ids())
     for pdir in (ACTIVE.iterdir() if ACTIVE.is_dir() else []):
         if pdir.is_dir():
             ids.add(pdir.name)
@@ -2711,16 +2758,29 @@ def visible_id_tokens() -> set:
                 ids.add(str(read_json(pdir / "phase.json").get("id", "")))
             except Exception:  # noqa: BLE001 - an unreadable phase.json still has its folder name
                 pass
-    return {tok for tok in (_id_token(i) for i in ids) if tok}
+    ids.discard("")
+    return ids
+
+
+def visible_ids(prefix: str) -> set:
+    """The ids of one kind this workspace can see: phases (`P`, `visible_phase_ids`) or deferred jobs (`D`,
+    every folder in open/, promoted/ and dropped/)."""
+    return visible_phase_ids() if prefix == "P" else deferred_folder_ids()
+
+
+def visible_id_tokens() -> set:
+    """The v73 tokens of every phase and deferred id this workspace can see -- ONE pool for both kinds.
+    It now guards only an explicit v73-shape id (`--phase P-7kq2`, `--id D-m3xa`): the mint draws no token."""
+    return {tok for tok in (_id_token(i) for i in visible_phase_ids() | deferred_folder_ids()) if tok}
 
 
 def id_token_refusal(token: str, taken=None):
-    """Why `token` cannot be a new id's token, or None: all digits (it would read as an old number), a
-    mode word (`gate`, `plan`), a `p`/`d` and three digits (typed bare it would read as the old `P123` / `D123`),
-    or a token some visible phase or deferred id already has."""
+    """Why `token` cannot be an explicit v73-shape id's token, or None: all digits (it would read as a
+    number), a mode word (`gate`, `plan`), a `p`/`d` and three digits (typed bare it would read as the old
+    `P123` / `D123`), or a token some visible phase or deferred id already has."""
     token = token.lower()
     if token.isdigit():
-        return f"its token {token} is all digits, which reads as an old number"
+        return f"its token {token} is all digits, which reads as a number"
     if token in ID_MODE_WORDS:
         return f"its token {token} is a mode word"
     if re.fullmatch(r"[pd][0-9]{3}", token):
@@ -2730,43 +2790,76 @@ def id_token_refusal(token: str, taken=None):
     return None
 
 
+def id_number(value):
+    """`(n, tail)` of a numbered id of either prefix (`P46` -> `(46, None)`, `D92-x4` -> `(92, "x4")`), or
+    None for any other shape (a v73 token, an odd name)."""
+    match = NUMBERED_ID_RE.fullmatch(str(value))
+    return (int(match.group(1)), match.group(2)) if match else None
+
+
+def next_id_number(prefix: str, visible=None) -> int:
+    """1 + the highest number of every visible numbered id of this kind, untailed (`P45`) and tailed
+    (`P45-m9`) alike (`visible_ids`: phases active and archived, deferred jobs open, promoted and dropped);
+    v73 tokens carry no number and are ignored. An empty workspace gives 1."""
+    numbers = [id_number(i)[0] for i in (visible_ids(prefix) if visible is None else visible)
+               if str(i).startswith(prefix) and id_number(i)]
+    return max(numbers, default=0) + 1
+
+
+def draw_id_tail() -> str:
+    """Two symbols of `ID_TOKEN_ALPHABET`, drawn with `secrets` until one is a letter (never all digits)."""
+    while True:
+        tail = "".join(secrets.choice(ID_TOKEN_ALPHABET) for _ in range(ID_TAIL_LENGTH))
+        if any(c in ID_TAIL_LETTERS for c in tail):
+            return tail
+
+
 def mint_id(prefix: str) -> str:
-    """A new `<prefix>-<token>` id (prefix `P` or `D`), the token drawn with `secrets` until
-    `id_token_refusal` accepts it. Nothing else allocates a phase or deferred id (v73)."""
-    taken = visible_id_tokens()
+    """A new `<prefix><n>-<tail>` id (prefix `P` or `D`): `next_id_number` and a tail re-drawn while the full
+    id is visible. Nothing else allocates a phase or deferred id. Two branches that each mint draw the same
+    number; the tail keeps them apart, and a same-tail pair (1 in 924) is a git add/add conflict at merge."""
+    visible = visible_ids(prefix)
+    number = next_id_number(prefix, visible)
     for _ in range(10000):
-        token = "".join(secrets.choice(ID_TOKEN_ALPHABET) for _ in range(ID_TOKEN_LENGTH))
-        if id_token_refusal(token, taken) is None:
-            return f"{prefix}-{token}"
-    raise SystemExit(f"could not mint a free {prefix}- id: {len(taken)} tokens are taken")
+        candidate = f"{prefix}{number}-{draw_id_tail()}"
+        if candidate not in visible:
+            return candidate
+    raise SystemExit(f"could not mint a free {prefix}{number}- id: every tail is taken")
 
 
 def mint_phase_id() -> str:
-    """`P-<token>`: `new-phase` without `--phase`, `promote-deferred --create-phase` without `--phase`, and
-    rotate-backlog's docs-phase proposal. It supersedes v72's `max + 1` (`P<n>`), which two branches drew alike."""
+    """`P<n>-<tail>`: `new-phase` without `--phase`, `promote-deferred --create-phase` without `--phase`, and
+    rotate-backlog's docs-phase proposal. It supersedes v73's `P-<token>`, which no one could say."""
     return mint_id("P")
 
 
-# Brief names (v73, P44.S2): what an operator may TYPE for an id, and the one place it becomes the id as
-# stored. `7kq2`, `P-7kq2`, `p-7KQ2` are the minted `P-7kq2`; `12`, `p12`, `P12` the old `P12` (a deferred
-# job likewise: `m3xa`, `D-m3xa`, `d12`, `12`). A token needs a letter (a bare number is always an old id), is
-# never a mode word (`gate`), and its dash is required once the prefix is written: `P7kq2` names nothing.
-# `brief_id` is the parser; `resolve_id_arg` is what a command argument goes through (a stored id keeps its
-# exact name, and an id of no known shape is refused with the shapes); `normalize_id_args` applies it to every
-# phase / deferred-id argument after argparse, so no command parses one on its own. Slice ids are full-form only.
+# Brief names: what an operator may TYPE for an id, and the one place it becomes the id as stored. A
+# numbered id is typed by its number: `46`, `p46`, `P46` name `P46-k2` while it is the only phase numbered
+# 46 (an exact stored `P46` always wins), and `46-k2`, `p46-K2` name it always -- the tail is needed only when
+# two branches each made a P46. v73's minted ids keep their brief forms: `7kq2`, `P-7kq2`, `p-7KQ2` are
+# `P-7kq2` (a token needs a letter, is never a mode word, and keeps its dash once the prefix is written:
+# `P7kq2` names nothing; `46k2` is the token `P-46k2`, never a tailed id). A deferred job likewise (`92`,
+# `d92-X4`, `m3xa`, `D-m3xa`). Two contexts, both in `normalize_id_args`, the ONE choke point after argparse:
+# CREATING an id (`new-phase --phase`, `defer-job --id`) reads the form statically (`brief_id`: `46` is `P46`);
+# REFERENCING one (every other argument) looks a number up among the stored ids (`resolve_id_ref`).
 ID_ARG_KINDS = {"P": "phase", "D": "deferred job"}
-PHASE_ARG_HELP = "the phase, in any brief form: 7kq2 or P-7kq2 (minted), 12 or P12 (numbered), any case"
-ID_ARG_EXAMPLES = {"P": ("P-7kq2", "7kq2", "P12", "12"), "D": ("D-m3xa", "m3xa", "D12", "12")}
+PHASE_ARG_HELP = ("the phase, in any brief form: 46 or P46 (numbered; type the tail, 46-k2, only when two phases share"
+                  " the number), 7kq2 or P-7kq2 (a v73 id), any case")
+ID_ARG_EXAMPLES = {"P": ("P46-k2", "46", "P12", "P-7kq2", "7kq2"), "D": ("D92-x4", "92", "D12", "D-m3xa", "m3xa")}
 
 
 def brief_id(prefix: str, raw) -> "str | None":
-    """The stored id (`P-7kq2`, `P12`; prefix `D` for a deferred job) that `raw` names in any brief form, or
-    None when it names none: the optional `P-`/`p-` and four token symbols with a letter and no mode word,
-    or the optional `P`/`p` and digits (leading zeros dropped, as `run-phases` always did)."""
+    """The id `raw` names read STATICALLY (prefix `P` for a phase, `D` for a deferred job), or None when it is
+    no brief form: the optional `P`/`p` and digits (`P46`; leading zeros dropped, as `run-phases` always did),
+    the same plus a dash and a valid tail (`P46-k2`, the tail lowercased), or the optional `P-`/`p-` and four
+    v73 token symbols with a letter and no mode word (`P-7kq2`). A number is not looked up here."""
     text = str(raw).strip()
     number = re.fullmatch(rf"{prefix}?([0-9]+)", text, re.I)
     if number:
         return f"{prefix}{int(number.group(1))}"
+    tailed = re.fullmatch(rf"{prefix}?([0-9]+)-([0-9A-Za-z]{{{ID_TAIL_LENGTH}}})", text, re.I)
+    if tailed and re.fullmatch(ID_TAIL_PATTERN, tailed.group(2).lower()):
+        return f"{prefix}{int(tailed.group(1))}-{tailed.group(2).lower()}"
     token = re.fullmatch(rf"(?:{prefix}-)?({ID_TOKEN_PATTERN})", text, re.I)
     if token and not token.group(1).isdigit() and token.group(1).lower() not in ID_MODE_WORDS:
         return f"{prefix}-{token.group(1).lower()}"
@@ -2774,14 +2867,41 @@ def brief_id(prefix: str, raw) -> "str | None":
 
 
 def id_arg_refusal(prefix: str, raw) -> str:
-    """Why `raw` is not a phase (`P`) or deferred job (`D`) id, with the shapes that are."""
+    """Why `raw` is not a phase (`P`) or deferred job (`D`) id, with the three shapes that are."""
     text = str(raw).strip()
-    minted, bare, old, number = ID_ARG_EXAMPLES[prefix]
-    msg = (f"{raw!r} is not a {ID_ARG_KINDS[prefix]} id: write {minted} or {bare} (minted), or {old} or {number} (numbered)")
+    tailed, number, old, minted, bare = ID_ARG_EXAMPLES[prefix]
+    msg = (f"{raw!r} is not a {ID_ARG_KINDS[prefix]} id: write {number} or {tailed} (numbered, the tail typed only when"
+           f" two share the number), {old} (an old numbered id), or {bare} or {minted} (a minted v73 id)")
     lone = re.fullmatch(rf"{prefix}({ID_TOKEN_PATTERN})", text, re.I)
     if lone:
         msg += f"; a minted id keeps its dash: {prefix}-{lone.group(1).lower()} (or just {lone.group(1).lower()})"
     return msg
+
+
+def lookup_id_number(prefix: str, number: int, stored=None) -> tuple:
+    """`(id, tailed)` for the number `number` of this kind: an exact stored `P46` wins (`(P46, [])`); else the
+    stored `P46-<tail>` ids -- exactly one gives `(it, [it])`, none `(None, [])`, several `(None, [them, sorted])`.
+    `stored` defaults to `visible_ids(prefix)`; an active `P46` folder answers without reading the rest."""
+    exact = f"{prefix}{number}"
+    if stored is None:
+        if prefix == "P" and (ACTIVE / exact).is_dir():
+            return exact, []
+        stored = visible_ids(prefix)
+    if exact in stored:
+        return exact, []
+    tailed = sorted((i for i in stored if str(i).startswith(prefix) and (id_number(i) or (None, None))[0] == number
+                     and id_number(i)[1]), key=id_sort_key)
+    return (tailed[0] if len(tailed) == 1 else None), tailed
+
+
+def id_number_refusal(prefix: str, raw, number: int, tailed: list) -> str:
+    """Why the number `raw` names no single id: no stored id has it, or several tailed ids share it."""
+    kind = ID_ARG_KINDS[prefix]
+    if tailed:
+        return (f"{str(raw).strip()!r} names {len(tailed)} {kind}s numbered {number}: {', '.join(tailed)} -- type the tail"
+                f" (e.g. {tailed[0]} or {tailed[0][1:]})")
+    where = "active or archived" if prefix == "P" else "open, promoted or dropped"
+    return f"{str(raw).strip()!r} names no {kind}: none is {prefix}{number} or {prefix}{number}-<tail>, {where}"
 
 
 def _stored_id_named(prefix: str, text: str) -> bool:
@@ -2795,8 +2915,9 @@ def _stored_id_named(prefix: str, text: str) -> bool:
 
 
 def resolve_id_arg(prefix: str, raw) -> str:
-    """A phase (`P`) or deferred job (`D`) id as typed -> the id as stored; SystemExit with the shapes when
-    it is neither. An id already in a stored shape (`PHASE_ID_RE` / `DEFERRED_ID_RE`) is returned untouched."""
+    """A phase (`P`) or deferred job (`D`) id as typed when CREATING one -> the id as stored, read statically
+    (`46` is `P46`); SystemExit with the shapes when it is no id. An id already in a stored shape
+    (`PHASE_ID_RE` / `DEFERRED_ID_RE`) is returned untouched."""
     text = str(raw).strip()
     if (PHASE_ID_RE if prefix == "P" else DEFERRED_ID_RE).fullmatch(text):
         return text
@@ -2808,22 +2929,76 @@ def resolve_id_arg(prefix: str, raw) -> str:
     raise SystemExit(id_arg_refusal(prefix, raw))
 
 
+def resolve_id_ref(prefix: str, raw, stored=None) -> str:
+    """A phase (`P`) or deferred job (`D`) id as typed when REFERENCING one -> the stored id: a bare number
+    (`46`, `p46`, `P46`) is looked up (`lookup_id_number`: an exact `P46` wins, else the one `P46-<tail>`), and
+    refused when it names none or several (the several listed); every other form reads as `resolve_id_arg`."""
+    number = re.fullmatch(rf"{prefix}?([0-9]+)", str(raw).strip(), re.I)
+    if number:
+        found, tailed = lookup_id_number(prefix, int(number.group(1)), stored)
+        if found is None:
+            raise SystemExit(id_number_refusal(prefix, raw, int(number.group(1)), tailed))
+        return found
+    return resolve_id_arg(prefix, raw)
+
+
+def _resolve_slice_arg(raw: str) -> str:
+    """A slice id typed as `<brief phase>.<suffix>` -> its stored phase part (`46.S1` -> `P46-k2.S1`, `p-7KQ2.S1`
+    -> `P-7kq2.S1`). A bare suffix (`S1`), a full id, a phase part that is no brief form, and a number that names
+    no phase pass untouched (the command reports it); a number several phases share is refused."""
+    head, dot, suffix = raw.partition(".")
+    if not dot or not head or PHASE_ID_RE.fullmatch(head) and not re.fullmatch(r"P[0-9]+", head):
+        return raw
+    number = re.fullmatch(r"[Pp]?([0-9]+)", head)
+    if number:
+        found, tailed = lookup_id_number("P", int(number.group(1)))
+        if found is None and len(tailed) > 1:
+            raise SystemExit(id_number_refusal("P", head, int(number.group(1)), tailed))
+        return f"{found}.{suffix}" if found else raw
+    stored = brief_id("P", head)
+    return f"{stored}.{suffix}" if stored else raw
+
+
 def normalize_id_args(args: argparse.Namespace) -> None:
     """The ONE choke point for an id typed on a command line, run once after argparse: every `phase` /
-    `--phase` argument is a phase id, every `deferred_id` and `defer-job --id` a deferred job's, and
-    `new-phase --consolidates` a comma list of phase ids (an item that names nothing is left for that flag's own
-    refusal). A command then only ever sees the stored shape. Slice ids are not touched (full-form only)."""
+    `--phase` argument is a phase id, every `deferred_id` and `defer-job --id` a deferred job's, `new-phase
+    --consolidates` a comma list of phase ids, and the `slice` attribute (positional `slice` and `--slice`) a
+    slice whose phase part may be brief (`46.S1`). CREATING an id (`new-phase --phase`, `defer-job --id`) reads
+    it statically; `promote-deferred --create-phase --phase` references an existing phase when the number names
+    one and otherwise creates statically; every other argument REFERENCES a stored id (`resolve_id_ref`). A
+    `--consolidates` item that names nothing is left for that flag's own refusal; `--depends-on` stays full-form.
+    A command then only ever sees the stored shape."""
+    cmd = getattr(args, "cmd", None)
     phase = getattr(args, "phase", None)
     if isinstance(phase, str):
-        args.phase = resolve_id_arg("P", phase)
+        if cmd == "new-phase":
+            args.phase = resolve_id_arg("P", phase)
+        elif cmd == "promote-deferred" and getattr(args, "create_phase", False):
+            number = re.fullmatch(r"[Pp]?([0-9]+)", phase.strip())
+            found, tailed = lookup_id_number("P", int(number.group(1))) if number else (None, [])
+            if len(tailed) > 1 and found is None:
+                raise SystemExit(id_number_refusal("P", phase, int(number.group(1)), tailed))
+            args.phase = found or resolve_id_arg("P", phase)
+        else:
+            args.phase = resolve_id_ref("P", phase)
     deferred = getattr(args, "deferred_id", None)
     if isinstance(deferred, str):
-        args.deferred_id = resolve_id_arg("D", deferred)
-    if getattr(args, "cmd", None) == "defer-job" and isinstance(getattr(args, "id", None), str) and args.id:
+        args.deferred_id = resolve_id_ref("D", deferred)
+    if cmd == "defer-job" and isinstance(getattr(args, "id", None), str) and args.id:
         args.id = resolve_id_arg("D", args.id)
     consolidates = getattr(args, "consolidates", None)
     if isinstance(consolidates, str):
-        args.consolidates = ",".join(brief_id("P", part) or part.strip() for part in consolidates.split(","))
+        parts = []
+        for part in consolidates.split(","):
+            number = re.fullmatch(r"[Pp]?([0-9]+)", part.strip())
+            found, tailed = lookup_id_number("P", int(number.group(1))) if number else (None, [])
+            if found is None and len(tailed) > 1:
+                raise SystemExit(f"--consolidates: {id_number_refusal('P', part, int(number.group(1)), tailed)}; nothing was written")
+            parts.append(found or brief_id("P", part) or part.strip())
+        args.consolidates = ",".join(parts)
+    slice_arg = getattr(args, "slice", None)
+    if isinstance(slice_arg, str):
+        args.slice = _resolve_slice_arg(slice_arg.strip())
 
 
 def stale_docs(phases=None) -> dict:
@@ -3049,19 +3224,34 @@ def phase_parked(phase: dict) -> bool:
                 and not any(s.get("status") in ("pending", "blocked") for s in phase.get("slices", [])))
 
 
-def run_phase_tokens(tokens) -> tuple:
-    """`(phase ids, refused tokens)`: any brief form of a phase id (`brief_id`: `7kq2`, `P-7kq2`, `P12`, `p12`,
-    `12`, any case), separated by commas and/or spaces, in the given order, duplicates dropped. Anything else
-    (a range, `worktree`, a mode word such as `gate`, `P7kq2` without its dash) is refused."""
-    ids, refused = [], []
+def run_phase_tokens(tokens, stored=None) -> tuple:
+    """`(phase ids, refused)`: any brief form of a phase id, separated by commas and/or spaces, in the given
+    order, duplicates dropped. A number (`46`, `p46`, `P46`) is looked up like any referencing argument
+    (`lookup_id_number`: an exact `P46` wins, else the one `P46-<tail>`; one that names none stays `P46` for the
+    caller's no-such-phase refusal); `46-k2`, `P46-k2`, `7kq2`, `P-7kq2` and `P12` read as `brief_id`, any case.
+    `refused` is `[(token, why)]`: `why` None for a token that is no phase id (a range, `worktree`, a mode word
+    such as `gate`, `P7kq2` without its dash), else the text naming the phases a shared number names."""
+    ids, refused, seen = [], [], set()
     for raw in tokens or []:
         for piece in re.split(r"[,\s]+", raw):
-            if not piece:
+            if not piece or piece in seen:
                 continue
-            pid = brief_id("P", piece)
-            if pid is None and piece not in refused:
-                refused.append(piece)
-            elif pid is not None and pid not in ids:
+            number = re.fullmatch(r"[Pp]?([0-9]+)", piece)
+            if number:
+                if stored is None:
+                    stored = visible_phase_ids()
+                found, tailed = lookup_id_number("P", int(number.group(1)), stored)
+                if found is None and len(tailed) > 1:
+                    seen.add(piece)
+                    refused.append((piece, f"names {', '.join(tailed)}: type the tail"))
+                    continue
+                pid = found or f"P{int(number.group(1))}"
+            else:
+                pid = brief_id("P", piece)
+            if pid is None:
+                seen.add(piece)
+                refused.append((piece, None))
+            elif pid not in ids:
                 ids.append(pid)
     return ids, refused
 
@@ -3115,8 +3305,11 @@ def cmd_run_phases(args: argparse.Namespace) -> None:
     archived = archived_phase_ids() if any(pid not in active for pid in ids) else set()
     unknown = [pid for pid in ids if pid not in active and pid not in archived]
     if refused or unknown:
-        for token in refused:
-            print(f"refused={token} -- not a phase id (7kq2, P-7kq2, P12 or 12, any case, separated by commas and/or spaces"
+        for token, why in refused:
+            if why:
+                print(f"refused={token} -- {why}; the run starts nothing")
+                continue
+            print(f"refused={token} -- not a phase id (46, P46 or 46-k2; P12; 7kq2 or P-7kq2; any case, separated by commas and/or spaces"
                   + (f"; a minted id keeps its dash: P-{token[1:].lower()}" if re.fullmatch(rf"[Pp]{ID_TOKEN_PATTERN}", token, re.I) else "")
                   + "); the run starts nothing")
         for pid in unknown:
@@ -3436,6 +3629,29 @@ def explain_phase(pdir: Path) -> bool:
     """True when the phase's intent.md carries the `## Explain` section (the explain route's only marker)."""
     intent = pdir / "intent.md"
     return intent.is_file() and any(line.strip() == "## Explain" for line in intent.read_text(encoding="utf-8").split("\n"))
+
+
+def explain_unit(pdir: Path):
+    """An explain phase's publishable unit: the `- unit:` value in intent.md's `## Explain` section
+    (`document` | `book` | `chapter`, lower-cased, as written: `validate` reports an unknown one), or
+    `book` when the field is absent -- every explain phase before v86 is a book. None for a phase that
+    is not an explain phase. `next` prints it so the orchestrator picks its reference branch."""
+    if not explain_phase(pdir):
+        return None
+    inside = False
+    for line in (pdir / "intent.md").read_text(encoding="utf-8").split("\n"):
+        text = line.strip()
+        if text.startswith("## "):
+            if inside:
+                break
+            inside = text == "## Explain"
+            continue
+        if inside:
+            m = re.match(r"[-*]\s+unit\s*:\s*(.*)$", text, re.IGNORECASE)
+            if m:
+                value = m.group(1).strip().strip("`").strip()
+                return value.split()[0].lower() if value else EXPLAIN_UNIT_DEFAULT
+    return EXPLAIN_UNIT_DEFAULT
 
 
 def undeclared_middle_slices(phase: dict) -> list:
@@ -4518,7 +4734,7 @@ def streams_section(phases: list, state: dict, live=None) -> list:
         cells = [f"`{clean_cell(stream_cell)}`", f"`{clean_cell(phase_id)}`" if phase_id else "-", clean_cell(status) or "-",
                  f"`{clean_cell(cur)}`" if cur else "-", done or "-"]
         if nested:
-            cells.append(f"`{clean_cell(host)}`" if host else "-")
+            cells.append("detached" if host is HOST_DETACHED else f"`{clean_cell(host)}`" if host else "-")
         cells += [f"`{clean_cell(worktree)}`" if worktree else "-", clean_cell(source)]
         rows.append("| " + " | ".join(cells) + " |")
 
@@ -4527,7 +4743,7 @@ def streams_section(phases: list, state: dict, live=None) -> list:
         cur, done = _phase_progress(own, own["slices"])
         short = _parallel_verdict_pair(own["id"], own.get("status"), (own.get("review") or {}).get("status"), own["slices"],
                                        phase_consolidation(own), None, False, True)[0]
-        add(stream, own["id"], short, cur, done, execution.get("host_branch"), execution.get("worktree"), "working tree")
+        add(stream, own["id"], short, cur, done, _host_branch_cell(execution), execution.get("worktree"), "working tree")
 
     # The default row.
     if own is None:
@@ -4582,10 +4798,19 @@ def streams_section(phases: list, state: dict, live=None) -> list:
         short = _parallel_verdict_pair(p["id"], data.get("status"), (data.get("review") or {}).get("status"), slices,
                                        phase_consolidation(p), merged, branch_gone, False)[0]
         cur, done = _phase_progress(data, slices)
-        add(branch or "-", p["id"], short, cur, done, execution.get("host_branch"), execution.get("worktree"), source)
+        add(branch or "-", p["id"], short, cur, done, _host_branch_cell(execution), execution.get("worktree"), source)
 
     head = ["Stream", "Phase", "Status", "Current slice", "Done"] + (["Host branch"] if nested else []) + ["Worktree", "Source"]
     return ["## Streams", "", "| " + " | ".join(head) + " |", "|" + "---|" * len(head)] + rows + [""]
+
+
+def installed_workspace_version():
+    """The installer's marker version (`works/.workspace-version.json`), or None when missing, unreadable or not an int."""
+    try:
+        version = read_json(WORKS / ".workspace-version.json").get("workspace_version")
+    except (OSError, ValueError, AttributeError):
+        return None
+    return version if isinstance(version, int) and not isinstance(version, bool) else None
 
 
 def rebuild_backlog(phases: list, state: dict, index: dict) -> None:
@@ -4601,8 +4826,10 @@ def rebuild_backlog(phases: list, state: dict, index: dict) -> None:
     if state.get("stream"):  # only in a parallel-phase checkout; absent on the default stream
         lines.append(f"- Stream: `{clean_cell(state['stream'])}` (parallel phase checkout; the pointer above is scoped to it)")
     live = {}  # phase id -> (phase data, slices, where) for every phase streams_section read from elsewhere
+    version = installed_workspace_version()
     lines += [
-        f"- Open deferred jobs: `{index.get('deferred_open_count', 0)}`", "",
+        f"- Open deferred jobs: `{index.get('deferred_open_count', 0)}`",
+        f"- Workspace version: `{'unknown' if version is None else f'v{version}'}`", "",
         *streams_section(phases, state, live),
         "## Active Phases", "", "| Phase | Status | Review | Name | Current Slice | Path |", "|---|---|---|---|---|---|",
     ]
@@ -4647,10 +4874,10 @@ def validate() -> int:
         if p["id"] in seen_phases:
             errors.append(f"duplicate phase id: {p['id']}")
         seen_phases.add(p["id"])
-        # v73 ids: both shapes are valid and nothing is renamed, so these two only WARN -- an adopter's
+        # Ids: all three shapes are valid and nothing is renamed, so these two only WARN -- an adopter's
         # history must keep validating. Creation is the hard gate (new-phase refuses either case).
         if not PHASE_ID_RE.fullmatch(str(p["id"])):
-            warnings.append(f"phase id {p['id']!r} has an unknown shape; expected P<n> (P12) or a minted P-<token> (P-7kq2) -- nothing renames it")
+            warnings.append(f"phase id {p['id']!r} has an unknown shape; expected P<n>-<tail> (P46-k2), P<n> (P12) or a minted P-<token> (P-7kq2) -- nothing renames it")
         if p["id"] in archived_ids:
             warnings.append(f"active phase {p['id']} has the same id as an archived phase; an archived id is spent, so lookups by id "
                             "(phase-scope, the meter, events.jsonl) mix the two -- new phases are minted (new-phase without --phase)")
@@ -4671,7 +4898,7 @@ def validate() -> int:
         if "consolidates" in p:
             paid = p.get("consolidates")
             if not (isinstance(paid, list) and paid and all(isinstance(v, str) and PHASE_ID_RE.fullmatch(v) for v in paid)):
-                errors.append(f"phase {p['id']} has invalid consolidates {paid!r}; expected a non-empty list of phase ids such as [\"P26\", \"P-7kq2\"] (written by new-phase --consolidates)")
+                errors.append(f"phase {p['id']} has invalid consolidates {paid!r}; expected a non-empty list of phase ids such as [\"P26\", \"P46-k2\", \"P-7kq2\"] (written by new-phase --consolidates)")
         # Optional parallel-execution block. Absent = default stream = nothing to check.
         # A phase that merged `done` while its doc consolidation is still pending
         # (`consolidation: "pending"`) is a legitimate state and passes cleanly here.
@@ -4737,6 +4964,10 @@ def validate() -> int:
             _repo_anchor_problems(p, errors, warnings)
         if not (ACTIVE / p["id"] / "intent.md").exists():
             warnings.append(f"phase {p['id']} has no intent.md (expected {p['id']}/intent.md); capture operator intent via the create-phase skill")
+        unit = explain_unit(ACTIVE / p["id"])
+        if unit is not None and unit not in EXPLAIN_UNITS:
+            errors.append(f"phase {p['id']} has an unknown explain unit {unit!r} in intent.md's ## Explain; expected one of "
+                          f"{', '.join(EXPLAIN_UNITS)} (an absent unit reads {EXPLAIN_UNIT_DEFAULT})")
         # Bounded notebook (v35). Warnings only: `validate` prints them and still exits 0.
         # A `done` phase is skipped for the budget: its notebook is closed history waiting
         # to be archived, so "rewrite it under budget" is advice nobody can act on -- the
@@ -4803,7 +5034,7 @@ def validate() -> int:
                 continue
             data = read_json(djson)
             if not DEFERRED_ID_RE.fullmatch(ddir.name):
-                warnings.append(f"deferred id {ddir.name!r} has an unknown shape; expected D<n> (D12) or a minted D-<token> (D-m3xa) -- nothing renames it")
+                warnings.append(f"deferred id {ddir.name!r} has an unknown shape; expected D<n>-<tail> (D92-x4), D<n> (D12) or a minted D-<token> (D-m3xa) -- nothing renames it")
             if data.get("status") not in DEFERRED_STATUSES:
                 errors.append(f"invalid deferred status {data.get('id')}: {data.get('status')}")
             if data.get("status") not in allowed:
@@ -5025,7 +5256,7 @@ def _with_repo_anchors(data: dict, entries: dict) -> dict:
 
 
 def _parse_consolidates(raw) -> list:
-    """`new-phase --consolidates P26,P-7kq2` -> `["P26", "P-7kq2"]`: comma-separated, spaces tolerated,
+    """`new-phase --consolidates P26,P46-k2` -> `["P26", "P46-k2"]`: comma-separated, spaces tolerated,
     duplicates dropped in order. Refuses (before `new-phase` writes anything) when the flag names
     nothing, or names an id that is not an ACTIVE phase still owing doc consolidation -- a docs phase
     can only pay debt that stands. `None` (flag absent) is `[]`."""
@@ -5037,7 +5268,7 @@ def _parse_consolidates(raw) -> list:
         if part and part not in ids:
             ids.append(part)
     if not ids:
-        raise SystemExit("--consolidates needs at least one phase id (e.g. --consolidates P26,P-7kq2)")
+        raise SystemExit("--consolidates needs at least one phase id (e.g. --consolidates P26,P46-k2)")
     active = {p["id"]: p for p in all_active_phases()}
     bad = []
     for pid in ids:
@@ -5051,11 +5282,13 @@ def _parse_consolidates(raw) -> list:
 
 
 def explicit_phase_id(phase_id: str) -> str:
-    """An explicit `new-phase --phase` id, checked before anything is written: either shape (`P12`, or a
-    `P-` token as minted), never one that exists active or archived (an archived id is spent), and a
-    token only as the mint would draw it (`id_token_refusal`). SystemExit otherwise."""
+    """An explicit `new-phase --phase` id, checked before anything is written: any of the three shapes
+    (`P46-k2` with a valid tail -- its number need not be the next one --, an old `P12`, or a v73 `P-` token),
+    never one that exists active or archived (an archived id is spent), and a v73 token only as v73's mint
+    would have drawn it (`id_token_refusal`). SystemExit otherwise."""
     if not PHASE_ID_RE.fullmatch(phase_id):
-        raise SystemExit(f"phase must look like P12 or P-7kq2 (got {phase_id!r}); omit --phase and the engine mints one")
+        raise SystemExit(f"phase must look like P46-k2 (a number and a two-symbol tail with a letter), P12 or P-7kq2"
+                         f" (got {phase_id!r}); omit --phase and the engine mints one")
     if (ACTIVE / phase_id).exists():
         raise SystemExit(f"phase already exists: {phase_id}")
     if phase_id in archived_phase_ids():
@@ -5399,6 +5632,17 @@ def review_phase(args: argparse.Namespace) -> None:
             print(f"docs: {len(notes)} '## Doc impact' note(s) recorded -- durable docs are NOT versioned here.")
             print("  consolidation is deferred: the operator creates a docs phase for it (doc-new-version per note, then rebuild-docs).")
             print(f"  when those versions land: {WORKFLOW_CMD} {done_cmd} {args.phase}   (until then {args.phase} is held out of archiving)")
+        else:
+            # v86 (§9.3): parallel-start stamps every worktree phase `pending` up front; a phase whose
+            # pass leaves no note changed no durable truth, so it owes nothing -- settle the debt here
+            # (both fields, through the setter) or it would sit unarchivable forever.
+            data = read_json(pdir / "phase.json")
+            if phase_execution(data) and phase_consolidation(data) == "pending":
+                set_phase_consolidation(data, "done")
+                write_json(pdir / "phase.json", data)
+                append_event("phase_consolidation_settled", phase=args.phase, notes=0)
+                rebuild_index_and_state()
+                print("docs: no '## Doc impact' note -- this worktree phase owes no doc consolidation (consolidation=done)")
         print(f"phase {args.phase} is done and stays in active/. Do NOT archive a single phase now.")
         print("Archive done phases later, whole phases only: `rotate-backlog` (it pays the doc debt first, then archives every done phase), or `archive-all` once every active phase is done.")
 
@@ -5697,18 +5941,23 @@ def parallel_start(args: argparse.Namespace) -> None:
     achieve that by construction; this can.
 
     In a nested personal install (P35) the phase gets a worktree PAIR instead -- see
-    `_parallel_start_nested`; `--host-branch` is required there and refused at root.
+    `_parallel_start_nested`; `--host-branch` is required there and refused at root. v86 (§9.4): an
+    explain phase (`## Explain` in intent.md) may omit it -- its host worktree is cut DETACHED at the
+    host base (`execution.host_branch` null), since an explain makes no host commit; `--host-branch`
+    is still honoured for it, a non-explain phase still needs it, and `--repo` never goes without it.
     """
     host_branch = getattr(args, "host_branch", None)
     host_base = getattr(args, "host_base", None)
+    repo_args = getattr(args, "repo", None) or []
+    repo_base_args = getattr(args, "repo_base", None) or []
     if NESTED is None:
         if host_branch is not None or host_base is not None:
             raise SystemExit("--host-branch and --host-base are for a nested personal install only (they name the host repo's branch and base); "
                              "at root the phase branch is the only branch -- nothing was written")
-    elif not (host_branch or "").strip():
-        raise SystemExit(NESTED_HOST_BRANCH_REQUIRED)
-    repo_args = getattr(args, "repo", None) or []
-    repo_base_args = getattr(args, "repo_base", None) or []
+    else:
+        host_branch = (host_branch or "").strip() or None
+        if host_branch is None and (repo_args or repo_base_args):
+            raise SystemExit(NESTED_SET_NEEDS_HOST_BRANCH)
     set_repos = []
     if repo_args or repo_base_args:  # P40.S6: a worktree set's repos, multi-repo hosts only
         if NESTED is None:
@@ -5720,6 +5969,8 @@ def parallel_start(args: argparse.Namespace) -> None:
                              f"and the pair is all there is; register repos with {WORKFLOW_CMD} nested-repos --add <path>) -- nothing was written")
         set_repos = _parse_set_repo_args(repo_args, repo_base_args, repos)
     pdir = require_phase(args.phase)
+    if NESTED is not None and host_branch is None and not explain_phase(pdir):
+        raise SystemExit(NESTED_HOST_BRANCH_REQUIRED)  # v86: below require_phase, so an explain phase may go detached
     data = read_json(pdir / "phase.json")
     if data.get("status") != "planned":
         raise SystemExit(f"phase {args.phase} is {data.get('status')!r}; a phase enters its worktree before it starts (parallel-start needs status 'planned') -- a phase already in flight finishes on this stream")
@@ -5743,7 +5994,7 @@ def parallel_start(args: argparse.Namespace) -> None:
         if execution and execution.get("branch") == branch:
             raise SystemExit(f"branch {branch} is already stamped on phase {p['id']}")
     if NESTED is not None:
-        _parallel_start_nested(args, pdir, data, branch, host_branch.strip(), host_base, set_repos)
+        _parallel_start_nested(args, pdir, data, branch, host_branch, host_base, set_repos)
         return
     if args.worktree:
         worktree = Path(os.path.abspath(str(Path(args.worktree).expanduser())))
@@ -6010,7 +6261,7 @@ def _set_repo_line(plan: dict, by: str = "parallel-start") -> str:
             f"repo_anchors.{plan['name']}.created={plan['anchor']} ({anchor})")
 
 
-def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, branch: str, host_branch: str, host_base_arg, set_repos=()) -> None:
+def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, branch: str, host_branch, host_base_arg, set_repos=()) -> None:
     """`parallel-start` in a nested personal install (P35): a host worktree with the nested worktree inside.
 
     The pair is `<host>/.claude/worktrees/P<N>-<slug>` on `host_branch` (the operator names it, by the
@@ -6026,21 +6277,27 @@ def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, bra
     `--repo-base`) makes the pair a SET: every repo's guards run after the host's, in one combined
     refusal; the stamp adds `execution.repos` and re-stamps each named repo's `repo_anchors` through
     `_stamp_set_repo`; each repo worktree is cut at `<host-wt>/<path>` after the nested worktree.
-    Without `set_repos` every step and line is exactly the pair's."""
+    Without `set_repos` every step and line is exactly the pair's.
+
+    v86 (§9.4): `host_branch` None (an explain phase, never a set: the caller refused both other
+    cases) cuts the host worktree DETACHED at the resolved host base (`git worktree add --detach`):
+    no branch to name, create, reuse or integrate. The stamp carries `host_branch: null` and
+    `host_branch_created: false`; `host_anchors.created` is the base; everything else is the pair's."""
     host = HOST_ROOT
+    detached = host_branch is None
     if host is None or not _git_available(cwd=host):
         raise SystemExit(f"the nested install's host {host} is not a git work tree; parallel-start cuts a host worktree, so it needs one -- nothing was written")
     busy = _git_operation_in_progress(cwd=host)
     if busy:
         raise SystemExit(f"a {busy} is in progress in the host checkout {host}; finish or abort it first -- nothing was written")
-    if host_branch.startswith("-") or _git(["check-ref-format", "--branch", host_branch], cwd=host, check=False).returncode != 0:
+    if not detached and (host_branch.startswith("-") or _git(["check-ref-format", "--branch", host_branch], cwd=host, check=False).returncode != 0):
         raise SystemExit(f"--host-branch {host_branch!r} is not a valid branch name in the host repo -- nothing was written")
     host_entries = _worktree_entries(cwd=host)
-    holder = next((path for path, ref in host_entries if ref == f"refs/heads/{host_branch}"), None)
+    holder = None if detached else next((path for path, ref in host_entries if ref == f"refs/heads/{host_branch}"), None)
     if holder:
         raise SystemExit(f"host branch {host_branch} is checked out in {holder}; a branch lives in one worktree at a time, so pick another --host-branch "
                          f"or switch that checkout off it -- nothing was written")
-    host_branch_created = _git(["rev-parse", "--verify", "--quiet", f"refs/heads/{host_branch}"], cwd=host, check=False).returncode != 0
+    host_branch_created = (not detached) and _git(["rev-parse", "--verify", "--quiet", f"refs/heads/{host_branch}"], cwd=host, check=False).returncode != 0
     rel = Path(os.path.relpath(ROOT, host))
     if args.worktree:
         host_wt = Path(os.path.abspath(str(Path(args.worktree).expanduser())))
@@ -6056,7 +6313,7 @@ def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, bra
         if os.path.realpath(str(path)) in registered:
             raise SystemExit(f"{path} is still registered as a git worktree (a stale entry); run `git worktree prune` in that repo first -- nothing was written")
     base_ref, base_sha = _resolve_host_base(host, host_base_arg)
-    if host_branch_created:
+    if detached or host_branch_created:
         anchor = base_sha
     else:
         proc = _git(["merge-base", base_sha, f"refs/heads/{host_branch}"], cwd=host, check=False)
@@ -6100,7 +6357,8 @@ def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, bra
     _git(["commit", "--only", "-m", f"chore(works): opt {args.phase} into parallel execution", "--", *stamp_paths])
 
     q = shlex.quote
-    host_add = (["worktree", "add", "-b", host_branch, str(host_wt), base_sha] if host_branch_created
+    host_add = (["worktree", "add", "--detach", str(host_wt), base_sha] if detached
+                else ["worktree", "add", "-b", host_branch, str(host_wt), base_sha] if host_branch_created
                 else ["worktree", "add", str(host_wt), host_branch])
     steps = [
         (["git", "-C", str(host), *host_add], host),
@@ -6137,9 +6395,12 @@ def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, bra
     print(f"branch={branch}")
     print(f"worktree={nested_wt}")
     print(f"host_worktree={host_wt}")
-    print(f"host_branch={host_branch} ({'created by parallel-start' if host_branch_created else 'reused: it existed and was not checked out'})")
+    if detached:
+        print(f"host_branch=- (detached host worktree at the base: an explain phase makes no host commit, so it has no host branch)")
+    else:
+        print(f"host_branch={host_branch} ({'created by parallel-start' if host_branch_created else 'reused: it existed and was not checked out'})")
     print(f"host_base={base_ref} ({base_sha})")
-    print(f"host_anchors.created={anchor} ({'the base' if host_branch_created else 'merge-base of the base and the reused branch'}) -- phase-scope's base")
+    print(f"host_anchors.created={anchor} ({'the base' if detached or host_branch_created else 'merge-base of the base and the reused branch'}) -- phase-scope's base")
     for plan in plans:
         print(_set_repo_line(plan))
     if nested_repos():  # P40.S6: multi-repo only
@@ -6152,6 +6413,11 @@ def _parallel_start_nested(args: argparse.Namespace, pdir: Path, data: dict, bra
     print("CLAUDE.local.md copied into the host worktree" if copied else f"note: no {local_md} to copy -- a session in the host worktree loads no workspace contract")
     print(f"next: enter the host worktree in this session (Claude Code: EnterWorktree with path={host_wt}) or open a session there, run "
           f"{WORKFLOW_CMD} next (it prints stream={branch}), and drive the phase from that checkout")
+    if detached:
+        print(f"there: no product commits -- the host worktree is detached and read-only by intent (an explain reads the host code at {base_sha[:12]}); "
+              f"workflow commits go to git -C {rel.as_posix()} (the nested worktree, on {branch})")
+        print(f"this stream's pointer now skips {args.phase}; the host side has no branch, so there is nothing to integrate there -- merge {branch} in the nested repo")
+        return
     if plans:
         print(f"there: product commits go to each repo's branch in its worktree (git -C <repo path>); workflow commits go to git -C {rel.as_posix()} "
               f"(the nested worktree, on {branch}); {host_branch} carries only the host's own files")
@@ -6293,7 +6559,7 @@ def parallel_skip(args: argparse.Namespace) -> None:
         print(f"phase {args.phase} carries v42's legacy pin (execution.mode=default) and runs on the default stream -- as it would with no block at all")
     else:
         print(f"phase {args.phase} already runs on the default stream")
-        print(f"to run it in its own worktree instead, ask for one: {WORKFLOW_CMD} parallel-start {args.phase}{NESTED_HOST_BRANCH_ARG}")
+        print(f"to run it in its own worktree instead, ask for one: {WORKFLOW_CMD} parallel-start {args.phase}{'' if explain_phase(pdir) else NESTED_HOST_BRANCH_ARG}")
 
 
 def parallel_teardown(args: argparse.Namespace) -> None:
@@ -6667,13 +6933,14 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
         ignored += [(host_wt, entry) for entry in _ignored_worktree_files(host_wt, skip)]
         dirty = _git(["status", "--porcelain", "--untracked-files=normal"], cwd=host_wt).stdout.splitlines()
         if dirty:
-            problems.append(f"the host worktree {host_wt} has uncommitted work (commit it on {host_branch}, or move or discard it):\n"
+            problems.append(f"the host worktree {host_wt} has uncommitted work "
+                            f"({f'commit it on {host_branch}' if host_branch else 'it is detached: put it on a branch'}, or move or discard it):\n"
                             + "\n".join(f"      {line}" for line in dirty))
         orphan = _detached_orphans(host_wt, base_sha)
         if orphan:
             problems.append(f"the host worktree {host_wt} is detached at {orphan[0]} with {orphan[1]} commit(s) beyond the base that no branch, tag or "
                             f"remote ref holds; removing it would orphan them -- put them on a branch first "
-                            f"(git -C {q(host_wt)} switch -c <name>, or switch {host_branch} to them)")
+                            f"(git -C {q(host_wt)} switch -c <name>" + (f", or switch {host_branch} to them)" if host_branch else ")"))
     if ignored and not discard_ignored:
         problems.append("ignored, worktree-only files would be deleted with the worktrees (git worktree remove does not ask):\n"
                         + "\n".join(f"      {os.path.join(where, entry)}" for where, entry in ignored)
@@ -6829,6 +7096,8 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
     if kept_repo_branch:
         print(f"each repo branch follows its repo's own custom (nested-convention --repo <name>): integrate it there; "
               f"the engine pushed, opened and merged nothing")
+    if not host_branch:
+        print("no host branch: the host worktree was detached (an explain phase), so there is no branch to keep or delete")
     if host_branch and not delete_host_branch:
         if host_branch_exists:
             print(f"kept host branch {host_branch}: {keep_reason}")
@@ -6837,13 +7106,41 @@ def _parallel_teardown_nested(args: argparse.Namespace, pdir: Path, data: dict, 
         else:
             print(f"host branch {host_branch} is already gone; nothing to keep")
     print(f"execution.worktree=null, execution.host_worktree=null; mode/branch/consolidation and host_branch/host_base/host_base_sha/"
-          f"host_branch_created/base_branch kept as history (branch={branch}, host_branch={host_branch}, consolidation={phase_consolidation(data)})")
+          f"host_branch_created/base_branch kept as history (branch={branch}, host_branch={host_branch or '- (detached)'}, consolidation={phase_consolidation(data)})")
     if set_repos:
         print(f"execution.repos.<name>.worktree=null for {', '.join(repo['name'] for repo in set_repos)}; branch/base/base_sha/branch_created "
               f"kept as history")
     if phase_consolidation(data) == "pending":
         print(f"warning: {args.phase} doc consolidation is still 'pending' -- run the post-merge consolidation on this stream (teardown does not gate on it)")
     print("phase.json changed -- commit it in the nested repo with the rest of the merge cleanup")
+
+
+def _gate_exemption(phase_id: str, main_side: str, branch_ref: str) -> tuple:
+    """(exempt, detail) for the quiet point's checked exemption (v86, §9.2).
+
+    Reads `git diff --name-status <merge-base> <branch_ref>` -- what merging the branch into the
+    default side would bring -- and is exempt only when every path is inside the phase's own folder,
+    one of the STAMP_WORKS_FILES (generated, regenerated by parallel-merge-finish; events.jsonl merges
+    as union), or ADDED under GATE_EXEMPT_ADDED_PREFIX. `detail` is the path count when exempt, else
+    the first offending path (or why git could not answer: then nothing is exempt)."""
+    base = _git(["merge-base", main_side, branch_ref], check=False)
+    if base.returncode != 0 or not base.stdout.strip():
+        return False, f"(no merge-base between {main_side} and {branch_ref})"
+    proc = _git(["diff", "--name-status", "--no-renames", "-z", base.stdout.strip(), branch_ref], check=False)
+    if proc.returncode != 0:
+        return False, f"(git diff {base.stdout.strip()[:12]}..{branch_ref} failed)"
+    prefix = _repo_prefix()
+    own = f"works/phases/active/{phase_id}/"
+    fields = [f for f in proc.stdout.split("\0") if f]
+    count = 0
+    for status, path in zip(fields[0::2], fields[1::2]):
+        count += 1
+        rel = path[len(prefix):] if prefix and path.startswith(prefix) else (path if not prefix else None)
+        if rel is not None and (rel.startswith(own) or rel in STAMP_WORKS_FILES
+                                or (status == "A" and rel.startswith(GATE_EXEMPT_ADDED_PREFIX))):
+            continue
+        return False, f"{path} ({status})"
+    return True, f"{count} path{'' if count == 1 else 's'}"
 
 
 def parallel_gate(args: argparse.Namespace) -> None:
@@ -6854,7 +7151,10 @@ def parallel_gate(args: argparse.Namespace) -> None:
     * **branch side** -- the phase is `done` with a `pass` review *on its own branch*. Main's copy
       is stale before the merge, so it is never trusted here.
     * **main side** -- the default stream is quiet: every non-parallel active phase is `planned` or
-      `done`. Merging into a live phase is what this gate exists to prevent.
+      `done`. Merging into a live phase is what this gate exists to prevent. v86: a busy default
+      stream is skipped when the branch's diff since its merge-base with the default side touches
+      only its own phase folder, the generated works/ files and added deferred jobs
+      (`_gate_exemption`, printed as `exemption=`): such a merge cannot collide with live work.
 
     Read-only and CI-shaped: `GATE OPEN` + exit 0, or `GATE CLOSED` + numbered reasons + exit 1.
     In a nested install (P35) both sides are read in the nested repo, which owns the state.
@@ -6893,7 +7193,7 @@ def parallel_gate(args: argparse.Namespace) -> None:
         if main_phases is None:
             reasons.append(f"cannot read the default stream's phase state at {args.main_ref} (unknown ref?)")
             main_phases = []
-        source = args.main_ref
+        source = main_side = args.main_ref
     else:
         # Without --main-ref the working tree stands in for main -- unless it IS the phase
         # branch: checked out by name (its worktree) or detached at its tip (how CI checks out a
@@ -6915,15 +7215,28 @@ def parallel_gate(args: argparse.Namespace) -> None:
                 reasons.append(f"cannot read the default stream's phase state at {default} (unknown ref?)")
                 main_phases = []
             source = f"{default} (local default branch; this checkout is the phase branch)"
+            main_side = default
         else:
             main_phases = all_active_phases()
             source = "working tree"
+            main_side = "HEAD"  # the working tree's own history: what a merge here would merge into
     print(f"main_state_source={source}")
+    busy = []
     for p in main_phases:
         if p.get("id") == args.phase or phase_execution(p):
             continue  # parallel phases run on their own stream; they do not make main busy
         if p.get("status") in BUSY_PHASE_STATUSES:
-            reasons.append(f"the default stream is not quiet: phase {p.get('id')} is {p.get('status')!r} (finish or park it, then re-run the gate)")
+            busy.append(f"the default stream is not quiet: phase {p.get('id')} is {p.get('status')!r} (finish or park it, then re-run the gate)")
+    # v86 (§9.2): the checked exemption. Only the busy-default-stream reasons can be dropped, and only
+    # when git shows the branch touches nothing the default stream could be holding; the branch-side
+    # reasons (done, pass) never are. Decided by the diff, never by what kind of phase it is.
+    exempt, detail = _gate_exemption(args.phase, main_side, branch_ref)
+    print(f"exemption=phase-folder-only ({detail})" if exempt else f"exemption=none: {detail}")
+    if busy and exempt:
+        notes.append(f"{len(busy)} busy default-stream phase(s) skipped: the branch touches only its own phase folder, the generated works/ files "
+                     f"and added {GATE_EXEMPT_ADDED_PREFIX} paths, so its merge cannot collide with them")
+    else:
+        reasons.extend(busy)
     for p in main_phases:
         other = phase_execution(p)
         if p.get("id") != args.phase and other and phase_consolidation(p) == "pending" and p.get("status") == "done":
@@ -7226,8 +7539,12 @@ def parallel_status(args: argparse.Namespace) -> None:
         print(f"  branch={branch or '- (stamped parallel with no branch; fix phase.json)'}")
         print(f"  worktree={worktree or '- (plain clone, or already torn down)'}")
         if NESTED is not None:  # P35: the host half of the pair, as stamped at parallel-start
-            if execution.get("host_branch"):
-                print(f"  host_branch={execution['host_branch']}" + (" (created by parallel-start)" if execution.get("host_branch_created") else " (reused)"))
+            detached = "host_branch" in execution and execution.get("host_branch") is None and "host_worktree" in execution
+            if execution.get("host_branch") or detached:
+                if detached:  # v86 (§9.4): an explain phase's pair
+                    print("  host_branch=- (detached host worktree)")
+                else:
+                    print(f"  host_branch={execution['host_branch']}" + (" (created by parallel-start)" if execution.get("host_branch_created") else " (reused)"))
                 print(f"  host_base={execution.get('host_base') or '-'} ({execution.get('host_base_sha') or '-'})")
                 print(f"  host_worktree={execution.get('host_worktree') or '- (already torn down)'}")
             else:
@@ -7258,6 +7575,36 @@ def parallel_status(args: argparse.Namespace) -> None:
         else:
             print("  slices: none readable at that source")
         print(f"  verdict: {_parallel_verdict(pid, status, review, slices, phase_consolidation(phase), merged, branch_gone, own_stream)}")
+
+
+def merge_ready_line(stream, phases: list):
+    """`merge_ready=<P>:<branch>, ...` on the default stream (v86, §9.5): every stamped phase whose
+    branch copy is `done` with a `pass` review while this stream's copy is not `done` yet -- an
+    integration nobody has run (an explain run that could not merge by itself leaves it so). Read at
+    the branch ref, never trusted from the stale local copy. None on a phase stream or without git."""
+    if stream or not _git_available():
+        return None
+    ready = []
+    for p in phases:
+        execution = phase_execution(p)
+        branch = (execution or {}).get("branch")
+        if not branch or p.get("status") == "done":
+            continue
+        branch_data = _phase_json_at_ref(branch, p["id"])
+        if isinstance(branch_data, dict) and branch_data.get("status") == "done" and (branch_data.get("review") or {}).get("status") == "pass":
+            ready.append(f"{p['id']}:{branch}")
+    if not ready:
+        return None
+    return (f"merge_ready={', '.join(ready)} (done with a passing review on its branch, not merged here: "
+            f"whoever drives this stream merges it at a slice boundary, past {WORKFLOW_CMD} parallel-gate <P>)")
+
+
+def explain_unit_lines(phase_id) -> list:
+    """`explain_unit=<unit>` for an explain phase (v86), so the orchestrator picks the document, book
+    or chapter branch of the explain references without re-reading intent.md; nothing otherwise."""
+    pdir = ACTIVE / phase_id if phase_id else None
+    unit = explain_unit(pdir) if pdir is not None and pdir.is_dir() else None
+    return [f"explain_unit={unit}"] if unit else []
 
 
 def parallel_start_hint(state: dict, index: dict) -> str:
@@ -8641,6 +8988,9 @@ def cmd_next(args: argparse.Namespace) -> None:
     ]
     if elsewhere:
         print(f"parallel_phases_elsewhere={', '.join(elsewhere)} (not in this stream; each runs from its own branch)")
+    ready = merge_ready_line(stream, index.get("active_phases", []))
+    if ready:
+        print(ready)
     # Deferred doc consolidation, printed before every return below so no path hides it. Purely
     # advisory: it names the debt and the command, selects nothing, and is silent when nothing owes.
     debt = consolidation_debt_line(index.get("active_phases", []))
@@ -8659,6 +9009,8 @@ def cmd_next(args: argparse.Namespace) -> None:
                 gate = phase_acceptance(pdata)
                 clear = f"accept-gate {waiting} --clear"
         print(f"current_phase={state.get('current_phase')}")
+        for line in explain_unit_lines(state.get("current_phase")):
+            print(line)
         print(f"waiting_on_operator={waiting}")
         print(f"WAITING ON OPERATOR: {kind} {waiting} is pending [~] -- operator co-work needed (validation or an operator-run action).")
         if kind == "slice":
@@ -8688,12 +9040,16 @@ def cmd_next(args: argparse.Namespace) -> None:
     if not current_slice:
         if state.get("current_phase"):
             print(f"current_phase={state['current_phase']}")
+            for line in explain_unit_lines(state["current_phase"]):
+                print(line)
             print("no open slice in the current phase; review/archive it or create a new phase")
         else:
             print("no active slice; create a phase or promote deferred work")
         return
     sdir = require_slice(current_slice)
     print(f"current_phase={current_slice.split('.', 1)[0]}")
+    for line in explain_unit_lines(current_slice.split(".", 1)[0]):
+        print(line)
     print(f"current_slice={current_slice}")
     print(f"slice_path={shown(sdir)}")
     print(f"next_slice={state.get('next_slice') or 'none'}")
@@ -8960,16 +9316,17 @@ def cmd_deferred(args: argparse.Namespace) -> None:
 
 
 def mint_deferred_id() -> str:
-    """`D-<token>`: `defer-job` without `--id`. It supersedes v72's `max + 1` (`D<n>`), which two branches drew alike."""
+    """`D<n>-<tail>`: `defer-job` without `--id`. It supersedes v73's `D-<token>`, which no one could say."""
     return mint_id("D")
 
 
 def explicit_deferred_id(did: str) -> str:
-    """An explicit `defer-job --id`, checked before anything is written: either shape (`D12`, or a `D-`
-    token as minted), never an id with a folder in open/, promoted/ or dropped/, and a token only as
-    the mint would draw it (`id_token_refusal`). SystemExit otherwise."""
+    """An explicit `defer-job --id`, checked before anything is written: any of the three shapes (`D92-x4`
+    with a valid tail, an old `D12`, or a v73 `D-` token), never an id with a folder in open/, promoted/ or
+    dropped/, and a v73 token only as v73's mint would have drawn it (`id_token_refusal`). SystemExit otherwise."""
     if not DEFERRED_ID_RE.fullmatch(did):
-        raise SystemExit(f"deferred id must look like D12 or D-m3xa (got {did!r}); omit --id and the engine mints one")
+        raise SystemExit(f"deferred id must look like D92-x4 (a number and a two-symbol tail with a letter), D12 or D-m3xa"
+                         f" (got {did!r}); omit --id and the engine mints one")
     if did in deferred_folder_ids():
         raise SystemExit(f"deferred job already exists: {did}")
     token = _id_token(did)
@@ -8995,7 +9352,7 @@ def defer_job(args: argparse.Namespace) -> None:
 
 
 def full_slice_id(phase_id: str, raw: str) -> str:
-    """`--slice` as stored: a bare suffix (`S1`, `F2`) is prefixed with its phase id (`P-7kq2.S1`), so a
+    """`--slice` as stored: a bare suffix (`S1`, `F2`) is prefixed with its phase id (`P46-k2.S1`), so a
     slice of a phase the same command mints can be named before its id is known; a full id stays as is."""
     return f"{phase_id}.{raw}" if re.fullmatch(SLICE_SUFFIX_PATTERN, raw) else raw
 
@@ -9187,13 +9544,14 @@ def archive_all(args: argparse.Namespace) -> None:
 
 
 def _phase_range_label(ids: list) -> str:
-    """`P26`, the en-dash range `P26–P29` when EVERY id is numeric and the numbers run consecutively,
-    else `P26, P28, P29` (a minted token never joins a range: `P26, P27, P-7kq2`). For an all-numeric
-    list the label is byte-identical to v72's."""
+    """`P26`, the en-dash range `P26–P29` when EVERY id is numbered (tailed or not) and the numbers run
+    consecutively with none repeated, the ends written in full (`P45–P47-m9`), else `P26, P28, P29` (a v73
+    token never joins a range: `P26, P27, P-7kq2`; nor does a repeated number: `P46-k2, P46-x4`). For an
+    all-numeric list the label is byte-identical to v72's."""
     if len(ids) == 1:
         return ids[0]
-    matches = [re.fullmatch(r"P([0-9]+)", str(i)) for i in ids]
-    numbers = [int(m.group(1)) for m in matches if m]
+    parsed = [id_number(i) if str(i).startswith("P") else None for i in ids]
+    numbers = [n[0] for n in parsed if n]
     if len(numbers) == len(ids) and all(b - a == 1 for a, b in zip(numbers, numbers[1:])):
         return f"{ids[0]}\u2013{ids[-1]}"
     return ", ".join(ids)
@@ -9337,9 +9695,9 @@ def _docs_debt_split(phases: list) -> tuple:
 
 def _debt_sort_key(phase_id: str, phases: list):
     """The order a docs phase's ids are listed in (`_docs_debt_split`'s uncovered list, a proposal's
-    `consolidates`): `id_sort_key`, a token's `created_at` read from `phases` -- numeric ids by number,
-    exactly v72's order, then minted tokens by creation. The one place `rotate-backlog` turns an id
-    into a sort key."""
+    `consolidates`): `id_sort_key`, a token's `created_at` read from `phases` -- numbered ids by number
+    and tail (an all-numeric list in exactly v72's order), then v73 tokens by creation. The one place
+    `rotate-backlog` turns an id into a sort key."""
     return id_sort_key(phase_id, next((p.get("created_at") for p in phases if p.get("id") == phase_id), None))
 
 
@@ -9392,7 +9750,7 @@ def _print_docs_phase_proposal(uncovered: list, order) -> None:
     ids = [p["id"] for p in uncovered]
     listing = ", ".join(ids)
     name, objective = _docs_phase_draft(ids, uncovered)
-    phase_id = mint_phase_id()  # v73: a minted token, passed to new-phase as --phase (the create: line runs as is)
+    phase_id = mint_phase_id()  # a minted P<n>-<tail>, passed to new-phase as --phase (the create: line runs as is)
     order_arg = f" --order {order}" if order is not None else ""
     print(f"docs_phase_proposal={listing}")
     print(f"phase={phase_id}")
@@ -13138,19 +13496,19 @@ def main(argv=None) -> int:
     p.set_defaults(func=cmd_record_dispatch)
 
     p = sub.add_parser("dispatch-summary", help="Read-only: what a phase really cost -- the main thread beside its subagent spans per slice and per phase (requests, context, output, list-price $, minutes, limit hits, verdicts) metered from Claude Code's transcripts, the means a DECOMP estimates time from, then the recorded verdicts; no transcripts found prints one line and the recorded tables")
-    p.add_argument("--phase", help="one phase (a brief id: 7kq2, P-7kq2, 12 or P12): its slices, read from the sessions overlapping its slice windows")
+    p.add_argument("--phase", help="one phase (a brief id: 46, P46 or 46-k2; P12; 7kq2 or P-7kq2): its slices, read from the sessions overlapping its slice windows")
     p.add_argument("--slice", help="one slice: its metered rows and its recorded attempts, one per line")
     p.add_argument("--json", action="store_true", help="print everything as one JSON object")
     p.add_argument("--transcripts", action="append", metavar="DIR", help="read this projects/<slug> directory instead of discovering the session root's (repeatable)")
     p.set_defaults(func=cmd_dispatch_summary)
 
-    p = sub.add_parser("next", help="Print the current phase/slice selection; when the phase's notebook is over 40,960 B, also notebook_over_budget= with up to 3 notebook_move= commands to run before the next dispatch (required form), or none when nothing can move (advisory form)")
+    p = sub.add_parser("next", help="Print the current phase/slice selection (plus explain_unit=<document|book|chapter> on an explain phase, and on the default stream merge_ready=<P>:<branch> for a parallel phase done with a passing review on its branch but not merged yet); when the phase's notebook is over 40,960 B, also notebook_over_budget= with up to 3 notebook_move= commands to run before the next dispatch (required form), or none when nothing can move (advisory form)")
     p.add_argument("--card", action="store_true", help="print the resume card instead: the pointer, the next action or the typed stop, the open gates, the running spans (from the newest session's subagents/*.meta.json) and the slice's file paths, computed from state, at most 2,048 bytes -- what compact-resume prints after a compaction")
     p.set_defaults(func=cmd_next)
 
-    run_help = "Read-only, writes nothing: the phase list and the next target of a /do-whole-phases run, recomputed from disk on every call (re-run it at each phase boundary and after a compaction). Prints run=, stream=, queue= (this stream's non-done phases of the run, in order), skipped=<P> reason=done | done (archived) | other-stream stream=<branch or default>, parked=<P> (pending, its acceptance gate open, no slice pending or blocked: the run passes it), then target_phase= / target_slice= / slice_path= / next_slice= (plus notebook_over_budget= / notebook_move= when the target phase's notebook is over 40,960 B: run the moves before the dispatch; plus gate_cleared= when a cleared gate's review awaits its recorded pass), or halt=<item> status= with stop_kind= / on_words= for a pending slice and halt_reason= (any other pending or blocked phase, or a pending or blocked current slice: the whole run stops), or run_done=yes. Phase tokens are brief ids: 7kq2 / P-7kq2 (minted) or 12 / P12 (numbered), any case. Exits 2 with refused= lines and nothing else for a token that is not a phase id or names no phase. The plain pointer (next, works/state.json, the resume card's stop) is unchanged and still halts at a parked phase"
+    run_help = "Read-only, writes nothing: the phase list and the next target of a /do-whole-phases run, recomputed from disk on every call (re-run it at each phase boundary and after a compaction). Prints run=, stream=, queue= (this stream's non-done phases of the run, in order), skipped=<P> reason=done | done (archived) | other-stream stream=<branch or default>, parked=<P> (pending, its acceptance gate open, no slice pending or blocked: the run passes it), then target_phase= / target_slice= / slice_path= / next_slice= (plus notebook_over_budget= / notebook_move= when the target phase's notebook is over 40,960 B: run the moves before the dispatch; plus gate_cleared= when a cleared gate's review awaits its recorded pass), or halt=<item> status= with stop_kind= / on_words= for a pending slice and halt_reason= (any other pending or blocked phase, or a pending or blocked current slice: the whole run stops), or run_done=yes. Phase tokens are brief ids: 46 / P46 (numbered: the one P46, else the one P46-<tail>; 46-k2 names the tail), P12, or 7kq2 / P-7kq2 (a v73 id), any case. Exits 2 with refused= lines and nothing else for a token that is not a phase id, names no phase, or is a number two tailed phases share (refused=46 -- names P46-k2, P46-x4: type the tail). The plain pointer (next, works/state.json, the resume card's stop) is unchanged and still halts at a parked phase"
     p = sub.add_parser("run-phases", help=run_help, description=run_help)
-    p.add_argument("tokens", nargs="*", metavar="PHASE", help="a phase id in any brief form: 7kq2 or P-7kq2 (a minted id), 12 or P12 (a numbered one), any case, separated by commas and/or spaces; the given order is kept and duplicates are dropped; none = every non-done phase on this stream, by order. Ranges, mode words, `worktree` and a minted id without its dash (P7kq2) are refused")
+    p.add_argument("tokens", nargs="*", metavar="PHASE", help="a phase id in any brief form: 46 or P46 (numbered; 46-k2 when two phases share the number), P12, or 7kq2 or P-7kq2 (a v73 id), any case, separated by commas and/or spaces; the given order is kept and duplicates are dropped; none = every non-done phase on this stream, by order. Ranges, mode words, `worktree` and a minted id without its dash (P7kq2) are refused")
     p.set_defaults(func=cmd_run_phases)
 
     p = sub.add_parser("compact-resume", help="The SessionStart hook (matcher compact): after a compaction, print compaction=done source=compact and the resume card (next --card; the running spans from the hook's transcript_path session), falling back to the plain pointer on any error; never fails, always exits 0")
@@ -13160,20 +13518,20 @@ def main(argv=None) -> int:
     p.set_defaults(func=cmd_deferred)
 
     p = sub.add_parser("new-phase", help="Create a new phase with DECOMP and REVIEW slices")
-    p.add_argument("--phase", help="the phase id; omit it and the engine mints one (P-7kq2), printed on the created line. "
-                   "Given, either shape (P12 or P-7kq2; 12 and 7kq2 are read as those); refused when it exists active or archived")
+    p.add_argument("--phase", help="the phase id; omit it and the engine mints one (P46-k2: the next number and a random tail), printed on the created line. "
+                   "Given, any shape (P46-k2, P12 or P-7kq2; 46-k2, 12 and 7kq2 are read as those); refused when it exists active or archived")
     p.add_argument("--name", required=True)
     p.add_argument("--objective", required=True)
     p.add_argument("--order", type=float, help="sort position among phases; a fractional value (e.g. 4.5) inserts between two neighbors without renumbering")
     p.add_argument("--on-main", action="store_true", dest="on_main",
                    help="no-op since v43 (the default stream is the default); accepted so v42 habits and scripts keep working")
     p.add_argument("--consolidates", metavar="P26,P27",
-                   help="docs phase: the comma-separated ids (any brief form: P26, 26, P-7kq2, 7kq2) of active phases whose doc consolidation debt this phase pays; refused (nothing written) for an id that is not an active phase owing consolidation. Stored as `consolidates` in phase.json -- the only docs-phase marker; `docs-debt` shows it as 'paid by' and `rotate-backlog` proposes no second docs phase for what it covers")
+                   help="docs phase: the comma-separated ids (any brief form: P26, 26, 46-k2, P-7kq2, 7kq2) of active phases whose doc consolidation debt this phase pays; refused (nothing written) for an id that is not an active phase owing consolidation. Stored as `consolidates` in phase.json -- the only docs-phase marker; `docs-debt` shows it as 'paid by' and `rotate-backlog` proposes no second docs phase for what it covers")
     p.set_defaults(func=new_phase)
 
     p = sub.add_parser("new-slice", help="Create a new slice folder with slice.json + markdown files")
-    p.add_argument("--phase", required=True, help="the phase, in any brief form (7kq2, P-7kq2, 12 or P12)")
-    p.add_argument("--slice", required=True, help="the slice id (P-7kq2.S1), or its bare suffix (S1)")
+    p.add_argument("--phase", required=True, help=PHASE_ARG_HELP)
+    p.add_argument("--slice", required=True, help="the slice id (P46-k2.S1, or 46.S1 while one phase is numbered 46), or its bare suffix (S1)")
     p.add_argument("--name", required=True)
     p.add_argument("--kind", default="implementation", help="one of implementation, review, decomposition, research, fix, docs, qa, co-work (closed set; unknown kinds are rejected). research is findings-only: no product code, findings land in phase.md, and it always routes to the research row")
     p.add_argument("--risk", default="high", help="low (the mid row for implementation, fix, docs and qa -- the default since v46, real code included) or high (the high row: only for a named trigger -- open design, a core invariant, an unlocated root cause, a wide blast radius -- or a fix to mid-row work); unset or unrecognized values route to high; kind decomposition, review, co-work and research route by kind whatever this says; `executor-route <slice>` prints the decision")
@@ -13212,7 +13570,7 @@ def main(argv=None) -> int:
     p.add_argument("status")
     p.set_defaults(func=set_phase_status)
 
-    p = sub.add_parser("review-phase", help="Record a phase review verdict (pass/changes_requested/blocked)")
+    p = sub.add_parser("review-phase", help="Record a phase review verdict (pass/changes_requested/blocked); a pass stamps doc consolidation pending when '## Doc impact' has notes, and settles a worktree phase's to done when it has none")
     p.add_argument("phase", help=PHASE_ARG_HELP)
     p.add_argument("--verdict", required=True, choices=sorted(REVIEW_VERDICTS))
     p.add_argument("--reviewer", default=None)
@@ -13241,7 +13599,7 @@ def main(argv=None) -> int:
     p.add_argument("phase", help=PHASE_ARG_HELP)
     p.add_argument("--worktree", default=None, help="worktree path (default: <repo>/.claude/worktrees/P<N>-<slug>, which EnterWorktree can enter in the same session; elsewhere means opening a second session there)")
     p.add_argument("--slug", default=None, help="branch slug override (default: slugified phase name); branch is phase/<phase>-<slug>")
-    p.add_argument("--host-branch", default=None, help="nested install only, and required there: the host repo's branch for this phase's product commits, named by the host's convention (no workspace IDs); reused when it exists and no host worktree has it checked out. In nested the pair is <host>/.claude/worktrees/P<N>-<slug> on this branch, with the nested worktree inside it (--worktree overrides the host worktree's path)")
+    p.add_argument("--host-branch", default=None, help="nested install only, and required there except for an explain phase (## Explain in intent.md), whose host worktree is then cut detached at the host base with no host branch (v86: an explain makes no host commit; --repo still needs it): the host repo's branch for this phase's product commits, named by the host's convention (no workspace IDs); reused when it exists and no host worktree has it checked out. In nested the pair is <host>/.claude/worktrees/P<N>-<slug> on this branch, with the nested worktree inside it (--worktree overrides the host worktree's path)")
     p.add_argument("--host-base", default=None, help="nested install only: the host ref the host branch starts from (default: origin/HEAD, else init.defaultBranch if it exists locally, else main, then master; never fetched)")
     p.add_argument("--repo", action="append", default=None, metavar="NAME=BRANCH", help="multi-repo host only, repeatable: also cut a worktree for registered repo NAME at <host worktree>/<its path> on BRANCH (required, named by that repo's convention: nested-convention --repo NAME); reused when it exists and is checked out nowhere. A registered repo not named here is not in this set: inside it, phase-scope skips it")
     p.add_argument("--repo-base", action="append", default=None, dest="repo_base", metavar="NAME=REF", help="multi-repo host only, repeatable: the ref repo NAME's branch starts from (default: its registry default_branch as a local branch; never fetched); NAME must also be given with --repo")
@@ -13261,7 +13619,7 @@ def main(argv=None) -> int:
     p = sub.add_parser("parallel-status", help="Read-only cross-stream view: this checkout's pointer plus every parallel phase's branch-side slice state (never writes anything)")
     p.set_defaults(func=parallel_status)
 
-    p = sub.add_parser("parallel-gate", help="Quiet-point gate: is this parallel phase's branch mergeable now (branch done+pass, default stream quiet)? Exit 0 = open")
+    p = sub.add_parser("parallel-gate", help="Quiet-point gate: is this parallel phase's branch mergeable now (branch done+pass, default stream quiet -- or, v86, exemption=phase-folder-only: its diff since the merge-base touches only its phase folder, the generated works/ files and added works/deferred/open/ paths)? Exit 0 = open")
     p.add_argument("phase", help=PHASE_ARG_HELP)
     p.add_argument("--branch-ref", default=None, help="git ref holding the phase branch's state (default: the phase's stamped execution.branch; e.g. HEAD or origin/phase/P2-x in CI)")
     p.add_argument("--main-ref", default=None, help="git ref holding the default stream's state (default: this working tree; e.g. origin/main when running from a PR checkout)")
@@ -13349,7 +13707,7 @@ def main(argv=None) -> int:
     p = sub.add_parser("design-open", help=f"Open the next design round of a job in a co-work slice: {DESIGN_ROOT_REL}/jobs/NN-<slug>/ (job.json, created on the slice's first round, or by --new-job for another job of the slice) and jobs/<job>/rounds/NN-<slug>/round.json, status open, with its critique level; refuses only while the target job has an open round",
                        description=f"A co-work slice holds one job or several (a wave, about 3-4, drafted in parallel), each with at most one open round; rounds of different jobs may be open at once. The target: with neither flag, the slice's only job (its first round creates it; two or more jobs refuse and ask for --job); --new-job creates another job for the slice (re-running it with the same --slug resumes that job); --job <job> opens the next round of that job, which must belong to --slice. A later round supersedes the job's previous one (a signed job is reopened; an implemented one refuses). Rounds number inside the job. Re-running an open with the open round's slug writes nothing. --critique records the round's critique level in round.json (absent in an older round reads as off). More than {DESIGN_WAVE_OPEN_MAX} open rounds in one slice prints a warning, never a refusal. The orchestrator writes the round's handoff.md next (with a critique: line); the drafter writes the canvas tree in jobs/<job>/canvas/project/.")
     p.add_argument("--slug", required=True, help="the round's slug (and the job's, when the round creates its job): lowercase words joined by hyphens")
-    p.add_argument("--slice", required=True, help="the co-work slice that owns the job (e.g. P48.S1)")
+    p.add_argument("--slice", required=True, help="the co-work slice that owns the job (e.g. P48-k2.S1)")
     p.add_argument("--title", default=None, help="display title (default: the slug)")
     g = p.add_mutually_exclusive_group()
     g.add_argument("--new-job", action="store_true", help="create another job for a slice that already has one (a wave's next surface)")
@@ -13418,7 +13776,7 @@ def main(argv=None) -> int:
 
     p = sub.add_parser("design-sign", help="Sign every job presented at a stop on the operator's literal words: each open round of the slice that recorded a publish (design-canvas --version) is signed as design-close --words would; all or nothing -- one presented round without a settled read-back, without its build contract or failing design-check signs none; one line per job",
                        description="Rounds of the slice that published nothing yet are held, not signed. Each signed round gets a generated SIGNOFF.md (the words verbatim, the canvas version, the read-back, the open-item ids), its snapshot, and its job marked signed. With a mockup requested, the words at PENDING #1 are its go-ahead, not a signoff: sign at PENDING #2.")
-    p.add_argument("--slice", required=True, help="the co-work slice whose presented jobs are signed (e.g. P48.S1)")
+    p.add_argument("--slice", required=True, help="the co-work slice whose presented jobs are signed (e.g. P48-k2.S1)")
     p.add_argument("--words", required=True, help="the operator's literal signoff words, recorded verbatim")
     p.set_defaults(func=design_sign)
 
@@ -13438,7 +13796,7 @@ def main(argv=None) -> int:
     p.set_defaults(func=design_migrate)
 
     p = sub.add_parser("defer-job", help="Create a deferred job folder")
-    p.add_argument("--id", help="the deferred id; omit it and the engine mints one (D-m3xa). Given, either shape (D12 or D-m3xa; 12 and m3xa are read as those); "
+    p.add_argument("--id", help="the deferred id; omit it and the engine mints one (D92-x4: the next number and a random tail). Given, any shape (D92-x4, D12 or D-m3xa; 92-x4, 12 and m3xa are read as those); "
                    "refused when any deferred folder holds it")
     p.add_argument("--title", required=True)
     p.add_argument("--reason", required=True)
@@ -13447,9 +13805,9 @@ def main(argv=None) -> int:
     p.set_defaults(func=defer_job)
 
     p = sub.add_parser("promote-deferred", help="Promote an open deferred job into an active slice")
-    p.add_argument("deferred_id", help="the deferred job, in any brief form (m3xa, D-m3xa, 12 or D12)")
-    p.add_argument("--phase", help="the target phase, in any brief form (7kq2, P-7kq2, 12 or P12); omit it with --create-phase and the engine mints the new phase's id")
-    p.add_argument("--slice", required=True, help="the new slice's id (P-7kq2.S1), or its bare suffix (S1) -- the only way to name it in a phase being minted")
+    p.add_argument("deferred_id", help="the deferred job, in any brief form (92, D92 or 92-x4; D12; m3xa or D-m3xa)")
+    p.add_argument("--phase", help="the target phase, in any brief form (46, P46 or 46-k2; P12; 7kq2 or P-7kq2); omit it with --create-phase and the engine mints the new phase's id")
+    p.add_argument("--slice", required=True, help="the new slice's id (P46-k2.S1), or its bare suffix (S1) -- the only way to name it in a phase being minted")
     p.add_argument("--name")
     p.add_argument("--kind", default="implementation", help="one of implementation, review, decomposition, research, fix, docs, qa, co-work (closed set; unknown kinds are rejected). research is findings-only: no product code, findings land in phase.md, and it always routes to the research row")
     p.add_argument("--risk", default="high", help="low (the mid row for implementation, fix, docs and qa -- the default since v46, real code included) or high (the high row: only for a named trigger -- open design, a core invariant, an unlocated root cause, a wide blast radius -- or a fix to mid-row work); unset or unrecognized values route to high; kind decomposition, review, co-work and research route by kind whatever this says; `executor-route <slice>` prints the decision")
@@ -13461,7 +13819,7 @@ def main(argv=None) -> int:
     p.set_defaults(func=promote_deferred)
 
     p = sub.add_parser("drop-deferred", help="Drop an open deferred job")
-    p.add_argument("deferred_id", help="the deferred job, in any brief form (m3xa, D-m3xa, 12 or D12)")
+    p.add_argument("deferred_id", help="the deferred job, in any brief form (92, D92 or 92-x4; D12; m3xa or D-m3xa)")
     p.add_argument("--reason", required=True)
     p.set_defaults(func=drop_deferred)
 
@@ -13484,7 +13842,7 @@ def main(argv=None) -> int:
         # Never fall back to at-root mode on a broken marker: refuse, and let validate list it all.
         raise SystemExit(f"{shown(ROOT / NESTED_MARKER)} is malformed, so this nested install cannot run {args.cmd}: "
                          f"{'; '.join(NESTED_PROBLEMS)} -- fix the file (run: {WORKFLOW_CMD} validate)")
-    normalize_id_args(args)  # v73: every typed phase / deferred-id argument becomes its stored id here, once
+    normalize_id_args(args)  # every typed phase / deferred-id / slice argument becomes its stored id here, once
     result = args.func(args)
     if isinstance(result, tuple):
         return 0

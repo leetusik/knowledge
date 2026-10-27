@@ -53,58 +53,71 @@ rendering a different product). Verify at **every viewport the manifest names**.
 **absent, or still carries its `UNFILLED` marker**, the slice returns `needs_operator` (the
 orchestrator sets it `pending`). Never assume localhost, the production build or headless.
 
-**With what — the instrument.** Drive that browser with **Aside** (aside.com), the workspace's
+**With what — the instrument.** Drive that browser with **Claude in Chrome**, the workspace's
 default instrument for every check in this section, **in place of a pre-written assertion suite**.
-Aside has **two surfaces, not three**:
+Its tools are `mcp__claude-in-chrome__*` (navigate, read the page, find, click and type through
+`computer` and `form_input`, run page JS, read the console and network, resize, screenshot), and the
+executor **picks each next action itself**. `slice-executor` lists the wildcard last in its `tools:`,
+so whoever runs a check (that executor, or the main thread, which inherits every tool the session
+has) can drive it; `design-drafter`, `design-critic` and `Explore` carry none (`design-preview` is a
+headless render self-check, not verification). **Nothing ships, nothing registers in settings:** a
+project cannot enable Chrome, and the extension owns site permissions.
 
-- the **`repl` surface**: one tool, *identical* over `aside mcp` and the `aside repl` CLI, the same
-  Playwright-like environment (`page`, `snapshot()`, locators, page JS, screenshots), **different
-  transport only**. The executor holds the surface and **picks each next action itself**.
-- **`aside exec`**: Aside's own model drives the browser from a natural-language instruction
-  (`aside exec -m <model> "Open <the manifest origin> and …"`). Useful for a broad look; not what a
-  check you must be able to describe runs on.
+**Setup (the operator, once).**
 
-**The default is `aside repl` over Bash**, executor-driven, and explicitly **not** the MCP transport.
-`aside mcp` exposes that one `repl` tool, and its definition measures 4,974 JSON chars (**~1,344
-tokens**) paid in **every** session, browser-related or not. Bash is already in the executor's
-allowlist, so **nothing ships, nothing registers, nothing is configured**. The CLI loses JS scope
-between invocations; a two-line preamble re-attaches to the tab you already opened:
+- **Chrome on in the session:** start with `claude --chrome`, or run `/chrome` and pick "Enabled by
+  default". It needs a direct Anthropic plan signed in with `/login` (no API key, `setup-token`,
+  Bedrock, Vertex or Foundry), a visible Chrome window (no headless), and not WSL.
+- **A separate Chrome profile for the agent**, signed into **none** of the operator's accounts
+  (mail, banking, Google), with the Claude in Chrome extension installed and signed in to the
+  **same claude.ai account and organization** as Claude Code (the connection requires it), its site
+  permissions allowing the manifest's origin(s).
+- **Record its `deviceId`** in `## Operator Runtime` as `Agent's Chrome deviceId:`. Never a name:
+  `list_connected_browsers` hides the names you give and labels browsers by position ("Browser 1",
+  "Browser 2"), a label can move to another browser between connections, and the `deviceId` stays.
+  To read it, connect **only** the agent profile (close the other profiles' Chrome windows for the
+  moment), ask Claude in a Chrome-on Claude Code session to call `list_connected_browsers`, and copy
+  the one entry's `deviceId`. Reinstalling the extension or signing it out gives the profile a new
+  id: the run then halts (below) until you record the new one.
 
-```js
-const tabs = await listBrowserTabs();
-const page = await attachBrowserTab(tabs[0].targetId);
-```
+**Whose browser — the agent's profile, selected first, on every run.** With one browser connected
+the tools act on it unasked, and that one may be the operator's, where an agent could read their
+mail, spend from saved cards and authenticate as them. So **before any other browser tool**:
 
-Two sharp edges. Over MCP the `repl` tool **requires both `title` and `code`** (over the CLI the code
-is positional: `aside repl --account <id> "await openTab('<url>')"`). And **snapshot refs go stale on
-navigation** (`RefStaleError`), while `getByRole` survives it: after navigating, re-snapshot or locate
-by role. An operator who wants Aside's tools natively in their **own** session may run
-`claude mcp add -s local aside -- aside mcp`; that is a per-operator **escape hatch** the workspace
-neither ships nor prescribes, and no slice may assume it.
+1. `list_connected_browsers` (it returns `deviceId`, `name`, `osPlatform`, `connectedAt`, `isLocal`,
+   `inUse` for every browser on this claude.ai account);
+2. find the entry whose `deviceId` equals the recorded `Agent's Chrome deviceId:`. Never match on
+   `name`: it is a position label that another browser, the operator's included, can hold next time;
+3. `select_browser` with that `deviceId`. The choice holds for the session even when another browser
+   connects. Never pick a browser by guess, never act before selecting. The tool's own description
+   says to ask the user when several browsers are connected: the recorded `deviceId` **is** the
+   operator's answer, given ahead of time in the manifest, so selecting it is not a pick.
 
-**Whose browser — a dedicated profile, never the operator's.** `--account <id>` picks a real
-signed-in profile, and an agent driving the operator's could read their mail, spend from saved cards
-and authenticate as them. So agent runs use a **dedicated Aside profile**, named on every call:
-`aside repl --account <id> "<js>"`. Pass it per invocation, and **do not rely on `aside account use
-<id>`**: that only moves the *default*, which is the operator's profile. `## Operator Runtime` records
-the agent's id; `aside account list` enumerates accounts without driving anything. **The halt:** a
-manifest that names Aside but records no agent account id, or a machine holding only the operator's
-profile, returns **`needs_operator`**: never a fallback to the personal profile, and never an account
-created on the operator's behalf. That is a **third** halt condition and it is not the runtime one:
-the runtime halt fires on an absent or `UNFILLED` manifest, while a manifest naming no instrument
-still stops nothing.
+**The halt.** No Chrome tools in the session, no recorded `deviceId`, or no connected browser with
+that `deviceId` returns **`needs_operator`** (the orchestrator sets the slice `pending`), naming the
+fix: Chrome enabled in the session (`/chrome` → "Enabled by default", or `claude --chrome`), the
+agent's profile connected, or its `deviceId` re-recorded after an extension reinstall or sign-out.
+Never fall back to a label, never borrow another connected browser, and never create a profile on
+the operator's behalf. That is a **third** halt condition and it is not the runtime one: the
+runtime halt fires on an absent or `UNFILLED` manifest. A manifest that still names an older
+instrument counts as unfilled here, so the first real-browser slice stops once to ask for the
+`deviceId`.
 
-**Why the executor drives, and not a pre-written suite.** The surface *is* Playwright; what the
-doctrine rejects is **deciding every check in advance**. "Type into it and wait", "watch a timer
-tick",
-"the browser defaults the record never drew" pass only when something looks at the page and chooses
-the next action (the qa doc's *Verification doctrine* has the story).
+**Why the executor drives, and not a pre-written suite.** What the doctrine rejects is **deciding
+every check in advance**. "Type into it and wait", "watch a timer tick", "the browser defaults the
+record never drew" pass only when something looks at the page and chooses the next action (the qa
+doc's *Verification doctrine* has the story).
 
-**The fallback — the doctrine's demands bind, the instrument does not.** Where Aside cannot be
-installed (Linux, CI, an operator who declines), run the same sweep, at the same viewports, in the
-same manifest runtime, through whatever real browser there is, on a profile of its own: an agent
-never drives a browser profile signed into the operator's accounts, whichever browser it is. Name the
-instrument you used in `result.md`, and never report a browser run you did not make.
+**The fallback — chosen by the manifest, never by the agent mid-run; the doctrine's demands bind,
+the instrument does not.** `## Operator Runtime`'s `Browser instrument for the agent:` names Claude
+in Chrome (a blank field means it) or, where the platform rules Chrome out (WSL, CI, a
+Bedrock/Vertex/Foundry or API-key session), another real browser: the agent drives it step by step
+from Bash on a throwaway profile (e.g. the project's own Playwright), picking each next action, never
+a pre-written suite. Same sweep, same viewports, same manifest runtime, and never a profile signed
+into the operator's accounts, whichever browser it is. **Chrome missing from a session whose manifest
+names it is the halt above, never a silent fallback**: a fallback picked mid-run would hide a
+misconfigured session. Name the instrument you used in `result.md`, and never report a browser run
+you did not make.
 
 **Re-run the lines inside the boundary.** A fidelity slice re-runs the `## Regression Checklist`
 lines inside its phase's boundary: this phase's surfaces plus every earlier line whose surface a file
@@ -142,6 +155,6 @@ slice, never something to argue away with the record.
 
 - Verify only against the record, or only in whichever runtime is convenient. The manifest's runtime
   is mandatory **everywhere, a requested mockup included**; the functional sweep is mandatory on
-  every slice that ships real wiring; **Aside** is the instrument, and a workspace that cannot run it
-  owes the same checks through another real browser.
+  every slice that ships real wiring; **Claude in Chrome** is the instrument, on the agent's own
+  profile selected first, and a manifest that names another real browser owes the same checks there.
 - Fix a design gap silently, or "improve" it: catalogue it on `## Operator Questions`.

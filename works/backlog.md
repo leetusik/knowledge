@@ -10,6 +10,7 @@
 - Next slice: `none`
 - Waiting on operator: `P-8jbf`
 - Open deferred jobs: `62`
+- Workspace version: `v86`
 
 ## Streams
 

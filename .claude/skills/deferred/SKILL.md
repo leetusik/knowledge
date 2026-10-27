@@ -7,4 +7,4 @@ disable-model-invocation: true
 
 # deferred
 
-Run `python3 scripts/workflow.py deferred`. Then read `works/deferred.md` if you need the human-readable dashboard. It lists jobs in id order: numbered ids (`D2` before `D10`) first, then minted ones (`D-m3xa`) by creation time.
+Run `python3 scripts/workflow.py deferred`. Then read `works/deferred.md` if you need the human-readable dashboard. It lists jobs in id order: numbered ids by number (`D2` before `D10`, `D92` before `D92-x4`) first, then v73 ids (`D-m3xa`) by creation time.
