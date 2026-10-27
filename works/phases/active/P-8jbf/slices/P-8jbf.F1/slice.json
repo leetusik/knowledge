@@ -3,12 +3,12 @@
   "phase_id": "P-8jbf",
   "name": "Wide table fits the wide column without a scroller",
   "kind": "fix",
-  "status": "todo",
+  "status": "done",
   "order": 20,
   "depends_on": [],
   "created_at": "2026-10-27T17:41:32+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-27T17:41:38+09:00",
+  "completed_at": "2026-10-27T19:02:03+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "From 1600px a wide table's minimum is its box, so an 8+ column table that fits the 44rem column shows whole and wider content still scrolls; TableBox's region follows the measure for a wide, not long, table",
   "validation": {
     "required": [],
     "last_run": null,

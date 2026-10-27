@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `61`
+- Open: `62`
 - Promoted: `5`
 - Dropped: `14`
 
@@ -73,6 +73,7 @@
 | `D-32rc` | `deferred` | Rewrite the knowledge plugin's explain skill as the explain-phase front door (P-9sz6 handoff §7) | P-9sz6.REVIEW | the new workflow version ships and /update-workspace brings it here | `works/deferred/open/D-32rc` |
 | `D-pzs7` | `deferred` | Retire or redirect the orphaned document archive page | P-8jbf.DECOMP | the next reader or documents phase | `works/deferred/open/D-pzs7` |
 | `D-19n8` | `deferred` | Quiz Show answer button overflows a 390 phone at 200% root text | P-8jbf.REVIEW | the next reader or quiz phase, or a QA sweep | `works/deferred/open/D-19n8` |
+| `D-6pf9` | `deferred` | A long table's box state depends on resize history | P-8jbf.F1 | the next reader-tables phase or a QA sweep | `works/deferred/open/D-6pf9` |
 
 ## Promoted
 

@@ -1448,3 +1448,7 @@
 {"ts": "2026-10-27T17:41:32+09:00", "type": "phase_reviewed", "phase": "P-8jbf", "verdict": "changes_requested", "reviewer": "slice-executor"}
 {"ts": "2026-10-27T17:41:32+09:00", "type": "slice_created", "phase": "P-8jbf", "slice": "P-8jbf.F1"}
 {"ts": "2026-10-27T17:41:32+09:00", "type": "deferred_created", "deferred": "D-19n8", "source": "P-8jbf.REVIEW"}
+{"ts": "2026-10-27T17:41:38+09:00", "type": "slice_status_changed", "slice": "P-8jbf.F1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-27T19:02:03+09:00", "type": "executor_dispatched", "slice": "P-8jbf.F1", "phase": "P-8jbf", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-27T19:02:03+09:00", "type": "slice_status_changed", "slice": "P-8jbf.F1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-27T19:02:13+09:00", "type": "deferred_created", "deferred": "D-6pf9", "source": "P-8jbf.F1"}

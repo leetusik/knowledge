@@ -22,17 +22,19 @@ import {
  * `scrollLeft < max - 1`; left while `max > 1` and `scrollLeft > 1`. The fades are
  * overlays (`opacity` only), so nothing moves when one appears.
  *
- * Server render and first client render agree (not over, no fades); the measure runs
- * in an effect. The content arrives as `children`, rendered on the server.
+ * Server render and first client render agree (not over, no fades, not `measured`); the
+ * measure runs in an effect. The content arrives as `children`, rendered on the server.
  */
 
 interface Measure {
   over: boolean;
   l: boolean;
   r: boolean;
+  /** False until the first measure: what the server rendered still stands. */
+  measured: boolean;
 }
 
-const NONE: Measure = { over: false, l: false, r: false };
+const NONE: Measure = { over: false, l: false, r: false, measured: false };
 
 /**
  * `watchLoad` (P30.S16, a wide figure): an image inside the box that finishes loading can change
@@ -56,9 +58,9 @@ export function useBox(content: "self" | "table", watchLoad = false) {
     const l = max > 1 && el.scrollLeft > 1;
     const r = max > 1 && el.scrollLeft < max - 1;
     setM((prev) =>
-      prev.over === over && prev.l === l && prev.r === r
+      prev.measured && prev.over === over && prev.l === l && prev.r === r
         ? prev
-        : { over, l, r },
+        : { over, l, r, measured: true },
     );
   }, [content]);
 
@@ -114,6 +116,10 @@ export function TableBox({
   const { m, ref } = useBox("table");
   // A wide or long table is always a box; any other becomes one when measured wider.
   const box = wide || long || m.over;
+  // The box is a scrolling region (a tab stop, named as one) while it can scroll. A long table
+  // always is; a wide one is until the first measure (what the server renders), then only while
+  // measured wider: in the wide screen's 44rem column (P-8jbf) an 8-column table can fit.
+  const region = long || m.over || (wide && !m.measured);
   const cls = [
     "kb-ch-table",
     wide ? "kb-ch-table--wide" : "",
@@ -132,9 +138,9 @@ export function TableBox({
           ref={(el) => {
             ref.current = el;
           }}
-          tabIndex={box ? 0 : undefined}
-          role={box ? "region" : undefined}
-          aria-label={box ? ariaLabel : undefined}
+          tabIndex={region ? 0 : undefined}
+          role={region ? "region" : undefined}
+          aria-label={region ? ariaLabel : undefined}
         >
           {children}
         </div>

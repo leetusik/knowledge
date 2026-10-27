@@ -382,6 +382,9 @@ html:has(.rd-root) { scroll-behavior: auto; }
   .rd-size-3 .rd-article { --rd-fs: 1.25rem; --rd-k: 1.25; }
   .rd-size-4 .rd-article { --rd-fs: 1.3888889rem; --rd-k: 1.3888889; }
   .rd-size-5 .rd-article { --rd-fs: 1.5277778rem; --rd-k: 1.5277778; }
+  /* The column is now as wide as a wide table's 44rem minimum, which its box's two borders would leave 2px short of: a
+     wide table only has to fill its box here, so one that fits shows whole and wider content still scrolls. */
+  .rd-article .kb-ch-table--wide table { min-width: 100%; }
 }
 
 /* Headings carry the offset that clears the bars when a link or the contents jumps to them; so does any other id'd block
