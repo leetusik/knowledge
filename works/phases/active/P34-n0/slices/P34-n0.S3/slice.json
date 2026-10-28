@@ -3,14 +3,14 @@
   "phase_id": "P34-n0",
   "name": "Deploy the gate and verify a private write live",
   "kind": "qa",
-  "status": "todo",
+  "status": "pending",
   "order": 3,
   "depends_on": [
     "P34-n0.S2"
   ],
   "depends_declared": true,
   "created_at": "2026-10-28T12:39:35+09:00",
-  "started_at": null,
+  "started_at": "2026-10-28T13:28:59+09:00",
   "completed_at": null,
   "risk": "low",
   "source": {
@@ -31,5 +31,10 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "pending": {
+    "kind": "operator-action",
+    "on_words": "OQ3 answer (reword or 'no change'), then the pasted outputs of runbook B4/C/E/F/G (or 'push and deploy' for the main thread to run D): resumes S3's verification pass",
+    "since": "2026-10-28T13:32:12+09:00"
   }
 }

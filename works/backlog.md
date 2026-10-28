@@ -8,7 +8,7 @@
 - Current phase: `P34-n0`
 - Current slice: `P34-n0.S3`
 - Next slice: `P34-n0.S4`
-- Waiting on operator: `none`
+- Waiting on operator: `P34-n0.S3`
 - Open deferred jobs: `64`
 - Workspace version: `v86`
 
@@ -265,7 +265,7 @@
 | [x] `P34-n0.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P34-n0/slices/P34-n0.DECOMP` |
 | [x] `P34-n0.S1` | `done` | Gate publishing on project visibility | `implementation` | `works/phases/active/P34-n0/slices/P34-n0.S1` |
 | [x] `P34-n0.S2` | `done` | Make the published tree mirror project visibility | `implementation` | `works/phases/active/P34-n0/slices/P34-n0.S2` |
-| [ ] `P34-n0.S3` | `todo` | Deploy the gate and verify a private write live | `qa` | `works/phases/active/P34-n0/slices/P34-n0.S3` |
+| [~] `P34-n0.S3` | `pending` | Deploy the gate and verify a private write live | `qa` | `works/phases/active/P34-n0/slices/P34-n0.S3` |
 | [ ] `P34-n0.S4` | `todo` | Unpublish private projects from the tree on the server | `qa` | `works/phases/active/P34-n0/slices/P34-n0.S4` |
 | [ ] `P34-n0.S5` | `todo` | Purge private projects from the public history | `implementation` | `works/phases/active/P34-n0/slices/P34-n0.S5` |
 | [ ] `P34-n0.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P34-n0/slices/P34-n0.REVIEW` |
