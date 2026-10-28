@@ -65,3 +65,14 @@ pass_effort=yes
 attribution=Claude Opus 5.5
 explore_model=haiku
 explore_effort=xhigh
+
+## Operator report
+
+The operator said "you do the runbook" (2026-10-28); the main thread runs it on the knowledge box (`ssh oracle-cloud`, `/opt/knowledge`). Names are withheld here.
+
+- **A (OQ3):** the label named a private project. It is reworded in `intent.md` and scrubbed from the unpushed commits before the push.
+- **B1:** `docs/` backed up to `/home/opc/kb-docs-backup-20261028-044403.tgz` (7,793,074 bytes, opc-owned, mode 600).
+- **B2:** `git checkout -- docs/index.md` ran; the index diff is 0 lines.
+- **B3:** the exclude file had no managed block. Wrote one, markers verbatim, with the stray project's three footprint lines. Also added `/.env.bak*` outside the block, so two untracked env backups stop appearing in the deploy's `git status` artifact.
+- **B4:** `git status --short --branch` → `## main...origin/main` (clean, at `90671db`).
+- **Registry, read-only:** tenant #1 has 12 projects, 10 `private` and 2 `public`. The list stays in the session scratchpad, never in the repo.

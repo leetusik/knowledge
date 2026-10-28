@@ -1509,3 +1509,4 @@
 {"ts": "2026-10-28T13:28:59+09:00", "type": "slice_status_changed", "slice": "P34-n0.S3", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-28T13:32:12+09:00", "type": "executor_dispatched", "slice": "P34-n0.S3", "phase": "P34-n0", "kind": "qa", "risk": "low", "attempt": 1, "verdict": "needs_operator", "note": null}
 {"ts": "2026-10-28T13:32:12+09:00", "type": "slice_status_changed", "slice": "P34-n0.S3", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}
+{"ts": "2026-10-28T13:42:59+09:00", "type": "slice_status_changed", "slice": "P34-n0.S3", "old_status": "pending", "new_status": "in_progress"}
