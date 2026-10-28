@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P34-n0`
-- Current slice: `P34-n0.S5`
-- Next slice: `P34-n0.REVIEW`
+- Current slice: `P34-n0.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `64`
 - Workspace version: `v86`
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P34-n0` | planned | `P34-n0.S5` | 5/7 | - | working tree |
+| `default` | `P34-n0` | planned | `P34-n0.REVIEW` | 6/7 | - | working tree |
 
 ## Active Phases
 
@@ -37,7 +37,7 @@
 | [x] `P-9sz6` | `done` | `pass` | Explain as a phase: workflow handoff | `none` | `works/phases/active/P-9sz6` |
 | [x] `P-8jbf` | `done` | `pass` | Wide reader on big screens | `none` | `works/phases/active/P-8jbf` |
 | [x] `P33-n3` | `done` | `pass` | Explain front door | `none` | `works/phases/active/P33-n3` |
-| [ ] `P34-n0` | `planned` | `pending` | Keep private documents off the public repo | `P34-n0.S5` | `works/phases/active/P34-n0` |
+| [ ] `P34-n0` | `planned` | `pending` | Keep private documents off the public repo | `P34-n0.REVIEW` | `works/phases/active/P34-n0` |
 
 ## Phase P21: Web document deletion
 
@@ -267,5 +267,5 @@
 | [x] `P34-n0.S2` | `done` | Make the published tree mirror project visibility | `implementation` | `works/phases/active/P34-n0/slices/P34-n0.S2` |
 | [x] `P34-n0.S3` | `done` | Deploy the gate and verify a private write live | `qa` | `works/phases/active/P34-n0/slices/P34-n0.S3` |
 | [x] `P34-n0.S4` | `done` | Unpublish private projects from the tree on the server | `qa` | `works/phases/active/P34-n0/slices/P34-n0.S4` |
-| [ ] `P34-n0.S5` | `in_progress` | Purge private projects from the public history | `implementation` | `works/phases/active/P34-n0/slices/P34-n0.S5` |
+| [x] `P34-n0.S5` | `done` | Purge private projects from the public history | `implementation` | `works/phases/active/P34-n0/slices/P34-n0.S5` |
 | [ ] `P34-n0.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P34-n0/slices/P34-n0.REVIEW` |

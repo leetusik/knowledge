@@ -80,3 +80,9 @@ explore_effort=xhigh
   - `sudo git fetch origin` failed, because the host's root has no deploy key; the first `reset --hard origin/main` was a no-op at `ba2e878`. So it fetched over HTTPS from the public URL into `refs/remotes/origin/main` (forced update to `a852b40`), then ran `reset --hard origin/main`.
   - After: head `a852b40` (427 commits), `## main...origin/main`, 0 status lines, 67 private files on disk (unchanged).
   - The box's origin URL stays SSH, so the API's `gitops.push` keeps using the deploy key.
+- **(c) This clone (main thread):**
+  - Ran `git fetch origin` (forced update `25fe9f9...a852b40`), then `git rebase --onto origin/main 25fe9f9 main`; all 7 local `works/` commits replayed cleanly, and the clone is 7 ahead of `a852b40`.
+  - The clone tracks 0 private footprint files and has none on disk; the 65 are in the backup outside the repo.
+  - `workflow.py validate` passes.
+- **(d) Marketplace clone:** `fetch --depth 1` + `reset --hard origin/main` took it from `90671db` to `a852b40`.
+- **(e) Actions deletes and (f) the Support request:** not run yet; they are the operator's, and still open.

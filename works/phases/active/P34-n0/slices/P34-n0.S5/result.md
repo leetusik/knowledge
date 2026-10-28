@@ -1,39 +1,140 @@
-# P34-n0.S5 result: first pass. The rewrite is built and verified locally; nothing is pushed
+# P34-n0.S5 result: GitHub now carries only the rewritten history (resumed pass, done)
 
-- **status:** needs_operator
+- **status:** done
 - **route:** high
 - **model:** opus
 - **effort:** xhigh
-- **summary:** I rewrote a fresh mirror of `leetusik/knowledge` in the scratchpad with `git filter-repo`. The rewrite removes the private footprints by exact prefix, drops the private bullets and Browse cards from every `docs/index.md` version, and rewords the 19 surviving messages that named a project or cited a removed commit. It goes from 534 commits to 427, with 0 footprint paths, 0 private links or cards, and 0 messages naming a project or a title. One plan check conflicts with another. All 51 private titles still found outside the footprints sit in 17 files at the tip, so redacting them changes the tip. I built both versions: `purge/after` (recommended: titles redacted at the tip too) and `purge/after-tipkeep` (tip identical apart from the 3 cards; the titles stay). I also enumerated Actions read-only: 280 runs show a private name or title in their run title or log, and 0 artifacts do. The operator runbook and a drafted Support request are below.
-- **files_changed:** `works/phases/active/P34-n0/slices/P34-n0.S5/result.md`; `works/phases/active/P34-n0/phase.md`, through `phase-section` only (Now replaced; 2 S5 notes removed; 1 REVIEW note added; Decisions +1; Operator Questions +1 (OQ5)). Nothing in this checkout's `.git` or product tree was touched.
-- **validation** (all read-only against the scratchpad clones, counts only):
-  - Commits: 534 before, 427 after (107 left empty and pruned). One ref, `refs/heads/main`. PASS
-  - Footprint paths (`docs/<p>/`, `docs/.versions/<p>/`, `docs/.books/<p>/` for the 12 names plus the S3 probe, case-insensitive) in any of the 427 commits: 0. PASS
-  - `docs/index.md`: 0 lines linking into a listed project and 0 listed Browse cards, across all 427 commits. Each of the 427 old→new pairs is a pure line removal; every other line is byte-identical. PASS
-  - Blobs (`rev-list --all --objects` into `cat-file --batch`, 7,015 blobs), distinctive titles: `after` 0. PASS. `after-tipkeep` still has 51 strings in 46 blobs, 17 of them at the tip. FAIL by design: that is the tip-keeping variant.
-  - Messages (`git log --all --format=%B`): 0 with a distinctive name, 0 with a title, 0 with a project-named commit scope, and 0 old-history SHAs still cited. Both variants. PASS. The allowed contexts are reported below.
-  - Tip against `ba2e878`: `after-tipkeep` differs only in `docs/index.md` (51 to 39 lines, 5 to 2 cards). PASS. `after` differs there and in 17 files with 296 `[private]` substitutions. Each of those 17 is reproduced exactly by applying the replace list to the old blob. DEVIATION (see below)
-  - `python3 scripts/workflow.py validate`, run in both rewritten trees: passed, warnings only (the same consolidation and oversized-section warnings as today). It wrote nothing.
-  - `python3 scripts/workflow.py validate`, run in this checkout after the notebook edits: passed.
+- **summary:** A fresh mirror clone of `leetusik/knowledge` is the pushed build, byte for byte: one ref, `main` at `a852b40`, 427 commits, the same 13,032 objects as `purge/after`. Every step-4 check passes on it again: 0 footprint paths, 0 private links or cards in `docs/index.md`, 0 distinctive titles in 7,015 blobs, and 0 messages naming a project or a title. This checkout's `main` sits on `a852b40`, 7 commits ahead. It tracks no private footprint, and its 7 commits add no private name or title. Still open, both the operator's: the Actions deletes (all 280 required runs are still present) and the Support request.
+- **files_changed:** `works/phases/active/P34-n0/slices/P34-n0.S5/result.md` (rewritten; the first pass's log is kept below); `works/phases/active/P34-n0/phase.md`, through `phase-section` only (Doc impact +1, OQ5 resolved, Decisions entry "History rewrite (S5)" replaced in place, Notes +1 for the REVIEW, Now replaced). No product file. Nothing in this checkout's `.git` was written. Nothing on GitHub or the box was written.
+- **validation** (read-only, counts only):
+  - `git ls-remote https://github.com/leetusik/knowledge.git`: 2 lines, `HEAD` and `refs/heads/main`, both at `a852b40d3b6f863a14aee4ce9196c67361cb015a`. No tags, no `refs/pull/*`. PASS
+  - Fresh `git clone --mirror` into `purge/verify-clone`: 1 ref, 427 commits, 13,032 objects. Its `rev-list --all --objects` set is identical to `purge/after`'s. PASS
+  - Commits: 534 before (`before.git`), 427 after. PASS
+  - Footprint paths (the three prefixes for the 12 names and the probe, case-insensitive) in any of the 427 commits: 0. PASS
+  - `docs/index.md`: 4 distinct versions, 0 with a listed link or card. All 427 old→new pairs are a pure line removal. PASS
+  - Blobs (`rev-list --all --objects` into `cat-file --batch`): 7,015. 0 hold a distinctive title, 0 of them at the tip. PASS. Kept classes, unchanged from the first pass: own explainers 11 strings in 111 blobs, the product-example slug in 293, the generic strings 7 in 2,316.
+  - Tip against `ba2e878`: 18 paths differ. One is `docs/index.md` (51→39 lines, 5→2 cards). The other 17 are each exactly the old blob with the replace list applied, which is the OQ5 `after` variant. 0 paths were added or removed. PASS (as chosen)
+  - Messages (`git log --all --format=%B`, 427): 0 with a distinctive name, 0 with a title, 0 with a project-named scope, 0 citing a removed old SHA. PASS. The allowed contexts appear in 101 message/name pairs, the same as the first pass.
+  - Names report on the clone: identical to the first pass's (N1 to N9, every count). PASS
+  - This checkout: `git merge-base --is-ancestor a852b40 main` is true. `origin/main` is `a852b40`, and `main` (`37b6759`) is 7 ahead, 0 behind. Tracked footprint files: 0 of 3,658. On disk: 0 footprint dirs and 0 files. PASS
+  - The 7 unpushed commits touch 14 paths, all under `works/`, none in a footprint, and none of the paths names a project. Their messages hold 0 private names, 0 titles and 0 project scopes. Their added lines hold 0 of the 12 names outside the allowed contexts. Their 45 new blobs hold 0 distinctive titles and 0 removed SHAs. PASS (detail below)
+  - The marketplace clone (`git rev-parse HEAD`, read-only): `a852b40`. PASS
+  - New Actions runs since the push: 3, at `a852b40`. Their titles and logs hold 0 names, 0 titles and 0 document paths. PASS
+  - `python3 scripts/workflow.py validate`, after the notebook edits: passed.
 - **deviations:**
-  1. **The tip changes in `after`.** The plan asks both that "every blob holds no title" and that "the tip keeps its tree minus the 3 cards". Every one of the 51 residual titles sits in a tip file, so both cannot hold at once. I built both variants and recommend `after`. Its 17 extra tip changes are title→`[private]` substitutions only: 1 finished one-off migration map (`scripts/migrations/p30_books.json`, 64 substitutions, not read by any test or runtime path) and 16 workspace records (P29 2 files, P30 4, archived P2 2, P3 1, P4 2, P6 1, P8 3, P9 1; 232 substitutions). No code, test, skill or doc file changes. This is OQ5.
-  2. **Title classes.** Of the 159 collected strings, I redact the 140 distinctive ones. I keep three classes, and none of them identifies a private document's content:
-     - 11 strings from the product's own explainer project: its 5 titles, 5 slugs and book title. They describe this public repo, and they are sample data in the design references.
-     - 1 slug that the shipped explain skill, 2 test files, the plugin template tests, `deploy/README.md` and the operations doc use as their canonical example.
-     - 7 generic strings: book slugs and short two- or three-character phase ids.
-  3. **Sources for HTML titles.** For HTML documents I also took `<title>` and `<h1>` (the plan named front matter and `# `). Matching and redaction cover the HTML-escaped and JSON-escaped forms of each title.
-  4. **Removed-commit citations.** The message callback also replaces 2 abbreviated old SHAs, cited 3 times, that pointed at pruned private-document commits. They become `[removed]`, since filter-repo cannot map a pruned commit.
-  5. **Actions scope.** Beyond logs and artifacts, I counted run titles (the head commit message shown in the Actions list), where most matches are. I also counted the runs whose head commit's tree held the private files, as an optional wider delete.
-  6. **The force-push command.** Runbook (a) uses `--force-with-lease` pinned to the current remote tip instead of bare `--force`. The effect is the same, but it refuses if anything reached GitHub since `ba2e878`.
-- **doc_impact:** none in this pass. The resumed pass records the history-rewrite note (stale pre-rewrite SHAs in `docs/versions/**` and `works/`) once the push has happened.
-- **operator_need:**
-  1. Decide OQ5: push `purge/after` (recommended) or `purge/after-tipkeep`.
-  2. Run the force-push yourself (runbook a). The harness denies force-pushes to the agents.
-  3. After the push, run the Actions deletes (runbook e). The 280 required runs are a must; the 114 wider runs are optional.
-  4. Send the GitHub Support request (runbook f). Paste the first-changed-commit value into it from the scratchpad file named there.
-  5. Then tell the main thread. It runs b (box reset over SSH), c (this clone) and d (the marketplace clone), and re-dispatches S5 with the outputs under `## Operator report`. KB writes stay paused until the resumed pass passes.
+  1. **A mirror clone.** `verify-clone` is `git clone --mirror`, so it takes every ref GitHub advertises, not just the default branch. It is bare.
+  2. **The index pair check** reads `purge/after`'s filter-repo commit-map, because a fresh clone has none. All 427 mapped new commits are present in the clone. The version scan of every `docs/index.md` in the clone stands alone without the map.
+  3. **The box was not re-checked.** SSH is out of bounds for this pass. Its state rests on the main thread's report (b): head `a852b40`, clean, the 67 private files unchanged.
+  4. **Extra read-only checks:** the object-set comparison, a scan of the 3 runs the push triggered, and a scan of the public origin's landing page.
+- **doc_impact:** `operations.md, decisions.md (P34-n0.S5)`: GitHub's `main` was rewritten and force-pushed (534 to 427 commits, tip `a852b40`), and every commit SHA cited before the rewrite in `docs/versions/**` and `works/` is stale (accepted).
+- **open (the operator's, not failures):**
+  - (e) Actions deletes: **280 of the 280 required runs are still present**. All 114 optional runs are still present too. The 6 artifacts are still there; none matched.
+  - (f) The Support request has not been sent. Old commits still resolve by exact SHA through the API (both the old tip and the pre-rewrite upstream this clone was rebased from do), and the 45 deployment records still point at old SHAs. Both are expected until GitHub garbage-collects or Support purges.
 
-## What was built
+## Verification (resumed pass)
+
+All of it ran read-only, in `/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/92187eb6-2875-4f67-86c4-d9f905426343/scratchpad/purge/` (below: `purge/`), against `all12.txt` and the first pass's lists (`titles.txt`, `title_class.json`, `replace_full.txt`, `stale_hashes.txt`, `name_labels.json`). Scripts: `purge/bin/verify2.py`, `localcheck.py`, `localnames.py`, `allowedctx.py`, `ctx.py`, `scan_new_runs.py`.
+
+### GitHub
+
+| check | fresh clone (`verify-clone`) | first pass (`after`) |
+|---|---|---|
+| refs | `refs/heads/main` only (`ls-remote`: `HEAD` + `main`) | `refs/heads/main` |
+| tip | `a852b40` | `a852b40` |
+| commits before / after | 534 / 427 | 534 / 427 |
+| objects (identical set) | 13,032 | 13,032 |
+| footprint paths, any commit | 0 | 0 |
+| `index.md` versions / with a listed link or card | 4 / 0 | 4 / 0 |
+| `index.md` pairs not a pure line removal | 0 of 427 | 0 of 427 |
+| blobs / with a distinctive title | 7,015 / 0 | 7,015 / 0 |
+| tip paths differing from `ba2e878` | 18 (`index.md` + 17 exact redactions) | 18 |
+| tip `index.md` lines / cards | 51→39 / 5→2 | 51→39 / 5→2 |
+| messages with a distinctive name / title / project scope / removed SHA | 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 |
+
+The allowed contexts (A1 to A4) and the other distinctive names (N1 to N9) count exactly as in the first pass's tables below. The judgement stands: none is a reference to a private document that still needs purging.
+
+### This checkout
+
+- `main` is `37b6759`, and `a852b40` is its ancestor. `origin/main` and `origin/HEAD` are `a852b40`, and there are no other local branches or refs. `main` is 7 ahead and 0 behind.
+- 0 of the 3,658 tracked files sit under a footprint, and so does none of the `main` tree. On disk there are 0 footprint dirs.
+- The 7 unpushed commits (S3 ×1, S4 ×4, S5 ×2) touch 14 paths: 10 under `works/phases/` (P34-n0 only) and 4 under `works/`.
+  - **Messages:** 0 private names, 0 titles, 0 project scopes, 0 allowed-context names.
+  - **Added lines:** 0 of the 12 names outside the allowed contexts. The probe id (N9, the S3 probe's synthetic registry row, not one of the 12) appears in 10 added lines across 4 P34-n0 records. That is the same harmless class as at the pushed tip.
+  - **New blobs (45):** 0 distinctive titles, 0 own-explainer titles, 0 removed SHAs. 20 blobs carry a distinctive label:
+    - N9 in 11, the P34-n0 records above;
+    - N5 in 7 and N2 in 2. Each is one line in `works/events.jsonl` or `works/index.json` that is already in the pushed tip and that no commit adds or changes; the first pass judged both harmless.
+  - **Allowed contexts in the added lines:**
+    - A1, 32: repo, product and service names 29, plus 3 others (the box's name, the index heading, the public domain);
+    - A2, 6: the word;
+    - A3, 1: the domain;
+    - A4, 0.
+  - **The uncommitted working-tree change** (the main thread's `## Operator report` in `plan.md`) holds 0 names and 0 titles.
+- **Local old history (not a leak):** the rebase left `ORIG_HEAD` on the pre-rewrite `main`, and the reflog keeps old commits. Neither is reachable from `main`, and `git push origin main` cannot send them. They expire with local reflog GC.
+
+### The box and the marketplace clone
+
+- **Box:** not re-checked; SSH is out of bounds for this pass. The main thread's report (b) gives head `a852b40` (427 commits), `## main...origin/main`, 0 status lines, and 67 private files on disk, unchanged. The origin URL stays SSH for `gitops.push`.
+- **Marketplace clone:** `git rev-parse HEAD` returns `a852b40`.
+- **Public origin:** read-only GET of the landing page, HTTP 200. It holds 0 distinctive titles and 0 Browse cards. It shows N6 twice, as the example repo-directory name in a shipped skill's text, the first pass's harmless class. GitHub Pages stays disabled.
+
+### Actions and the other GitHub surfaces (open items, not failures)
+
+| item | now |
+|---|---|
+| runs listed (first pass 397) | 400: the 397 plus 3 runs triggered by the push |
+| required set (runbook e) still present | **280 of 280** |
+| optional wider set still present | 114 of 114 |
+| artifacts | 6 (0 matched in the first pass) |
+| the 3 new runs (workspace-ci success, plugin parity success, site build failure) | titles and logs: 0 names, 0 titles, 0 document paths |
+| old commits by exact SHA through the API | still resolvable |
+| deployment records pointing at old SHAs | 45 |
+
+The Support request (runbook f) has not been sent. Its first-changed-commit value is still only in `purge/support-first-changed-commit.txt`.
+
+### Observations for the review
+
+1. **site build fails on every push since `ba2e878`.** The push-triggered run at `a852b40` fails `scripts/site_smoke.py`'s invariants in the same way as the run at `ba2e878`: no bullet under the Recent marker, no rendered Recent bullet, no project dir under `docs/`. Those invariants assume at least one public project, which "all private" removed on purpose. Deferred-job candidate: relax the invariants for a KB with no public project, or retire the workflow. Trigger: before the next publish, or when the red CI gets in the way.
+2. **The A2 word spelled out.** Inside the 7 unpushed commits, two records spell out the A2 common word as a name-grep match: S3's `result.md` and the first pass of this `result.md`. This rewrite drops it from this file. History keeps both. A2 is an allowed context and an ordinary English word, so this is not a failure, and another rewrite is not worth it.
+3. **Stale S4 notes.** The 5 `(… for P34-n0.S4)` notes in `## Notes for later slices` are still there after S4 closed. They are not S5's to consume.
+
+### Scratchpad additions (this pass)
+
+- `purge/verify-clone` (the fresh mirror) and `verify-clone.verify.json` and `verify-clone.names.json` (counts).
+- `purge/vc_objs.txt` and `after_objs.txt` (object lists).
+- `purge/localcheck.json`.
+- `purge/name_labels.before-resume.json` (identical copy).
+- `purge/actions/resume/`: the run list and the 3 new runs' logs.
+- `purge/web/home.html`.
+- `purge/firstpass_body.md`, `result_head.md` (the drafting of this file).
+
+The whole `purge/` directory still holds private material. Delete it once S5 is closed; `rm` was denied to the agents.
+
+### Notebook (this pass)
+
+All edits went through `phase-section`:
+
+- `## Doc impact`: +1, the stale-SHA line above.
+- `## Operator Questions`: OQ5 resolved → `after`, force-pushed.
+- `## Decisions`: "History rewrite (S5)" replaced in place, since it now says pushed.
+- `## Notes for later slices`: +1 for the REVIEW (observation 1). No S5-tagged note was left to consume; the first pass removed both.
+- `## Now`: rewritten.
+
+No browser was used in this slice.
+
+## First pass (kept as this slice's log)
+
+First-pass verdict: `needs_operator`, for OQ5, the force-push (a), the Actions deletes (e) and the Support request (f). The first pass changed nothing on GitHub. Its deviations still hold:
+
+1. The tip changes in `after`: 17 title redactions, now shipped (OQ5).
+2. Kept title classes: own explainers 11, the product-example slug 1, generic 7.
+3. HTML `<title>` and `<h1>` were added as title sources.
+4. 2 removed-commit SHAs were replaced in messages.
+5. The Actions scope also covers run titles and the optional wider set.
+6. Runbook (a) used `--force-with-lease`.
+
+**Runbook status:** (a) the operator force-pushed `purge/after`. (b) the box, (c) this clone and (d) the marketplace clone are done, per `## Operator report` and the checks above. **(e) and (f) are still open, and their text below is still the one to use.**
+
+### What was built
 
 All work is in `/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/92187eb6-2875-4f67-86c4-d9f905426343/scratchpad/purge/` (below: `purge/`). Nothing was copied into the repo.
 
@@ -54,7 +155,7 @@ All work is in `/private/tmp/claude-502/-Users-sugang-projects-personal-knowledg
     - The 2 stale SHAs become `[removed]`: 2 messages.
     - In total 19 messages are reworded, 3 more changed only by filter-repo's own hash translation, and 0 were reworded without a reason.
 
-## Verification detail
+### Verification detail
 
 | check | `after` | `after-tipkeep` |
 |---|---|---|
@@ -74,7 +175,7 @@ All work is in `/private/tmp/claude-502/-Users-sugang-projects-personal-knowledg
 | name | tip files | context classes (files) | messages |
 |---|---|---|---|
 | A1 product | 1,234 | product, CLI, plugin and service names 1,193; path of a removed explainer of the product's own project 41 | 59 (product) |
-| A2 common word | 495 | the word 493; removed-document path 2 | 5 (12 counting case-insensitively) |
+| A2 common word | 495 | the word 493; removed-document path 2 | 5 (12 case-insensitively) |
 | A3 domain | 374 | the domain 309; the product of that name, its key, a consumer 64; removed-document path 25 | 21: 14 domain, 6 product, 1 the project's docs directory |
 | A4 tool | 136 | the workspace tool 127; removed-document path 9 | 2 (the tool) |
 
@@ -94,7 +195,7 @@ All work is in `/private/tmp/claude-502/-Users-sugang-projects-personal-knowledg
 
 None of the remaining names is a reference to a private document that still needs purging: the documents and their titles are gone, and a name alone was never in the purge's scope. Case variants were checked too.
 
-## Actions (read-only enumeration)
+### Actions (read-only enumeration)
 
 - 397 runs: site build 124, plugin parity 128, workspace-ci 94, Production Deploy 33, pages 18. 361 were push-triggered and 36 dispatched.
 - 303 run logs downloaded. 94 are gone (HTTP 410), all from 2026-07-02 to 2026-07-29 (the 90-day retention).
@@ -111,9 +212,9 @@ None of the remaining names is a reference to a private document that still need
   - no branch protection or rulesets;
   - 45 deployment records (16 github-pages, 29 production), with no names in them but pointing at old SHAs.
 
-## Operator runbook
+### Operator runbook
 
-### a. The force-push (operator only; the harness denies force-pushes to the agents)
+#### a. The force-push (operator only; the harness denies force-pushes to the agents)
 
 For the recommended variant:
 
@@ -126,7 +227,7 @@ git ls-remote https://github.com/leetusik/knowledge.git   # expect only HEAD and
 
 For the tip-keeping variant, run the same commands from `purge/after-tipkeep`. Expect `75045b47a33e96f6fcc8db8c8f1c133bf70e749b`. The plain `git push --force origin main` works too, but without the lease guard. Push only `main`.
 
-### b. The box reset (main thread, over SSH, before any write or deploy)
+#### b. The box reset (main thread, over SSH, before any write or deploy)
 
 ```sh
 ssh oracle-cloud
@@ -153,7 +254,7 @@ sudo find $(cat /home/opc/p34-s5-footprints.txt) -type f | wc -l   # still 67
 - Afterwards, check that the public homepage no longer shows the 3 cards. If it does, run the normal deploy.
 - The footprint list and the tarball name private projects. They stay in `/home/opc`, never in a repo, log or chat.
 
-### c. This clone (main thread, after S5's commit, with a clean tree)
+#### c. This clone (main thread, after S5's commit, with a clean tree)
 
 ```sh
 cd /Users/sugang/projects/personal/knowledge
@@ -166,7 +267,7 @@ git log --oneline origin/main..main   # the local works/ commits, replayed
 - The 65 tracked private files leave this working tree. The main thread's backup outside the repo holds them.
 - SHAs cited in `works/` and `docs/versions/` before the rewrite go stale. That is accepted.
 
-### d. The plugin marketplace clone (main thread)
+#### d. The plugin marketplace clone (main thread)
 
 ```sh
 cd ~/.claude/plugins/marketplaces/knowledge   # shallow, currently at 90671db
@@ -174,7 +275,7 @@ git fetch --depth 1 origin main && git reset --hard origin/main
 git rev-parse HEAD                             # expect the pushed tip
 ```
 
-### e. Actions cleanup (operator, after the push; nothing was deleted by the agent)
+#### e. Actions cleanup (operator, after the push; nothing was deleted by the agent)
 
 Required: the 280 runs whose run title or log shows a private name or title.
 
@@ -240,7 +341,7 @@ for id in \
 
 No artifact delete lines: 0 of the 6 artifacts matched.
 
-### f. GitHub Support (operator sends, via https://support.github.com/contact)
+#### f. GitHub Support (operator sends, via https://support.github.com/contact)
 
 GitHub's guide asks for the owner/repo, the number of affected pull requests and the "First Changed Commit(s)" that filter-repo reports. That value is an old SHA, so it is kept out of the repo. It is in `/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/92187eb6-2875-4f67-86c4-d9f905426343/scratchpad/purge/support-first-changed-commit.txt` (also `purge/after/.git/filter-repo/first-changed-commits`). Copy it somewhere private before this session's scratchpad goes. GitHub states it helps only with sensitive data that rotation cannot fix, so it may decline. If it does, the old commits stay reachable by exact SHA only.
 
@@ -254,7 +355,7 @@ GitHub's guide asks for the owner/repo, the number of affected pull requests and
 >
 > I can give more detail privately if needed. Thank you.
 
-## Scratchpad files left behind (`rm` was denied)
+### Scratchpad files left behind (`rm` was denied)
 
 These sit under `/private/tmp/claude-502/-Users-sugang-projects-personal-knowledge/92187eb6-2875-4f67-86c4-d9f905426343/scratchpad/purge/`. Several hold private titles, names or document text. Delete the whole `purge/` directory once S5 is closed. Until then, keep `before.git`, `after` and `after-tipkeep` for the push and the resumed pass.
 
@@ -267,7 +368,7 @@ These sit under `/private/tmp/claude-502/-Users-sugang-projects-personal-knowled
 - Scan output: `scan_trial1.json`, `scan_trial2.json`, `after*.verify.json`, `after.names.json`, `allindex.txt`, `allpaths*.txt`, `allobjpaths.txt`, `raw.txt`, `fpblobs.txt`, `indexblobs.txt`, `before_tip.txt`, `trial*_tip*.txt`.
 - `bin/`: the scripts (`titles.py`, `classify.py`, `mkreplace.py`, `index_cb.py`, `file_cb.py`, `msg_cb.py`, `scan.py`, `scan_actions.py`, `verify.py`, `names_report.py`, `pathargs.bin`).
 
-## Notebook
+### Notebook (first pass)
 
 All edits went through `phase-section`:
 
@@ -276,4 +377,3 @@ All edits went through `phase-section`:
 - Decisions: +1 (the history-rewrite rules).
 - Operator Questions: +1 (OQ5).
 
-No browser was used in this slice.
