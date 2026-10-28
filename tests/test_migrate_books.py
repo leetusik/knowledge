@@ -22,7 +22,8 @@ from uuid import uuid4
 
 import pytest
 
-from tests.test_documents_api import _signup, documents_client  # noqa: F401
+from tests.test_documents_api import _project, _signup, documents_client  # noqa: F401
+from tests.test_public_read import _set_public
 
 _SPEC = importlib.util.spec_from_file_location(
     "migrate_books", Path(__file__).resolve().parents[1] / "scripts" / "migrate_books.py"
@@ -112,6 +113,9 @@ def test_migration_binds_books_and_preserves_every_link(library, documents_clien
     email = f"op-{uuid4()}@example.com"
     session_headers, _tenant = _signup(client, email)
     monkeypatch.setenv("KB_OPERATOR_EMAIL", email)
+    # P34: tenant #1 commits only public projects, so both projects go public first.
+    for name in ("alpha", "beta"):
+        _set_public(client, session_headers, _project(client, session_headers, name))
     org = f"org-{uuid4().hex[:10]}"
     assert client.patch("/app/tenant", json={"slug": org}, headers=session_headers).status_code == 200
     bearer = {"Authorization": f"Bearer {MASTER}"}

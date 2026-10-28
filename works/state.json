@@ -1,8 +1,8 @@
 {
   "current_phase": "P34-n0",
-  "current_slice": "P34-n0.S1",
-  "next_slice": "P34-n0.S2",
+  "current_slice": "P34-n0.S2",
+  "next_slice": "P34-n0.S3",
   "waiting_on_operator": null,
   "mode": "phase",
-  "updated_at": "2026-10-28T12:43:33+09:00"
+  "updated_at": "2026-10-28T13:03:26+09:00"
 }

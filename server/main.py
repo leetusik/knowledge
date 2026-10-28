@@ -45,6 +45,7 @@ from server import embeddings as embeddings_mod
 from server import gitops
 from server import native_ingest
 from server import publish
+from server import publish_gate
 from server import reindex as reindex_mod
 from server import search as search_mod
 from server.accounts.auth import AuthError, auth_error_handler
@@ -812,10 +813,25 @@ def _place_variant(
     return manifest, book_created, chapter_created
 
 
+@dataclass(frozen=True)
+class RegistryProject:
+    """What ``ensure_registry_project`` hands the save handler (P34-n0.S1).
+
+    ``id`` is the registry project's id (``None`` in legacy mode, for a name the
+    handler will 422, or when the registry could not be read). ``publish`` is the
+    project-visibility rule's answer for this write (``server/publish_gate.py``),
+    taken from the record the dependency already loaded, so the sync handler never
+    has to reach Postgres itself.
+    """
+
+    id: UUID | None
+    publish: publish_gate.PublishDecision
+
+
 async def ensure_registry_project(
     body: DocumentIn,
     ctx: ApiAuthContext = Depends(resolve_api_write),
-) -> UUID | None:
+) -> RegistryProject:
     """Get-or-create the Postgres registry project for a write's project name.
 
     An **async** dependency because the ``create_document`` handler is sync (it holds
@@ -832,16 +848,32 @@ async def ensure_registry_project(
     ``UNIQUE(tenant_id, name)``. The row may be created even when the handler then
     409s (target already exists) — harmless and idempotent. Returns the registry
     project id, or ``None`` (legacy mode / an invalid name the handler will 422).
+
+    P34-n0.S1: it also returns whether the write publishes, by the one visibility
+    rule (``publish_gate.decide``) applied to the record it just loaded: legacy mode
+    publishes as before; tenant #1 publishes only a ``public`` project (a new one is
+    created ``private``); another tenant never does. For tenant #1 a registry failure
+    no longer fails the write: it is logged and the write lands unpublished, reporting
+    ``publish_gate.VISIBILITY_UNREADABLE`` as its ``commit_error`` (fail closed).
     """
 
     if ctx.tenant_id is None:
-        return None
+        return RegistryProject(id=None, publish=publish_gate.decide(ctx, None))
     try:
         project = documents_mod.validate_project(body.project)
     except documents_mod.ConventionError:
-        return None
-    record = await get_accounts_service().get_or_create_project(ctx.tenant_id, project)
-    return record.id
+        return RegistryProject(id=None, publish=publish_gate.PRIVATE)
+    try:
+        record = await get_accounts_service().get_or_create_project(ctx.tenant_id, project)
+    except Exception:  # noqa: BLE001 - fail closed: saved, never published
+        if not ctx.is_public:
+            raise  # another tenant never publishes: its failure stays what it was
+        logger.warning(
+            "registry project get-or-create failed; the write will not publish",
+            exc_info=True,
+        )
+        return RegistryProject(id=None, publish=publish_gate.UNREADABLE)
+    return RegistryProject(id=record.id, publish=publish_gate.decide(ctx, record))
 
 
 async def resolve_org_slug(
@@ -1304,7 +1336,7 @@ def create_document(
     body: DocumentIn,
     request: Request,
     ctx: ApiAuthContext = Depends(resolve_api_write),
-    registry_project_id: UUID | None = Depends(ensure_registry_project),
+    registry: RegistryProject = Depends(ensure_registry_project),
     org_slug: str | None = Depends(resolve_org_slug),
     conn=Depends(get_conn),
 ):
@@ -1368,10 +1400,19 @@ def create_document(
         checked.native_assigned,
     )
 
+    # P34-n0.S1: whether this write publishes (commit, Recent bullet, landing) is the
+    # project-visibility rule's answer, carried in from the async registry dependency.
+    publish_decision = registry.publish
+
     # 3. Locked critical section: archive -> file write -> index update -> DB upsert
     #    -> LOCAL git add/commit. (WRITE_LOCK is NOT reentrant — nothing called in
     #    here may retake it, which is why the push is queued outside it in 4b.)
     with WRITE_LOCK:
+        # 3--. P34-n0.S1: a private tenant #1 project is hidden in the checkout's
+        #      info/exclude block BEFORE any of its files land, so its untracked files
+        #      never show in `git status` and gitops refuses its footprint. Logged,
+        #      never fatal.
+        publish_gate.hide_private_project(ctx, publish_decision, project)
         # 3-. Chapter placement (P30.S2): settle the manifest FIRST, before any file
         #     is touched, so a binding conflict (409) or a book that cannot be created
         #     (422) leaves nothing behind. Re-read under the lock: it is the
@@ -1491,10 +1532,12 @@ def create_document(
             else:
                 raw_html = None
                 stored_markdown = stored_body
-        # Public landing + Recent index are mkdocs-publish concerns, so only the
-        # public root gets them. Non-#1 tenants keep a minimal tree (their content
-        # is never served in P10) — skip both and report them as not created.
-        if ctx.is_public:
+        # Public landing + Recent index are mkdocs-publish concerns, so only a write
+        # that publishes gets them. Non-#1 tenants keep a minimal tree (their content
+        # is never served in P10) and, since P34-n0.S1, so does a private tenant #1
+        # project: its title never reaches docs/index.md — skip both and report them
+        # as not created.
+        if publish_decision.publishes:
             # Auto-create the project landing on a project's first document, so
             # mkdocs builds site/<project>/index.html and the deploy gate stays
             # green. Never overwrites an existing (hand-written or auto) landing.
@@ -1562,8 +1605,18 @@ def create_document(
         commit_sha = None
         commit_error = None
         # Git publish is a public-root concern only: non-#1 tenants' content lives
-        # under the gitignored tenants/ tree and is never committed/pushed.
-        if body.commit and config.git_commit_enabled() and ctx.is_public:
+        # under the gitignored tenants/ tree and is never committed/pushed. Since
+        # P34-n0.S1 it is also a public-PROJECT concern: a private tenant #1 project
+        # never commits (committed:false, no error — like commit:false), and a write
+        # whose visibility could not be read reports why in commit_error.
+        if (
+            body.commit
+            and config.git_commit_enabled()
+            and ctx.is_public
+            and not publish_decision.publishes
+        ):
+            commit_error = publish_decision.error
+        elif body.commit and config.git_commit_enabled() and ctx.is_public:
             try:
                 staged = [f"docs/{rel}", "docs/index.md"]
                 if landing_created:
@@ -1731,7 +1784,7 @@ def create_document(
         # The registry row now always exists (get-or-create above), so metering's
         # name-first lookup resolves it; the id here is the fallback, preferring the
         # just-ensured registry project over the vk_ caller's bound project.
-        project_id=registry_project_id or ctx.project_id,
+        project_id=registry.id or ctx.project_id,
         credential_id=ctx.credential_id,
     )
     return resp
@@ -1800,6 +1853,7 @@ def _delete_document(
     *,
     commit: bool,
     co_authored_by: Optional[str],
+    publish_decision: publish_gate.PublishDecision,
 ) -> dict:
     """Own the whole delete path: the POST write path in reverse (file -> Recent
     bullet -> DB -> scoped git commit), all under WRITE_LOCK. Routes by tenant like
@@ -1807,7 +1861,15 @@ def _delete_document(
     only their namespaced tenants/<uuid>/ file + DB row. docs/ row deletion is
     missing_ok — a DB row without a file is drift, still cleaned up. A failed
     commit never rolls back the removal (responds with committed:false). Like the
-    write path, the push runs after the response (P24.S1)."""
+    write path, the push runs after the response (P24.S1).
+
+    P34-n0.S1: every caller passes ``publish_decision``, the project-visibility
+    rule's answer for ``doc["project"]`` (``server/publish_gate.py``). The commit runs
+    only when it publishes; a private tenant #1 project's delete reports
+    ``committed: false`` with no error, an unreadable visibility with
+    ``commit_error``. The Recent bullet is still removed for every public-root
+    caller whatever the visibility: removing a bullet never leaks, and a private
+    bullet already in the index should go."""
     rel = doc["rel_path"]
     root = _tenant_root(ctx)
     # P30.S8: purge every reader's state for this document FIRST, and fail closed —
@@ -1855,8 +1917,16 @@ def _delete_document(
         committed = False
         commit_sha = None
         commit_error = None
-        # Git publish is a public-root concern only (see create_document).
-        if commit and config.git_commit_enabled() and ctx.is_public:
+        # Git publish is a public-root concern only (see create_document), and since
+        # P34-n0.S1 a public-project one: a private project's delete never commits.
+        if (
+            commit
+            and config.git_commit_enabled()
+            and ctx.is_public
+            and not publish_decision.publishes
+        ):
+            commit_error = publish_decision.error
+        elif commit and config.git_commit_enabled() and ctx.is_public:
             try:
                 staged = [f"docs/{rel}", "docs/index.md"]
                 if versions_removed:
@@ -1922,7 +1992,12 @@ def delete_document_by_path(
     doc = db.get_document_by_path(conn, rel_path, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document at rel_path {rel_path!r}")
-    resp = _delete_document(conn, doc, ctx, commit=commit, co_authored_by=co_authored_by)
+    # P34-n0.S1: the visibility rule, bridged from this sync handler's worker thread.
+    decision = publish_gate.publish_decision_from_worker(ctx, doc["project"])
+    resp = _delete_document(
+        conn, doc, ctx, commit=commit, co_authored_by=co_authored_by,
+        publish_decision=decision,
+    )
     # Meter the deletion (best-effort, via the middleware) — only reached when the
     # doc was found. Attributed to the deleted doc's project. Inert in legacy mode.
     request.state.usage = UsageHint(
@@ -1947,7 +2022,12 @@ def delete_document(
     doc = db.get_document(conn, doc_id, tenant_id=_tenant_filter(ctx))
     if doc is None:
         raise HTTPException(status_code=404, detail=f"no document with id {doc_id}")
-    resp = _delete_document(conn, doc, ctx, commit=commit, co_authored_by=co_authored_by)
+    # P34-n0.S1: the visibility rule, bridged from this sync handler's worker thread.
+    decision = publish_gate.publish_decision_from_worker(ctx, doc["project"])
+    resp = _delete_document(
+        conn, doc, ctx, commit=commit, co_authored_by=co_authored_by,
+        publish_decision=decision,
+    )
     # Meter the deletion (best-effort, via the middleware) — only reached when the
     # doc was found. Attributed to the deleted doc's project. Inert in legacy mode.
     request.state.usage = UsageHint(
@@ -2041,7 +2121,8 @@ def put_book(
     * a document another book already binds -> 409 (P29: at most one chapter).
 
     Then, under ``WRITE_LOCK``: the manifest is written atomically, the derived rows
-    rebuilt, and — for the public root — the manifest committed alone
+    rebuilt, and — for the public root, and since P34-n0.S1 only for a project the
+    visibility rule publishes — the manifest committed alone
     (``docs(<project>): update book <slug>``), pushed after the response like a
     document write. Bound documents are never rewritten. Unmetered.
     """
@@ -2084,6 +2165,9 @@ def put_book(
 
     root = _tenant_root(ctx)
     tid = _tenant_db_id(ctx)
+    # P34-n0.S1: the project-visibility rule, bridged from this sync handler's worker
+    # thread: only a public project's manifest is committed.
+    publish_decision = publish_gate.publish_decision_from_worker(ctx, project)
     with WRITE_LOCK:
         for ch in manifest["chapters"]:
             for lang, rel in ch["variants"].items():
@@ -2101,6 +2185,9 @@ def put_book(
                             "chapter_key": other["chapter_key"],
                         },
                     )
+        # A private tenant #1 project's manifest is hidden in info/exclude before it
+        # is written (logged, never fatal), exactly like a document write's files.
+        publish_gate.hide_private_project(ctx, publish_decision, project)
         manifest_file = root / books_mod.manifest_rel_path(project, book)
         created = not manifest_file.is_file()
         before = None if created else manifest_file.read_bytes()
@@ -2116,8 +2203,18 @@ def put_book(
         commit_sha = None
         commit_error = None
         # An unchanged manifest has nothing to commit (git would refuse the empty
-        # commit), so a no-op PUT reports committed:false with no error.
-        if changed and body.commit and config.git_commit_enabled() and ctx.is_public:
+        # commit), so a no-op PUT reports committed:false with no error. A private
+        # project's manifest is never committed (P34-n0.S1; no error, like
+        # commit:false), and an unreadable visibility reports why.
+        if (
+            changed
+            and body.commit
+            and config.git_commit_enabled()
+            and ctx.is_public
+            and not publish_decision.publishes
+        ):
+            commit_error = publish_decision.error
+        elif changed and body.commit and config.git_commit_enabled() and ctx.is_public:
             try:
                 gitops.add([f"docs/{manifest_rel}"], root=config.kb_root())
                 commit_sha = gitops.commit(

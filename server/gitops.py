@@ -15,10 +15,22 @@ default 60s): a git that exceeds it is killed and surfaces as ``GitError`` like 
 other failure. That cap is load-bearing since P24 — the push runs on the
 after-response publish worker while holding ``WRITE_LOCK``, so an unbounded network
 stage there would wedge every later write in the process.
+
+**Private projects (P34).** A tenant #1 project that is not ``public`` never
+publishes. The callers gate on visibility (``server/publish_gate.py``); this module
+adds a second, caller-independent guard with no database: a managed block in the
+checkout's own ``info/exclude`` (never a tracked file, which would publish the names)
+lists each private project's footprint, and ``add`` / ``remove`` refuse any path in
+it, and a ``docs/index.md`` that links into it, with ``GitError`` (fail closed: the
+write stays on disk, ``committed: false``). See the *Private projects* section below.
 """
 from __future__ import annotations
 
+import os
+import posixpath
+import re
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -56,17 +68,228 @@ def _run(args: list[str], *, root, timeout: Optional[float] = None) -> subproces
 _NEVER_STAGED_DIR = ".assets"
 
 
+# --- Private projects (P34): the managed info/exclude block + the staging guard ---
+#
+# The block sits in the checkout's ``info/exclude`` (located with ``git rev-parse
+# --git-path info/exclude``, so a linked worktree finds the common one), between two
+# fixed marker lines, and holds three lines per private project:
+#
+#     /docs/<project>/
+#     /docs/.versions/<project>/
+#     /docs/.books/<project>/
+#
+# That hides the project's UNTRACKED files from ``git status`` / ``git add``. It cannot
+# stop a TRACKED file (git ignores excludes for those), which is why ``add`` and
+# ``remove`` refuse every path in a listed footprint themselves. The block is always
+# rewritten whole (``write_private_projects``) from a set of names, so it stays
+# canonical: sorted, three lines per project, nothing else between the markers.
+# Everything outside the markers is the operator's and is kept as it is.
+
+PRIVATE_BLOCK_BEGIN = "# >>> knowledge server: private projects (managed; rewritten whole) >>>"
+PRIVATE_BLOCK_END = "# <<< knowledge server: private projects <<<"
+
+# Under docs/: a project's documents, its superseded versions, its book manifests.
+_FOOTPRINT_PREFIXES = ("", ".versions/", ".books/")
+# The registry/convention project-name shape (``documents._PROJECT_RE``): no glob
+# metacharacter, no slash, so a name is safe to write as an exclude pattern verbatim.
+_PROJECT_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+_BLOCK_LINE_RE = re.compile(r"^/docs/(?:\.versions/|\.books/)?([A-Za-z0-9][A-Za-z0-9._-]*)/$")
+# Staging any of these would sweep every project's footprint at once.
+_FOOTPRINT_ANCESTORS = frozenset({".", "docs", "docs/.versions", "docs/.books"})
+
+
+def _check_project_name(project: str) -> str:
+    if (
+        not isinstance(project, str)
+        or not _PROJECT_NAME_RE.fullmatch(project)
+        or ".." in project
+    ):
+        raise ValueError("invalid project name for the private-projects block")
+    return project
+
+
+def exclude_path(root) -> Path:
+    """The checkout's ``info/exclude`` file (it need not exist yet)."""
+    out = _run(["rev-parse", "--git-path", "info/exclude"], root=root).stdout.strip()
+    path = Path(out)
+    return path if path.is_absolute() else Path(root) / path
+
+
+def _read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return ""
+
+
+def _split_block(text: str) -> tuple[list[str], list[str]]:
+    """``(lines outside the managed block, lines inside it)``, markers dropped."""
+    outside: list[str] = []
+    inside: list[str] = []
+    in_block = False
+    for line in text.splitlines():
+        if line == PRIVATE_BLOCK_BEGIN:
+            in_block = True
+        elif line == PRIVATE_BLOCK_END and in_block:
+            in_block = False
+        elif in_block:
+            inside.append(line)
+        else:
+            outside.append(line)
+    return outside, inside
+
+
+def _block_names(inside: list[str]) -> set[str]:
+    names: set[str] = set()
+    for line in inside:
+        match = _BLOCK_LINE_RE.match(line.strip())
+        if match and ".." not in match.group(1):
+            names.add(match.group(1))
+    return names
+
+
+def _render(outside: list[str], names: Iterable[str]) -> str:
+    lines = list(outside)
+    while lines and not lines[-1].strip():
+        lines.pop()
+    ordered = sorted(set(names))
+    if ordered:
+        if lines:
+            lines.append("")
+        lines.append(PRIVATE_BLOCK_BEGIN)
+        for name in ordered:
+            lines.extend(f"/docs/{prefix}{name}/" for prefix in _FOOTPRINT_PREFIXES)
+        lines.append(PRIVATE_BLOCK_END)
+    return "\n".join(lines) + "\n" if lines else ""
+
+
+def _atomic_write(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        mode = path.stat().st_mode & 0o777
+    except FileNotFoundError:
+        mode = 0o644
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".exclude-", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        os.chmod(tmp, mode)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def private_projects(root) -> list[str]:
+    """The project names in the managed block, sorted (``[]`` when there is none)."""
+    _, inside = _split_block(_read_text(exclude_path(root)))
+    return sorted(_block_names(inside))
+
+
+def write_private_projects(projects: Iterable[str], *, root) -> bool:
+    """Rewrite the managed block whole so it lists exactly ``projects``.
+
+    The one writer of the block (``mark_private`` goes through it, and a re-sync from
+    the registry can call it directly). An empty set removes the block. Lines outside
+    the markers are kept; the block moves to the end of the file. Atomic (temp file +
+    ``os.replace``). Returns whether the file changed. ``ValueError`` on a name that
+    is not a valid project name; ``GitError`` when ``root`` is not a git checkout.
+    """
+    names = {_check_project_name(p) for p in projects}
+    path = exclude_path(root)
+    text = _read_text(path)
+    outside, _ = _split_block(text)
+    new_text = _render(outside, names)
+    if new_text == text:
+        return False
+    _atomic_write(path, new_text)
+    return True
+
+
+def mark_private(project: str, *, root) -> bool:
+    """Add ``project``'s three footprint lines to the managed block (idempotent).
+
+    Returns ``False`` when the block already lists it canonically (nothing written).
+    """
+    _check_project_name(project)
+    path = exclude_path(root)
+    _, inside = _split_block(_read_text(path))
+    return write_private_projects(_block_names(inside) | {project}, root=root)
+
+
+def _repo_rel(path, root) -> str:
+    """A staged path as a normalized repo-relative POSIX string."""
+    text = str(path)
+    if os.path.isabs(text):
+        try:
+            text = Path(text).resolve().relative_to(Path(str(root)).resolve()).as_posix()
+        except ValueError:
+            pass
+    return posixpath.normpath(text)
+
+
+def _in_private_footprint(rel: str, private: set[str]) -> bool:
+    if rel in _FOOTPRINT_ANCESTORS:
+        return True
+    parts = rel.split("/")
+    if len(parts) < 2 or parts[0] != "docs":
+        return False
+    if parts[1] in (".versions", ".books"):
+        return len(parts) >= 3 and parts[2] in private
+    return parts[1] in private
+
+
+def _index_links_private(root, private: set[str]) -> bool:
+    text = _read_text(Path(str(root)) / "docs" / "index.md")
+    return any(f"]({p}/" in text or f"](./{p}/" in text for p in private)
+
+
+def _refuse_private(command: list[str], paths: list[str], *, root) -> None:
+    """Raise ``GitError`` when staging ``paths`` could publish a private project.
+
+    Refused: a path inside a listed project's footprint, an ancestor that would sweep
+    one in (``docs``, ``docs/.versions``, ``docs/.books``, the repo root), and
+    ``docs/index.md`` while its text links into a listed project. Fail closed: a block
+    that cannot be read raises too. The message names no project and no path.
+    """
+    private = set(private_projects(root))
+    if not private:
+        return
+    rels = [_repo_rel(p, root) for p in paths]
+    if any(_in_private_footprint(rel, private) for rel in rels):
+        raise GitError(
+            ["git", "-C", str(root), *command],
+            "refused: a path is inside a private project's footprint "
+            "(info/exclude private-projects block); nothing was staged",
+        )
+    if "docs/index.md" in rels and _index_links_private(root, private):
+        raise GitError(
+            ["git", "-C", str(root), *command],
+            "refused: docs/index.md links into a private project "
+            "(info/exclude private-projects block); nothing was staged",
+        )
+
+
 def add(paths: Iterable[str], *, root) -> None:
     """``git -C <root> add -- <paths...>`` — only the given paths, never ``-A``.
 
     A path inside an ``.assets/`` tree is dropped before git sees it (P30.S4): the
     images live on the box disk only, whatever a caller passes. ``.assets/`` is also
     gitignored, so this is the second of two guards.
+
+    P34: a path in a private project's footprint, or a ``docs/index.md`` that links
+    into one, raises ``GitError`` before anything is staged (``_refuse_private``).
+    Pathspecs are literal (``--literal-pathspecs``), so the paths checked are exactly
+    the paths git stages: no glob can widen them.
     """
     kept = [p for p in paths if _NEVER_STAGED_DIR not in Path(str(p)).parts]
     if not kept:
         return
-    _run(["add", "--", *kept], root=root)
+    _refuse_private(["add", "--", *kept], kept, root=root)
+    _run(["--literal-pathspecs", "add", "--", *kept], root=root)
 
 
 def remove(paths: Iterable[str], *, root) -> None:
@@ -75,12 +298,14 @@ def remove(paths: Iterable[str], *, root) -> None:
     ``git -C <root> rm --cached --quiet --ignore-unmatch -- <paths...>``: the html ->
     native migration unlinks the old ``.html`` file itself, and this records that
     removal in the same scoped commit. ``--ignore-unmatch`` keeps a never-committed
-    path from failing the commit.
+    path from failing the commit. Refuses private footprints exactly like ``add``.
     """
     kept = [p for p in paths if _NEVER_STAGED_DIR not in Path(str(p)).parts]
     if not kept:
         return
-    _run(["rm", "--cached", "--quiet", "--ignore-unmatch", "--", *kept], root=root)
+    args = ["rm", "--cached", "--quiet", "--ignore-unmatch", "--", *kept]
+    _refuse_private(args, kept, root=root)
+    _run(["--literal-pathspecs", *args], root=root)
 
 
 def commit(message: str, *, root, co_authored_by: Optional[str] = None) -> str:

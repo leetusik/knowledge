@@ -3,13 +3,13 @@
   "phase_id": "P34-n0",
   "name": "Gate publishing on project visibility",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 1,
   "depends_on": [],
   "depends_declared": true,
   "created_at": "2026-10-28T12:39:34+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-28T12:45:28+09:00",
+  "completed_at": "2026-10-28T13:03:26+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -19,7 +19,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Tenant #1 writes publish only when the registry project is public (server/publish_gate.py); private writes stay uncommitted, out of the index, and blocked by a fail-closed gitops guard",
   "validation": {
     "required": [],
     "last_run": null,

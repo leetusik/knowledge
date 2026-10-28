@@ -76,6 +76,7 @@ from starlette.concurrency import run_in_threadpool
 from server import assets as assets_mod
 from server import config
 from server import db
+from server import publish_gate
 from server import search as search_mod
 from server.accounts.auth import AuthContext, optional_user, require_user
 from server.accounts.service import get_accounts_service
@@ -807,6 +808,12 @@ def _delete_owned_document(doc_id: int, api_ctx: ApiAuthContext) -> bool:
 
     The lookup is tenant-scoped, so another tenant's id is simply a miss (⇒ 404,
     never 403) and the delete can never cross tenants.
+
+    P34-n0.S1: the document's project is known only after that lookup, so the
+    project-visibility rule runs here, on this worker thread, through the same
+    sync-to-async bridge ``_delete_document``'s reader-state purge already uses
+    (``publish_gate.publish_decision_from_worker``): a private project's delete never
+    commits, and an unreadable visibility fails closed.
     """
 
     from server.main import _delete_document  # deferred: main imports this module.
@@ -816,7 +823,11 @@ def _delete_owned_document(doc_id: int, api_ctx: ApiAuthContext) -> bool:
         doc = db.get_document(conn, doc_id, tenant_id=str(api_ctx.tenant_id))
         if doc is None:
             return False
-        _delete_document(conn, doc, api_ctx, commit=True, co_authored_by=None)
+        decision = publish_gate.publish_decision_from_worker(api_ctx, doc["project"])
+        _delete_document(
+            conn, doc, api_ctx, commit=True, co_authored_by=None,
+            publish_decision=decision,
+        )
         return True
     finally:
         conn.close()
@@ -836,7 +847,8 @@ async def delete_document(
 
     Reuses ``server/main.py``'s ``_delete_document`` — file unlink, public Recent-index
     bullet, DB row (FTS row via the AFTER DELETE trigger, embeddings via
-    ``ON DELETE CASCADE``), then the scoped git commit/push for the public root — so the
+    ``ON DELETE CASCADE``), then the scoped git commit/push for the public root (only
+    for a project the P34 visibility rule publishes) — so the
     web plane and the ``/api`` plane delete identically, including the non-transactional
     ordering (the file goes first; a failed commit never restores it). What it does *not*
     reuse is the ``/api`` route, which meters ``EVENT_DOCUMENT_DELETED``: this handler
