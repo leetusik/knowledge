@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P34-n0`
-- Current slice: `P34-n0.DECOMP`
-- Next slice: `P34-n0.REVIEW`
+- Current slice: `P34-n0.S1`
+- Next slice: `P34-n0.S2`
 - Waiting on operator: `none`
 - Open deferred jobs: `64`
 - Workspace version: `v86`
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P34-n0` | planned | `P34-n0.DECOMP` | 0/2 | - | working tree |
+| `default` | `P34-n0` | planned | `P34-n0.S1` | 1/7 | - | working tree |
 
 ## Active Phases
 
@@ -37,7 +37,7 @@
 | [x] `P-9sz6` | `done` | `pass` | Explain as a phase: workflow handoff | `none` | `works/phases/active/P-9sz6` |
 | [x] `P-8jbf` | `done` | `pass` | Wide reader on big screens | `none` | `works/phases/active/P-8jbf` |
 | [x] `P33-n3` | `done` | `pass` | Explain front door | `none` | `works/phases/active/P33-n3` |
-| [ ] `P34-n0` | `planned` | `pending` | Keep private documents off the public repo | `P34-n0.DECOMP` | `works/phases/active/P34-n0` |
+| [ ] `P34-n0` | `planned` | `pending` | Keep private documents off the public repo | `P34-n0.S1` | `works/phases/active/P34-n0` |
 
 ## Phase P21: Web document deletion
 
@@ -262,5 +262,10 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P34-n0.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P34-n0/slices/P34-n0.DECOMP` |
+| [x] `P34-n0.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P34-n0/slices/P34-n0.DECOMP` |
+| [ ] `P34-n0.S1` | `todo` | Gate publishing on project visibility | `implementation` | `works/phases/active/P34-n0/slices/P34-n0.S1` |
+| [ ] `P34-n0.S2` | `todo` | Make the published tree mirror project visibility | `implementation` | `works/phases/active/P34-n0/slices/P34-n0.S2` |
+| [ ] `P34-n0.S3` | `todo` | Deploy the gate and verify a private write live | `qa` | `works/phases/active/P34-n0/slices/P34-n0.S3` |
+| [ ] `P34-n0.S4` | `todo` | Unpublish private projects from the tree on the server | `qa` | `works/phases/active/P34-n0/slices/P34-n0.S4` |
+| [ ] `P34-n0.S5` | `todo` | Purge private projects from the public history | `implementation` | `works/phases/active/P34-n0/slices/P34-n0.S5` |
 | [ ] `P34-n0.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P34-n0/slices/P34-n0.REVIEW` |

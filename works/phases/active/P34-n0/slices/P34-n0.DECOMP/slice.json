@@ -3,12 +3,12 @@
   "phase_id": "P34-n0",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-28T12:23:01+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-28T12:31:13+09:00",
+  "completed_at": "2026-10-28T12:43:33+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut a declared five-slice chain: S1 gate on visibility, S2 tree mirrors visibility, S3 deploy + live private check, S4 unpublish on the server, S5 history purge",
   "validation": {
     "required": [],
     "last_run": null,

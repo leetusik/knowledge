@@ -1491,3 +1491,12 @@
 {"ts": "2026-10-27T22:47:53+09:00", "type": "phase_reviewed", "phase": "P33-n3", "verdict": "pass", "reviewer": "slice-executor"}
 {"ts": "2026-10-27T22:47:53+09:00", "type": "phase_consolidation_owed", "phase": "P33-n3", "notes": 6}
 {"ts": "2026-10-28T12:23:01+09:00", "type": "phase_created", "phase": "P34-n0"}
+{"ts": "2026-10-28T12:31:13+09:00", "type": "slice_status_changed", "slice": "P34-n0.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-28T12:39:34+09:00", "type": "slice_created", "phase": "P34-n0", "slice": "P34-n0.S1"}
+{"ts": "2026-10-28T12:39:35+09:00", "type": "slice_created", "phase": "P34-n0", "slice": "P34-n0.S2"}
+{"ts": "2026-10-28T12:39:35+09:00", "type": "slice_created", "phase": "P34-n0", "slice": "P34-n0.S3"}
+{"ts": "2026-10-28T12:39:35+09:00", "type": "slice_created", "phase": "P34-n0", "slice": "P34-n0.S4"}
+{"ts": "2026-10-28T12:39:35+09:00", "type": "slice_created", "phase": "P34-n0", "slice": "P34-n0.S5"}
+{"ts": "2026-10-28T12:43:33+09:00", "type": "executor_dispatched", "slice": "P34-n0.DECOMP", "phase": "P34-n0", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-28T12:43:33+09:00", "type": "slice_status_changed", "slice": "P34-n0.DECOMP", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-28T12:43:33+09:00", "type": "acceptance_required", "phase": "P34-n0"}
