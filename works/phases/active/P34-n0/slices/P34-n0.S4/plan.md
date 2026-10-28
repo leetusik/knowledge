@@ -62,3 +62,7 @@ explore_effort=xhigh
 - **`reconcile --push`:** denied to the main thread by the harness, so the operator runs it.
 - **Operator ran** `ssh oracle-cloud 'docker exec knowledge-api python -m server.reconcile --push'`: 11 `unpublish` (65 files untracked, 43 index lines removed), 2 `none private`. `exclude block: changed`. `committed ba2e8781a7066db6900aff522c70fb727ea58740: docs: unpublish private projects (11)`. `pushed: origin/main is now ba2e878…`.
 - **Box after (main thread):** `## main...origin/main`, head `ba2e878`. Tracked files under the 12 projects' footprints: 0. Private files on disk: 67 (the 65 untracked, plus the stray project's untracked files). Index lines linking into a private project: 0.
+
+## Resolution (main thread)
+
+The verify returned `blocked`. 3 hand-written Browse-grid cards in the tip `docs/index.md` (HTML `href`) name private projects. The reconcile's markdown-link matcher cannot see them. Operator, 2026-10-28, on OQ4: "as your recommendation", that is, fold them into S5. S5's rewrite drops them from every version of `docs/index.md`, the tip included. Teaching the matcher and the guard the `href` forms goes to the review, as a deferred job. S4's own goal is met at `ba2e878`: 11 projects unpublished, 65 files untracked, 43 bullets removed, every private file still on the box's disk. The public-write probe is skipped: no public project remains. The write pause holds through S5.

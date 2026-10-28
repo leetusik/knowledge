@@ -3,7 +3,7 @@
   "phase_id": "P34-n0",
   "name": "Unpublish private projects from the tree on the server",
   "kind": "qa",
-  "status": "pending",
+  "status": "done",
   "order": 4,
   "depends_on": [
     "P34-n0.S3"
@@ -11,7 +11,7 @@
   "depends_declared": true,
   "created_at": "2026-10-28T12:39:35+09:00",
   "started_at": "2026-10-28T13:55:15+09:00",
-  "completed_at": null,
+  "completed_at": "2026-10-28T14:24:17+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -21,7 +21,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Unpublished all 11 tracked private projects at ba2e878 (65 files, 43 bullets; files kept on the box); 3 leftover index cards handed to S5 (OQ4)",
   "validation": {
     "required": [],
     "last_run": null,
@@ -31,10 +31,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "decision",
-    "on_words": "OQ4: 'fold into S5' has S5's rewrite drop the 3 index cards from every docs/index.md version incl. the tip; 'now' has the main thread remove them on the box in one more unpublish commit (operator runs the push)",
-    "since": "2026-10-28T14:13:32+09:00"
   }
 }
