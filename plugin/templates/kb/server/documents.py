@@ -723,6 +723,24 @@ def remove_recent_bullet(index_text: str, rel_path: str) -> tuple[str, bool]:
     return "\n".join(kept), True
 
 
+def remove_project_bullets(index_text: str, project: str) -> tuple[str, int]:
+    """Drop every line that links into ``project``. Pure function (no I/O).
+
+    A line links into a project when it holds ``](<project>/`` or ``](./<project>/``,
+    the same test ``gitops``' private-projects guard applies to ``docs/index.md``, so
+    once a private project's lines are gone the guard lets the index stage again
+    (P34-n0.S2's reconcile). The whole line goes, whatever else it holds. Returns
+    ``(new_text, removed_count)``; the text is unchanged when nothing matched.
+    """
+    needles = (f"]({project}/", f"](./{project}/")
+    lines = index_text.split("\n")
+    kept = [line for line in lines if not any(n in line for n in needles)]
+    removed = len(lines) - len(kept)
+    if not removed:
+        return index_text, 0
+    return "\n".join(kept), removed
+
+
 def remove_from_recent_index(docs_root: Union[str, Path], rel_path: str) -> bool:
     """Remove the doc's Recent bullet from ``docs/index.md``; returns ``recent_removed``.
 

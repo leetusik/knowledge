@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import datetime
 import logging
-import threading
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -48,6 +47,7 @@ from server import publish
 from server import publish_gate
 from server import reindex as reindex_mod
 from server import search as search_mod
+from server import write_lock
 from server.accounts.auth import AuthError, auth_error_handler
 from server.native import NativeFormatError, parse_chapter, search_text
 from server.accounts.service import get_accounts_service
@@ -180,27 +180,11 @@ app.include_router(reader_api.router)
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an
 # in-process lock is sufficient; never scale to multiple workers. WAL gives reads
-# concurrency regardless.
-WRITE_LOCK = threading.Lock()
-
-
-def _push_task(root: Path):
-    """Build the after-response publish task for one write (P24.S1).
-
-    ``root`` is captured at submit time (never re-read from the env in the
-    worker). The task re-takes ``WRITE_LOCK`` — the rebase mutates the work tree
-    and must not race another write's file write — which is exactly why it is
-    submitted from OUTSIDE the lock (``WRITE_LOCK`` is not reentrant) and why
-    every git subprocess is bounded by ``KB_GIT_TIMEOUT_S``: a wedged network
-    must never hold the process's write lock. A ``GitError`` propagates to the
-    worker, which logs it; the local commit stays and publishes on the next push.
-    """
-
-    def _task() -> None:
-        with WRITE_LOCK:
-            gitops.push(root=root)
-
-    return _task
+# concurrency regardless. Since P34-n0.S2 the lock and the after-response push task
+# live in ``server/write_lock.py``, so ``app_api`` (which ``main`` imports) can take
+# the same lock for the visibility toggle; both names are re-exported here unchanged.
+WRITE_LOCK = write_lock.WRITE_LOCK
+_push_task = write_lock.push_task
 
 
 def _embed_task(*, db_file: Path, doc_id: int, title: str, markdown: str):

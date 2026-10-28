@@ -24,18 +24,25 @@ mints (``name=None``).
 
 from __future__ import annotations
 
+import logging
 from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field, field_validator
+from starlette.concurrency import run_in_threadpool
 
+from server import config, db, publish, write_lock
+from server import reconcile as reconcile_mod
 from server.accounts.auth import AuthContext, require_user
 from server.accounts.security import generate_opaque_token, sha256_hex
 from server.accounts.service import DuplicateOrgSlugError, get_accounts_service
 from server.accounts.slugs import InvalidOrgSlugError, normalize_org_slug
 from server.accounts.types import CreateProject, CreateProjectCredential
+from server.api_auth import get_tenant_one_id
 from server.auth_api import serialize_tenant
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -230,13 +237,112 @@ async def set_project_visibility(
     for a missing *or* cross-tenant project, so the toggle never leaks another
     tenant's project existence. An invalid ``visibility`` value gets a 422 from the
     ``Literal`` before any DB work.
+
+    P34-n0.S2: for a tenant #1 project the git tree then follows the new visibility
+    (``_mirror_visibility``): Postgres first, git second, so a git failure keeps the
+    new visibility and is reported in the added optional ``"publish"`` field. The
+    ``"project"`` key is unchanged; other tenants' responses carry no ``"publish"``.
     """
 
     await _load_scoped_project(project_id, ctx)
     updated = await get_accounts_service().set_project_visibility(
         project_id, payload.visibility
     )
-    return {"project": serialize_project(updated)}
+    body: dict[str, object] = {"project": serialize_project(updated)}
+    published = await _mirror_visibility(updated)
+    if published is not None:
+        body["publish"] = published
+    return body
+
+
+# The toggle's error, whatever failed: it names no project and no path (the
+# unpublish path must never name one); the stage word says where it stopped.
+_MIRROR_FAILED = (
+    "the git tree was not reconciled ({stage}); the new visibility is kept. Toggle "
+    "again, or run `python -m server.reconcile` while writes are paused"
+)
+
+
+async def _mirror_visibility(record) -> dict[str, object] | None:
+    """Make tenant #1's git tree follow one project's new visibility (P34-n0.S2).
+
+    Runs ``reconcile.reconcile(..., only=<name>)`` for a tenant #1 project only (other
+    tenants' content is never in git), when git commits are enabled, in a threadpool
+    under ``WRITE_LOCK`` (the same lock every write takes; it lives in
+    ``server/write_lock.py`` so this module never imports ``server.main``). A commit
+    queues the push on the publish worker exactly as a write does (``KB_GIT_PUSH``
+    gated, submitted outside the lock). Returns ``None`` when nothing applies, else
+    ``{"action", "committed", "commit_sha", "push_pending", "error"}``. Never raises:
+    the registry already changed, and re-toggling (or the CLI) is the retry.
+    """
+
+    if record is None or not config.git_commit_enabled():
+        return None
+    try:
+        tenant_one = await get_tenant_one_id()
+    except Exception:  # noqa: BLE001 - unknown: say the tree may not mirror
+        logger.warning("visibility toggle: tenant #1 could not be resolved; git not reconciled")
+        return _mirror_result(error=_MIRROR_FAILED.format(stage="read"))
+    if tenant_one is None or record.tenant_id != tenant_one:
+        return None
+
+    root = config.kb_root()
+    name, visibility = record.name, record.visibility
+
+    def _run() -> reconcile_mod.Report:
+        with write_lock.WRITE_LOCK:
+            conn = db.connect()
+            try:
+                return reconcile_mod.reconcile(
+                    {name: visibility}, kb_root=root, db_conn=conn,
+                    tenant_db_id=tenant_one, only=name,
+                )
+            finally:
+                conn.close()
+
+    try:
+        report = await run_in_threadpool(_run)
+    except Exception as exc:  # noqa: BLE001 - never fail the toggle on git
+        logger.warning("visibility toggle: reconcile raised %s", type(exc).__name__)
+        return _mirror_result(error=_MIRROR_FAILED.format(stage="reconcile"))
+
+    entry = report.project(name)
+    failure = report.error or (entry.error if entry is not None else None)
+    if failure:
+        stage = reconcile_mod.error_stage(failure) or "reconcile"
+        logger.warning("visibility toggle: reconcile stopped at stage %s", stage)
+    push_pending = False
+    if report.committed and config.git_push_enabled():
+        # Outside WRITE_LOCK: the push task re-takes it (not reentrant).
+        publish.submit("push visibility reconcile", write_lock.push_task(root))
+        push_pending = True
+    return _mirror_result(
+        action=entry.action if entry is not None else reconcile_mod.NONE,
+        committed=report.committed,
+        commit_sha=report.commit_sha,
+        push_pending=push_pending,
+        error=(
+            _MIRROR_FAILED.format(stage=reconcile_mod.error_stage(failure) or "reconcile")
+            if failure else None
+        ),
+    )
+
+
+def _mirror_result(
+    *,
+    action: str = reconcile_mod.NONE,
+    committed: bool = False,
+    commit_sha: str | None = None,
+    push_pending: bool = False,
+    error: str | None = None,
+) -> dict[str, object]:
+    return {
+        "action": action,
+        "committed": committed,
+        "commit_sha": commit_sha,
+        "push_pending": push_pending,
+        "error": error,
+    }
 
 
 @router.post("/app/projects/{project_id}/credentials", status_code=201)

@@ -195,13 +195,13 @@
       "order": 16,
       "path": "works/phases/active/P34-n0",
       "review_status": "pending",
-      "current_slice": "P34-n0.S2",
+      "current_slice": "P34-n0.S3",
       "slice_count": 7,
-      "done_slice_count": 2
+      "done_slice_count": 3
     }
   ],
   "deferred_open_count": 64,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-28T13:03:26+09:00"
+  "last_rebuilt_at": "2026-10-28T13:28:03+09:00"
 }

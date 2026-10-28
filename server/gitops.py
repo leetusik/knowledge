@@ -23,6 +23,9 @@ checkout's own ``info/exclude`` (never a tracked file, which would publish the n
 lists each private project's footprint, and ``add`` / ``remove`` refuse any path in
 it, and a ``docs/index.md`` that links into it, with ``GitError`` (fail closed: the
 write stays on disk, ``committed: false``). See the *Private projects* section below.
+``server/reconcile.py`` (P34-n0.S2) makes the tree mirror the registry with the
+reads and the one guard-bypassing write (``untrack``) in *The reconcile's git
+primitives*.
 """
 from __future__ import annotations
 
@@ -218,6 +221,161 @@ def mark_private(project: str, *, root) -> bool:
     path = exclude_path(root)
     _, inside = _split_block(_read_text(path))
     return write_private_projects(_block_names(inside) | {project}, root=root)
+
+
+def unmark_private(project: str, *, root) -> bool:
+    """Drop ``project``'s lines from the managed block (idempotent; P34-n0.S2).
+
+    The reverse of ``mark_private``, for a project that turned ``public``: once
+    unmarked, the guard lets its footprint stage again. Returns ``False`` when the
+    block did not list it (nothing written).
+    """
+    _check_project_name(project)
+    path = exclude_path(root)
+    _, inside = _split_block(_read_text(path))
+    names = _block_names(inside)
+    if project not in names:
+        return False
+    return write_private_projects(names - {project}, root=root)
+
+
+# --- The reconcile's git primitives (P34-n0.S2) ---
+#
+# ``server/reconcile.py`` makes the tree mirror the registry. It needs a few reads
+# (what of a footprint is tracked, what would show once unmarked, is anything
+# staged) and one write the guard must not stop: untracking a private project's
+# footprint. Nothing else calls ``untrack``.
+
+
+def footprint_dirs(project: str) -> list[str]:
+    """A project's three footprint directories, repo-relative (no trailing slash)."""
+    _check_project_name(project)
+    return [f"docs/{prefix}{project}" for prefix in _FOOTPRINT_PREFIXES]
+
+
+def _is_footprint_dir(rel: str) -> bool:
+    parts = rel.split("/")
+    if len(parts) == 2 and parts[0] == "docs":
+        name = parts[1]
+    elif len(parts) == 3 and parts[0] == "docs" and parts[1] in (".versions", ".books"):
+        name = parts[2]
+    else:
+        return False
+    return (
+        bool(_PROJECT_NAME_RE.fullmatch(name))
+        and ".." not in name
+        and name not in (".versions", ".books", _NEVER_STAGED_DIR)
+    )
+
+
+def _nul_list(text: str) -> list[str]:
+    return [p for p in text.split("\0") if p]
+
+
+def _has_head(root) -> bool:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--verify", "--quiet", "HEAD"],
+        capture_output=True, text=True, timeout=config.git_timeout_s(),
+    )
+    return proc.returncode == 0
+
+
+def tracked_paths(paths: Iterable[str], *, root) -> list[str]:
+    """Files under ``paths`` that are in the index **or** in ``HEAD``, sorted.
+
+    ``HEAD`` counts too: a deletion already staged but not yet committed is still
+    published until a commit lands, so the reconcile must still treat it as tracked.
+    """
+    kept = [str(p) for p in paths]
+    if not kept:
+        return []
+    found = set(_nul_list(_run(["--literal-pathspecs", "ls-files", "-z", "--", *kept], root=root).stdout))
+    if _has_head(root):
+        out = _run(["ls-tree", "-r", "-z", "--name-only", "HEAD", "--", *kept], root=root).stdout
+        found.update(_nul_list(out))
+    return sorted(found)
+
+
+def pending_paths(paths: Iterable[str], *, root) -> list[str]:
+    """Files under ``paths`` that ``git add`` would stage once the project is unmarked.
+
+    Untracked files (honoring the tree's ``.gitignore`` files but **not**
+    ``info/exclude``, the block being exactly what an unmark removes, nor a global
+    excludes file) plus tracked files modified or deleted in the work tree. Sorted.
+    """
+    kept = [str(p) for p in paths]
+    if not kept:
+        return []
+    others = _run(
+        ["--literal-pathspecs", "ls-files", "-z", "--others",
+         "--exclude-per-directory=.gitignore", "--", *kept],
+        root=root,
+    ).stdout
+    modified = _run(
+        ["--literal-pathspecs", "ls-files", "-z", "--modified", "--", *kept], root=root
+    ).stdout
+    return sorted(set(_nul_list(others)) | set(_nul_list(modified)))
+
+
+def staged_paths(paths: Iterable[str], *, root) -> list[str]:
+    """Files under ``paths`` whose staged state differs from ``HEAD``, sorted."""
+    kept = [str(p) for p in paths]
+    if not kept:
+        return []
+    out = _run(
+        ["--literal-pathspecs", "diff", "--cached", "--name-only", "-z", "--", *kept],
+        root=root,
+    ).stdout
+    return sorted(set(_nul_list(out)))
+
+
+def untrack(paths: Iterable[str], *, root) -> None:
+    """Remove a private project's footprint from the index, keeping every file on disk.
+
+    ``git --literal-pathspecs rm -r --cached --quiet --ignore-unmatch -- <dirs>``.
+    The reconcile's own primitive (P34-n0.S2): it bypasses the private-projects guard
+    on purpose (untracking is exactly what the guard cannot do) and never deletes a
+    file from the work tree. Narrow by construction: every path must be one of a
+    project's three footprint directories (``docs/<p>``, ``docs/.versions/<p>``,
+    ``docs/.books/<p>``), else ``ValueError`` before git runs, so it can never untrack
+    ``docs/`` as a whole, a top-level page or anything outside ``docs/``.
+    """
+    rels = [_repo_rel(p, root) for p in paths]
+    if not rels:
+        return
+    if not all(_is_footprint_dir(rel) for rel in rels):
+        raise ValueError("untrack takes only a project's footprint directories")
+    _run(["--literal-pathspecs", "rm", "-r", "--cached", "--quiet", "--ignore-unmatch",
+          "--", *rels], root=root)
+
+
+def has_staged_changes(*, root) -> bool:
+    """Whether the index differs from ``HEAD`` (``git diff --cached --quiet``)."""
+    cmd = ["git", "-C", str(root), "diff", "--cached", "--quiet"]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=config.git_timeout_s())
+    except subprocess.TimeoutExpired as exc:
+        raise GitError(cmd, "timed out") from exc
+    if proc.returncode in (0, 1):
+        return proc.returncode == 1
+    raise GitError(cmd, proc.stderr or proc.stdout)
+
+
+def show(spec: str, *, root) -> Optional[str]:
+    """The text of a blob (``HEAD:<path>``, ``:<path>``), or ``None`` when it is absent."""
+    cmd = ["git", "-C", str(root), "show", spec]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=config.git_timeout_s())
+    except subprocess.TimeoutExpired as exc:
+        raise GitError(cmd, "timed out") from exc
+    return proc.stdout if proc.returncode == 0 else None
+
+
+def index_lock_path(root) -> Path:
+    """The checkout's ``index.lock`` (present while another git holds the index)."""
+    out = _run(["rev-parse", "--git-path", "index.lock"], root=root).stdout.strip()
+    path = Path(out)
+    return path if path.is_absolute() else Path(root) / path
 
 
 def _repo_rel(path, root) -> str:
