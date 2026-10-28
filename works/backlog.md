@@ -5,9 +5,9 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P34-n0`
+- Current slice: `P34-n0.DECOMP`
+- Next slice: `P34-n0.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `64`
 - Workspace version: `v86`
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | - | idle | - | - | - | working tree |
+| `default` | `P34-n0` | planned | `P34-n0.DECOMP` | 0/2 | - | working tree |
 
 ## Active Phases
 
@@ -37,6 +37,7 @@
 | [x] `P-9sz6` | `done` | `pass` | Explain as a phase: workflow handoff | `none` | `works/phases/active/P-9sz6` |
 | [x] `P-8jbf` | `done` | `pass` | Wide reader on big screens | `none` | `works/phases/active/P-8jbf` |
 | [x] `P33-n3` | `done` | `pass` | Explain front door | `none` | `works/phases/active/P33-n3` |
+| [ ] `P34-n0` | `planned` | `pending` | Keep private documents off the public repo | `P34-n0.DECOMP` | `works/phases/active/P34-n0` |
 
 ## Phase P21: Web document deletion
 
@@ -256,3 +257,10 @@
 | [x] `P33-n3.S1` | `done` | Rewrite the explain skill as the explain-phase front door | `implementation` | `works/phases/active/P33-n3/slices/P33-n3.S1` |
 | [x] `P33-n3.S2` | `done` | Say it on the plugin's outer surface and bump it to 0.7.0 | `implementation` | `works/phases/active/P33-n3/slices/P33-n3.S2` |
 | [x] `P33-n3.REVIEW` | `done` | phase review | `review` | `works/phases/active/P33-n3/slices/P33-n3.REVIEW` |
+
+## Phase P34-n0: Keep private documents off the public repo
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P34-n0.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P34-n0/slices/P34-n0.DECOMP` |
+| [ ] `P34-n0.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P34-n0/slices/P34-n0.REVIEW` |
