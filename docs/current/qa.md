@@ -1,11 +1,11 @@
 ---
 doc_id: qa
-version: v2610271204
-created_at: 2026-10-27T21:04:30+09:00
-commit: 74fd0865ad7909cdd69fe90ae5617271787bf89e
-source: P33-n3.REVIEW
-summary: P33-n3.REVIEW gate: Regression Checklist replaces three P32 single-document-engine explain lines with front-door lines and adds the book confirmation and citation-check lines
-previous: v2610271051_p-8jbf.review_append_the_wide-step_and_wide-table_smoke_lines_to_the_regression_checklist
+version: v2610280645
+created_at: 2026-10-28T15:45:23+09:00
+commit: 2fedc85d176afd0c5cad432087efca2e37666d70
+source: P34-n0.REVIEW
+summary: P34-n0.REVIEW gate: Regression Checklist adds the private-publish gate, the tenant #1 visibility-toggle mirror and the public-repo footprint lines
+previous: v2610271204_p33-n3.review_gate_regression_checklist_replaces_three_p32_single-document-engine_explain_lines_with_front-door_lines_and_adds_the_book_confirmation_and_citation-check_lines
 ---
 
 # QA
@@ -375,6 +375,17 @@ apply there; use *In-app graph label focus (P22)* instead._
       no tab stop; one whose content is wider still scrolls in its box with
       the hint and fade; below 1600px every 8+ column table scrolls as before
       (P-8jbf)
+- [ ] Private publish gate: a tenant #1 write and its delete in a private
+      project with `commit: true` answer `committed: false` with no
+      `commit_error`, and leave no commit, no `docs/index.md` bullet and no
+      push (P34-n0)
+- [ ] Visibility toggle (tenant #1): setting a project private untracks its
+      `docs/` footprint and drops its index lines in one commit whose message
+      names no project, with its files kept on disk; setting it public again
+      restores them (P34-n0)
+- [ ] Public repo: GitHub `main`'s tree holds no path under a private
+      project's footprint (`docs/<p>/`, `docs/.versions/<p>/`,
+      `docs/.books/<p>/`), and its `docs/index.md` links into none (P34-n0)
 
 ## Verifying the Guard Itself (negative-test pattern)
 

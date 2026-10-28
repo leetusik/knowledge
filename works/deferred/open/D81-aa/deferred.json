@@ -1,0 +1,11 @@
+{
+  "id": "D81-aa",
+  "title": "Teach the private-project matcher HTML card links",
+  "status": "deferred",
+  "source": "P34-n0.REVIEW",
+  "reason": "remove_project_bullets, the reconcile and the gitops index guard match only markdown links, so a hand-written kb-card <a href=\"<p>/\"> survives an unpublish (P34-n0 S4 found 3); may also carry OQ2's warn-on-public-linking-private",
+  "trigger": "before a card is added for a project, or before any project is set public again",
+  "created_at": "2026-10-28T15:49:36+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

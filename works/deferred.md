@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `64`
+- Open: `67`
 - Promoted: `6`
 - Dropped: `14`
 
@@ -73,6 +73,9 @@
 | `D78-rq` | `deferred` | Explain front door: landing framing and wording follow-up | P33-n3.REVIEW | the operator's rewording, or the next plugin release (0.7.1) | `works/deferred/open/D78-rq` |
 | `D79-we` | `deferred` | Delete the vendored .claude/skills/explain/ | P33-n3.REVIEW | the operator's word, or the next /update-workspace | `works/deferred/open/D79-we` |
 | `D80-ch` | `deferred` | Plugin text drift outside the explain front door | P33-n3.REVIEW | the next touch of either file | `works/deferred/open/D80-ch` |
+| `D81-aa` | `deferred` | Teach the private-project matcher HTML card links | P34-n0.REVIEW | before a card is added for a project, or before any project is set public again | `works/deferred/open/D81-aa` |
+| `D82-kq` | `deferred` | Let the site build pass on a KB with no public project | P34-n0.REVIEW | when the operator wants a green push, or the red check gets in the way | `works/deferred/open/D82-kq` |
+| `D83-5s` | `deferred` | Off-box backup for tenant #1's documents | P34-n0.REVIEW | operator's word (P34-n0 OQ6, accepted as drawn: file now); at the latest before the next document of value is written | `works/deferred/open/D83-5s` |
 | `D-pzs7` | `deferred` | Retire or redirect the orphaned document archive page | P-8jbf.DECOMP | the next reader or documents phase | `works/deferred/open/D-pzs7` |
 | `D-19n8` | `deferred` | Quiz Show answer button overflows a 390 phone at 200% root text | P-8jbf.REVIEW | the next reader or quiz phase, or a QA sweep | `works/deferred/open/D-19n8` |
 | `D-6pf9` | `deferred` | A long table's box state depends on resize history | P-8jbf.F1 | the next reader-tables phase or a QA sweep | `works/deferred/open/D-6pf9` |

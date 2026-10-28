@@ -191,17 +191,18 @@
       "id": "P34-n0",
       "name": "Keep private documents off the public repo",
       "objective": "Stop the knowledge server from committing and pushing private projects' documents to the public GitHub repo (today it decides by owner account, not by project visibility), deal with what is already exposed there, and keep private titles out of the published home index.",
-      "status": "planned",
+      "status": "done",
       "order": 16,
       "path": "works/phases/active/P34-n0",
-      "review_status": "pending",
-      "current_slice": "P34-n0.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 7,
-      "done_slice_count": 6
+      "done_slice_count": 7,
+      "consolidation": "pending"
     }
   ],
-  "deferred_open_count": 64,
+  "deferred_open_count": 67,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-28T15:26:46+09:00"
+  "last_rebuilt_at": "2026-10-28T15:50:46+09:00"
 }

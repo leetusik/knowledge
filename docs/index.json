@@ -1218,7 +1218,7 @@
       ]
     },
     "qa": {
-      "latest": "v2610271204_p33-n3.review_gate_regression_checklist_replaces_three_p32_single-document-engine_explain_lines_with_front-door_lines_and_adds_the_book_confirmation_and_citation-check_lines",
+      "latest": "v2610280645_p34-n0.review_gate_regression_checklist_adds_the_private-publish_gate_the_tenant_1_visibility-toggle_mirror_and_the_public-repo_footprint_lines",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1412,6 +1412,15 @@
           "source": "P33-n3.REVIEW",
           "summary": "P33-n3.REVIEW gate: Regression Checklist replaces three P32 single-document-engine explain lines with front-door lines and adds the book confirmation and citation-check lines",
           "previous": "v2610271051_p-8jbf.review_append_the_wide-step_and_wide-table_smoke_lines_to_the_regression_checklist"
+        },
+        {
+          "id": "v2610280645_p34-n0.review_gate_regression_checklist_adds_the_private-publish_gate_the_tenant_1_visibility-toggle_mirror_and_the_public-repo_footprint_lines",
+          "path": "docs/versions/qa/v2610280645_p34-n0.review_gate_regression_checklist_adds_the_private-publish_gate_the_tenant_1_visibility-toggle_mirror_and_the_public-repo_footprint_lines.md",
+          "created_at": "2026-10-28T15:45:23+09:00",
+          "commit": "2fedc85d176afd0c5cad432087efca2e37666d70",
+          "source": "P34-n0.REVIEW",
+          "summary": "P34-n0.REVIEW gate: Regression Checklist adds the private-publish gate, the tenant #1 visibility-toggle mirror and the public-repo footprint lines",
+          "previous": "v2610271204_p33-n3.review_gate_regression_checklist_replaces_three_p32_single-document-engine_explain_lines_with_front-door_lines_and_adds_the_book_confirmation_and_citation-check_lines"
         }
       ]
     },
@@ -1590,5 +1599,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-10-27T21:04:30+09:00"
+  "last_rebuilt_at": "2026-10-28T15:45:23+09:00"
 }

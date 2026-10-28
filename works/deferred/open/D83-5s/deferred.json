@@ -1,0 +1,11 @@
+{
+  "id": "D83-5s",
+  "title": "Off-box backup for tenant #1's documents",
+  "status": "deferred",
+  "source": "P34-n0.REVIEW",
+  "reason": "the git push was tenant #1's off-box backup; with every project private nothing is pushed, so the box disk is the only copy (one dated laptop tarball aside). D7 covers only other tenants and assumes tenant #1 is safe via git; D47's reason is fixed by P34-n0. Re-scope or supersede them",
+  "trigger": "operator's word (P34-n0 OQ6, accepted as drawn: file now); at the latest before the next document of value is written",
+  "created_at": "2026-10-28T15:49:36+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

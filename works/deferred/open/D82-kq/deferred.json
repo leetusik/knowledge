@@ -1,0 +1,11 @@
+{
+  "id": "D82-kq",
+  "title": "Let the site build pass on a KB with no public project",
+  "status": "deferred",
+  "source": "P34-n0.REVIEW",
+  "reason": "scripts/site_smoke.py assumes a Recent bullet, a project dir and a matching graph count; with every project private the site build workflow fails on every push since the unpublish (it gates no deploy)",
+  "trigger": "when the operator wants a green push, or the red check gets in the way",
+  "created_at": "2026-10-28T15:49:36+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

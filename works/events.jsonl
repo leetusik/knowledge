@@ -1529,3 +1529,16 @@
 {"ts": "2026-10-28T15:12:51+09:00", "type": "slice_status_changed", "slice": "P34-n0.S5", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-10-28T15:26:46+09:00", "type": "executor_dispatched", "slice": "P34-n0.S5", "phase": "P34-n0", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": "resumed verification pass after the operator's force-push"}
 {"ts": "2026-10-28T15:26:46+09:00", "type": "slice_status_changed", "slice": "P34-n0.S5", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-28T15:28:55+09:00", "type": "slice_status_changed", "slice": "P34-n0.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-28T15:45:23+09:00", "type": "doc_version_created", "doc": "qa", "version": "v2610280645_p34-n0.review_gate_regression_checklist_adds_the_private-publish_gate_the_tenant_1_visibility-toggle_mirror_and_the_public-repo_footprint_lines", "source": "P34-n0.REVIEW"}
+{"ts": "2026-10-28T15:49:36+09:00", "type": "executor_dispatched", "slice": "P34-n0.REVIEW", "phase": "P34-n0", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-28T15:49:36+09:00", "type": "deferred_created", "deferred": "D81-aa", "source": "P34-n0.REVIEW"}
+{"ts": "2026-10-28T15:49:36+09:00", "type": "deferred_created", "deferred": "D82-kq", "source": "P34-n0.REVIEW"}
+{"ts": "2026-10-28T15:49:36+09:00", "type": "deferred_created", "deferred": "D83-5s", "source": "P34-n0.REVIEW"}
+{"ts": "2026-10-28T15:49:50+09:00", "type": "phase_status_changed", "phase": "P34-n0", "old_status": "planned", "new_status": "pending"}
+{"ts": "2026-10-28T15:49:50+09:00", "type": "acceptance_opened", "phase": "P34-n0"}
+{"ts": "2026-10-28T15:49:50+09:00", "type": "phase_status_changed", "phase": "P34-n0", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-10-28T15:49:50+09:00", "type": "acceptance_cleared", "phase": "P34-n0"}
+{"ts": "2026-10-28T15:50:46+09:00", "type": "slice_status_changed", "slice": "P34-n0.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-28T15:50:46+09:00", "type": "phase_reviewed", "phase": "P34-n0", "verdict": "pass", "reviewer": "slice-executor"}
+{"ts": "2026-10-28T15:50:46+09:00", "type": "phase_consolidation_owed", "phase": "P34-n0", "notes": 9}

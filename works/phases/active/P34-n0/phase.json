@@ -2,23 +2,23 @@
   "id": "P34-n0",
   "name": "Keep private documents off the public repo",
   "objective": "Stop the knowledge server from committing and pushing private projects' documents to the public GitHub repo (today it decides by owner account, not by project visibility), deal with what is already exposed there, and keep private titles out of the published home index.",
-  "status": "planned",
+  "status": "done",
   "order": 16,
   "created_at": "2026-10-28T12:23:01+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-28T15:49:50+09:00",
+  "completed_at": "2026-10-28T15:50:46+09:00",
   "review": {
-    "status": "pending",
-    "reviewed_at": null,
-    "reviewer": null,
-    "note": null
+    "status": "pass",
+    "reviewed_at": "2026-10-28T15:50:46+09:00",
+    "reviewer": "slice-executor",
+    "note": "round 1 pass, no findings; gate cleared on the operator's 'accept the review when it passes'; deferred D81-aa, D82-kq, D83-5s"
   },
   "acceptance": {
     "required": true,
-    "walkthrough": null,
-    "requested_at": null,
-    "cleared_at": null,
-    "note": null
+    "walkthrough": "Signed out: https://knowledge.hi2vi.com/ shows no project, title or card; /@leetusik reads Library not found and old document links Document not found. GitHub: docs/ holds no KB project folder, docs/index.md has an empty Recent with only the Tags and Graph cards, 427 commits on main (a852b40). Signed in (not run by the review: Aside was down): /library lists every project as private and a document still opens. Still the operator's: delete the 280 Actions runs (scratchpad purge/delete-required.sh; 114 optional), send the GitHub Support request (S5 result.md runbook f), then delete scratchpad purge/ and review/, and the /home/opc tarballs when unwanted. KB writes may resume (all private: no write commits). D1 backup gap (OQ6): keep ~/kb-private-docs-backup-20261028.tgz, file a tenant #1 backup job. D2 (OQ7): scrub one spelled-out private name from the unpushed records and rewrite those local commits before the next push. Full text: slices/P34-n0.REVIEW/result.md.",
+    "requested_at": "2026-10-28T15:49:50+09:00",
+    "cleared_at": "2026-10-28T15:49:50+09:00",
+    "note": "operator: 'accept the review when it passes.' (2026-10-28); D1 and D2 taken as drawn: D83-5s filed, OQ7 scrub done before the next push"
   },
   "paths": {
     "phase_md": "phase.md",
@@ -29,5 +29,6 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  }
+  },
+  "consolidation": "pending"
 }
