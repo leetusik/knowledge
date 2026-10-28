@@ -1,0 +1,56 @@
+# P34-n0.S4 — Unpublish private projects from the tree on the server
+
+## Goal
+
+On the knowledge box (`ssh oracle-cloud`, `/opt/knowledge`), never from this laptop, the reconcile untracks every private registry project's footprint and unlists its bullets from `docs/index.md`. That is one unpublish commit, pushed, with the exclude block rewritten whole. Afterwards, GitHub's tip tree holds no private footprint path and no private bullet, and the server still has every private file on disk.
+
+## Who runs what
+
+The operator said "you do the runbook" for S3, and the harness denied the main thread's `git push`. So the main thread runs the read-only and server steps over SSH. The steps that change the public repo happen only on the operator's word at this slice's stop. The executor then verifies.
+
+1. **Dry run (main thread, read-only):** `docker exec knowledge-api python -m server.reconcile --dry-run --verbose`. Its output names private projects, so it stays in the session, never in a repo file. Record counts only below, under `## Operator report`.
+2. **Stop (`decision`):** the operator confirms the private list. They also say whether "keep everything private" covers the two projects that are public in the registry today. If it does, the main thread sets those two private first, through the registry on the box. A toggle through the app would commit and push at once, so the order is agreed at the stop. Then the dry run is repeated.
+3. **On the operator's word (main thread):**
+   - Back up `docs/` again on the box.
+   - Run `docker exec knowledge-api python -m server.reconcile --push`.
+   - If the harness denies the push step, run it without `--push` and hand the operator `docker exec knowledge-api python -m server.reconcile --push` to run on the box. That command is the owed-push retry.
+4. **Verify (executor, high row, read-only):** re-dispatched with the main thread's report appended below. It checks, against the private-name list at the scratchpad path given in the dispatch prompt (never copied into the repo):
+   - GitHub's tip tree, through `gh api repos/leetusik/knowledge/git/trees/main?recursive=1`, holds no path under any private project's footprint (`docs/<p>/`, `docs/.versions/<p>/`, `docs/.books/<p>/`);
+   - the tip's `docs/index.md` (`gh api …/contents/docs/index.md`) has no bullet linking into a private project;
+   - the unpublish commit's message names no project;
+   - the counts in the main thread's report (files untracked, index lines removed, files still on the box's disk) agree with the dry run.
+   It writes `result.md` with counts only, no names, and returns `done` or `blocked`.
+5. **The write pause:** it lifts once the verify passes. If a public project remains, a public-write probe goes to it first (a tiny document, `commit: true`, expected `committed: true` and pushed), and is then deleted. If none remains, there is nothing left to publish, and the probe is skipped with that reason.
+
+## After S4
+
+Pulling into this laptop clone deletes the private files from this laptop's `docs/`, because the server is canonical. The operator decides whether to copy them first. S5 (the history purge) follows.
+
+## Set
+
+No product files: only this slice's `result.md` and the notebook through `phase-section`.
+
+## Hygiene
+
+No private project name, title, tenant id or secret in `result.md`, the notebook or any commit; counts only.
+
+## Dispatch
+
+route=high
+reason=risk high (not low)
+subagent_type=slice-executor
+model=opus
+pass_model=yes
+effort=xhigh
+pass_effort=yes
+attribution=Claude Opus 5.5
+explore_model=haiku
+explore_effort=xhigh
+
+## Operator report
+
+- **Dry run (main thread, 2026-10-28, box at `25fe9f9`, clean tree):**
+  - `reconcile --dry-run --verbose` exit 0, 13 registry projects in scope.
+  - 9 `unpublish` (52 tracked files would be untracked; 34 index lines removed), 2 `none private` (already marked, nothing tracked: the stray project and the probe), 2 `none public`.
+  - Exclude block: would change. Would commit `docs: unpublish private projects (9)`.
+  - Names stay in the session.

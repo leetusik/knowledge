@@ -3,14 +3,14 @@
   "phase_id": "P34-n0",
   "name": "Unpublish private projects from the tree on the server",
   "kind": "qa",
-  "status": "todo",
+  "status": "pending",
   "order": 4,
   "depends_on": [
     "P34-n0.S3"
   ],
   "depends_declared": true,
   "created_at": "2026-10-28T12:39:35+09:00",
-  "started_at": null,
+  "started_at": "2026-10-28T13:55:15+09:00",
   "completed_at": null,
   "risk": "high",
   "source": {
@@ -31,5 +31,10 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "pending": {
+    "kind": "decision",
+    "on_words": "'accept' unpublishes the 9 private projects with the 2 public ones kept public; 'accept, all private' first sets those 2 private too; then the main thread backs up docs/ and runs reconcile --push on the box",
+    "since": "2026-10-28T13:55:37+09:00"
   }
 }
