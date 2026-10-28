@@ -60,3 +60,5 @@ explore_effort=xhigh
 - **Dry run 2:** exit 0. 11 `unpublish` (65 tracked files, 43 index lines), 2 `none private`, 0 public. Would commit `docs: unpublish private projects (11)`.
 - **Laptop backup:** the clone's 19 private footprint dirs (65 files) are in `/Users/sugang/kb-private-docs-backup-20261028.tgz`, mode 600, outside the repo.
 - **`reconcile --push`:** denied to the main thread by the harness, so the operator runs it.
+- **Operator ran** `ssh oracle-cloud 'docker exec knowledge-api python -m server.reconcile --push'`: 11 `unpublish` (65 files untracked, 43 index lines removed), 2 `none private`. `exclude block: changed`. `committed ba2e8781a7066db6900aff522c70fb727ea58740: docs: unpublish private projects (11)`. `pushed: origin/main is now ba2e878…`.
+- **Box after (main thread):** `## main...origin/main`, head `ba2e878`. Tracked files under the 12 projects' footprints: 0. Private files on disk: 67 (the 65 untracked, plus the stray project's untracked files). Index lines linking into a private project: 0.

@@ -33,8 +33,8 @@
     "archive_path": null
   },
   "pending": {
-    "kind": "operator-action",
-    "on_words": "the operator ran \"! ssh oracle-cloud 'docker exec knowledge-api python -m server.reconcile --push'\": the main thread checks the box, then dispatches S4's verification",
-    "since": "2026-10-28T14:03:40+09:00"
+    "kind": "decision",
+    "on_words": "OQ4: 'fold into S5' has S5's rewrite drop the 3 index cards from every docs/index.md version incl. the tip; 'now' has the main thread remove them on the box in one more unpublish commit (operator runs the push)",
+    "since": "2026-10-28T14:13:32+09:00"
   }
 }
