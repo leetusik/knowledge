@@ -3,7 +3,7 @@
   "phase_id": "P34-n0",
   "name": "Purge private projects from the public history",
   "kind": "implementation",
-  "status": "pending",
+  "status": "in_progress",
   "order": 5,
   "depends_on": [
     "P34-n0.S4"
@@ -31,10 +31,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "decision",
-    "on_words": "OQ5 answer plus the operator's force-push from purge/after (or after-tipkeep): the main thread resets the box, rebases this clone, resets the marketplace clone, then re-dispatches S5's verification",
-    "since": "2026-10-28T14:58:34+09:00"
   }
 }

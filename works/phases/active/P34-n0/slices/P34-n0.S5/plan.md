@@ -71,3 +71,12 @@ pass_effort=yes
 attribution=Claude Opus 5.5
 explore_model=haiku
 explore_effort=xhigh
+
+## Operator report
+
+- **OQ5 → `after`.** The operator force-pushed from `purge/after`: `+ ba2e878...a852b40 main -> main (forced update)`.
+- **(b) Box (main thread, SSH):**
+  - Before: head `ba2e878`, 0 ahead, clean. Backup tarball of the 21 footprint dirs (67 files) in `/home/opc`.
+  - `sudo git fetch origin` failed, because the host's root has no deploy key; the first `reset --hard origin/main` was a no-op at `ba2e878`. So it fetched over HTTPS from the public URL into `refs/remotes/origin/main` (forced update to `a852b40`), then ran `reset --hard origin/main`.
+  - After: head `a852b40` (427 commits), `## main...origin/main`, 0 status lines, 67 private files on disk (unchanged).
+  - The box's origin URL stays SSH, so the API's `gitops.push` keeps using the deploy key.

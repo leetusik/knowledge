@@ -2,7 +2,7 @@
   "current_phase": "P34-n0",
   "current_slice": "P34-n0.S5",
   "next_slice": "P34-n0.REVIEW",
-  "waiting_on_operator": "P34-n0.S5",
-  "mode": "waiting",
-  "updated_at": "2026-10-28T14:58:34+09:00"
+  "waiting_on_operator": null,
+  "mode": "phase",
+  "updated_at": "2026-10-28T15:12:51+09:00"
 }
