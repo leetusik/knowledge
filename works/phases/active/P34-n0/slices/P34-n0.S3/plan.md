@@ -76,3 +76,14 @@ The operator said "you do the runbook" (2026-10-28); the main thread runs it on 
 - **B3:** the exclude file had no managed block. Wrote one, markers verbatim, with the stray project's three footprint lines. Also added `/.env.bak*` outside the block, so two untracked env backups stop appearing in the deploy's `git status` artifact.
 - **B4:** `git status --short --branch` → `## main...origin/main` (clean, at `90671db`).
 - **Registry, read-only:** tenant #1 has 12 projects, 10 `private` and 2 `public`. The list stays in the session scratchpad, never in the repo.
+- **C (main thread, laptop):** 10 private names from the registry (scratchpad only). After the scrub, a whole-word grep of the unpushed commits found nothing but the "Knowledge Base" index heading (one listed name that is also an ordinary word, a false positive). A substring grep without that name found nothing.
+- **D:** the harness denied the main thread's `git push`, so the operator ran `git push origin main && gh workflow run deploy-production.yml --ref main`. `90671db..25fe9f9`, run `40634414628`, conclusion `success` at `25fe9f9`. The run artifact and log name no private project; the only hits are the public domain `knowledge.hi2vi.com`.
+- **E1:** `docker exec knowledge-api python -m server.reconcile --help` prints `usage: python -m server.reconcile [-h] [--dry-run] [--push] [--verbose]` and names no project.
+- **E2:** the box's `log -1` is `25fe9f973fc97deed3b3039e062f40e7dcc17e62`, equal to origin's head.
+- **E3:** `status --short` on the box printed nothing.
+- **F (probe, `p34-probe`, `commit: true`):** response `201`, with `id 69`, `rel_path p34-probe/2026-10-28-p34-probe.md`, `committed false`, `commit_sha null`, `pushed false`, `push_pending false`, `recent_updated false`, `landing_created false`, `commit_error` absent.
+- **F1:** status empty.
+- **F2:** head `25fe9f9`; the `docs/index.md` diff against HEAD is 0 lines.
+- **F3:** origin is `25fe9f9`.
+- **F4:** the exclude file holds the probe's 3 lines; the file sits at `docs/p34-probe/`.
+- **G (delete id 69, `commit=true`):** response `200`, `committed false`, `commit_sha null`, `push_pending false`, `commit_error` absent. Status empty, head `25fe9f9`. The probe's folder is gone. Its registry row (private, empty) and exclude lines remain, as the runbook expected.

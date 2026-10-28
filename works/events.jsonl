@@ -1511,3 +1511,6 @@
 {"ts": "2026-10-28T13:32:12+09:00", "type": "slice_status_changed", "slice": "P34-n0.S3", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}
 {"ts": "2026-10-28T13:42:59+09:00", "type": "slice_status_changed", "slice": "P34-n0.S3", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-10-28T13:47:07+09:00", "type": "slice_status_changed", "slice": "P34-n0.S3", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}
+{"ts": "2026-10-28T13:48:56+09:00", "type": "slice_status_changed", "slice": "P34-n0.S3", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-10-28T13:54:25+09:00", "type": "executor_dispatched", "slice": "P34-n0.S3", "phase": "P34-n0", "kind": "qa", "risk": "low", "attempt": 1, "verdict": "done", "note": "resumed verification pass after the operator-action stop"}
+{"ts": "2026-10-28T13:54:25+09:00", "type": "slice_status_changed", "slice": "P34-n0.S3", "old_status": "in_progress", "new_status": "done"}

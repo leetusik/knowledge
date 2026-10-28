@@ -1,19 +1,48 @@
-# P34-n0.S3 result: Deploy the gate and verify a private write live (first pass)
+# P34-n0.S3 result: Deploy the gate and verify a private write live
 
 ## Verdict
 
-- status: needs_operator
+- status: done
 - route: mid
 - model: opus
 - effort: medium
-- summary: First pass. Ran the read-only checks: local `main` is 4 commits ahead of origin, origin is at `90671db`, and the last three Production Deploys succeeded. Wrote the operator runbook below (OQ3, server pre-steps, hygiene grep, push and deploy, deploy checks, the private probe write, probe cleanup). Nothing was pushed, dispatched or run on the server.
-- operator_need: (A) settle OQ3: if the session label in `intent.md`'s `## Notes` matches a private project's name, give the replacement wording; the main thread edits that line and commits it before anything is pushed. Then run B, C, E, F and G yourself, and either run D or tell the main thread "push and deploy" when you are ready. Paste back: B4's status output, C's grep output (it must be empty), E's three outputs, F's response block and its four checks, and G's response and status. Toggle no project's visibility and make no other KB write until S4.
-- files_changed: works/phases/active/P34-n0/slices/P34-n0.S3/result.md; works/phases/active/P34-n0/phase.md (`## Now` only, through `phase-section`)
-- validation: `git log --oneline origin/main..main` (4 commits, passed); `git status --short` (clean apart from the orchestrator's slice-start files and this slice's own, passed); `gh run list --workflow deploy-production.yml -L 3` (3 successes, passed); `gh api repos/leetusik/knowledge/commits/main --jq .sha` (= local `origin/main`, passed); `python3 scripts/workflow.py validate` (passed, pre-existing warnings only)
-- deviations: (1) F and G call the API with Python's `urllib` inside `knowledge-api`, not `curl`: the image installs only git, openssh-client and tzdata (Dockerfile L18-19), so it has no `curl`, and the API port is not published on the host (compose.prod.yml L126). The compose healthcheck already calls the API this way. (2) The SSH alias is the README's `oracle-cloud`, not the plan's `h`: use your own alias if it differs. (3) The block lines are listed in the order `server/gitops.py` `_render` writes them (`/docs/<p>/`, `/docs/.versions/<p>/`, `/docs/.books/<p>/`, one project per group), which is the plan's order. They are sorted by project name, not alphabetically within a group.
+- summary: S1 and S2 are deployed (run 40634414628, success at `25fe9f9`), and a live private write with `commit: true` made no commit, no index bullet and no push; its delete made none either. Every reported output matches the runbook's expected output, and GitHub re-checks read-only confirm origin's head and the run's conclusion.
+- files_changed: works/phases/active/P34-n0/slices/P34-n0.S3/result.md; works/phases/active/P34-n0/phase.md (`## Notes for later slices` and `## Now`, through `phase-section`)
+- validation: `gh api repos/leetusik/knowledge/commits/main --jq .sha` -> `25fe9f973fc97deed3b3039e062f40e7dcc17e62` (passed); `gh run view 40634414628 -R leetusik/knowledge --json conclusion,headSha` -> `success` at `25fe9f97...` (passed); operator-report comparison, 17 checks (all passed, see `## Verification`); `python3 scripts/workflow.py validate` (passed, pre-existing warnings only)
+- deviations: (1) The main thread ran the runbook on the box for the operator ("you do the runbook"); the operator ran D (push and dispatch) because the harness denied the main thread's push. (2) C's whole-word grep was not literally empty: it hit one generic word in a heading that coincides with a private name; a substring grep with that one name left out printed nothing. Judged a false positive, not a leak. (3) B3 also added one env-backup pattern outside the managed block, so untracked env backups stay out of the deploy's `git status` artifact. Harmless: the server rewrites only the block between its markers.
 - doc_impact: none
 
-## Read-only checks (2026-10-28)
+## Verification (resumed pass, 2026-10-28)
+
+Source: the `## Operator report` in this slice's `plan.md`, plus two read-only GitHub checks run by this pass.
+
+| Check | Expected (runbook) | Reported / observed | Result |
+|---|---|---|---|
+| A, OQ3 | label reworded and committed before the push if it matched | it matched; reworded in `intent.md` and scrubbed from the unpushed commits before the push | pass |
+| B1, backup | one non-zero tarball in `/home/opc` | one tarball, 7,793,074 bytes, opc-owned, mode 600 | pass |
+| B2, index | `git diff --stat -- docs/index.md` empty | 0 lines | pass |
+| B3, exclude | no prior block; block written with verbatim markers and three footprint lines | no prior block; written verbatim with the three lines (plus one env-backup pattern outside the block) | pass |
+| B4, clean | `## main...origin/main`, no ahead/behind, no other lines | `## main...origin/main`, clean at `90671db` | pass |
+| C, hygiene grep | empty | one generic-word false positive (whole-word); substring grep without it empty | pass (deviation 2) |
+| D, push | origin fast-forwards from `90671db` | `90671db..25fe9f9` | pass |
+| D, deploy | run ends `success` | run 40634414628 `success`; artifact and log name no private project | pass |
+| GitHub re-check, run | `success` at the pushed head | `gh run view`: `success`, headSha `25fe9f973fc9...` | pass |
+| GitHub re-check, origin | equals the pushed head | `gh api`: `25fe9f973fc97deed3b3039e062f40e7dcc17e62` | pass |
+| E1, reconcile `--help` | usage `[--dry-run] [--push] [--verbose]`, no project | exactly that usage line, no project | pass |
+| E2, box head | box `log -1` = origin head | `25fe9f97...` = origin | pass |
+| E3, box status | empty | empty | pass |
+| F, probe response | `201`, `committed false`, `commit_sha null`, `pushed false`, `push_pending false`, `recent_updated false`, `landing_created false`, `commit_error` absent, path under `docs/p34-probe/` | all as expected; `rel_path p34-probe/2026-10-28-p34-probe.md` (relative to `docs/`) | pass |
+| F1, status | empty | empty | pass |
+| F2, head and index | head = E's SHA; index diff empty | `25fe9f9`; 0 lines | pass |
+| F3, origin | unchanged | `25fe9f9` | pass |
+| F4, exclude | the probe's three lines in the block | three lines; the file sits at `docs/p34-probe/` | pass |
+| G, delete | `200`, `committed false`, `commit_sha null`, no `commit_error`; status empty; head unchanged | `200`, all as expected, `push_pending false`; status empty; head `25fe9f9`; probe folder gone | pass |
+
+Left behind, as the runbook expected: the `p34-probe` registry row (private, no documents) and its three exclude lines; the `docs/` backup tarball on the box (holds private content, deletable after S4). The registry read showed tenant #1 with 10 private and 2 public projects (counts only; the names stay out of the repo).
+
+Conclusion: the S1 publish gate and S2 reconcile code are live, and the private-write path is proven not to commit, index or push. S4 (the reconcile run) can proceed.
+
+## First-pass read-only checks (2026-10-28)
 
 | Check | Output |
 |---|---|
@@ -211,7 +240,7 @@ Expected: `200`, `committed: false`, `commit_sha: null`, no `commit_error`. The 
 
 What stays behind is harmless: the `p34-probe` registry row (private, holding no documents) and its three lines in the exclude block. You may delete the project from the app later. Toggle no project's visibility before S4: after this deploy, a toggle commits and pushes at once.
 
-## Validation
+## First-pass validation
 
 - Read-only git and gh checks: see the table above.
 - `python3 scripts/workflow.py validate`: passed (warnings only, all pre-existing and from other phases: P26.S5 kind, consolidation owed, stale docs, oversized doc sections).

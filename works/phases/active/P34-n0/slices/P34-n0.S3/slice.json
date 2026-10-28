@@ -3,7 +3,7 @@
   "phase_id": "P34-n0",
   "name": "Deploy the gate and verify a private write live",
   "kind": "qa",
-  "status": "pending",
+  "status": "done",
   "order": 3,
   "depends_on": [
     "P34-n0.S2"
@@ -11,7 +11,7 @@
   "depends_declared": true,
   "created_at": "2026-10-28T12:39:35+09:00",
   "started_at": "2026-10-28T13:28:59+09:00",
-  "completed_at": null,
+  "completed_at": "2026-10-28T13:54:25+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -21,7 +21,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Deployed S1+S2 (run 40634414628 at 25fe9f9); a live private write with commit:true made no commit, no index bullet, no push; 19/19 checks pass",
   "validation": {
     "required": [],
     "last_run": null,
@@ -31,10 +31,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "operator-action",
-    "on_words": "the operator ran '! git push origin main && gh workflow run deploy-production.yml --ref main': the main thread watches the deploy, then runs runbook E-G and S3's verification pass",
-    "since": "2026-10-28T13:47:07+09:00"
   }
 }
