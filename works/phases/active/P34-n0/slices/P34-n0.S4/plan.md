@@ -54,3 +54,9 @@ explore_effort=xhigh
   - 9 `unpublish` (52 tracked files would be untracked; 34 index lines removed), 2 `none private` (already marked, nothing tracked: the stray project and the probe), 2 `none public`.
   - Exclude block: would change. Would commit `docs: unpublish private projects (9)`.
   - Names stay in the session.
+- **Operator, 2026-10-28:** "all private. cleanup the github repo as well. accept".
+- **Box `docs/` backup 2:** `/home/opc/kb-docs-backup-20261028-050242.tgz` (7,794,584 bytes).
+- **The 2 public projects:** set `private` through the accounts service inside `knowledge-api`, the same call the app toggle makes. Calling the service directly runs no reconcile.
+- **Dry run 2:** exit 0. 11 `unpublish` (65 tracked files, 43 index lines), 2 `none private`, 0 public. Would commit `docs: unpublish private projects (11)`.
+- **Laptop backup:** the clone's 19 private footprint dirs (65 files) are in `/Users/sugang/kb-private-docs-backup-20261028.tgz`, mode 600, outside the repo.
+- **`reconcile --push`:** denied to the main thread by the harness, so the operator runs it.

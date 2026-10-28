@@ -33,8 +33,8 @@
     "archive_path": null
   },
   "pending": {
-    "kind": "decision",
-    "on_words": "'accept' unpublishes the 9 private projects with the 2 public ones kept public; 'accept, all private' first sets those 2 private too; then the main thread backs up docs/ and runs reconcile --push on the box",
-    "since": "2026-10-28T13:55:37+09:00"
+    "kind": "operator-action",
+    "on_words": "the operator ran \"! ssh oracle-cloud 'docker exec knowledge-api python -m server.reconcile --push'\": the main thread checks the box, then dispatches S4's verification",
+    "since": "2026-10-28T14:03:40+09:00"
   }
 }
