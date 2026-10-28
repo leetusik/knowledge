@@ -3,7 +3,7 @@
   "phase_id": "P34-n0",
   "name": "Deploy the gate and verify a private write live",
   "kind": "qa",
-  "status": "in_progress",
+  "status": "pending",
   "order": 3,
   "depends_on": [
     "P34-n0.S2"
@@ -31,5 +31,10 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "pending": {
+    "kind": "operator-action",
+    "on_words": "the operator ran '! git push origin main && gh workflow run deploy-production.yml --ref main': the main thread watches the deploy, then runs runbook E-G and S3's verification pass",
+    "since": "2026-10-28T13:47:07+09:00"
   }
 }
