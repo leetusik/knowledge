@@ -50,6 +50,7 @@ Out of scope: paid or other users, any write tool, line selection on legacy HTML
 - Q: Are chats saved per user per document? — A: yes.
 - Q: Native books and markdown documents get the full feature, legacy HTML explainers whole-document questions only? — A: yes.
 - Q: Design style and mockup — `build-after`, canvas sign-off with a mockup on request? — A: yes.
+- Q: Hermes searches the web through its own backends, not Anthropic's; which one: the free keyless rotation, Firecrawl (500 free credits a month), Brave (2,000 free queries a month) or a self-hosted SearXNG? — A: "I'll take brave." (2026-10-30). Brave is search-only, so fetching a page's content needs a second backend, chosen at the Hermes fit check; the Brave key (`BRAVE_SEARCH_API_KEY`) is the operator's to provide.
 
 ## Design Style
 
