@@ -81,8 +81,8 @@ and `Read` only their ranges.
    the outline lists as this one's prerequisite.
 7. **The explain skill** (`skill:`; otherwise the `knowledge` plugin's `installPath` in
    `~/.claude/plugins/installed_plugins.json`, plus `/skills/explain/SKILL.md`). It is the
-   writer's contract and your yardstick: read §3 (research), §4.1 (hard rules), §4.2
-   (outline and tone), §4.4 (the block grammar, for diagram and quiz shapes), §4.5 (the quiz
+   writer's contract and your yardstick: read §3 (research), §4's prose rules, §4.1 (hard
+   rules), §4.2 (outline and tone), §4.4 (the block grammar, for diagram and quiz shapes), §4.5 (the quiz
    and best practices) and §4.6 (sources). Cite its sections; never restate or extend
    them. If you cannot find it, say so in the verdict and mark every `rules` finding at
    most `medium` confidence.
@@ -160,15 +160,21 @@ that changes the case is a `must-fix` when its key is then wrong.
 
 **Order and prerequisites:** walk the chapter as the outline's stated reader who has read
 only the earlier chapters (none, for a single document). A term or idea used before this
-chapter or an earlier one introduces it is a finding; so is re-teaching at length what an
-earlier chapter covers instead of linking it (`chapter:` links to unpublished siblings are
-expected warnings, not defects).
+chapter or an earlier one introduces it is a finding; so is leaning on a link (`chapter:`,
+`doc:`, a source or a file) where the reader needs the idea (a `reader` must-fix, below),
+and so is re-teaching at length what an earlier chapter covers where a short recap would
+do (`chapter:` links to unpublished siblings are expected warnings, not defects).
 
 **The reader:** as the stated reader, do each task in `## Reader's task` (none: the spec's
-purpose) from the chapter alone. A task it does not serve, or its deliverable missing:
-`must-fix`. A paragraph holding two ideas or past about 100 words, a step buried in prose,
-a caveat that interrupts the main line, a fact reported as who-said-what, a section past
-its budget: `should-fix`, saying where the reader trips (the skill's §4 prose rules).
+purpose) from the chapter alone, opening no link, file or source. A task it does not serve,
+or its deliverable missing: `must-fix`; so is a chapter organised by slices or work
+records, or one its reader cannot follow without opening a link, a file or a source. An
+id as a sentence's subject or in a heading, a deferred job's id, a work record named where
+plain words would do, or a lone "see X" in place of an explanation: `should-fix` (the
+skill's §4, *The subject, not the records* and *Standalone*). A paragraph holding two
+ideas or past about 100 words, a step buried in prose, a caveat that interrupts the main
+line, a fact reported as who-said-what, a section past its budget: `should-fix`, saying
+where the reader trips (the skill's §4 prose rules).
 
 **Clarity:** for the outline's stated reader, per the skill's §4.2 tone: jargon defined on
 first use, transitions that carry the argument, the core idea reachable without the code.
@@ -191,7 +197,7 @@ to the right source id for the wrong claim, an image without real alt text.
 - **`should-fix`**: the chapter is right but weaker than it should be. An unlabelled
   diagram, or one not worth its place; a quiz item that tests recall, or a distractor
   nobody would pick; undefined jargon; a section order that makes the idea harder to
-  follow; re-teaching an earlier chapter instead of linking it; an uncited
+  follow; long re-teaching of an earlier chapter where a short recap would do; an uncited
   non-load-bearing claim; the `ledger`, `coverage` and `reader` should-fixes above.
 - **`note`**: advisory, never blocks: a matter of taste, or an improvement the outline did
   not ask for. Judge taste against the outline's reader and the skill's §4.2 tone, never
@@ -210,8 +216,9 @@ it is not a finding.
 
 **What never counts against the chapter:** following its spec or the outline; a gap
 declared in `gaps/final.md` and honoured as declared; a warning `knowledge check` reports
-for a `chapter:` link to a sibling not yet published; a choice the spec made that you would
-have made differently (a `note` at most).
+for a `chapter:` link to a sibling not yet published; a short recap of an earlier chapter's
+idea; a phase or slice id used only as the small trailing mark; a choice the spec made that
+you would have made differently (a `note` at most).
 
 **The verdict:** `pass` means no `must-fix` is open; anything else is `revise`. Never `pass`
 with an open `must-fix`. A `should-fix` or `note` never blocks.
@@ -374,6 +381,9 @@ way".
   rung 1 or 2, and cite that.
 - **The attributed form is always open:** "the vendor says X" is a descriptive claim about
   the vendor's statement, so rung 1 supports it, and the chapter must keep the attribution.
+  A workspace work record (a phase's notes, a slice's result) is attributed in plain words
+  ("the notes from the change that introduced it report X", "the change's own tests show
+  Y"), its id at most a trailing mark, "(P24)".
 
 **Credibility tests**, done off the page: leave it and search for who is behind it (lateral
 reading). Their answers go into the entries (B9):

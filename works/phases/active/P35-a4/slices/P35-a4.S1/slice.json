@@ -3,13 +3,13 @@
   "phase_id": "P35-a4",
   "name": "Explain rules: teach the subject, not the work records, and stand alone",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 10,
   "depends_on": [],
   "depends_declared": true,
   "created_at": "2026-10-30T15:40:44+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-30T15:45:52+09:00",
+  "completed_at": "2026-10-30T15:51:05+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -19,7 +19,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Explain skill teaches the subject over the work records (ids at most a trailing mark), standalone documents and chapters, subject-led titles; the critic enforces them; copies and agents regenerated",
   "validation": {
     "required": [],
     "last_run": null,

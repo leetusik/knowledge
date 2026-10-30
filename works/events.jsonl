@@ -1549,3 +1549,6 @@
 {"ts": "2026-10-30T15:44:37+09:00", "type": "executor_dispatched", "slice": "P35-a4.DECOMP", "phase": "P35-a4", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-30T15:44:37+09:00", "type": "slice_status_changed", "slice": "P35-a4.DECOMP", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-10-30T15:44:37+09:00", "type": "acceptance_waived", "phase": "P35-a4"}
+{"ts": "2026-10-30T15:45:52+09:00", "type": "slice_status_changed", "slice": "P35-a4.S1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-30T15:51:05+09:00", "type": "executor_dispatched", "slice": "P35-a4.S1", "phase": "P35-a4", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-30T15:51:05+09:00", "type": "slice_status_changed", "slice": "P35-a4.S1", "old_status": "in_progress", "new_status": "done"}

@@ -190,6 +190,9 @@ way".
   rung 1 or 2, and cite that.
 - **The attributed form is always open:** "the vendor says X" is a descriptive claim about
   the vendor's statement, so rung 1 supports it, and the chapter must keep the attribution.
+  A workspace work record (a phase's notes, a slice's result) is attributed in plain words
+  ("the notes from the change that introduced it report X", "the change's own tests show
+  Y"), its id at most a trailing mark, "(P24)".
 
 **Credibility tests**, done off the page: leave it and search for who is behind it (lateral
 reading). Their answers go into the entries (B9):

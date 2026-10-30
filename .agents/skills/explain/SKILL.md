@@ -167,11 +167,11 @@ imposed:
   the subject:
   - **a whole phase** (change mode, "explain P8", a joint "P8 and P9") → a chapter of the
     repo's **`phases`** book (kind `codebase`, book title `"<project>, phase by phase"`):
-    chapter key `p<N>` (a joint explain → `p<N>-p<M>`), position `N`, chapter title
-    `"P<N>: <phase name>"`, source `phase=P<N>`;
+    chapter key `p<N>` (a joint explain → `p<N>-p<M>`), position `N`, a chapter title
+    by the title rule below, source `phase=P<N>`;
   - **one slice** of a phase (change mode, "explain P8.S2") → a chapter of that phase's
     own book `p<N>`: chapter key = the slice id lowercased (`s1`, `f1`), position = the
-    slice's `order`, chapter title = the slice's name, sources `phase=P<N>` and
+    slice's `order`, a chapter title by the title rule below, sources `phase=P<N>` and
     `slice=P<N>.S<k>`;
   - **any other subject** → a chapter of the book the operator names: the chapter key is
     a short lowercase-kebab name for the chapter, its position the next after the book's
@@ -182,11 +182,18 @@ imposed:
 - **A book**, only when the operator asks for one (a book, chapters, a course, a series
   or a multi-part guide; or `book=<slug>` naming no existing book): `unit: book`, `run:
   full`, `outline sign-off: on`, `depth: about <n> chapters`. Its slug, title and kind: a
-  **phase or slice subject** gets that phase's own book, `p<N>` titled
-  `"P<N>: <phase name>"` (a tailed or v73 id keeps its form: `P46-k2` suggests `p46-k2`,
-  titled `"P46-k2: <phase name>"`), kind `codebase`; **anything else** is a named book:
-  a repo's book is kind `codebase`; a book about a general subject is kind `subject`
-  with `subject` set to its label (`Finance`).
+  **phase or slice subject** gets that phase's own book, `p<N>` (a tailed or v73 id keeps
+  its form: `P46-k2` suggests `p46-k2`), titled by the rule below, kind `codebase`;
+  **anything else** is a named book: a repo's book is kind `codebase`; a book about a
+  general subject is kind `subject` with `subject` set to its label (`Finance`).
+
+**The title rule.** A book's, a chapter's or a loose document's title says what the text
+explains, never the work that produced it: "How a review publishes privately (P30)", not
+"P30: <phase name>". A phase or slice id appears at most as that trailing mark (§4, *The
+subject, not the records*). Keys, slugs and positions are internal and stay as above, and
+the `phases` book keeps its title; only its chapters' titles follow the rule. It binds only
+a **new** book or chapter: an existing chapter keeps its manifest entry and a loose v2 its
+`rel_path` (§5), so nothing already published changes.
 
 Do **not** invent a book the user did not ask for and the rules above do not name. A
 topic too big for one document stays one document: its run scopes it down at D1 and the
@@ -256,6 +263,7 @@ Read with Read, Glob and Grep; your only other calls are §2's resolver and one 
    - **book**: `none`; for a chapter, `<slug> — "<title>" (exists, <n> chapters, project
      private)`; for a book, `<slug> — "<title>" (kind <codebase | subject>)` ·
      **chapter**: `none`, or `<key> — "<title>" · position <n>` · **prior**: from step 5;
+     a new book's or chapter's `<title>` follows §1's title rule;
    - **run**: RUN (a book is always `full`: a `quick` or `no-research` asked for a book is
      said so, never applied) · **lang**: `<LANG> (translations: none)`;
    - **reader**: who it is for, what they already know, and what they will do with it (a
@@ -434,7 +442,8 @@ D0b passes:
 
 In an explain phase the brief's fields come from `intent.md`'s `## Explain`, and its
 `prior:` line, when it is not `none`, names the prior version; otherwise look for one as
-below.
+below. A phase or slice subject is what the system now does and why; its records are
+evidence (§4, *The subject, not the records*).
 
 **The prior version: is this an update to an existing chapter or document?**
 
@@ -668,7 +677,8 @@ disk:
    of 1–3 existing treatments; in repo modes also the diff, `git log --stat` and the file list.
 2. **Questions,** 8–20: the explicit asks, every must-cover item, and 3–5 things an expert
    would expect a chapter for this reader to cover. Mark each load-bearing or not.
-3. **An outline skeleton** in §4.2's order, with the questions each section answers.
+3. **An outline skeleton** in §4.2's order, with the questions each section answers,
+   grouped by the subject's ideas, never by slice or record.
 4. **The tier:** the highest of three axes. Breadth: one domain (1), 2–5 subtopics (2), more
    than 5 or disjoint domains (3). Nesting: one-step inference (1), 2–3 dependent
    sub-questions (2), 4 or more (3). Exploration: fully specified (1), 1–2 unspecified
@@ -700,7 +710,8 @@ disk:
    - **code in real order** (a code researcher, no web): the path through this repository,
      in execution order for a flow and dependencies first for a structure;
    - **history behind it** (a code researcher): `git log` and `git blame`, commit messages,
-     design, phase and slice notes: why it is this way (the field's history is history);
+     design, phase and slice notes, as evidence of why it is this way, never the
+     chapter's structure (the field's history is history);
    - **how others solve it** (a web researcher): comparable implementations and the
      standard patterns this code follows or departs from (definitions are foundations).
 
@@ -866,7 +877,7 @@ say `quick`, and what it skipped.
 no ledger: you read the repository yourself, by mode. **Change mode:** the real change,
 not your memory of it (`git diff <base>..<head>`, `git log --stat`, `git show <ref>`), then
 the changed files and the code around them, and a phase's or slice's plan and result notes
-if the repository keeps them. **Topic mode:** the real code, configs, compose files and
+if the repository keeps them, as evidence, never the chapter's structure. **Topic mode:** the real code, configs, compose files and
 scripts that make the topic work here. **General mode:** only what the user gave you and
 what the conversation established. Write `brief.md` and `run.md` (`run: no-research`) to
 `<DOSSIER>` at once; the drafts follow there. The
@@ -883,8 +894,8 @@ the reader's task; the research supports it, never leads it.**
    fit: a checklist ("Before you change X"), a decision table ("try it if… / wait if…"),
    the commands to run, the test that guards the behaviour.
 2. **The path:** §4.2's sections, the middle ones in the order the reader meets the work
-   (code: the order it runs; a general subject: the decision or the steps as the reader
-   takes them). Each task gets the section that delivers it, ending in its deliverable;
+   (code: the order it runs; a phase or slice: the system's ideas and flow, never slice
+   order; a general subject: the decision or the steps as the reader takes them). Each task gets the section that delivers it, ending in its deliverable;
    each heading carries a one-line purpose, its tasks and a word budget: the fewest words
    that deliver them (a single document mostly 3,000–5,000 in all).
 3. **Each finding goes in the step it changes** (a race in the step that has it, and in the
@@ -945,9 +956,27 @@ at the first paragraph or `##` heading.
 - **A finding opens with one bold sentence** saying what it means for the reader; the
   evidence follows.
 - **Teach, don't report:** a fact in your own voice ("the GIL is released for I/O", not
-  "the glossary says…"); a source named in the sentence only where B8 needs the attributed
-  form or it changes the reader's trust. One citation per source a paragraph, at the
-  sentence's end; a code location once, in its block's title.
+  "the glossary says…"); a source or work record named in the sentence only where B8 needs
+  the attributed form (a work record's is B7's plain-words form) or it changes the
+  reader's trust. One citation per source a paragraph, at the sentence's end; a code
+  location once, in its block's title.
+- **The subject, not the records:** for a phase, a slice or a change, the reader wants what
+  the system now does and why. The workspace's records (a phase's intent and notebook, a
+  slice's `result.md`, a deferred job) are evidence, never the subject or the structure:
+  sections follow the system's ideas and flow, never slice order, and no sentence takes a
+  record or an id as its subject. A phase or slice id appears at most as a small trailing
+  mark, "(P30)", after the plain-words statement, never in a heading; a deferred job's id
+  never appears: say in plain words what is still open. Not "The P24.S1 result adds that a
+  background task could run before the body reached the client", but "A background task
+  could run before the body reached the client, which the change that introduced the
+  worker found (P24)".
+- **Standalone:** the chapter reads complete on its own; no sentence depends on the reader
+  opening a link, a source, a repo file, or another document or chapter. An idea the
+  reader needs is explained in place, briefly when another chapter teaches it at length: a
+  short recap of an earlier chapter's idea, never "see chapter 2" (a `chapter:` link may
+  follow, as an extra). Citations and the sources block stay, as evidence the reader may
+  check, never as the explanation. A repo path is fine as a code block's title, never "see
+  `X` §4" or "`architecture.md` says…" in place of saying what it says.
 - **Secondary depth** (another number, history, edge evidence) goes in a collapsed callout
   (`> [!NOTE]- <title>`), so the main line reads fast.
 - **Shorter wins:** the research's volume is never a reason to write more.
@@ -984,7 +1013,7 @@ at publish with a line-numbered list — never silently repaired — so write to
   and `doc:[<project>/]<slug>`. Nothing else: no `mailto:`, `javascript:`, `data:`,
   relative paths or bare filenames. A `#id` that matches nothing is an error; a
   `chapter:`/`doc:` target that does not exist yet is only a warning (a series may link
-  forward).
+  forward). A link is an extra, never the explanation (§4, *Standalone*).
 - **Images** are `![alt](asset:NAME)` or a figure's `src` — never an `http(s)` URL (that is
   an error), and every NAME must be attached to **this** publish (§4.7).
 - **YAML strings:** quote anything with a colon-space, a leading `#`, `{`, `[`, `*`, `&`, `!`,
@@ -1000,17 +1029,19 @@ A starting shape, not a form to fill. Use the sections the subject earns, in thi
 `##` headings with ids (the reader builds the table of contents from `##` and `###`;
 **never write one**):
 
-1. **Background** — change mode: the system as it was before this change, plus context;
-   topic mode: what this is and why it exists here; general mode: what the subject is and
-   what the reader needs to already know. Offer a deeper beginner background in a
-   `> [!SKIP] Skip this if you already know …` callout, then the narrower relevant part.
+1. **Background** — change mode: the system as it was before this change, plus context,
+   never the work's history slice by slice; topic mode: what this is and why it exists
+   here; general mode: what the subject is and what the reader needs to already know.
+   Offer a deeper beginner background in a `> [!SKIP] Skip this if you already know …`
+   callout, then the narrower relevant part.
 2. **Intuition** — the core idea in essence, with **concrete toy data** and a diagram;
    change mode: why the change and what it buys; topic mode: the mental model; general
    mode: the idea through a worked example.
-3. **Code** — change mode walks the diff, grouped and ordered logically; topic mode walks
-   the real implementation here (fenced code with a `title="path"`). In **general mode**
-   this section is **Worked examples** instead: real numbers, real cases, step by step.
-   Its subsections, and any section a task needs ("Should you use it today?"), follow
+3. **Code** — change mode walks the diff, grouped and ordered logically (a phase or slice:
+   the system as it now works, by idea, never slice by slice); topic mode walks the real
+   implementation here (fenced code with a `title="path"`). In **general mode** this
+   section is **Worked examples** instead: real numbers, real cases, step by step. Its
+   subsections, and any section a task needs ("Should you use it today?"), follow
    the reader's path (§3.10), each task's section ending in its deliverable.
 4. **Best practices & next steps** — on every run but `no-research` (§4.5), where it is
    absent and the report says so.
@@ -1305,7 +1336,8 @@ Offline (§6): no check is possible; say so.
 - **slug** = short lowercase-kebab topic name (e.g. `shared-nginx-explained`); date = today,
   `YYYY-MM-DD`. (A chapter's address is its book and key; the slug and date still name its
   file.)
-- **title** = a clean title, no trailing period. **tags** = 2–5 lowercase-kebab topic tags.
+- **title** = a clean title saying what the text explains (§1's title rule), no trailing
+  period. **tags** = 2–5 lowercase-kebab topic tags.
   **summary** = one or two sentences that lede the chapter under its title (optional,
   recommended). **lang** = the chapter's language (§1).
 - `co_authored_by` is the bare attribution value naming the model that actually did the
@@ -1522,7 +1554,7 @@ committed with each slice except `pages/` (write `pages/.gitignore`, `*` then
 1. **D0–D0b:** the brief from `intent.md`'s `## Explain` (subject, mode, reader, depth,
    must-cover, leave-out, trusted sources, `lang: en`), placement `book <slug>`.
 2. **D1:** 20–60 questions; the skeleton is a draft chapter list with each chapter's
-   questions; tier usually 3, the heaviest angles split by the book's parts.
+   questions, the chapters following the subject's ideas, never one per slice by default; tier usually 3, the heaviest angles split by the book's parts.
 3. **D2–D4:** waves of at most 10 (wave 1 in up to two); at most 3 gap rounds of at most 6
    researchers, against the chapter list; a ceiling of 45 researcher and gap-reviewer
    dispatches.
@@ -1971,8 +2003,8 @@ and `Read` only their ranges.
    the outline lists as this one's prerequisite.
 7. **The explain skill** (`skill:`; otherwise the `knowledge` plugin's `installPath` in
    `~/.claude/plugins/installed_plugins.json`, plus `/skills/explain/SKILL.md`). It is the
-   writer's contract and your yardstick: read §3 (research), §4.1 (hard rules), §4.2
-   (outline and tone), §4.4 (the block grammar, for diagram and quiz shapes), §4.5 (the quiz
+   writer's contract and your yardstick: read §3 (research), §4's prose rules, §4.1 (hard
+   rules), §4.2 (outline and tone), §4.4 (the block grammar, for diagram and quiz shapes), §4.5 (the quiz
    and best practices) and §4.6 (sources). Cite its sections; never restate or extend
    them. If you cannot find it, say so in the verdict and mark every `rules` finding at
    most `medium` confidence.
@@ -2050,15 +2082,21 @@ that changes the case is a `must-fix` when its key is then wrong.
 
 **Order and prerequisites:** walk the chapter as the outline's stated reader who has read
 only the earlier chapters (none, for a single document). A term or idea used before this
-chapter or an earlier one introduces it is a finding; so is re-teaching at length what an
-earlier chapter covers instead of linking it (`chapter:` links to unpublished siblings are
-expected warnings, not defects).
+chapter or an earlier one introduces it is a finding; so is leaning on a link (`chapter:`,
+`doc:`, a source or a file) where the reader needs the idea (a `reader` must-fix, below),
+and so is re-teaching at length what an earlier chapter covers where a short recap would
+do (`chapter:` links to unpublished siblings are expected warnings, not defects).
 
 **The reader:** as the stated reader, do each task in `## Reader's task` (none: the spec's
-purpose) from the chapter alone. A task it does not serve, or its deliverable missing:
-`must-fix`. A paragraph holding two ideas or past about 100 words, a step buried in prose,
-a caveat that interrupts the main line, a fact reported as who-said-what, a section past
-its budget: `should-fix`, saying where the reader trips (the skill's §4 prose rules).
+purpose) from the chapter alone, opening no link, file or source. A task it does not serve,
+or its deliverable missing: `must-fix`; so is a chapter organised by slices or work
+records, or one its reader cannot follow without opening a link, a file or a source. An
+id as a sentence's subject or in a heading, a deferred job's id, a work record named where
+plain words would do, or a lone "see X" in place of an explanation: `should-fix` (the
+skill's §4, *The subject, not the records* and *Standalone*). A paragraph holding two
+ideas or past about 100 words, a step buried in prose, a caveat that interrupts the main
+line, a fact reported as who-said-what, a section past its budget: `should-fix`, saying
+where the reader trips (the skill's §4 prose rules).
 
 **Clarity:** for the outline's stated reader, per the skill's §4.2 tone: jargon defined on
 first use, transitions that carry the argument, the core idea reachable without the code.
@@ -2081,7 +2119,7 @@ to the right source id for the wrong claim, an image without real alt text.
 - **`should-fix`**: the chapter is right but weaker than it should be. An unlabelled
   diagram, or one not worth its place; a quiz item that tests recall, or a distractor
   nobody would pick; undefined jargon; a section order that makes the idea harder to
-  follow; re-teaching an earlier chapter instead of linking it; an uncited
+  follow; long re-teaching of an earlier chapter where a short recap would do; an uncited
   non-load-bearing claim; the `ledger`, `coverage` and `reader` should-fixes above.
 - **`note`**: advisory, never blocks: a matter of taste, or an improvement the outline did
   not ask for. Judge taste against the outline's reader and the skill's §4.2 tone, never
@@ -2100,8 +2138,9 @@ it is not a finding.
 
 **What never counts against the chapter:** following its spec or the outline; a gap
 declared in `gaps/final.md` and honoured as declared; a warning `knowledge check` reports
-for a `chapter:` link to a sibling not yet published; a choice the spec made that you would
-have made differently (a `note` at most).
+for a `chapter:` link to a sibling not yet published; a short recap of an earlier chapter's
+idea; a phase or slice id used only as the small trailing mark; a choice the spec made that
+you would have made differently (a `note` at most).
 
 **The verdict:** `pass` means no `must-fix` is open; anything else is `revise`. Never `pass`
 with an open `must-fix`. A `should-fix` or `note` never blocks.
@@ -2268,6 +2307,9 @@ way".
   rung 1 or 2, and cite that.
 - **The attributed form is always open:** "the vendor says X" is a descriptive claim about
   the vendor's statement, so rung 1 supports it, and the chapter must keep the attribution.
+  A workspace work record (a phase's notes, a slice's result) is attributed in plain words
+  ("the notes from the change that introduced it report X", "the change's own tests show
+  Y"), its id at most a trailing mark, "(P24)".
 
 **Credibility tests**, done off the page: leave it and search for who is behind it (lateral
 reading). Their answers go into the entries (B9):
