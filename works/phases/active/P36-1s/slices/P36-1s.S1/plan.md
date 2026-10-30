@@ -79,3 +79,20 @@ pass_effort=yes
 attribution=Claude Opus 5.5
 explore_model=haiku
 explore_effort=xhigh
+
+## Resume after the operator's key fix (2026-10-30)
+
+The first dispatch returned `needs_operator` with $0.00 spent: the key line ended in a stray `$`. The operator fixed it (now checked by shape only: no trailing `$`, mode 600). This dispatch runs **only** the checks listed in `topics/hermes-fit.md` § *Still open* (items 1–6), reusing the kept probe kit and images. The rules above still hold, including the budget: at most 8 model questions, within the approved $5 (this run's expected spend is about $1–2; stop asking at a running total of $4.50). It updates `topics/hermes-fit.md` (it fills *Still open* and corrects any finding a live answer contradicts), the `phase.md` Decisions lines a live answer changes, `## Now`, and rewrites `result.md` for the whole slice with `spent:` covering both dispatches.
+
+One decision landed since the first dispatch: the operator chose a GitHub App connection plus a per-document linked repo following the branch's latest commit (`intent.md` Clarifications, OQ2; Decisions "Repo link" and "Code access"). It changes nothing in these checks: keep the code probe on the scratch blobless clone.
+
+route=high
+reason=second attempt
+subagent_type=slice-executor
+model=opus
+pass_model=yes
+effort=xhigh
+pass_effort=yes
+attribution=Claude Opus 5.5
+explore_model=haiku
+explore_effort=xhigh

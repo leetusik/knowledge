@@ -3,13 +3,13 @@
   "phase_id": "P36-1s",
   "name": "Hermes fit and code access",
   "kind": "research",
-  "status": "pending",
+  "status": "done",
   "order": 1,
   "depends_on": [],
   "depends_declared": true,
   "created_at": "2026-10-30T20:27:20+09:00",
   "started_at": "2026-10-30T20:33:07+09:00",
-  "completed_at": null,
+  "completed_at": "2026-10-30T23:18:55+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -19,7 +19,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Hermes 0.22.5 proven live as a confined read-only reader agent on Opus 5.5 medium: web, KB and code answers cited, sessions isolated, two-layer tool lockdown; code via blobless clone + read-only MCP; chats in Postgres; spend priced from the guard tap; $0.21 spent",
   "validation": {
     "required": [],
     "last_run": null,
@@ -29,10 +29,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "operator-action",
-    "on_words": "the fixed ANTHROPIC_API_KEY line clears S1 to in_progress and re-dispatches it for the live checks only (at most 8 questions, about $1-2, inside the approved $5)",
-    "since": "2026-10-30T21:09:53+09:00"
   }
 }

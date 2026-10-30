@@ -1,9 +1,9 @@
 {
   "current_phase": "P36-1s",
-  "current_slice": "P36-1s.S1",
-  "next_slice": "P36-1s.D1",
-  "waiting_on_operator": "P36-1s.S1",
-  "mode": "waiting",
+  "current_slice": "P36-1s.D1",
+  "next_slice": "P36-1s.DECOMP2",
+  "waiting_on_operator": null,
+  "mode": "phase",
   "stream": "phase/P36-1s-hermes_a_chat_agent_beside_the_reader",
-  "updated_at": "2026-10-30T21:09:53+09:00"
+  "updated_at": "2026-10-30T23:18:55+09:00"
 }
