@@ -28,7 +28,7 @@ Add **Hermes**, a chat agent, to the reader, built on the open-source **Hermes A
 - **What the reader asks.** General questions about the document, and questions about specific lines: the reader selects text in the document and adds it to the chat as context (several excerpts may be attached to one question). The "add as context" action sits with the reader's existing selection actions.
 - **What the agent can look at.**
   - the document itself (the current chapter and its book), and the knowledge base (other documents and search), under the reader's own visibility rules;
-  - the code repositories behind the document's project, **read-only**, and only those "document related" repos: never anything else on the machine. Secrets (`.env`, keys) stay unreadable;
+  - the code repository linked to the document, **read-only**, and only that "document related" repo: never anything else on the machine. Secrets (`.env`, keys) stay unreadable;
   - the web (search and fetch).
   It has no tool that writes anything and no shell.
 - **Model.** Claude Opus 5.5 at medium effort, on the operator's own Claude API key, held as a server secret.
@@ -37,6 +37,7 @@ Add **Hermes**, a chat agent, to the reader, built on the open-source **Hermes A
 - **Chats.** Saved per user per document, so the reader can come back to a thread; a "new chat" starts a fresh one.
 - **Which documents.** Native books and markdown documents get the full feature. Legacy HTML explainers get whole-document questions only (no line selection).
 - **Code access without copies, if possible.** Before settling on server-side copies of the repos, look for a better way (for example reading files on demand from GitHub at the cited commit, or a clone that fetches file contents only when read). If there is no better way, read-only copies on the server are fine.
+- **Connect GitHub, link a document to a repo** (confirmed 2026-10-30). A user connects GitHub from their account settings, through a GitHub App installed on the repos they choose, with read access to code only; the server works from short-lived tokens, and access is revocable on GitHub. A member links a document to one repo the connection can see, on a branch (the default branch preselected); Hermes follows that branch's latest code. A document with no link gets no code access but still answers from the document, the knowledge base and the web. This replaces a per-project repo mapping and per-repo deploy keys, and needs nothing more for paid users later (each connects their own GitHub). The connection belongs to the user's account for now. Registering the GitHub App on github.com is the operator's step during the build.
 - **Hermes must fit.** Confirm first that Hermes Agent can run as a server behind the reader, use Opus 5.5 with medium effort, have its shell and write tools turned off, stay confined to the allowed repos, and keep each user's chats separate. If it cannot be confined safely, stop and ask the operator before going further; the suggested fallback is to keep the Hermes name on a chat built directly on the Claude API.
 - **Spend.** The feature calls a paid API; anything that spends against the key during the build is planned with the operator first, with the calls and a rough cost. Rough estimate given: $0.10–0.50 a question, up to about $1 for a deep dig through code.
 
@@ -51,6 +52,8 @@ Out of scope: paid or other users, any write tool, line selection on legacy HTML
 - Q: Native books and markdown documents get the full feature, legacy HTML explainers whole-document questions only? — A: yes.
 - Q: Design style and mockup — `build-after`, canvas sign-off with a mockup on request? — A: yes.
 - Q: Hermes searches the web through its own backends, not Anthropic's; which one: the free keyless rotation, Firecrawl (500 free credits a month), Brave (2,000 free queries a month) or a self-hosted SearXNG? — A: "I'll take brave." (2026-10-30). Brave is search-only, so fetching a page's content needs a second backend, chosen at the Hermes fit check; the Brave key (`BRAVE_SEARCH_API_KEY`) is the operator's to provide.
+- Q (OQ1): Brave's free tier allows one search per second, so a second search in the same step can fail. Accept it, pay for a plan, or retry on the keyless vendors? — A: "1 accept." (2026-10-30)
+- Q (OQ2): Which read-only GitHub credential for private repos: a deploy key per repo, a fine-grained token or a GitHub App? — A: "why don't we just let a user connect github in account, and make it possible to link the document with the certain repo." Proposed back as a GitHub App connected from account settings plus a per-document linked repo on a branch, following the branch's latest code, the connection on the user's account for now, a fourth design job in the wave, and `/knowledge:explain` filling the link automatically filed as a separate later job — A: "yes" (2026-10-30).
 
 ## Design Style
 

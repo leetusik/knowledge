@@ -10,7 +10,7 @@
 - Next slice: `P36-1s.D1`
 - Waiting on operator: `P36-1s.S1`
 - Stream: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` (parallel phase checkout; the pointer above is scoped to it)
-- Open deferred jobs: `67`
+- Open deferred jobs: `68`
 - Workspace version: `v86`
 
 ## Streams

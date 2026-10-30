@@ -81,7 +81,7 @@ and cut from it.
 - The box secrets: `ANTHROPIC_API_KEY`, `BRAVE_SEARCH_API_KEY`, a page-extract key if S1's
   choice needs one, and a GitHub token if option A wins.
 
-**D1's jobs: one co-work slice, a wave of 3, each at critique level `critic`**
+**D1's jobs: one co-work slice, a wave of 4, each at critique level `critic`** (job 4 added 2026-10-30 by the operator's OQ2 answer)
 
 The foundation is the reader's existing design system (the P30 rounds: namespace `kb`,
 source `web/src/app/kb-tokens.css`), so every job extends it. Each is a new, central,
@@ -115,6 +115,17 @@ order to open them, the most central first.
    - Legacy HTML explainers get whole-document questions only.
    - Not this job: the composer's frame (`hermes-shell`); the citation's look in the
      answer (`hermes-conversation`).
+
+4. **`hermes-github`: connect GitHub, link a document** — `critic`.
+   - In account settings: "Connect GitHub" (a GitHub App installed on the repos the user
+     chooses, read access to code only), its connected state (which repos it can see),
+     and disconnect; error states (install cancelled, access revoked on GitHub).
+   - On a document, members only: its "Linked repo" control, picking one repo the
+     connection can see and a branch (the default branch preselected); the linked,
+     unlinked and "not connected yet" states; changing and removing the link.
+   - What the chat says on a document with no linked repo (it answers without code).
+   - Not this job: the chat panel itself (`hermes-shell`); code citations in an answer
+     (`hermes-conversation`).
 
 ## Out of scope
 
@@ -184,9 +195,9 @@ explainers (all from `intent.md`).
 
 ## P36-1s.D1
 
-- **Name:** chat design, a wave of 3 jobs. **Kind / risk:** `co-work` / `high`, by kind (a
+- **Name:** chat design, a wave of 4 jobs. **Kind / risk:** `co-work` / `high`, by kind (a
   design slice is never `low`).
-- **Goal:** the three jobs above drafted, critiqued at `critic` and signed by the operator
+- **Goal:** the four jobs above drafted, critiqued at `critic` and signed by the operator
   on their canvases. It runs inline on the main thread (drafter and critic dispatched), ends
   at SIGNOFF, and writes no product code; an in-product mockup only if the operator asks
   for one (then the gate is re-declared in the mockup commit). Where S1's findings shape a
@@ -194,7 +205,7 @@ explainers (all from `intent.md`).
   unavailable states), the handoff carries them. In a plain Markdown document the
   selection bar captures no anchor (`annotations.tsx`, `NoneSel`), which the
   `hermes-context` handoff should name.
-- **Set:** the three new job folders under `docs/reference/design/jobs/` and the wave's
+- **Set:** the four new job folders under `docs/reference/design/jobs/` and the wave's
   folder under `docs/reference/design/waves/`, any `docs/reference/design/design.json`
   update `design-open` makes; `works/phases/active/P36-1s/slices/P36-1s.D1/`;
   `works/phases/active/P36-1s/phase.md`. Numbered sequence: the design job numbers.
