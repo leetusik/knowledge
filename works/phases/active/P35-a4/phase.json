@@ -2,16 +2,16 @@
   "id": "P35-a4",
   "name": "Explain documents: about the subject, standalone",
   "objective": "Refine the explain writing rules, the outline and the critic that checks them so every document and chapter explains what its subject is and does, not which phase, slice or deferred job did the work; workflow ids appear at most as a small mark like (P30), and every document reads complete without depending on links.",
-  "status": "in_progress",
+  "status": "done",
   "order": 17,
   "created_at": "2026-10-30T15:25:20+09:00",
   "started_at": null,
-  "completed_at": null,
+  "completed_at": "2026-10-30T16:45:06+09:00",
   "review": {
-    "status": "changes_requested",
-    "reviewed_at": "2026-10-30T16:11:44+09:00",
+    "status": "pass",
+    "reviewed_at": "2026-10-30T16:45:06+09:00",
     "reviewer": "slice-executor",
-    "note": "round 1: the critic and the writer's answer rule let a writer decline the subject, standalone and title rules (should-fix); F1 makes them reader must-fixes"
+    "note": "round 2: F1 closes Finding 1; the critic holds every document to the subject, standalone and title rules; all validation passes; gate waived"
   },
   "acceptance": {
     "required": false,
@@ -29,5 +29,6 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  }
+  },
+  "consolidation": "pending"
 }
