@@ -82,8 +82,9 @@ re-dispatch goes on from `run.md` (§3.3).
 
 - Ask nobody anything during the run: decide, record the decision in `run.md`, and go
   on. Never choose `quick` or `no-research` yourself.
-- Loop safety is the only bound: at most 3 gap rounds, the tier's dispatch ceiling, one
-  re-dispatch per failed agent, one re-verification per claim. Overflow is queued, never
+- Loop safety is the only bound: at most 3 gap rounds, the dispatch ceiling (8 for a
+  document, the tier's for a book; §3.4), one re-dispatch per failed agent, one
+  re-verification per claim. Overflow is queued, never
   dropped; evidence is never truncated; research never ends silently on an error.
 - **Wait for a background agent only by ending your turn:** its notification starts your
   next one. Never schedule your own resumption, not even as a fallback: no
@@ -698,7 +699,7 @@ dispatch it once more, the call named or the path corrected, like any other fail
 before your next action, so that a compaction, a crash or a usage limit loses nothing:
 
     # Run: <run-id>
-    - subject: <subject> · run: full | quick | no-research · tier: <n> · lang: <LANG>
+    - subject: <subject> · run: full | quick | no-research · size: W <n> | tier: <n> · lang: <LANG>
     - stage: D<k> <name> · state: running | stopped: <reason> | done
     - dossier: <absolute path> · tools: <absolute path> · skill: <absolute path of this file>
     ## Mode
@@ -720,7 +721,8 @@ before your next action, so that a compaction, a crash or a usage limit loses no
     ## Resume
     - <date>: <what the operator asked, and what you did>
 
-`mode` is how the research ran (`quick`: sequential); `agents` is D0b's path, whatever the
+The first line's `size: W <n>` is a document's (§3.4 step 4, `W` its word budget);
+`tier: <n>` is a book's. `mode` is how the research ran (`quick`: sequential); `agents` is D0b's path, whatever the
 run. `wave` is the wave size (§3.5); `caps: agent` when the agents' own turn limits apply
 (the plugin path), `prompt-only` when only the dispatch's budget does; `searches` counts
 every WebSearch of the run: yours (your findings' `## Queries`), the probe's one, and each
@@ -750,8 +752,10 @@ disk:
 `plan.md` is written once; later you only add questions and append to its query log:
 
     # Plan: <run-id>
-    - tier: <n> (breadth <…> · nesting <…> · exploration <…>) · wave 1: <n> · per round: ≤ <n>
-      · budget: <target> / <cap> tool calls · ceiling: <n>
+    - size: W <n> words → <r> researchers (<c> code · <w> web) · claims ≤ <C> · ceiling 8
+      · per round: ≤ 2 · budget: <target> / <cap> tool calls
+      (a book's line instead: tier: <n> (breadth <…> · nesting <…> · exploration <…>) · wave 1: <n>
+      · per round: ≤ <n> · budget: <target> / <cap> tool calls · ceiling: <n>)
     ## Scouting
     ## Questions
     - Q1 · load-bearing: yes | no (<why>) · angle: <angle-id> · from: ask | must-cover | expert | gap G-…
@@ -770,10 +774,37 @@ disk:
    their order and wording: every question belongs to exactly one signed section, each
    must-cover item folds into the section it belongs to, and no question serves an
    unsigned section. Only with none signed do you draft the sections here.
-4. **The tier:** the highest of three axes. Breadth: one domain (1), 2–5 subtopics (2), more
-   than 5 or disjoint domains (3). Nesting: one-step inference (1), 2–3 dependent
-   sub-questions (2), 4 or more (3). Exploration: fully specified (1), 1–2 unspecified
-   factors (2), 3 or more (3).
+4. **The size.** A **document** is sized by its word budget and by where its evidence
+   lives, never by how rich the subject is; this holds for a v1 exactly as for a v2.
+   - **`W`, the word budget:** the sum of the signed sections' budgets (D0); for a
+     document 3,000–5,000, and **4,800** when no budget is stated.
+   - **Wave 1:** `W` ≤ 2,000 → 2 researchers; ≤ 3,500 → 3; above 3,500 → **4**, the cap
+     for a document.
+   - **Where the evidence lives.** A codebase subject (change or topic mode): code
+     researchers take the repository's angles, merged (step 5), *code in real order* with
+     *history behind it* as one researcher, and how it is applied, its branches and real
+     cases, as another; web researchers take the outside angles, merged into at most 2. Above 3,500
+     words that is **2 code + 2 web**. A general subject: every researcher on the web, each
+     a merge of step 5's angles.
+   - **A prior:** a v2 with a usable prior is sized by §3.1's delta.
+   - **Gap rounds:** at most 2 researchers a round. The **ceiling is 8** dispatches,
+     researchers and gap reviewers, re-dispatches included, verifier batches not; the 3-round
+     bound stays, and the ceiling binds first.
+   - **The budget per researcher:** a web researcher 10–20 / 30 tool calls, a code
+     researcher double.
+   - **The claim cap, `C = W ÷ 25`** (≈ 190 at 4,800 words, ≈ 120 at 3,000): about as many
+     claims as the budget holds checkable sentences. Split it across wave 1 by each
+     researcher's share of the questions, and send each share on its dispatch as `claims:
+     ≤ <n>` (§3.5); a gap-round researcher gets a share of what is left. `quick` caps its
+     own claims by the same `C` (§3.9).
+
+   For example, a codebase document with no prior and no stated budget: `W` 4,800 → 4
+   researchers (2 code · 2 web) · claims ≤ 192 · ceiling 8.
+
+   A **book** (§9.2) is sized by its tier: the highest of three axes. Breadth: one domain
+   (1), 2–5 subtopics (2), more than 5 or disjoint domains (3). Nesting: one-step inference
+   (1), 2–3 dependent sub-questions (2), 4 or more (3). Exploration: fully specified (1),
+   1–2 unspecified factors (2), 3 or more (3).
 
    | Tier | Wave 1 | Per gap round | Budget per web researcher: target / hard cap | Ceiling |
    |---|---|---|---|---|
@@ -781,9 +812,10 @@ disk:
    | 2 standard | 5–6 | ≤ 3 | 10–20 / 30 | 18 |
    | 3 broad | 7–10 | ≤ 4 | 15–25 / 40 | 25 |
 
-   A code researcher gets double the budget. The ceiling counts researcher and gap-reviewer
-   dispatches, re-dispatches included, but not verifier batches. Caps and ceilings are loop
-   safety, not targets.
+   A code researcher gets double the budget. Every ceiling counts researcher and
+   gap-reviewer dispatches, re-dispatches included, but not verifier batches. Caps, ceilings
+   and the claim cap are loop safety, not targets; they size each stage, and never let a
+   stage be skipped or shortened (the card).
 5. **Angles, each with an owner.** Every question has exactly one owning angle. An angle
    with no questions is dropped, with a one-line reason. An angle's `not yours` is what the
    others own. For any subject:
@@ -807,7 +839,10 @@ disk:
    - **how others solve it** (a web researcher): comparable implementations and the
      standard patterns this code follows or departs from (definitions are foundations).
 
-   Merge angles to fit the tier. Tier 1: {foundations + history}, {current practice + real
+   Merge angles to fit the size. A document merges them into its wave (step 4): a
+   codebase's two code researchers as step 4 says, its web researchers sharing the outside
+   angles; a general subject's 2–4 web researchers each a merge of the list above. A book
+   merges by tier. Tier 1: {foundations + history}, {current practice + real
    cases}, {evidence + criticism}; a codebase: {code in real order + history behind it},
    {foundations + how others solve it}, {criticism + evidence + real cases}. Tier 2: one
    researcher per angle (history joins foundations when thin; a codebase merges current
@@ -826,14 +861,16 @@ the rest (§8).
 1. **Fill each researcher's dispatch** from its role section (B1 web, B2 code): the stem
    `r<n>-<angle-id>`, absolute dossier and tools paths, its questions with their
    load-bearing marks, `not yours`, `known already` (the ledger's ids on those questions),
-   `queries already run` (the query log), the brief's trusted sources and leave-out, and
-   the tier's budget. A code researcher gets the repository, which is the session's working folder (its
+   `queries already run` (the query log), the brief's trusted sources and leave-out, the
+   plan's budget, and `claims: ≤ <n>`, its share of the claim cap (§3.4 step 4; a book's
+   researchers get `claims: none`). A code researcher gets the repository, which is the session's working folder (its
    `git` runs there, never with `-C`), and `commit`: the full sha of `HEAD` written
    `<sha> (HEAD)`, or `WORKTREE` for uncommitted work.
 2. **Send the wave in one message,** every agent in the background, then end your turn and
    wait (the card's wait rule; a lead that is itself a subagent, §3.2: in the foreground,
    still in one message, so that they run at once and the message returns when the last
-   has): at most **10** on Claude Code, **6** elsewhere. The rest are queued, never dropped; they go out as soon as
+   has): at most **10** on Claude Code, **6** elsewhere, a host limit, not a size (a
+   document's wave is §3.4's). The rest are queued, never dropped; they go out as soon as
    this wave has returned, before the merge. A spawn refused for a concurrency limit is
    queued the same way, never retried in a loop. How each call goes out (B0):
    - **plugin:** `knowledge:web-researcher` or `knowledge:code-researcher`; the prompt is
@@ -908,7 +945,8 @@ subagent on `opus`) with `after round: <n>`, `scope: run` and the earlier gaps f
   gap rounds have run, and the ceiling has room. Each load-bearing gap becomes a new
   load-bearing question in `plan.md` (the next `Q` id, `from: gap G-…`), owned by the gap's
   angle; a `new:` angle joins the plan with its boundaries. Group them by angle into at
-  most the tier's per-round number of researchers, and run D2–D3s again. A gap that is not
+  most the plan's per-round number of researchers (2 for a document, the tier's for a
+  book), each with its share of the claims the cap has left, and run D2–D3s again. A gap that is not
   load-bearing is recorded, not researched.
 - **Research stops** at the first of: `complete` (no load-bearing gap); `stalled` (a round
   closed none); `capped: rounds` (3 gap rounds); `capped: ceiling`. Record the reason and
@@ -957,7 +995,8 @@ dossier's path, and the two ways on, §3.3's resume note: `trust <a source or si
 **`quick`** cuts the research team, never the agents, the files or the map. "Alone" means
 no researchers in waves, not no agents: the path is D0b's rule, never the run (`plugin`
 whenever the `knowledge:` roles are listed). On every path `quick` **keeps** what a full run
-has there: D0b's two probe agents; D1's `plan.md` (no tier, no team); the findings files
+has there: D0b's two probe agents; D1's `plan.md` (no team; its claim cap `C`, §3.4 step
+4, caps your own claims); the findings files
 and `library.md`; the verifier agent's batch, on a model other than yours; `gaps/final.md`;
 D6's `outline.md` with `## Reader's task`; D7's `trace.md`.
 
@@ -1628,7 +1667,8 @@ merged back; nothing is written twice. A stopped run's first line is its stop in
    each degraded mode on a line: a role played by the same model or by the lead (a defect
    while its `knowledge:` agent was listed), `quote-match: approximate`, the tools
    fallback (§2), a skipped check.
-3. **The research:** tier, researchers, rounds and the stop reason; claims by status; the
+3. **The research:** the size (a document) or the tier (a book), researchers, rounds and
+   the stop reason; claims by status; the
    gate's counts. `quick` names what it skipped; `no-research` says it was the operator's
    choice, with no web research and no "Best practices & next steps". Then
    `sections: <n> signed · <m> delivered`, and each cut section with why (§3.10); or
@@ -1649,8 +1689,8 @@ merged back; nothing is written twice. A stopped run's first line is its stop in
 
 A book is offered, never imposed, and settled once, at the start. **(a)** When the request
 asks for a book, the front door's one confirmation proposes `unit: book` (§1). **(b)** When
-a document's D1 plan is plainly over one document — over about 25 questions or 7 top-level
-sections, tier 3 on two or more axes, or over 10 researchers in wave 1, the sections and
+a document's D1 plan is plainly over one document — over about 25 questions, more than 6
+content sections, or `W` over ~6,000 words (§3.4 step 4), the sections and
 their questions read from the signed sections when the confirmation signed them (§3.1) —
 nothing asks: the
 run scopes the document down to what one document carries, records the part left out in
@@ -1777,6 +1817,7 @@ says is worth more than five that point near it.
     trusted sources: <names or sites> | none
     leave out: <topics> | none
     budget: target <t> / hard cap <cap> tool calls
+    claims: ≤ <n> | none
 
 **How you work:**
 
@@ -1794,7 +1835,8 @@ says is worth more than five that point near it.
    conflict.
 6. Stop at your hard cap, or earlier when every question meets the bar (B8) or your last 2
    searches added nothing new. A question with no source after 3 different queries is
-   `not found`.
+   `not found`. Stop adding claims at `claims:`, your load-bearing questions served first;
+   return `partial` only when the cap leaves a load-bearing question open.
 7. Write your findings file (B9) to `<dossier>/<output>` as soon as your load-bearing
    questions are answered or you have spent three quarters of your hard cap, whichever
    comes first, so that a cap never leaves nothing on disk. If you go on, rewrite it whole
@@ -1841,6 +1883,7 @@ the repository points to goes under `## Unused leads`, for a web researcher.
     known already: <source and claim ids> | none
     leave out: <topics> | none
     budget: target <t> / hard cap <cap> tool calls
+    claims: ≤ <n> | none
 
 **How you work:**
 
@@ -1863,7 +1906,8 @@ the repository points to goes under `## Unused leads`, for a web researcher.
 5. **Search with care:** run independent reads and greps together; never repeat a search;
    a question with nothing after 3 different searches is `not found`. Stop at your hard
    cap, or earlier when every question meets the bar (B8) or your last 2 searches added
-   nothing new.
+   nothing new. Stop adding claims at `claims:`, your load-bearing questions served first;
+   return `partial` only when the cap leaves a load-bearing question open.
 6. **Write your findings file** (B9) to `<dossier>/<output>` as soon as your load-bearing
    questions are answered or you have spent three quarters of your hard cap, whichever
    comes first. If you go on, rewrite it whole before you return.

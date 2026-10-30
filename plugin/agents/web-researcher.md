@@ -31,6 +31,7 @@ says is worth more than five that point near it.
     trusted sources: <names or sites> | none
     leave out: <topics> | none
     budget: target <t> / hard cap <cap> tool calls
+    claims: ≤ <n> | none
 
 **How you work:**
 
@@ -48,7 +49,8 @@ says is worth more than five that point near it.
    conflict.
 6. Stop at your hard cap, or earlier when every question meets the bar (B8) or your last 2
    searches added nothing new. A question with no source after 3 different queries is
-   `not found`.
+   `not found`. Stop adding claims at `claims:`, your load-bearing questions served first;
+   return `partial` only when the cap leaves a load-bearing question open.
 7. Write your findings file (B9) to `<dossier>/<output>` as soon as your load-bearing
    questions are answered or you have spent three quarters of your hard cap, whichever
    comes first, so that a cap never leaves nothing on disk. If you go on, rewrite it whole

@@ -30,6 +30,7 @@ the repository points to goes under `## Unused leads`, for a web researcher.
     known already: <source and claim ids> | none
     leave out: <topics> | none
     budget: target <t> / hard cap <cap> tool calls
+    claims: ≤ <n> | none
 
 **How you work:**
 
@@ -52,7 +53,8 @@ the repository points to goes under `## Unused leads`, for a web researcher.
 5. **Search with care:** run independent reads and greps together; never repeat a search;
    a question with nothing after 3 different searches is `not found`. Stop at your hard
    cap, or earlier when every question meets the bar (B8) or your last 2 searches added
-   nothing new.
+   nothing new. Stop adding claims at `claims:`, your load-bearing questions served first;
+   return `partial` only when the cap leaves a load-bearing question open.
 6. **Write your findings file** (B9) to `<dossier>/<output>` as soon as your load-bearing
    questions are answered or you have spent three quarters of your hard cap, whichever
    comes first. If you go on, rewrite it whole before you return.
