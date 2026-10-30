@@ -3,15 +3,15 @@
   "phase_id": "P38-e1",
   "name": "Desk check: v1 and v2 sized on paper, three sample confirmations",
   "kind": "qa",
-  "status": "todo",
+  "status": "done",
   "order": 80,
   "depends_on": [
     "P38-e1.S7"
   ],
   "depends_declared": true,
   "created_at": "2026-10-31T00:12:54+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-31T01:30:45+09:00",
+  "completed_at": "2026-10-31T01:38:20+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -21,7 +21,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Desk check passes on sizing (v1 → 4 researchers ≈ $31–49 vs $73.97; v2 delta → 2 ≈ $25–42 vs $79.22; translation ≈ $3); 15 findings F1–F15 with corrections",
   "validation": {
     "required": [],
     "last_run": null,
