@@ -6,18 +6,18 @@
 ## Pointer
 
 - Current phase: `P38-e1`
-- Current slice: `P38-e1.REVIEW`
+- Current slice: `none`
 - Next slice: `none`
-- Waiting on operator: `none`
+- Waiting on operator: `P38-e1`
 - Stream: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` (parallel phase checkout; the pointer above is scoped to it)
-- Open deferred jobs: `67`
+- Open deferred jobs: `71`
 - Workspace version: `v89`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `P38-e1` | in flight 11/12 | `P38-e1.REVIEW` | 11/12 | `.` | working tree |
+| `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `P38-e1` | pending | `P38-e1.REVIEW` | 11/12 | `.` | working tree |
 | `default` | `P37-1p` | planned | `P37-1p.DECOMP` | 0/2 | - | branch main |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
@@ -44,7 +44,7 @@
 | [x] `P35-a4` | `done` | `pass` | Explain documents: about the subject, standalone | `none` | `works/phases/active/P35-a4` |
 | [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.D1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [ ] `P37-1p` | `planned` | `pending` | Drop the knowledge graph | `P37-1p.DECOMP` | `works/phases/active/P37-1p` |
-| [ ] `P38-e1` | `planned` | `pending` | Right-size explain runs (plugin 0.9.0) | `P38-e1.REVIEW` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
+| [~] `P38-e1` | `pending` | `pending` | Right-size explain runs (plugin 0.9.0) | `P38-e1.REVIEW` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
 | [ ] `P39-hk` | `planned` | `pending` | Glossary: term definitions on hover or tap | `P39-hk.DECOMP` | `works/phases/active/P39-hk` |
 
 ## Phase P21: Web document deletion
@@ -324,7 +324,7 @@ _Read live from branch `main`, where this phase advances._
 | [x] `P38-e1.S8` | `done` | Desk check: v1 and v2 sized on paper, three sample confirmations | `qa` | `works/phases/active/P38-e1/slices/P38-e1.S8` |
 | [x] `P38-e1.F1` | `done` | apply the desk check's 15 findings | `fix` | `works/phases/active/P38-e1/slices/P38-e1.F1` |
 | [x] `P38-e1.S9` | `done` | Release the knowledge plugin as 0.9.0 | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S9` |
-| [ ] `P38-e1.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P38-e1/slices/P38-e1.REVIEW` |
+| [ ] `P38-e1.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P38-e1/slices/P38-e1.REVIEW` |
 
 ## Phase P39-hk: Glossary: term definitions on hover or tap
 

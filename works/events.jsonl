@@ -1619,3 +1619,12 @@
 {"ts": "2026-10-31T01:54:06+09:00", "type": "slice_status_changed", "slice": "P38-e1.S9", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-10-31T01:56:13+09:00", "type": "executor_dispatched", "slice": "P38-e1.S9", "phase": "P38-e1", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-31T01:56:13+09:00", "type": "slice_status_changed", "slice": "P38-e1.S9", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-10-31T01:56:39+09:00", "type": "phase_status_changed", "phase": "P38-e1", "old_status": "planned", "new_status": "in_progress"}
+{"ts": "2026-10-31T01:57:28+09:00", "type": "slice_status_changed", "slice": "P38-e1.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-31T02:23:47+09:00", "type": "executor_dispatched", "slice": "P38-e1.REVIEW", "phase": "P38-e1", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-31T02:23:58+09:00", "type": "deferred_created", "deferred": "D84-8s", "source": "P38-e1.REVIEW"}
+{"ts": "2026-10-31T02:23:58+09:00", "type": "deferred_created", "deferred": "D85-qk", "source": "P38-e1.REVIEW"}
+{"ts": "2026-10-31T02:23:59+09:00", "type": "deferred_created", "deferred": "D86-sd", "source": "P38-e1.REVIEW"}
+{"ts": "2026-10-31T02:23:59+09:00", "type": "deferred_created", "deferred": "D87-2g", "source": "P38-e1.REVIEW"}
+{"ts": "2026-10-31T02:24:21+09:00", "type": "phase_status_changed", "phase": "P38-e1", "old_status": "in_progress", "new_status": "pending"}
+{"ts": "2026-10-31T02:24:21+09:00", "type": "acceptance_opened", "phase": "P38-e1"}
