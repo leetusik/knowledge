@@ -26,16 +26,23 @@ leave-out); `plan.md` (the questions with their load-bearing marks, the angles);
 `outline.md` (each section's questions, claim ids and question states); `ledger.md`
 (statuses, disagreements) and `library.md`; the `## Unused leads` and `## Queries` of this
 round's findings files; and the earlier gaps file. Open an entry in a findings or verify
-file only to check a status you doubt. In a chapter scope, read the book's frozen indexes
-plus that chapter's overlays.
+file only to check a support line or a status you doubt. In a chapter scope, read the
+book's frozen indexes plus that chapter's overlays.
+
+**Most of what you read is unverified:** the verifier checks only the claims the outline
+picks, after research stops (and a book's main claims, before its outline gate). A claim
+with no record is `candidate`, and a question's state is its researchers' own report,
+marked `(reported)` (B8). Judge from what the findings record (each claim's support lines:
+rung, fit, independence), never as if a verifier had passed it.
 
 **Ask, of the outline as it stands:**
 
 1. **Expert:** what would an expert in this subject expect a chapter for this reader to
    cover that is missing or thin?
 2. **Reader:** section by section, what would this reader still ask after reading it?
-3. **Evidence:** which questions or load-bearing claims are thin (B8), contested, or rest
-   on one secondary source? A claim the verifier failed is an evidence gap.
+3. **Evidence:** which questions are reported thin or contested (B8), and which
+   load-bearing claims rest on one secondary source, a partial fit or rung 3 alone? A claim
+   a verifier failed (a record on disk says so) is an evidence gap.
 4. **Unused:** which found-but-unused leads point to something this reader needs, and
    which are noise?
 5. **Must-cover:** is every must-cover item answered or contested?
@@ -187,7 +194,9 @@ Rung 3 never counts, and a source nobody opened never counts.
 
 **Claim statuses**, set by the lead in `ledger.md`, only from verify files:
 
-- `candidate`: not yet verified.
+- `candidate`: not yet verified: every claim until the final verification checks the ones
+  the outline uses (`· used`), and for good a claim it never picks (a book's main claims
+  aside, which are verified before its outline gate).
 - `supported`: verified, and the bar is met.
 - `partial`: some parts verified; only the narrower, supported claim may be used.
 - `contested`: a disagreement entry (`D-…`) exists, and each side has a rung-1 or rung-2
@@ -198,18 +207,20 @@ Rung 3 never counts, and a source nobody opened never counts.
 
 **Question states:**
 
-- `answered`: every load-bearing claim mapped to it is `supported`, or `partial` with a
-  narrower claim that still answers it.
+- `answered`: every load-bearing claim that answers it (once the outline has picked: every
+  one it uses) is `supported`, or `partial` with a narrower claim that still answers it.
 - `contested`: answered, except that a load-bearing claim is `contested`; the chapter
   teaches the disagreement.
-- `thin`: a load-bearing claim is still `candidate`, `unsupported`, `contradicted` with no
-  replacement, or `partial` in a way that leaves the question open.
+- `thin`: one of those claims is `unsupported`, `contradicted` with no replacement,
+  `partial` in a way that leaves the question open, or still `candidate` once the verifier
+  has run.
 - `not found`: no source after 3 different queries, which are recorded.
 - `not searched`: the search did not run (a search limit, a denied tool). Never the same as
   `not found`.
 
-A researcher's question states are its own opinion; the ledger's are the lead's, set after
-verification.
+A researcher's question states are its own opinion. Until the verifier has checked the
+claims the outline uses, the lead carries them as reported, marked `(reported)`; the
+ledger's own states are the lead's, set after verification from those claims' records.
 
 **In the chapter**, a contested claim is written as attributed views, with the weight the
 sources give each side and no false balance. A load-bearing claim below the bar appears
@@ -234,7 +245,9 @@ The dossier is one folder; your dispatch names it. Each file has one writer:
 
 In a book the dossier is `book/research/`. Its `library.md` and `ledger.md` freeze at the
 outline signature; each chapter's lead then writes the overlays `library-ch<k>.md` and
-`ledger-ch<k>.md`.
+`ledger-ch<k>.md`: its top-up's lines, and a line of its own for each frozen claim the
+chapter uses, with the status its record gives, which wins over the frozen line for that
+chapter.
 
 **Ids** never change once given. `<stem>` is `r<n>-<angle>` (a book chapter's top-up:
 `ch<k>-r<n>-<angle>`) and `<seq>` is two digits: sources `S-<stem>-<seq>`, passages
@@ -320,7 +333,7 @@ only. A behaviour claim ("X runs before Y") cites every range on its path, in or
 with the file that holds it, its canonical URL, its kind and the claims it supports.
 `ledger.md` holds one line per claim, with `merged:` listing duplicate ids:
 
-    - C-r1-evidence-05 · Q7 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-evidence-05-1
+    - C-r1-evidence-05 · Q7 · load-bearing · status supported · used · main · verified verify/final-b2.md#V-C-r1-evidence-05-1
       · counter: none-found (<queries>) | D-03 · bar met (<why>) · used-in: <outline sections>
 
 and a `## Disagreements` section, which the lead records and never settles:
@@ -333,6 +346,12 @@ and a `## Disagreements` section, which the lead records and never settles:
     - prominence: <which side most independent rung-1 and rung-2 sources take: due weight, not a vote>
     - would settle it: <the evidence that would decide it>
     - status: open | resolved-by-scope
+
+On a ledger line, `· used` marks a claim the outline picked (the lead's pick, after
+research stops), and `· main` a main claim among them; a book marks its main claims before
+any chapter picks. Only a used claim is written, and each ends with the `verified` link to
+its record. A claim never picked is never verified, a book's main claims aside, and stays
+`candidate`.
 
 **The trace** (`trace.md`), written by the writer as it finishes each section, because the
 chapter itself may carry no comments. Every checkable sentence maps to a claim id or a code

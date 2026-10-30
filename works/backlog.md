@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P38-e1`
-- Current slice: `P38-e1.S4`
-- Next slice: `P38-e1.S5`
+- Current slice: `P38-e1.S5`
+- Next slice: `P38-e1.S6`
 - Waiting on operator: `none`
 - Stream: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `67`
@@ -17,7 +17,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `P38-e1` | in flight 4/11 | `P38-e1.S4` | 4/11 | `.` | working tree |
+| `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `P38-e1` | in flight 5/11 | `P38-e1.S5` | 5/11 | `.` | working tree |
 | `default` | `P37-1p` | planned | `P37-1p.DECOMP` | 0/2 | - | branch main |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
@@ -44,7 +44,7 @@
 | [x] `P35-a4` | `done` | `pass` | Explain documents: about the subject, standalone | `none` | `works/phases/active/P35-a4` |
 | [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.D1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [ ] `P37-1p` | `planned` | `pending` | Drop the knowledge graph | `P37-1p.DECOMP` | `works/phases/active/P37-1p` |
-| [ ] `P38-e1` | `planned` | `pending` | Right-size explain runs (plugin 0.9.0) | `P38-e1.S4` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
+| [ ] `P38-e1` | `planned` | `pending` | Right-size explain runs (plugin 0.9.0) | `P38-e1.S5` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
 | [ ] `P39-hk` | `planned` | `pending` | Glossary: term definitions on hover or tap | `P39-hk.DECOMP` | `works/phases/active/P39-hk` |
 
 ## Phase P21: Web document deletion
@@ -317,7 +317,7 @@ _Read live from branch `main`, where this phase advances._
 | [x] `P38-e1.S1` | `done` | The KB key never printed: header file and CLI for every KB call | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S1` |
 | [x] `P38-e1.S2` | `done` | Sections proposed at the confirmation and signed there; the run researches only for them | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S2` |
 | [x] `P38-e1.S3` | `done` | A research team sized by the document: word budget, evidence location, claim cap | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S3` |
-| [ ] `P38-e1.S4` | `todo` | Verify only the claims the outline uses | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S4` |
+| [x] `P38-e1.S4` | `done` | Verify only the claims the outline uses | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S4` |
 | [ ] `P38-e1.S5` | `todo` | Delta mode for a v2: research what changed, reuse the prior's verified claims by content check | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S5` |
 | [ ] `P38-e1.S6` | `todo` | The writer held to budget, plain words, a cheaper critic that samples | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S6` |
 | [ ] `P38-e1.S7` | `todo` | An honest confirmation: the cost line, the cheaper run, a loose document's translation | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S7` |

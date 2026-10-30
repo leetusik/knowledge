@@ -49,9 +49,10 @@ stop below into its own stop, and re-dispatches a stopped span from disk.
 | D1 plan | you | `plan.md` | — |
 | D2 wave | researchers (B1, B2) | `findings/<stem>.md` | a load-bearing angle fails twice; a search limit |
 | D3 merge | you | `library.md`, `ledger.md`, `outline.md` | an entry count falls (fix it first) |
-| D3v, D3s | verifiers (B4); you | `verify/r<n>-b<k>.md`; statuses | a batch fails twice |
+| D3v, D3s | you (D3v sends no batch, §3.6) | statuses: the researchers' own, every claim `candidate` | — |
 | D4 gap round | gap reviewer (B3), then D2–D3s | `gaps/r<n>.md` | complete, stalled, 3 rounds or the ceiling |
-| D5, D5s | verifiers, with counter-evidence; you | `verify/final-b<k>.md`; disagreements; `gaps/final.md` | a batch fails twice |
+| D5p pick | you | `· used` and `· main` on the ledger lines, within the claim cap | — |
+| D5, D5s | verifiers, on the used claims only, with counter-evidence on the main ones; you | `verify/final-b<k>.md`; statuses; the swap; disagreements; `gaps/final.md` | a batch fails twice |
 | D5g evidence gate | you | its result in `run.md` | below the gate: stop before writing |
 | D6 the reader's path (§3.10) | you | `outline.md`, final | — |
 | D7 write (§4) | you, alone | `body.md`, `trace.md` | — (a writer gap is stated or dropped) |
@@ -60,11 +61,13 @@ stop below into its own stop, and re-dispatches a stopped span from disk.
 
 **The run** (`## Explain`'s `run:`, §1's RUN; the report's first line names it):
 
-- **`full`**, the default: a research team in waves, verified on another model, up to 3
-  gap rounds, counter-evidence on the main claims, the evidence gate, the critic.
-- **`quick`**: no research team: you research the angles yourself, then one verifier batch
-  by the verifier agent on another model. The path stays D0b's, and every agent and file
-  §3.9 lists stays. No gap rounds, no counter-evidence, no critic; the gate still holds.
+- **`full`**, the default: a research team in waves, up to 3 gap rounds, then the pick:
+  only the claims the outline uses are verified, on another model, with counter-evidence
+  on the main ones; the evidence gate, the critic.
+- **`quick`**: no research team: you research the angles yourself, then the pick and one
+  verifier batch of the claims it uses, by the verifier agent on another model. The path
+  stays D0b's, and every agent and file §3.9 lists stays. No gap rounds, no
+  counter-evidence, no critic; the gate still holds.
 - **`no-research`**: only when the operator asked for it; never your choice. No web and no
   team: the repository, or the user's own material, only (§3.9). The critic still runs.
 
@@ -93,7 +96,8 @@ re-dispatch goes on from `run.md` (§3.3).
   the foreground (§3.2).
 - **Never skip or shorten a stage** to save time, tokens or money. A budget, usage or turn
   limit that would cut one short stops the run at the last stage boundary, resumable, and
-  `run.md` says so.
+  `run.md` says so. Verification is sized to the claims the outline uses (§3.8), never
+  skipped.
 - **English**, whatever the request's language, unless the operator names another (§1).
 
 ## 1. Resolve the topic, the mode and the placement
@@ -713,8 +717,9 @@ before your next action, so that a compaction, a crash or a usage limit loses no
     ## Log
     - D2 r1: dispatched <stem> (<agent id>), … · returned <stem> (<status>), … · failed … · queued …
     - D3 r1: sources <n> · claims <n> (last merge: <n> · <n>)
-    - D3v r1: <batch id> (<n> claims), … · returned …
     - D4 r1: <the gaps verdict> → round 2 | stop: complete | stalled | capped: rounds | capped: ceiling
+    - D5p: used <n> of <m> claims (cap <C>) · main <k>
+    - D5: <batch id> (<n> claims), … · returned … · swap: <batch id> (<n> claims) | none
     - D5g: must-cover <a>/<b> · load-bearing questions <x>/<y> answered or contested → pass | stop
     ## Models
     - <stem or batch id>: <the model line it returned>[ · fallback: <the notice>]
@@ -739,12 +744,20 @@ disk:
 2. **Run D0b again**, the probe included: this is a new session, and its permissions may
    differ. Nothing in the dossier is rewritten.
 3. **Go on from the recorded stage.** In an unfinished wave or batch, dispatch again only
-   the agents whose output file is missing; merge the findings and verify files the
-   indexes do not list yet; a question left `not searched` goes back to its angle.
+   the agents whose output file is missing (a D5 batch: the used claims that have no
+   record yet); merge the findings and verify files the indexes do not list yet; a
+   question left `not searched` goes back to its angle. Research stopped (D4's stop in the
+   log; `quick`: its D3s) and no `D5p` line: run the pick (§3.8), whole. A `run.md` from
+   an earlier version of this skill that logged `D3v` batches: send none of them again
+   (§3.6).
 4. **The resume note,** the operator's answer to an evidence-gate stop, which the
    workspace passes on: `trust <a source or site>` joins the brief's trusted sources and
    buys one more round, beyond the cap, on the items the gate failed; `drop <item>` takes
-   it out of must-cover, in `brief.md`. Then D5–D5g again.
+   it out of must-cover, in `brief.md`. Then D5–D5g again, the pick first: the round's new
+   claims for the failed items join the pick (past the claim cap, for those items only),
+   the claims already used keep their marks and records, and D5 sends only the used claims
+   with no record yet, plus a failed one the round gave new support, as its one
+   `re-verify` (§3.8).
 5. **Record** the resume in `run.md` under `## Resume`.
 
 ### 3.4 D1: the plan
@@ -796,7 +809,8 @@ disk:
      claims as the budget holds checkable sentences. Split it across wave 1 by each
      researcher's share of the questions, and send each share on its dispatch as `claims:
      ≤ <n>` (§3.5); a gap-round researcher gets a share of what is left. `quick` caps its
-     own claims by the same `C` (§3.9).
+     own claims by the same `C` (§3.9). The pick holds the claims the outline uses, and so
+     verifies, to `C` too (§3.8).
 
    For example, a codebase document with no prior and no stated budget: `W` 4,800 → 4
    researchers (2 code · 2 web) · claims ≤ 192 · ceiling 8.
@@ -904,12 +918,12 @@ the rest (§8).
    both passages becomes a `D-<seq>` entry under `## Disagreements`, `status: open`.
    Never settle one.
 4. **`outline.md`**: the plan's skeleton, each section with its questions, each question
-   with its state (B8: as its findings file reports it, until D3s sets it) and its claim
-   ids. Every index lists ids in full, never as ranges:
+   with its state (B8: as its findings files report it, until D5s sets it from the
+   verify records) and its claim ids. Every index lists ids in full, never as ranges:
 
        ## Background
-       - Q3 · load-bearing · answered · C-r1-foundations-02, C-r1-foundations-05
-       - Q4 · load-bearing · thin · C-r1-evidence-01 (candidate)
+       - Q3 · load-bearing · answered (reported) · C-r1-foundations-02, C-r1-foundations-05
+       - Q4 · load-bearing · thin (reported) · C-r1-evidence-01 (candidate)
 
 5. **The query log:** append every query the new findings files list.
 6. **The checklist,** before you go on: `library.md`, `ledger.md` and `outline.md` all
@@ -918,28 +932,26 @@ the rest (§8).
    claim counts, recorded in `run.md`, are not below the last merge's. A count that fell is
    your error: fix the indexes first.
 
-**D3v, verify the round.** Batch this round's new or changed load-bearing claims, grouped
-by source, about 15 claims to a batch, and send the batches as a wave
-(`knowledge:verifier`, B4; generic: a subagent on `sonnet`): batch ids `r<n>-b<k>`, output
-`verify/r<n>-b<k>.md`, `counter-evidence ids: none`, `researchers_model:` its
-researchers' model. `blocked` for the model: correct `model:` on the call, send it once
-more (as §4.10). Only a host that cannot choose a model adds `same-model: accepted`. A
-batch that fails twice stops the run (resumable). On the sequential path you verify from
-the entries alone, in a separate pass.
+**D3v, verify the round,** sends no batch: a round's claims stay `candidate`, and
+verification waits for the pick, which sizes it to the claims the outline uses (D5p and
+D5, §3.8). The verifier is the run's expensive, second-model step, and the researchers'
+own states are enough to steer the gap rounds. A `run.md` from an earlier version of this
+skill that logged `D3v` batches keeps what they wrote: a missing batch is not sent again,
+D3s applies the records on disk as D5s does, and a claim with a record is not verified
+again at D5 (§3.8).
 
-**D3s, apply** (you): each claim's status from its record, by B8. `supported` only when
-the record says `supported` and the bar is met; `partial` keeps only its narrower claim,
-written on its ledger line; `contradicted` takes that source out of its support;
-`passage-not-found`, `not-addressed` and `unreachable` leave it `unsupported` unless its
-other support meets the bar; `needs-rewrite` leaves it `candidate`. Then set each
-question's state in `outline.md` and `ledger.md`. A claim that failed is an evidence gap
-for the next review, inside the cap; a claim given new support is re-verified once (B4's
-`re-verify`), never twice.
+**D3s, the round's states** (you): every claim stays `candidate`, and each question takes
+the state its findings files report (B8), marked `(reported)`; two reports that differ are
+both written, each with its stem. Set them in `outline.md` and `ledger.md`. A question
+reported `thin`, `not found` or `not searched`, and a load-bearing claim on weak support
+(one secondary source, a partial fit, rung 3 alone), are the next gap review's to weigh
+(B3), inside the cap.
 
 ### 3.7 D4: gap rounds
 
 After each D3s, dispatch the gap reviewer (`knowledge:gap-reviewer`, B3; generic: a
-subagent on `opus`) with `after round: <n>`, `scope: run` and the earlier gaps file.
+subagent on `opus`) with `after round: <n>`, `scope: run` and the earlier gaps file. It
+judges the researchers' reported states, knowing that nothing is verified yet (B3).
 
 - **Another round runs** only when `gaps/r<n>.md` holds a load-bearing gap, fewer than 3
   gap rounds have run, and the ceiling has room. Each load-bearing gap becomes a new
@@ -950,27 +962,64 @@ subagent on `opus`) with `after round: <n>`, `scope: run` and the earlier gaps f
   load-bearing is recorded, not researched.
 - **Research stops** at the first of: `complete` (no load-bearing gap); `stalled` (a round
   closed none); `capped: rounds` (3 gap rounds); `capped: ceiling`. Record the reason and
-  the round count in `run.md`.
+  the round count in `run.md`, then go to the pick (D5p, §3.8).
 - A gap review that fails twice stops the run (resumable).
 
 ### 3.8 D5, D5s and D5g: final verification, and the evidence gate
 
-**D5, the final verification.** Mark the **main claims** on their ledger lines (`· main`):
-the load-bearing claims that are evaluative, comparative, consensus or "best practice";
-numbers and statistics; superlatives; resting on one source; a vendor's claim about
-itself used beyond the attributed form; the claims the quiz will test; flagged
-exceptional. Batch every claim the outline maps that is still `candidate`, plus every main
-claim marked `· main`, with output `verify/final-b<k>.md`, counter-evidence ids `v<k>`
-(one per batch) and `researchers_model:` (D3v), and send the batches as a wave. A main
-claim's counter-evidence search is not a re-verification. A batch that fails twice stops
-the run.
+**D5p, the pick** (you), once research has stopped (§3.7): the outline picks its claims
+before any is verified. Map the ledger's claims to the sections they serve (the signed
+sections, D0; otherwise the skeleton's) and pick the ones the chapter will use, within the
+claim cap `C` (§3.4 step 4). First, for every must-cover item and every load-bearing
+question, the claims that answer it best (rung 1 and a direct fit first, B7); the cap never
+leaves one of them unserved. Then, section by section, what its purpose needs, at about 25
+words a claim (a section of 800 words carries about 32), never a claim only because it was
+found. Mark each picked claim `· used` on its ledger line (B9) and in `outline.md`; every
+other claim stays `candidate`, never verified and never written, unless the swap below or a
+writer gap (§4) picks it. Among the used claims, mark the **main claims** (`· main`): the
+load-bearing claims that are evaluative, comparative, consensus or "best practice";
+numbers and statistics; superlatives; resting on one source; a vendor's claim about itself
+used beyond the attributed form; the claims the quiz will test; flagged exceptional. Write
+the `D5p` log line last: a pick with no `D5p` line is done again, whole.
 
-**D5s, apply and record** (you): statuses as at D3s. A counter-source at rung 1 or 2 that
-directly disagrees becomes a `D-<seq>` entry, and its claim `contested`. One that changes
-the scope (a later version, another population) becomes a `D-…` entry with
-`nature: version/time` or `scope/conditions` and `status: resolved-by-scope`, when the
-sources themselves show both scopes. A rung-3 counter-page is only a lead. Never settle a
-disagreement. Then write **`gaps/final.md`**: every load-bearing question that is neither
+**D5, the final verification,** sized to the used claims. Batch every `· used` claim that
+has no verify record yet (in a run resumed from a `D3v` log, §3.6, also each used main
+claim that has had no counter-evidence search; each claim goes once), grouped by source,
+about 15 claims to a batch, and send the batches as a wave (`knowledge:verifier`, B4;
+generic: a subagent on `sonnet`): batch ids `final-b<k>`, output `verify/final-b<k>.md`,
+counter-evidence ids `v<k>` (one per batch), `researchers_model:` its researchers' model.
+`blocked` for the model: correct `model:` on the call, send it once more (as §4.10). Only a
+host that cannot choose a model adds `same-model: accepted`. A main claim's
+counter-evidence search is not a re-verification. A batch that fails twice stops the run
+(resumable). On the sequential path you verify from the entries alone, in a separate pass.
+
+**D5s, apply and record** (you): each claim's status from its record, by B8. `supported`
+only when the record says `supported` and the bar is met; `partial` keeps only its
+narrower claim, written on its ledger line; `contradicted` takes that source out of its
+support; `passage-not-found`, `not-addressed` and `unreachable` leave it `unsupported`
+unless its other support meets the bar; `needs-rewrite` leaves it `candidate`. A
+counter-source at rung 1 or 2 that directly disagrees becomes a `D-<seq>` entry, and its
+claim `contested`. One that changes the scope (a later version, another population)
+becomes a `D-…` entry with `nature: version/time` or `scope/conditions` and
+`status: resolved-by-scope`, when the sources themselves show both scopes. A rung-3
+counter-page is only a lead. Never settle a disagreement.
+
+- **The swap.** A used claim left `unsupported`, `contradicted`, `candidate`, or `partial`
+  in a way that leaves its question open (B8), is swapped once for an unpicked `candidate`
+  that serves the same question or must-cover item: the failed claim loses its `· used`,
+  and the swap takes it, marked `· used · swap for <the failed id>` (and `· main` by the
+  criteria above). Send the swaps in one more small batch, the next `final-b<k>`, as D5
+  does, and apply it the same way. A swap is never swapped again; a failed claim with no
+  candidate to swap stays used, for D6 to state as B8 allows (hedged and attributed) or
+  leave out. A used claim given new support later (the `trust` round, a writer's top-up)
+  is re-verified once (B4's `re-verify`), never twice.
+- **The records.** Set each question's state in `outline.md` and `ledger.md` from its used
+  claims (B8), in place of the reported one. Every used claim now ends with a verify record
+  its ledger line links (`verified verify/final-b<k>.md#V-<claim id>-<n>`, B9; a run
+  resumed from a `D3v` log may keep a `verify/r<n>-b<k>.md` one): the records the critic
+  reads (B5).
+
+Then write **`gaps/final.md`**: every load-bearing question that is neither
 `answered` nor `contested`, and every load-bearing gap still open, each with how the
 chapter will treat it:
 
@@ -1002,12 +1051,14 @@ D6's `outline.md` with `## Reader's task`; D7's `trace.md`.
 
 Research the angles yourself, by B1 and B2, into findings files `r1-<angle-id>`: a target of
 20 and a hard cap of 40 tool calls in all, then one coverage check against the plan's
-questions, with at most one follow-up burst of 10 calls. Then D3, and the verifier batch on
-the load-bearing claims: you are the researcher here, so `knowledge:verifier` as it is when
-you run on Opus, with `model: opus` otherwise; generic: a subagent on that model; and
-`researchers_model:` your model id (D3v). Then D5s without counter-evidence,
-`gaps/final.md`, D5g (the gate holds), D6 and D7 as in a full run. `run.md` and the report
-say `quick`, and what it skipped.
+questions, with at most one follow-up burst of 10 calls. Then D3 and D3s, the pick (D5p,
+within `C`), and one verifier batch of the used claims, `final-b1`, with
+`counter-evidence ids: none` and no claim sent as `main`: you are the researcher here, so
+`knowledge:verifier` as it is when you run on Opus, with `model: opus` otherwise; generic:
+a subagent on that model; and `researchers_model:` your model id (D5). Then D5s without
+counter-evidence or the swap (a used claim that fails is stated as B8 allows, or left out,
+at D6), `gaps/final.md`, D5g (the gate holds), D6 and D7 as in a full run. `run.md` and the
+report say `quick`, and what it skipped.
 
 **`no-research`** (the operator's choice only). D0, then no web probe, no plan, no team and
 no ledger: you read the repository yourself, by mode. **Change mode:** the real change,
@@ -1023,8 +1074,9 @@ gave you pages, and the report's first line says `no-research`.
 
 ### 3.10 D6: the final outline, the reader's path
 
-Past the gate, rewrite `outline.md` once as the map you write from. **The chapter follows
-the reader's task; the research supports it, never leads it.**
+Past the gate, rewrite `outline.md` once as the map you write from, from the used claims
+(D5p) and the statuses D5s gave them: a claim the pick left out is never written. **The
+chapter follows the reader's task; the research supports it, never leads it.**
 
 1. **`## Reader's task`** first: from the brief's `purpose`, the 2–4 things the reader must
    be able to do afterwards, each with the **deliverable** they will use to do it, chosen to
@@ -1048,12 +1100,13 @@ the reader's task; the research supports it, never leads it.**
    checklist line that guards it), never in a section of caveats. A claim earns the main
    line by changing what the reader does or understands there; secondary depth (another
    number, history, an edge the task never meets) goes in a collapsed callout.
-4. **`## Not used`:** each claim that serves no task and no must-cover point, with a
-   one-line reason; it stays out of the chapter. Every must-cover point, load-bearing
-   question and `stated` gap lands on the path, bar a cut section's (step 2); brevity
-   never drops one.
+4. **`## Not used`:** each used claim that serves no task and no must-cover point, and each
+   failed one D6 does not state, with a one-line reason; it stays out of the chapter (a
+   claim the pick left out is not listed: its ledger line has no `· used`). Every
+   must-cover point, load-bearing question and `stated` gap lands on the path, bar a cut
+   section's (step 2); brevity never drops one.
 
-Under each heading: its questions and states, its claim ids with their ledger statuses
+Under each heading: its questions and states, its used claim ids with their ledger statuses
 (B8), its code ranges, its declared gaps from `gaps/final.md` with their dispositions as
 written there, its callouts, and the diagrams it plans with the claims each draws. A
 `partial` claim carries its narrower wording; a disagreement its `D-` id.
@@ -1140,9 +1193,12 @@ at the first paragraph or `##` heading.
   adopted. Contested claims and claims below the bar as B8 says.
 - **Declared gaps** (`gaps/final.md`): a `stated` one is said openly; a `dropped` one is
   never asserted.
-- **A writer gap** (a claim a section needs that the ledger lacks): in `full`, while the gap
-  rounds and the ceiling have room, one targeted top-up (D2–D3s, counted against both);
-  otherwise leave it out or state it as open, and add it to `gaps/final.md` and `run.md`.
+- **A writer gap** (a claim a section needs that its used claims lack): pick an unpicked
+  `candidate` that serves it, or, in `full` while the gap rounds and the ceiling have room,
+  run one targeted top-up (D2–D3s, counted against both). Either way the claims it adds are
+  marked `· used` and verified once, in one more `final-b<k>` batch (§3.8: D5, then D5s),
+  before a sentence rests on them. With neither, leave it out or state it as open, and add
+  it to `gaps/final.md` and `run.md`.
 
 The grammar below is the one the server enforces. It is **CommonMark + GFM** (tables with
 alignment, `~~strikethrough~~`, autolinks) plus exactly three extensions:
@@ -1668,7 +1724,7 @@ merged back; nothing is written twice. A stopped run's first line is its stop in
    while its `knowledge:` agent was listed), `quote-match: approximate`, the tools
    fallback (§2), a skipped check.
 3. **The research:** the size (a document) or the tier (a book), researchers, rounds and
-   the stop reason; claims by status; the
+   the stop reason; claims by status, and the pick's `used <n> of <m>` (§3.8); the
    gate's counts. `quick` names what it skipped; `no-research` says it was the operator's
    choice, with no web research and no "Best practices & next steps". Then
    `sections: <n> signed · <m> delivered`, and each cut section with why (§3.10); or
@@ -1721,8 +1777,12 @@ committed with each slice except `pages/` (write `pages/.gitignore`, `*` then
 3. **D2–D4:** waves of at most 10 (wave 1 in up to two); at most 3 gap rounds of at most 6
    researchers, against the chapter list; a ceiling of 45 researcher and gap-reviewer
    dispatches.
-4. **D5–D5s** on the book's main claims, then `gaps/final.md`. No gate stop: what would
-   fail D5g is a weak spot.
+4. **D5–D5s** on the book's main claims, then `gaps/final.md`. A book has no pick of its
+   own: each chapter picks from the frozen ledger (§9.3). So D5 marks the main claims
+   (§3.8's list) among the load-bearing ones and verifies those, with counter-evidence,
+   before the outline gate, which then signs a map whose main claims and disagreements
+   are checked; every other claim stays `candidate`, its question's state as reported,
+   until a chapter uses it. No gate stop: what would fail D5g is a weak spot.
 5. **`book/outline.md`**, in the shape the workspace asks, drawn from the ledger: per
    chapter its **sections** (each a heading with one line on what it answers, in §4.2's
    order, at most 6 content sections), its questions, claim ids with statuses, declared
@@ -1733,6 +1793,7 @@ committed with each slice except `pages/` (write `pages/.gitignore`, `*` then
 
        # Research summary: <book>
        - run: <run-id> · tier <n> · researchers <n> · gap rounds <n> · stop: <reason>
+       - verified: the <n> main claims (D5); every other claim `candidate`, its states as reported, until a chapter uses it
        (the mode block)
        ## Key sources        (per chapter, rung 1 first, by S- id)
        ## Open disagreements (each D- id: the sides, what would settle it)
@@ -1752,9 +1813,14 @@ The chapter executor, for chapter `<k>` (its position), key `<key>`, state in `r
 3. **Top-up:** 0–3 researchers (stems `ch<k>-r<n>-<angle>`), one round plus at most one
    follow-up after a second gap check, a ceiling of 5 dispatches. Merge into the overlays
    `library-ch<k>.md` and `ledger-ch<k>.md` (B9's lines; a source in the book's library
-   keeps its id), never the frozen files. Verify the new mapped claims once (batches
-   `ch<k>-b<m>`, counter-evidence on its main claims, `researchers_model:` (D3v)); D5s
-   into the overlay and `gaps/final-ch<k>.md`.
+   keeps its id), never the frozen files. Then **its pick** (D5p, §3.8), over the frozen
+   ledger and the overlay together, for the chapter's signed sections and within its own
+   claim cap (§3.4 step 4's `C`, from the chapter's `W`): each claim it uses gets an overlay
+   line marked `· used` (B9), a frozen claim's included. Verify the used claims that have no
+   record yet, once (batches `ch<k>-b<m>`, counter-evidence on its main ones the book's D5
+   did not search, `researchers_model:` (D5)); D5s, the swap included, into the overlay and
+   `gaps/final-ch<k>.md`. Each used claim's record is then a `final-b<k>` one of the
+   book's or a `ch<k>-b<m>` one of the chapter's.
 4. **Its gate:** D5g over its must-cover items and load-bearing questions, frozen ledger and
    overlay together. Below it: stop before writing, with the failing items.
 5. **D6–D7** by §3.10 and §4 (the reader's path, the three passes, the prose rules), its
@@ -1799,9 +1865,9 @@ restates them.
 You research one angle of a subject on the web for the lead of an explain run, in a fresh
 context. You find what the chapter's reader needs on your questions, from the best sources
 there are, and write it down as evidence: sources with verbatim passages, and claims that
-each rest on a passage. A verifier on another model re-opens every passage you quote, and
-the writer may use only what survives, so one passage that says exactly what its claim
-says is worth more than five that point near it.
+each rest on a passage. A verifier on another model re-opens the passages of every claim
+the chapter uses, and the writer may use only what survives, so one passage that says
+exactly what its claim says is worth more than five that point near it.
 
 **Your dispatch** (the lead fills it in; `none` means empty):
 
@@ -1949,16 +2015,23 @@ leave-out); `plan.md` (the questions with their load-bearing marks, the angles);
 `outline.md` (each section's questions, claim ids and question states); `ledger.md`
 (statuses, disagreements) and `library.md`; the `## Unused leads` and `## Queries` of this
 round's findings files; and the earlier gaps file. Open an entry in a findings or verify
-file only to check a status you doubt. In a chapter scope, read the book's frozen indexes
-plus that chapter's overlays.
+file only to check a support line or a status you doubt. In a chapter scope, read the
+book's frozen indexes plus that chapter's overlays.
+
+**Most of what you read is unverified:** the verifier checks only the claims the outline
+picks, after research stops (and a book's main claims, before its outline gate). A claim
+with no record is `candidate`, and a question's state is its researchers' own report,
+marked `(reported)` (B8). Judge from what the findings record (each claim's support lines:
+rung, fit, independence), never as if a verifier had passed it.
 
 **Ask, of the outline as it stands:**
 
 1. **Expert:** what would an expert in this subject expect a chapter for this reader to
    cover that is missing or thin?
 2. **Reader:** section by section, what would this reader still ask after reading it?
-3. **Evidence:** which questions or load-bearing claims are thin (B8), contested, or rest
-   on one secondary source? A claim the verifier failed is an evidence gap.
+3. **Evidence:** which questions are reported thin or contested (B8), and which
+   load-bearing claims rest on one secondary source, a partial fit or rung 3 alone? A claim
+   a verifier failed (a record on disk says so) is an evidence gap.
 4. **Unused:** which found-but-unused leads point to something this reader needs, and
    which are noise?
 5. **Must-cover:** is every must-cover item answered or contested?
@@ -2535,7 +2608,9 @@ Rung 3 never counts, and a source nobody opened never counts.
 
 **Claim statuses**, set by the lead in `ledger.md`, only from verify files:
 
-- `candidate`: not yet verified.
+- `candidate`: not yet verified: every claim until the final verification checks the ones
+  the outline uses (`· used`), and for good a claim it never picks (a book's main claims
+  aside, which are verified before its outline gate).
 - `supported`: verified, and the bar is met.
 - `partial`: some parts verified; only the narrower, supported claim may be used.
 - `contested`: a disagreement entry (`D-…`) exists, and each side has a rung-1 or rung-2
@@ -2546,18 +2621,20 @@ Rung 3 never counts, and a source nobody opened never counts.
 
 **Question states:**
 
-- `answered`: every load-bearing claim mapped to it is `supported`, or `partial` with a
-  narrower claim that still answers it.
+- `answered`: every load-bearing claim that answers it (once the outline has picked: every
+  one it uses) is `supported`, or `partial` with a narrower claim that still answers it.
 - `contested`: answered, except that a load-bearing claim is `contested`; the chapter
   teaches the disagreement.
-- `thin`: a load-bearing claim is still `candidate`, `unsupported`, `contradicted` with no
-  replacement, or `partial` in a way that leaves the question open.
+- `thin`: one of those claims is `unsupported`, `contradicted` with no replacement,
+  `partial` in a way that leaves the question open, or still `candidate` once the verifier
+  has run.
 - `not found`: no source after 3 different queries, which are recorded.
 - `not searched`: the search did not run (a search limit, a denied tool). Never the same as
   `not found`.
 
-A researcher's question states are its own opinion; the ledger's are the lead's, set after
-verification.
+A researcher's question states are its own opinion. Until the verifier has checked the
+claims the outline uses, the lead carries them as reported, marked `(reported)`; the
+ledger's own states are the lead's, set after verification from those claims' records.
 
 **In the chapter**, a contested claim is written as attributed views, with the weight the
 sources give each side and no false balance. A load-bearing claim below the bar appears
@@ -2584,7 +2661,9 @@ The dossier is one folder; your dispatch names it. Each file has one writer:
 
 In a book the dossier is `book/research/`. Its `library.md` and `ledger.md` freeze at the
 outline signature; each chapter's lead then writes the overlays `library-ch<k>.md` and
-`ledger-ch<k>.md`.
+`ledger-ch<k>.md`: its top-up's lines, and a line of its own for each frozen claim the
+chapter uses, with the status its record gives, which wins over the frozen line for that
+chapter.
 
 **Ids** never change once given. `<stem>` is `r<n>-<angle>` (a book chapter's top-up:
 `ch<k>-r<n>-<angle>`) and `<seq>` is two digits: sources `S-<stem>-<seq>`, passages
@@ -2670,7 +2749,7 @@ only. A behaviour claim ("X runs before Y") cites every range on its path, in or
 with the file that holds it, its canonical URL, its kind and the claims it supports.
 `ledger.md` holds one line per claim, with `merged:` listing duplicate ids:
 
-    - C-r1-evidence-05 · Q7 · load-bearing · status supported · verified verify/r1-b2.md#V-C-r1-evidence-05-1
+    - C-r1-evidence-05 · Q7 · load-bearing · status supported · used · main · verified verify/final-b2.md#V-C-r1-evidence-05-1
       · counter: none-found (<queries>) | D-03 · bar met (<why>) · used-in: <outline sections>
 
 and a `## Disagreements` section, which the lead records and never settles:
@@ -2683,6 +2762,12 @@ and a `## Disagreements` section, which the lead records and never settles:
     - prominence: <which side most independent rung-1 and rung-2 sources take: due weight, not a vote>
     - would settle it: <the evidence that would decide it>
     - status: open | resolved-by-scope
+
+On a ledger line, `· used` marks a claim the outline picked (the lead's pick, after
+research stops), and `· main` a main claim among them; a book marks its main claims before
+any chapter picks. Only a used claim is written, and each ends with the `verified` link to
+its record. A claim never picked is never verified, a book's main claims aside, and stays
+`candidate`.
 
 **The trace** (`trace.md`), written by the writer as it finishes each section, because the
 chapter itself may carry no comments. Every checkable sentence maps to a claim id or a code
