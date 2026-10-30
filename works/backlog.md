@@ -17,7 +17,7 @@
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
 | `default` | `P37-1p` | planned | `P37-1p.DECOMP` | 0/2 | - | working tree |
-| `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 1/5 | `P36-1s.S1` | 1/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
+| `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
 
@@ -40,8 +40,10 @@
 | [x] `P33-n3` | `done` | `pass` | Explain front door | `none` | `works/phases/active/P33-n3` |
 | [x] `P34-n0` | `done` | `pass` | Keep private documents off the public repo | `none` | `works/phases/active/P34-n0` |
 | [x] `P35-a4` | `done` | `pass` | Explain documents: about the subject, standalone | `none` | `works/phases/active/P35-a4` |
-| [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.S1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
+| [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.D1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [ ] `P37-1p` | `planned` | `pending` | Drop the knowledge graph | `P37-1p.DECOMP` | `works/phases/active/P37-1p` |
+| [ ] `P38-e1` | `planned` | `pending` | Right-size explain runs (plugin 0.9.0) | `P38-e1.DECOMP` | `works/phases/active/P38-e1` |
+| [ ] `P39-hk` | `planned` | `pending` | Glossary: term definitions on hover or tap | `P39-hk.DECOMP` | `works/phases/active/P39-hk` |
 
 ## Phase P21: Web document deletion
 
@@ -291,7 +293,7 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P36-1s.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P36-1s/slices/P36-1s.DECOMP` |
-| [ ] `P36-1s.S1` | `in_progress` | Hermes fit and code access | `research` | `works/phases/active/P36-1s/slices/P36-1s.S1` |
+| [x] `P36-1s.S1` | `done` | Hermes fit and code access | `research` | `works/phases/active/P36-1s/slices/P36-1s.S1` |
 | [ ] `P36-1s.D1` | `todo` | chat design, a wave of 3 jobs | `co-work` | `works/phases/active/P36-1s/slices/P36-1s.D1` |
 | [ ] `P36-1s.DECOMP2` | `todo` | the build cut | `decomposition` | `works/phases/active/P36-1s/slices/P36-1s.DECOMP2` |
 | [ ] `P36-1s.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P36-1s/slices/P36-1s.REVIEW` |
@@ -302,3 +304,17 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 |---|---|---|---|---|
 | [ ] `P37-1p.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P37-1p/slices/P37-1p.DECOMP` |
 | [ ] `P37-1p.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P37-1p/slices/P37-1p.REVIEW` |
+
+## Phase P38-e1: Right-size explain runs (plugin 0.9.0)
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P38-e1.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P38-e1/slices/P38-e1.DECOMP` |
+| [ ] `P38-e1.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P38-e1/slices/P38-e1.REVIEW` |
+
+## Phase P39-hk: Glossary: term definitions on hover or tap
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P39-hk.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P39-hk/slices/P39-hk.DECOMP` |
+| [ ] `P39-hk.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |
