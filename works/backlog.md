@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P35-a4`
-- Current slice: `P35-a4.DECOMP`
-- Next slice: `P35-a4.REVIEW`
+- Current slice: `P35-a4.S1`
+- Next slice: `P35-a4.S2`
 - Waiting on operator: `none`
 - Open deferred jobs: `67`
 - Workspace version: `v86`
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P35-a4` | planned | `P35-a4.DECOMP` | 0/2 | - | working tree |
+| `default` | `P35-a4` | planned | `P35-a4.S1` | 1/4 | - | working tree |
 
 ## Active Phases
 
@@ -38,7 +38,7 @@
 | [x] `P-8jbf` | `done` | `pass` | Wide reader on big screens | `none` | `works/phases/active/P-8jbf` |
 | [x] `P33-n3` | `done` | `pass` | Explain front door | `none` | `works/phases/active/P33-n3` |
 | [x] `P34-n0` | `done` | `pass` | Keep private documents off the public repo | `none` | `works/phases/active/P34-n0` |
-| [ ] `P35-a4` | `planned` | `pending` | Explain documents: about the subject, standalone | `P35-a4.DECOMP` | `works/phases/active/P35-a4` |
+| [ ] `P35-a4` | `planned` | `pending` | Explain documents: about the subject, standalone | `P35-a4.S1` | `works/phases/active/P35-a4` |
 
 ## Phase P21: Web document deletion
 
@@ -275,5 +275,7 @@
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P35-a4.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P35-a4/slices/P35-a4.DECOMP` |
+| [x] `P35-a4.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P35-a4/slices/P35-a4.DECOMP` |
+| [ ] `P35-a4.S1` | `todo` | Explain rules: teach the subject, not the work records, and stand alone | `implementation` | `works/phases/active/P35-a4/slices/P35-a4.S1` |
+| [ ] `P35-a4.S2` | `todo` | Release the knowledge plugin as 0.8.0 | `implementation` | `works/phases/active/P35-a4/slices/P35-a4.S2` |
 | [ ] `P35-a4.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P35-a4/slices/P35-a4.REVIEW` |

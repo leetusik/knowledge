@@ -3,12 +3,12 @@
   "phase_id": "P35-a4",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-30T15:25:20+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-30T15:34:00+09:00",
+  "completed_at": "2026-10-30T15:44:37+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut a declared chain of two mid-row slices: S1 rewrites the explain rules (subject over records, ids as a small mark, standalone, critic's link rule reversed) with copies and agents; S2 releases plugin 0.8.0",
   "validation": {
     "required": [],
     "last_run": null,
