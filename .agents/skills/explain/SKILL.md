@@ -201,8 +201,9 @@ report suggests a book (§9.1); nothing asks mid-run.
 
 ### The front door, step by step
 
-Read with Read, Glob and Grep; your only other calls are §2's resolver and one read of
-§3.1's prior lookup. Write nothing, anywhere, with one exception: the resolver's own
+Read with Read, Glob and Grep; your only other calls are §2's resolver, one read of
+§3.1's prior lookup and, when that lookup finds a prior, one read of the prior itself for
+its headings (step 5's cheap look). Write nothing, anywhere, with one exception: the resolver's own
 header file (§2's `auth.header`), a credential cache beside the configuration it reads,
 never a run artifact.
 
@@ -257,6 +258,16 @@ never a run artifact.
    answer)`. A new book has no prior (`prior: none`): the same book call on its slug
    only checks that no book holds it yet; one that does is said so, with a chapter of it
    or another slug offered.
+
+   **Then the cheap look**, for the sections step 6 drafts: at most **10 reads** in all,
+   with no agents and no web search. Repo modes: Read, Glob and Grep the subject's files;
+   a phase or slice subject reads its `intent.md`, its `phase.md`'s `## Now` and
+   `## Decisions`, and the heads of its slices' `result.md`. A prior (a v2): its `##` and
+   `###` headings, from one more KB read, §3.1's
+   `knowledge --base-url <KB_API_BASE_URL> read <PRIOR_REL_PATH> --source`, or without the
+   CLI its `curl … -H @<KB_AUTH_HEADER>` form. General mode: the request and the subject's
+   ordinary map, as you already know it, with no search. The look sizes the list; it is
+   never research, and nothing it reads is evidence.
 6. **Draft the proposal:** the phase name `Explain: <subject>`, a one-sentence objective
    (the unit, its reader, published private), and the seventeen lines of `## Explain`,
    each field on its own line, exactly as create-phase's route writes them:
@@ -279,11 +290,31 @@ never a run artifact.
      name, created private on its first publish · **visibility**: `private`, always;
    - **outline sign-off**: `off` (a book: `on`, fixed; `on` for a document or a chapter
      only when asked) · **worktree**: `yes`, or `no` when the operator says to run it
-     here.
+     here. The sections are signed at this confirmation whatever the field says, so for
+     a document or a chapter `on` means the operator also signs D6's final outline (its
+     claims and word budgets, §3.10) before the write; for a book, the outline gate
+     signs each chapter's sections (§9.2), with no stop per chapter.
+
+   Then draft the **sections**, which ride in the confirmation above the `## Explain`
+   block, never as a field. A document: a numbered list of its `##` sections in §4.2's
+   order, `<n>. <Heading> — <what it answers>`, at most **6 content sections**; Quiz and
+   Sources always close it and are not listed. Headings a newcomer understands, and each
+   one-line answer in plain words. A v2 marks each prior heading `kept`, `renamed` (with
+   its old heading) or `dropped`, and each addition `new`; a kept or renamed heading
+   carries its id (§3.1). A book lists its chapters the same way,
+   `<n>. <Chapter title> — <what it covers>`; each chapter's sections are signed later,
+   at the book's outline gate. A new chapter of an existing book lists its own sections,
+   as a document does. The run researches and writes only for the signed sections (§3.4,
+   §3.10).
 7. **Ask once**, in this shape; a changed line is folded in and the whole confirmation
    shown again:
 
        Explain — confirm once; then it runs to publish.
+       Sections (your yes signs them; change any line):
+         1. <Heading> — <what it answers>[ · a v2: kept | renamed from "<old heading>" | new]
+         …
+         [a v2: <old heading> — dropped]
+         Quiz and Sources close it, as in every document.
        Phase: Explain: <subject> — <the objective>
        - unit: document (standalone). Say "a chapter of <book>" or "a book" to change it
        - subject: <subject> · mode: <codebase | general>
@@ -303,9 +334,11 @@ never a run artifact.
        Why: <field — reason>; … (one clause for each value you chose; the rest are the request's words or the defaults)
        Reply yes, or change any line.
 
-   A book's stops line adds its outline and acceptance gates, and its cost line says a
-   book is several runs' worth of research agents; with `worktree: no` the line says it
-   runs here, on this stream. Every web search, the agents' included, counts against the
+   A book's `Sections` block lists its chapters (step 6), and its stops line adds its
+   outline and acceptance gates and says that each chapter's sections are signed at the
+   outline gate, with no stop per chapter. A changed section line is folded in like any
+   other. A book's cost line says a book is several runs' worth of research agents; with
+   `worktree: no` the line says it runs here, on this stream. Every web search, the agents' included, counts against the
    session's cap (`CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`, 200 by default): say so for
    a `full` run, and that a long one is best started in a session of its own.
 
@@ -471,10 +504,16 @@ D0b passes:
     - must-cover: <the items the request names> | none · leave-out: <items> | none
     - trusted sources: <names or sites> | none · lang: <LANG> · placement: loose | <book>/<key>
     - prior: none | <PRIOR_REL_PATH> v<PRIOR_VERSION> · open: <each dimension the request leaves unstated>
+    - sections: signed: 1. <Heading> — <what it answers>; … | not signed up front
 
 In an explain phase the brief's fields come from `intent.md`'s `## Explain`, and its
 `prior:` line, when it is not `none`, names the prior version; otherwise look for one as
-below. A phase or slice subject is what the system now does and why; its records are
+below. **The signed sections** come from the confirmation create-phase recorded under
+`intent.md`'s *Original Input (verbatim)*: its `Sections` block in the last confirmation
+shown, with any line the operator's reply changed folded in (a book's: its chapters).
+With no `Sections` block there (a confirmation drafted without one, create-phase's own
+included), the brief says `sections: not signed up front`, D1 drafts the skeleton as
+below, and the report says so (§8). A phase or slice subject is what the system now does and why; its records are
 evidence (§4, *The subject, not the records*).
 
 **The prior version: is this an update to an existing chapter or document?**
@@ -727,7 +766,10 @@ disk:
    would expect a chapter for this reader to cover. Mark each load-bearing or not.
 3. **An outline skeleton** in §4.2's order, with the questions each section answers,
    grouped by the subject's ideas, never by slice or record (§4, *The subject, not the
-   records*).
+   records*). With signed sections (D0), the skeleton **is** the signed sections, in
+   their order and wording: every question belongs to exactly one signed section, each
+   must-cover item folds into the section it belongs to, and no question serves an
+   unsigned section. Only with none signed do you draft the sections here.
 4. **The tier:** the highest of three axes. Breadth: one domain (1), 2–5 subtopics (2), more
    than 5 or disjoint domains (3). Nesting: one-step inference (1), 2–3 dependent
    sub-questions (2), 4 or more (3). Exploration: fully specified (1), 1–2 unspecified
@@ -773,9 +815,11 @@ disk:
    angle, the heaviest split by sub-area.
 6. **The query log,** empty until D3.
 
-Then hold a document's plan to §9.1's size test: a plan plainly over one document is
-scoped down to the part one document carries, the cut recorded in `run.md` and, at D6, in
-the outline's `## Not used`; the report suggests a book for the rest (§8).
+Then hold a document's plan to §9.1's size test, which reads the signed sections when
+there are any: a plan plainly over one document is scoped down to the part one document
+carries, the cut recorded in `run.md` and, at D6, in the outline's `## Not used` (a signed
+section left out is a cut section, reported as §3.10 says); the report suggests a book for
+the rest (§8).
 
 ### 3.5 D2: a wave
 
@@ -898,7 +942,10 @@ chapter will treat it:
 
 **D5g, the evidence gate** (you, from `brief.md`, `outline.md` and `ledger.md`). It passes
 when **every must-cover item** is `answered` or `contested`, and **at least two-thirds of
-the load-bearing questions** are. Record the counts and the result in `run.md`. Below it, a
+the load-bearing questions** are, counted over the sections that **remain**: a signed
+section the evidence cannot carry is cut at D6 (§3.10), its questions leave the count, and
+a cut section never fails the gate on its own. The must-cover rule stands whatever is
+cut: a section holding a must-cover item is never cut. Record the counts and the result in `run.md`. Below it, a
 single document **stops before writing**. The report's first line is `STOPPED: evidence
 gate`; then each failing item or question with its best sources and the queries run, the
 dossier's path, and the two ways on, §3.3's resume note: `trust <a source or site>`, or
@@ -950,13 +997,22 @@ the reader's task; the research supports it, never leads it.**
    as the reader takes them). Each task gets the section that delivers it, ending in its
    deliverable; each heading carries a one-line purpose, its tasks and a word budget: the
    fewest words that deliver them (a single document mostly 3,000–5,000 in all).
+   **With signed sections** (D0), the path is the signed sections, in their order and
+   wording: the reader's tasks map onto them, never new sections beside them. Their ids
+   derive from the headings, and a v2's kept and renamed headings carry their ids (§3.1).
+   Each section keeps a word budget, and the budgets sum to the document's.
+   **A signed section the evidence cannot carry** (its load-bearing questions neither
+   `answered` nor `contested`, no must-cover item in it) is cut from the path: its claims
+   go to `## Not used` with the reason, and the report lists it with why (§8). A cut is
+   never a stop.
 3. **Each finding goes in the step it changes** (a race in the step that has it, and in the
    checklist line that guards it), never in a section of caveats. A claim earns the main
    line by changing what the reader does or understands there; secondary depth (another
    number, history, an edge the task never meets) goes in a collapsed callout.
 4. **`## Not used`:** each claim that serves no task and no must-cover point, with a
    one-line reason; it stays out of the chapter. Every must-cover point, load-bearing
-   question and `stated` gap lands on the path; brevity never drops one.
+   question and `stated` gap lands on the path, bar a cut section's (step 2); brevity
+   never drops one.
 
 Under each heading: its questions and states, its claim ids with their ledger statuses
 (B8), its code ranges, its declared gaps from `gaps/final.md` with their dispositions as
@@ -978,8 +1034,8 @@ written there, its callouts, and the diagrams it plans with the claims each draw
 
 **The quiz**, about 5 targets, tests only `supported` claims: never a `partial` beyond its
 narrower claim, a `contested` or `unsupported` one, or a disagreement. "Best practices & next
-steps" is in the map on every run but `no-research`. Record `D6: sections <n> · claims <n>
-· not used <n> · quiz <n>` in `run.md`, its mode block brought up to date. A `no-research`
+steps" is in the map on every run but `no-research`. Record `D6: sections <n> (signed <n> ·
+cut <n>) · claims <n> · not used <n> · quiz <n>` in `run.md`, its mode block brought up to date. A `no-research`
 map names code ranges, or the user's material, in place of claim ids.
 
 ## 4. Write the chapter — native Markdown
@@ -1574,7 +1630,9 @@ merged back; nothing is written twice. A stopped run's first line is its stop in
    fallback (§2), a skipped check.
 3. **The research:** tier, researchers, rounds and the stop reason; claims by status; the
    gate's counts. `quick` names what it skipped; `no-research` says it was the operator's
-   choice, with no web research and no "Best practices & next steps".
+   choice, with no web research and no "Best practices & next steps". Then
+   `sections: <n> signed · <m> delivered`, and each cut section with why (§3.10); or
+   `sections: not signed up front` when D0 found none (§3.1).
 4. **Declared gaps:** each `gaps/final.md` line and how the chapter treats it, or `none`.
 5. **The critic:** verdict, the answers, and the review's ruling on each dispute; or
    `none (quick)`.
@@ -1592,7 +1650,9 @@ merged back; nothing is written twice. A stopped run's first line is its stop in
 A book is offered, never imposed, and settled once, at the start. **(a)** When the request
 asks for a book, the front door's one confirmation proposes `unit: book` (§1). **(b)** When
 a document's D1 plan is plainly over one document — over about 25 questions or 7 top-level
-sections, tier 3 on two or more axes, or over 10 researchers in wave 1 — nothing asks: the
+sections, tier 3 on two or more axes, or over 10 researchers in wave 1, the sections and
+their questions read from the signed sections when the confirmation signed them (§3.1) —
+nothing asks: the
 run scopes the document down to what one document carries, records the part left out in
 `run.md` and in the outline's `## Not used`, and the report suggests a book for it (§8):
 the reason and the part left out. A book is a new explain, made only on the operator's
@@ -1613,18 +1673,22 @@ committed with each slice except `pages/` (write `pages/.gitignore`, `*` then
 
 1. **D0–D0b:** the brief from `intent.md`'s `## Explain` (subject, mode, reader, depth,
    must-cover, leave-out, trusted sources, `lang: en`), placement `book <slug>`.
-2. **D1:** 20–60 questions; the skeleton is a draft chapter list with each chapter's
-   questions, the chapters following the subject's ideas, never one per slice by default
-   (§4, *The subject, not the records*); tier usually 3, the heaviest angles split by the
-   book's parts.
+2. **D1:** 20–60 questions; the skeleton is the chapter list signed at the confirmation
+   (D0; with none signed, a draft chapter list), with each chapter's questions, the
+   chapters following the subject's ideas, never one per slice by default (§4, *The
+   subject, not the records*); tier usually 3, the heaviest angles split by the book's
+   parts.
 3. **D2–D4:** waves of at most 10 (wave 1 in up to two); at most 3 gap rounds of at most 6
    researchers, against the chapter list; a ceiling of 45 researcher and gap-reviewer
    dispatches.
 4. **D5–D5s** on the book's main claims, then `gaps/final.md`. No gate stop: what would
    fail D5g is a weak spot.
 5. **`book/outline.md`**, in the shape the workspace asks, drawn from the ledger: per
-   chapter its questions, claim ids with statuses, declared gaps, and its **expected
-   top-up** (what its depth needs that this research only skimmed, or `none`).
+   chapter its **sections** (each a heading with one line on what it answers, in §4.2's
+   order, at most 6 content sections), its questions, claim ids with statuses, declared
+   gaps, and its **expected top-up** (what its depth needs that this research only
+   skimmed, or `none`). The outline gate signs every chapter's sections at once: there is
+   no stop per chapter slice.
 6. **`book/research/summary.md`**, linked from the outline gate:
 
        # Research summary: <book>
@@ -1654,7 +1718,8 @@ The chapter executor, for chapter `<k>` (its position), key `<key>`, state in `r
 4. **Its gate:** D5g over its must-cover items and load-bearing questions, frozen ledger and
    overlay together. Below it: stop before writing, with the failing items.
 5. **D6–D7** by §3.10 and §4 (the reader's path, the three passes, the prose rules), its
-   reader's tasks from the chapter's outline entry and the book's reader: its map in
+   reader's tasks from the chapter's outline entry and the book's reader, and its path the
+   chapter's sections signed in `book/outline.md` (§3.10's signed-sections rules): its map in
    `outline-ch<k>.md`, the draft where the workspace says (`book/<key>.md`) with
    `trace-<key>.md`, then §4.8–§4.9.
 6. **D8:** the critic (`kind: chapter`) writes `book/critique/<key>.md`; answer it once (§4.10
