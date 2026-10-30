@@ -253,9 +253,9 @@
       "order": 20,
       "path": "works/phases/active/P38-e1",
       "review_status": "pending",
-      "current_slice": "P38-e1.S1",
+      "current_slice": "P38-e1.S2",
       "slice_count": 11,
-      "done_slice_count": 1,
+      "done_slice_count": 2,
       "execution": {
         "mode": "parallel",
         "branch": "phase/P38-e1-right-size_explain_runs_plugin_0.9.0",
@@ -281,5 +281,5 @@
   "deferred_open_count": 67,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-31T00:20:40+09:00"
+  "last_rebuilt_at": "2026-10-31T00:26:22+09:00"
 }
