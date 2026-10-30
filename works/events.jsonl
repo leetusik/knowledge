@@ -1542,3 +1542,4 @@
 {"ts": "2026-10-28T15:50:46+09:00", "type": "slice_status_changed", "slice": "P34-n0.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-10-28T15:50:46+09:00", "type": "phase_reviewed", "phase": "P34-n0", "verdict": "pass", "reviewer": "slice-executor"}
 {"ts": "2026-10-28T15:50:46+09:00", "type": "phase_consolidation_owed", "phase": "P34-n0", "notes": 9}
+{"ts": "2026-10-30T15:25:20+09:00", "type": "phase_created", "phase": "P35-a4"}

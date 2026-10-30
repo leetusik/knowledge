@@ -5,9 +5,9 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P35-a4`
+- Current slice: `P35-a4.DECOMP`
+- Next slice: `P35-a4.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `67`
 - Workspace version: `v86`
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | - | idle | - | - | - | working tree |
+| `default` | `P35-a4` | planned | `P35-a4.DECOMP` | 0/2 | - | working tree |
 
 ## Active Phases
 
@@ -38,6 +38,7 @@
 | [x] `P-8jbf` | `done` | `pass` | Wide reader on big screens | `none` | `works/phases/active/P-8jbf` |
 | [x] `P33-n3` | `done` | `pass` | Explain front door | `none` | `works/phases/active/P33-n3` |
 | [x] `P34-n0` | `done` | `pass` | Keep private documents off the public repo | `none` | `works/phases/active/P34-n0` |
+| [ ] `P35-a4` | `planned` | `pending` | Explain documents: about the subject, standalone | `P35-a4.DECOMP` | `works/phases/active/P35-a4` |
 
 ## Phase P21: Web document deletion
 
@@ -269,3 +270,10 @@
 | [x] `P34-n0.S4` | `done` | Unpublish private projects from the tree on the server | `qa` | `works/phases/active/P34-n0/slices/P34-n0.S4` |
 | [x] `P34-n0.S5` | `done` | Purge private projects from the public history | `implementation` | `works/phases/active/P34-n0/slices/P34-n0.S5` |
 | [x] `P34-n0.REVIEW` | `done` | phase review | `review` | `works/phases/active/P34-n0/slices/P34-n0.REVIEW` |
+
+## Phase P35-a4: Explain documents: about the subject, standalone
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P35-a4.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P35-a4/slices/P35-a4.DECOMP` |
+| [ ] `P35-a4.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P35-a4/slices/P35-a4.REVIEW` |
