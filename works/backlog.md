@@ -8,7 +8,7 @@
 - Current phase: `P36-1s`
 - Current slice: `P36-1s.S1`
 - Next slice: `P36-1s.D1`
-- Waiting on operator: `none`
+- Waiting on operator: `P36-1s.S1`
 - Stream: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `67`
 - Workspace version: `v86`
@@ -290,7 +290,7 @@
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P36-1s.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P36-1s/slices/P36-1s.DECOMP` |
-| [ ] `P36-1s.S1` | `todo` | Hermes fit and code access | `research` | `works/phases/active/P36-1s/slices/P36-1s.S1` |
+| [~] `P36-1s.S1` | `pending` | Hermes fit and code access | `research` | `works/phases/active/P36-1s/slices/P36-1s.S1` |
 | [ ] `P36-1s.D1` | `todo` | chat design, a wave of 3 jobs | `co-work` | `works/phases/active/P36-1s/slices/P36-1s.D1` |
 | [ ] `P36-1s.DECOMP2` | `todo` | the build cut | `decomposition` | `works/phases/active/P36-1s/slices/P36-1s.DECOMP2` |
 | [ ] `P36-1s.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P36-1s/slices/P36-1s.REVIEW` |

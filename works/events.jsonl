@@ -1578,3 +1578,6 @@
 {"ts": "2026-10-30T20:30:42+09:00", "type": "executor_dispatched", "slice": "P36-1s.DECOMP", "phase": "P36-1s", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-10-30T20:30:45+09:00", "type": "slice_status_changed", "slice": "P36-1s.DECOMP", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-10-30T20:30:46+09:00", "type": "acceptance_required", "phase": "P36-1s"}
+{"ts": "2026-10-30T20:33:07+09:00", "type": "slice_status_changed", "slice": "P36-1s.S1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-30T21:09:53+09:00", "type": "executor_dispatched", "slice": "P36-1s.S1", "phase": "P36-1s", "kind": "research", "risk": "high", "attempt": 1, "verdict": "needs_operator", "note": null}
+{"ts": "2026-10-30T21:09:53+09:00", "type": "slice_status_changed", "slice": "P36-1s.S1", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}
