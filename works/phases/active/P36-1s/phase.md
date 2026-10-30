@@ -39,7 +39,7 @@ _One line per durable-truth change: `- <doc>.md: <what changed> (<slice>)`. Appe
 ## Operator Questions
 
 _Questions only the operator can answer, one entry each: `- **OQ<n> (<slice>):** <question>`. Append only (`phase-section <P> "Operator Questions" --append`); an answered entry collapses with `phase-section <P> --resolve OQ<n> --pointer <ref>`, never deleted. Every entry is routed at the review — folded into the acceptance walkthrough, filed with `defer-job`, or resolved. An unrouted entry is a review finding._
-- **OQ1 (P36-1s.S1):** Brave's free tier allows one search per second, and the agent often searches twice in one step, so one of the pair can fail with HTTP 429. Accept the occasional failed search, pay for a Brave plan, or let a failed search retry once on the keyless vendors (Exa, Parallel or Firecrawl would then see that query text)? → [topics/hermes-fit.md](topics/hermes-fit.md) § Q2
+- **OQ1** (resolved → operator 2026-10-30: "accept" -- occasional failed searches are accepted; no paid Brave plan, no retry on the keyless vendors): Brave's free tier allows one search per second, and the agent often searches twice in one step, so one of the pair can fail with HTTP 429. Accept the occasio...
 - **OQ2 (P36-1s.S1):** For private repos the code MCP needs a read-only GitHub credential on the box. One deploy key per repo, one fine-grained read-only token, or a GitHub App installation? → [topics/hermes-fit.md](topics/hermes-fit.md) § Q4
 
 ## Notes for later slices
