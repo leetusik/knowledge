@@ -224,10 +224,22 @@
       "current_slice": "P36-1s.DECOMP",
       "slice_count": 2,
       "done_slice_count": 0
+    },
+    {
+      "id": "P37-1p",
+      "name": "Drop the knowledge graph",
+      "objective": "Remove the knowledge graph from the hosted product (the graph page and its nav entry, the public graph pages, the graph API, and the landing page's graph section and motif); old shared graph links redirect to the org's library; the plugin's starter template keeps its graph",
+      "status": "planned",
+      "order": 19,
+      "path": "works/phases/active/P37-1p",
+      "review_status": "pending",
+      "current_slice": "P37-1p.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
     }
   ],
   "deferred_open_count": 67,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-30T17:01:57+09:00"
+  "last_rebuilt_at": "2026-10-30T17:10:16+09:00"
 }

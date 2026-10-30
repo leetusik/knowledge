@@ -40,6 +40,7 @@
 | [x] `P34-n0` | `done` | `pass` | Keep private documents off the public repo | `none` | `works/phases/active/P34-n0` |
 | [x] `P35-a4` | `done` | `pass` | Explain documents: about the subject, standalone | `none` | `works/phases/active/P35-a4` |
 | [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.DECOMP` | `works/phases/active/P36-1s` |
+| [ ] `P37-1p` | `planned` | `pending` | Drop the knowledge graph | `P37-1p.DECOMP` | `works/phases/active/P37-1p` |
 
 ## Phase P21: Web document deletion
 
@@ -288,3 +289,10 @@
 |---|---|---|---|---|
 | [ ] `P36-1s.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P36-1s/slices/P36-1s.DECOMP` |
 | [ ] `P36-1s.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P36-1s/slices/P36-1s.REVIEW` |
+
+## Phase P37-1p: Drop the knowledge graph
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P37-1p.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P37-1p/slices/P37-1p.DECOMP` |
+| [ ] `P37-1p.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P37-1p/slices/P37-1p.REVIEW` |
