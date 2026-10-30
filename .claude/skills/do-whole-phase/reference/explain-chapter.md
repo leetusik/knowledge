@@ -85,7 +85,10 @@ The executor is the **lead** of the chapter's research run (§9.3 *A chapter: it
    critic in the foreground, because a headless `claude -p` session stopped a background critic after ten
    idle minutes; that is the lead's rule inside its own run, and your main thread is the interactive
    session the workspace runs in. The prompt is the line `slice: <id>`, then the B5 *Critic
-   (`knowledge:explain-critic`)* dispatch block filled in, every path from the repo root:
+   (`knowledge:explain-critic`)* dispatch block filled in, every path from the repo root. The field set is
+   B5 *Your dispatch*'s, read from the installed skill at dispatch; these blocks are that set filled with
+   this workspace's paths, a line B5 has and a block lacks is filled from B5, and B5 wins on any
+   difference:
 
    ```
    slice: <P>.S<k>
@@ -93,8 +96,12 @@ The executor is the **lead** of the chapter's research run (§9.3 *A chapter: it
    draft: works/phases/active/P<N>/book/<key>.md · critique: works/phases/active/P<N>/book/critique/<key>.md · dossier: works/phases/active/P<N>/book/research
    skill: <the skill path plan.md names> · scratch: works/phases/active/P<N>/book/research/pages/critic-<key>
    writer_model: <the model= line span 1 ran on> · same-model: accepted
+   title: <the chapter title plan.md names>[ · kept][ · book: <the book's title>]
    chapter: slice: <P>.S<k> · phase: P<N> · key: <key> · plan: works/phases/active/P<N>/slices/<P>.S<k>/plan.md
    ```
+
+   The `title:` value is the outline's chapter title in `plan.md`; `· book:` goes only on a new book's
+   first chapter slice by `order`, and `· kept` only on an existing chapter's next version (`prior:`).
 
    The scratch folder sits under the dossier's `pages/`, so what the critic fetches stays out of git. It is
    a long span (up to 120 turns, its frontmatter's `maxTurns`) and writes `book/critique/<key>.md`: findings by severity (`must-fix`, `should-fix`, `note`), confidence and
@@ -114,7 +121,8 @@ The executor is the **lead** of the chapter's research run (§9.3 *A chapter: it
    - re-read the changed parts per §4.8 *Before you publish* and re-run `knowledge check` to exit 0 (exit 2
      per span 1's rule); if the revision changed any flag, rewrite `## Publish` to match;
    - add a `## Notes for later slices` entry to `phase.md` for later chapters: the terms this chapter
-     defines and the heading ids to link to, as corrected;
+     teaches, so later chapters can recap them, and the heading ids a later chapter may link to as an
+     extra, as corrected;
    - rewrite the verdict block as the final one (`critique: answered`, `disputed: <ids> | none`) and return.
 
    This span always runs, even on a critic `pass`: it is where the critique is answered and recorded.
@@ -206,8 +214,8 @@ research agent. With `outline sign-off: on` it starts only after the operator's 
   the prior, and the publish fields. A field none of them fills is a gap: ask, never invent it.
 - **Span 1, the executor** (`span: 1`): D7 by §3.10 *D6: the final outline, the reader's path* and §4
   *Write the chapter — native Markdown*, from `doc/outline.md`'s `## Reader's task` and path, keeping
-  `doc/trace.md`; a chapter also honours `## The book` (it uses no term a later chapter defines without
-  defining it, and links earlier chapters' keys as `chapter:` links). Under `no-research`, the draft has no
+  `doc/trace.md`; a chapter also reads `## The book` for what earlier chapters teach, so it can recap that briefly per §4
+  *Write the chapter — native Markdown*, *Standalone* (a `chapter:` link only as an extra). Under `no-research`, the draft has no
   "Best practices & next steps" section and no sources block unless the operator gave pages (§3.9 *`quick`
   and `no-research`*). Then *The read-through and the check*, `result.md` with its `## Publish` section,
   and `done` with `critic_ready: yes`, or, under **`quick`**, the final verdict (`critique: none (quick)`):
@@ -222,7 +230,13 @@ research agent. With `outline sign-off: on` it starts only after the operator's 
   draft: works/phases/active/P<N>/doc/body.md · critique: works/phases/active/P<N>/doc/critique.md · dossier: works/phases/active/P<N>/doc
   skill: <the skill path plan.md names> · scratch: works/phases/active/P<N>/doc/pages/critic
   writer_model: <the model= line span 1 ran on> · same-model: accepted
+  title: <the --title of S1's ## Publish>[ · kept]
   ```
+
+  The field set is B5's, as the sentence above the chapter block says. The `title:` value is the `--title`
+  of S1's `## Publish`, which you read before this span; a chapter unit sends its chapter title from
+  `plan.md`'s publish fields, with `· kept` only on an existing chapter's next version, and a v2 loose
+  document sends its title with no `kept`.
 
   It reads `doc/brief.md` and `doc/outline.md` and writes `doc/critique.md`. A critic failing twice is the
   same `--stop-kind decision` stop as a book's.

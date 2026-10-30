@@ -78,4 +78,4 @@ While a wave runs, prepare only the **next frontier**: slices whose every open d
 
 ## Unchanged
 
-`reference/dispatch.md`, the explain references, the `plan only` and spend gates, a design wave's spans inside one `co-work` slice, and `/do-next-slice`, bar its stop while a wave is unfinished. The phase stays the unit of *worktree* parallelism (`reference/worktree.md`).
+`reference/dispatch.md`, the explain references, the `plan only` and spend gates, a `co-work` slice's dispatched spans (the frame, page and join passes, the page and cross-page critics, the judge, the mockup), and `/do-next-slice`, bar its stop while a wave is unfinished. The phase stays the unit of *worktree* parallelism (`reference/worktree.md`).

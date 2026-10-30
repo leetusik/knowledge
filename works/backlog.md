@@ -10,14 +10,14 @@
 - Next slice: `P37-1p.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `67`
-- Workspace version: `v86`
+- Workspace version: `v89`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
 | `default` | `P37-1p` | planned | `P37-1p.DECOMP` | 0/2 | - | working tree |
-| `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 0/2 | `P36-1s.DECOMP` | 0/2 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | local copy |
+| `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 1/5 | `P36-1s.S1` | 1/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
 
@@ -40,7 +40,7 @@
 | [x] `P33-n3` | `done` | `pass` | Explain front door | `none` | `works/phases/active/P33-n3` |
 | [x] `P34-n0` | `done` | `pass` | Keep private documents off the public repo | `none` | `works/phases/active/P34-n0` |
 | [x] `P35-a4` | `done` | `pass` | Explain documents: about the subject, standalone | `none` | `works/phases/active/P35-a4` |
-| [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.DECOMP` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
+| [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.S1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [ ] `P37-1p` | `planned` | `pending` | Drop the knowledge graph | `P37-1p.DECOMP` | `works/phases/active/P37-1p` |
 
 ## Phase P21: Web document deletion
@@ -286,9 +286,14 @@
 
 ## Phase P36-1s: Hermes: a chat agent beside the reader
 
+_Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader`, where this phase advances._
+
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P36-1s.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P36-1s/slices/P36-1s.DECOMP` |
+| [x] `P36-1s.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P36-1s/slices/P36-1s.DECOMP` |
+| [ ] `P36-1s.S1` | `in_progress` | Hermes fit and code access | `research` | `works/phases/active/P36-1s/slices/P36-1s.S1` |
+| [ ] `P36-1s.D1` | `todo` | chat design, a wave of 3 jobs | `co-work` | `works/phases/active/P36-1s/slices/P36-1s.D1` |
+| [ ] `P36-1s.DECOMP2` | `todo` | the build cut | `decomposition` | `works/phases/active/P36-1s/slices/P36-1s.DECOMP2` |
 | [ ] `P36-1s.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P36-1s/slices/P36-1s.REVIEW` |
 
 ## Phase P37-1p: Drop the knowledge graph
