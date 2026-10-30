@@ -223,7 +223,15 @@
       "review_status": "pending",
       "current_slice": "P36-1s.DECOMP",
       "slice_count": 2,
-      "done_slice_count": 0
+      "done_slice_count": 0,
+      "execution": {
+        "mode": "parallel",
+        "branch": "phase/P36-1s-hermes_a_chat_agent_beside_the_reader",
+        "worktree": "/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader",
+        "consolidation": "pending",
+        "base_branch": "main"
+      },
+      "consolidation": "pending"
     },
     {
       "id": "P37-1p",
@@ -241,5 +249,5 @@
   "deferred_open_count": 67,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-30T17:10:16+09:00"
+  "last_rebuilt_at": "2026-10-30T17:17:57+09:00"
 }

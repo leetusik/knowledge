@@ -5,9 +5,9 @@
 
 ## Pointer
 
-- Current phase: `P36-1s`
-- Current slice: `P36-1s.DECOMP`
-- Next slice: `P36-1s.REVIEW`
+- Current phase: `P37-1p`
+- Current slice: `P37-1p.DECOMP`
+- Next slice: `P37-1p.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `67`
 - Workspace version: `v86`
@@ -16,7 +16,8 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P36-1s` | planned | `P36-1s.DECOMP` | 0/2 | - | working tree |
+| `default` | `P37-1p` | planned | `P37-1p.DECOMP` | 0/2 | - | working tree |
+| `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 0/2 | `P36-1s.DECOMP` | 0/2 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | local copy |
 
 ## Active Phases
 
@@ -39,7 +40,7 @@
 | [x] `P33-n3` | `done` | `pass` | Explain front door | `none` | `works/phases/active/P33-n3` |
 | [x] `P34-n0` | `done` | `pass` | Keep private documents off the public repo | `none` | `works/phases/active/P34-n0` |
 | [x] `P35-a4` | `done` | `pass` | Explain documents: about the subject, standalone | `none` | `works/phases/active/P35-a4` |
-| [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.DECOMP` | `works/phases/active/P36-1s` |
+| [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.DECOMP` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [ ] `P37-1p` | `planned` | `pending` | Drop the knowledge graph | `P37-1p.DECOMP` | `works/phases/active/P37-1p` |
 
 ## Phase P21: Web document deletion

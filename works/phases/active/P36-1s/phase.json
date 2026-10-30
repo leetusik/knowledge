@@ -29,5 +29,12 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "execution": {
+    "mode": "parallel",
+    "branch": "phase/P36-1s-hermes_a_chat_agent_beside_the_reader",
+    "worktree": "/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader",
+    "consolidation": "pending",
+    "base_branch": "main"
   }
 }
