@@ -212,10 +212,22 @@
       "slice_count": 5,
       "done_slice_count": 5,
       "consolidation": "pending"
+    },
+    {
+      "id": "P36-1s",
+      "name": "Hermes: a chat agent beside the reader",
+      "objective": "Add a server-side Hermes Agent chat to the reader (hideable side panel on desktop, drawer on tablet and phone) where a signed-in member of the owning org asks about the document or about selected lines added as context, answered from the document, the knowledge base, the document's code repos (read-only) and the web on Claude Opus 5.5 at medium effort with the operator's key; chats saved per user per document",
+      "status": "planned",
+      "order": 18,
+      "path": "works/phases/active/P36-1s",
+      "review_status": "pending",
+      "current_slice": "P36-1s.DECOMP",
+      "slice_count": 2,
+      "done_slice_count": 0
     }
   ],
   "deferred_open_count": 67,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-30T16:45:06+09:00"
+  "last_rebuilt_at": "2026-10-30T17:01:57+09:00"
 }

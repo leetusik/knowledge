@@ -5,9 +5,9 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P36-1s`
+- Current slice: `P36-1s.DECOMP`
+- Next slice: `P36-1s.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `67`
 - Workspace version: `v86`
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | - | idle | - | - | - | working tree |
+| `default` | `P36-1s` | planned | `P36-1s.DECOMP` | 0/2 | - | working tree |
 
 ## Active Phases
 
@@ -39,6 +39,7 @@
 | [x] `P33-n3` | `done` | `pass` | Explain front door | `none` | `works/phases/active/P33-n3` |
 | [x] `P34-n0` | `done` | `pass` | Keep private documents off the public repo | `none` | `works/phases/active/P34-n0` |
 | [x] `P35-a4` | `done` | `pass` | Explain documents: about the subject, standalone | `none` | `works/phases/active/P35-a4` |
+| [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.DECOMP` | `works/phases/active/P36-1s` |
 
 ## Phase P21: Web document deletion
 
@@ -280,3 +281,10 @@
 | [x] `P35-a4.S2` | `done` | Release the knowledge plugin as 0.8.0 | `implementation` | `works/phases/active/P35-a4/slices/P35-a4.S2` |
 | [x] `P35-a4.F1` | `done` | Critic holds every document to the subject, standalone and title rules | `fix` | `works/phases/active/P35-a4/slices/P35-a4.F1` |
 | [x] `P35-a4.REVIEW` | `done` | phase review | `review` | `works/phases/active/P35-a4/slices/P35-a4.REVIEW` |
+
+## Phase P36-1s: Hermes: a chat agent beside the reader
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P36-1s.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P36-1s/slices/P36-1s.DECOMP` |
+| [ ] `P36-1s.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P36-1s/slices/P36-1s.REVIEW` |
