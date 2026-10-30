@@ -115,7 +115,7 @@ The phase review re-runs only the `## Regression Checklist` lines inside its pha
    - **unit**: `document` (default), `book` or `chapter`. The literal `unit` line is what the plugin's front door tests for, so it is always written;
    - **subject**: a phase id (`P30`), a slice id (`P30.S4`) or a free topic;
    - **mode**: `codebase` (the subject is this repo's code or its work records) or `general` (no code behind it; the web and the operator's material are the evidence). It is not the skill's §1 *Resolve the topic, the mode and the placement* mode (change, topic or general), which the outline sets per chapter;
-   - **book**: `none` for a document. For a book, its slug and title, placed by §1's rules: a phase or slice subject gets that phase's own book, `p<N>` titled `P<N>: <phase name>` (a tailed or v73 id keeps its form: `P46-k2` suggests `p46-k2`, titled `P46-k2: <phase name>`); anything else is a named book, of kind `codebase` or `subject`. For a chapter, the existing book it joins;
+   - **book**: `none` for a document. For a book, its slug and title, placed by §1's rules: a phase or slice subject gets that phase's own book, slug `p<N>` (a tailed or v73 id keeps its form: `P46-k2` suggests `p46-k2`), its title set by §1's title rule; anything else is a named book, of kind `codebase` or `subject`. For a chapter, the existing book it joins;
    - **chapter**: `none`, or for a chapter `<key> — "<title>" · position <n>`;
    - **prior**: `none`, or the version a v2 supersedes: `<rel_path> v<N>` for a document, `<book>/<key> v<N>` for a chapter. Fill it when a lookup finds one;
    - **run**: `full` (default; research team, verifier, gap rounds, critic), `quick`, or `no-research` (only in the operator's words). A book is always `full`;

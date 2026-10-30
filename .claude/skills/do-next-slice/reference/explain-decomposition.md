@@ -32,7 +32,7 @@ The `DECOMP` executor is the **lead** of the book's research run (§9.2 *Researc
    - **the book:** slug, title and kind (§1 *Resolve the topic, the mode and the placement*); the private project; `lang`; the explain skill's path and version; the dossier and its run id;
    - **the reader:** who they are, what they already know, and what they can do after the book;
    - **the brief:** must-cover, leave-out and trusted sources, as `## Explain` gives them;
-   - **the order and prerequisites:** the chapters in reading order, each naming the earlier keys it builds on, plus the terms the book defines and the chapter that defines each one, once;
+   - **the order and prerequisites:** the chapters in reading order, each naming the earlier keys it builds on, plus the terms the book teaches and the chapter that teaches each one, so a later chapter knows what to recap;
    - **each chapter's entry:**
      - its key: the slice key of §1 *Resolve the topic, the mode and the placement* for a chapter shaped like one slice, otherwise a short lowercase-kebab key;
      - its title and position;
@@ -69,7 +69,7 @@ The `DECOMP` executor is the **lead** of the book's research run (§9.2 *Researc
    - **No translation slices.** A translation names the published original's version (the `translated_from` of §5 *Publish via the KB document API*), so translations follow the accepted book (`reference/explain-review.md`).
 6. **Update `phase.md`**, entry by entry through `phase-section` (never `Read`, `Edit` or `Write` it):
    - `## Decisions`: one gist line for the book (placement, project, chapter count, the research run's id and counts), linking `book/outline.md`;
-   - `## Notes for later slices`: the defined-terms list, tagged for every chapter;
+   - `## Notes for later slices`: the taught-terms list, so each chapter knows what to recap, tagged for every chapter;
    - `## Now`: the outline awaits the operator's signature.
 7. **Return** `done` once the outline and the summary are written and the slices cut. A research run that stops returns instead, with no slice cut (*Research stops*, below).
 
@@ -134,7 +134,7 @@ P<N> (unit: document | chapter)
    - the run id is `<KB_NOW>-<slug>`; `run.md` holds the run's state (§3.3 *`run.md`, and resuming a run*), so a stopped span goes on from its recorded stage, D0b first;
    - **D0, the brief** (§3.1 *D0: the brief, and the prior version*) comes from `## Explain`: subject, mode, run, reader, must-cover, leave-out, trusted sources, `lang`; placement `loose` for a document, `<book>/<key>` for a chapter;
    - **the prior** (a v2): from `prior:`, or from that section's own lookup when it is `none`. D0 reads the prior's source and carries every surviving id forward. If the v1's phase folder is still in this repo (active or archived), its `doc/library.md` and `ledger.md` are **scouting leads** for D1, re-opened before use and never evidence as they stand;
-   - **a chapter reads its book at D0:** the book's chapters (`GET <KB_API_BASE_URL>/api/books/<project>/<book>` with the org key, as §3.1 *D0: the brief, and the prior version* reads a placement) and, when the book came from a phase in this repo (active or archived), that phase's `book/outline.md`. Write what they give into `doc/outline.md` under `## The book`: the chapter's position, the terms earlier chapters define (with the chapter that defines each), the terms it must define itself, and the keys it links to. The draft and the critic read it there; the review checks the order against the published book;
+   - **a chapter reads its book at D0:** the book's chapters (`GET <KB_API_BASE_URL>/api/books/<project>/<book>` with the org key, as §3.1 *D0: the brief, and the prior version* reads a placement) and, when the book came from a phase in this repo (active or archived), that phase's `book/outline.md`. Write what they give into `doc/outline.md` under `## The book`: the chapter's position, the terms earlier chapters teach (with the chapter that teaches each), so it can recap them, the terms it teaches itself, and the keys it may link to as an extra. The draft and the critic read it there; the review checks the order against the published book;
    - the evidence by subject, the `slice:` line on every agent prompt (`slice: <P>.DECOMP (a label for the workspace's meter, not a task)`), and probe A and every wave in the foreground: exactly as for a book, step 2 above;
    - **the run, from `run:`** (§3.9 *`quick` and `no-research`*): `full` runs §3.4 *D1: the plan* through §3.8 *D5, D5s and D5g: final verification, and the evidence gate* with its research team; **`quick`** has no research team: the lead researches the angles alone, then one verifier batch on another model, and keeps every file that section lists; **`no-research`** (the operator's words only) reads the repository by mode, with no web probe, no plan, no team and no ledger;
    - **D5g, the evidence gate** (§3.8 *D5, D5s and D5g: final verification, and the evidence gate*), for `full` and `quick`: below it, the run stops before writing (*Research stops*, below), and no slice is cut;
@@ -148,7 +148,7 @@ P<N> (unit: document | chapter)
    ```
 
    `high` for **open design**: its executor writes alone from the evidence. A bare folder, undeclared (no `--depends-on`), and no translation slice, as for a book.
-5. **Update `phase.md`**, entry by entry through `phase-section`: `## Decisions`, one gist line (the unit, its placement and project, the run and its id, the research counts and the gate's counts, a scoped-out part if any), linking `doc/outline.md`; for a chapter, `## Notes for later slices`, the defined terms and the keys it may link to, tagged for S1; `## Now`.
+5. **Update `phase.md`**, entry by entry through `phase-section`: `## Decisions`, one gist line (the unit, its placement and project, the run and its id, the research counts and the gate's counts, a scoped-out part if any), linking `doc/outline.md`; for a chapter, `## Notes for later slices`, the terms earlier chapters teach, so it can recap them, and the keys it may link to as an extra, tagged for S1; `## Now`.
 6. **Return** `done` once `doc/outline.md` is final and S1 is cut.
 
 ### After the executor returns: the gate, and the outline sign-off

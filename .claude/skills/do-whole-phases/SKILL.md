@@ -30,7 +30,7 @@ The mode word applies to every phase in the run (`.claude/skills/do-whole-phase/
 - *"Do not continue into the next phase."* In a run, after a phase's `pass` is recorded, or after it parks, re-run `run-phases` and continue with its target.
 - `.claude/skills/do-whole-phase/reference/review.md`'s *"accept-gate --open … STOP the loop"* on a `pass` with a required gate. In a run this becomes **park**: `accept-gate <P> --open --walkthrough "<the executor's walkthrough>"`, file the review's deferred jobs, `validate`, commit, and **continue; do not stop**. A waived or legacy phase records its verdict and continues, as there. If the operator clears a parked gate mid-run, `run-phases` prints `gate_cleared=<P>`: record the pass (`review-phase <P> --verdict pass`) without re-dispatching the review.
 
-**Every halt stops the whole run.** A `halt=` ending: report the item, its `stop_kind=` and `on_words=`, and STOP. A `needs_operator`, `blocked` or failed high-row return, a `blocked` review verdict, or a design wave (`pending`) inside a slice stops it too, exactly as in `do-whole-phase`: set the slice `pending` with a typed stop where that skill says so, report, STOP. Nothing past the halt starts; later phases and parked gates wait.
+**Every halt stops the whole run.** A `halt=` ending: report the item, its `stop_kind=` and `on_words=`, and STOP. A `needs_operator`, `blocked` or failed high-row return, a `blocked` review verdict, or a design stop (`pending`) inside a slice stops it too, exactly as in `do-whole-phase`: set the slice `pending` with a typed stop where that skill says so, report, STOP. Nothing past the halt starts; later phases and parked gates wait.
 
 ## The end of the run
 

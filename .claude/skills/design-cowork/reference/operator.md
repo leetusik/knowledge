@@ -2,9 +2,9 @@
 
 ## The operator's words — feedback, comments, edits, sign-off
 
-**The session's words are the record.** On the operator's return, per job:
+**The session's words are the record.** On the operator's return:
 
-1. **In-app edits.** Read each job back with `design-readback` (*Read back, then publish*: the
+1. **In-app edits.** Read the job back with `design-readback` (*Read back, then publish*: the
    listing, then only the files it names). A newer version with unchanged `project/` files is only
    the app saving on open, not an edit. Each changed file is copied into `jobs/<job>/canvas/project/`
    by `--fetched <dir> --apply` as the operator's work, and listed in `feedback.md` under
@@ -19,23 +19,27 @@
 3. **Their words decide the job:**
    - **Literal approval, no mockup requested** ("accept", "moveon", "approved", "ship it", or words
      to that effect): **`python3 scripts/workflow.py design-sign --slice <S> --words "<their literal
-     words>"`** signs every job presented at the stop in one call, or none (below). When their words
-     sign only some jobs, or a presented job has a mockup requested, sign each named job alone:
+     words>"`** signs the job presented at the stop (in a pre-change multi-job slice, every job
+     presented in one call, or none: below). When their words sign only one job of such a slice,
+     sign it alone:
      `python3 scripts/workflow.py design-close <job>/<round> --words "<their literal words>"`.
    - **Feedback, anything but literal approval:** their words go verbatim into `feedback.md`; run
      `python3 scripts/workflow.py design-close <job>/<round> --superseded`, then `design-open --slug
-     <s> --slice <S> --job <job>`, write the new round's handoff, and run the loop again. **A
+     <s> --slice <S> --job <job>`, write the new round's handoff, and dispatch **one scoped revise pass**: one drafter
+     (`pass: join`, the owner of the joined canvas) edits the canvas in place, with no frame and no
+     page passes. Only when the feedback adds a page does the round run a page pass for it
+     (`design-open … --pages <slug>`, `pass: page <slug>`) and then a join. **A
      superseding round's critique is off by default**: it is the scoped re-draft of an operator note.
      Pass `--critique <level>` only when the operator asks for it or the change reopens the look. The
      republish is a new canvas version of the same Artifact. A superseding round is a **new immutable
      round**, never an edit to the one it replaces.
    - **Mockup requested:** their go-ahead starts the mockup (*The mockup*); the close waits for their
      literal approval at PENDING #2. Never `design-sign` a slice with such a job at PENDING #1.
-   - **The operator drops a job:** record their words in `feedback.md`, close the round
+   - **The operator drops the job:** record their words in `feedback.md`, close the round
      `--superseded`, and open no new one.
 
-Signed jobs are done; the unsigned ones go round again, and the slice stops at PENDING #1 once more
-for them: **one more commit and one more stop per superseding wave.**
+A signed job is done; an unsigned one goes round again, and the slice stops at PENDING #1 once more:
+**one more commit and one more stop per superseding round.**
 
 ## Signing — the engine writes the record
 
@@ -61,5 +65,5 @@ PENDING #2; never on silence, a drafter's `done`, a critic's `pass` or a read-ba
   Anything longer (a contract, a summary later slices need) goes to `topics/<slug>.md` beside
   `phase.md`, behind that gist line.
 
-Commit `feat(design): <slice> signoff — <job>, …`. **The slice finishes when every job in it is
-signed or dropped**: then `finish-slice`. **Implementation is a separate slice in every style.**
+Commit `feat(design): <slice> signoff — <job>`. **The slice finishes when its job is signed or
+dropped** (a pre-change slice: every job in it): then `finish-slice`. **Implementation is a separate slice in every style.**
