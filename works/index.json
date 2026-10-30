@@ -204,17 +204,17 @@
       "id": "P35-a4",
       "name": "Explain documents: about the subject, standalone",
       "objective": "Refine the explain writing rules, the outline and the critic that checks them so every document and chapter explains what its subject is and does, not which phase, slice or deferred job did the work; workflow ids appear at most as a small mark like (P30), and every document reads complete without depending on links.",
-      "status": "planned",
+      "status": "in_progress",
       "order": 17,
       "path": "works/phases/active/P35-a4",
-      "review_status": "pending",
-      "current_slice": "P35-a4.REVIEW",
-      "slice_count": 4,
+      "review_status": "changes_requested",
+      "current_slice": "P35-a4.F1",
+      "slice_count": 5,
       "done_slice_count": 3
     }
   ],
   "deferred_open_count": 67,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-30T15:52:54+09:00"
+  "last_rebuilt_at": "2026-10-30T16:11:44+09:00"
 }
