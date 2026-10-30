@@ -1,0 +1,35 @@
+{
+  "id": "P38-e1.S5",
+  "phase_id": "P38-e1",
+  "name": "Delta mode for a v2: research what changed, reuse the prior's verified claims by content check",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 50,
+  "depends_on": [
+    "P38-e1.S4"
+  ],
+  "depends_declared": true,
+  "created_at": "2026-10-31T00:12:49+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": null,
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

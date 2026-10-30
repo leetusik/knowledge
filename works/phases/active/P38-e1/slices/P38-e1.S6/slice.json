@@ -1,0 +1,35 @@
+{
+  "id": "P38-e1.S6",
+  "phase_id": "P38-e1",
+  "name": "The writer held to budget, plain words, a cheaper critic that samples",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 60,
+  "depends_on": [
+    "P38-e1.S5"
+  ],
+  "depends_declared": true,
+  "created_at": "2026-10-31T00:12:51+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": null,
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

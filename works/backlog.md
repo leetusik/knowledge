@@ -5,10 +5,11 @@
 
 ## Pointer
 
-- Current phase: `P37-1p`
-- Current slice: `P37-1p.DECOMP`
-- Next slice: `P37-1p.REVIEW`
+- Current phase: `P38-e1`
+- Current slice: `P38-e1.S1`
+- Next slice: `P38-e1.S2`
 - Waiting on operator: `none`
+- Stream: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `67`
 - Workspace version: `v89`
 
@@ -16,9 +17,9 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P37-1p` | planned | `P37-1p.DECOMP` | 0/2 | - | working tree |
-| `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
-| `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `P38-e1` | in flight 0/2 | `P38-e1.DECOMP` | 0/2 | `.claude/worktrees/P38-e1-right-size_explain_runs_plugin_0.9.0` | local copy |
+| `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `P38-e1` | in flight 1/11 | `P38-e1.S1` | 1/11 | `.` | working tree |
+| `default` | `P37-1p` | planned | `P37-1p.DECOMP` | 0/2 | - | branch main |
+| `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
 
@@ -43,7 +44,7 @@
 | [x] `P35-a4` | `done` | `pass` | Explain documents: about the subject, standalone | `none` | `works/phases/active/P35-a4` |
 | [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.D1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [ ] `P37-1p` | `planned` | `pending` | Drop the knowledge graph | `P37-1p.DECOMP` | `works/phases/active/P37-1p` |
-| [ ] `P38-e1` | `planned` | `pending` | Right-size explain runs (plugin 0.9.0) | `P38-e1.DECOMP` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
+| [ ] `P38-e1` | `planned` | `pending` | Right-size explain runs (plugin 0.9.0) | `P38-e1.S1` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
 | [ ] `P39-hk` | `planned` | `pending` | Glossary: term definitions on hover or tap | `P39-hk.DECOMP` | `works/phases/active/P39-hk` |
 
 ## Phase P21: Web document deletion
@@ -289,7 +290,7 @@
 
 ## Phase P36-1s: Hermes: a chat agent beside the reader
 
-_Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader`, where this phase advances._
+_Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader`, where this phase advances._
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
@@ -301,6 +302,8 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 
 ## Phase P37-1p: Drop the knowledge graph
 
+_Read live from branch `main`, where this phase advances._
+
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [ ] `P37-1p.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P37-1p/slices/P37-1p.DECOMP` |
@@ -310,7 +313,16 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P38-e1.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P38-e1/slices/P38-e1.DECOMP` |
+| [x] `P38-e1.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P38-e1/slices/P38-e1.DECOMP` |
+| [ ] `P38-e1.S1` | `todo` | The KB key never printed: header file and CLI for every KB call | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S1` |
+| [ ] `P38-e1.S2` | `todo` | Sections proposed at the confirmation and signed there; the run researches only for them | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S2` |
+| [ ] `P38-e1.S3` | `todo` | A research team sized by the document: word budget, evidence location, claim cap | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S3` |
+| [ ] `P38-e1.S4` | `todo` | Verify only the claims the outline uses | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S4` |
+| [ ] `P38-e1.S5` | `todo` | Delta mode for a v2: research what changed, reuse the prior's verified claims by content check | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S5` |
+| [ ] `P38-e1.S6` | `todo` | The writer held to budget, plain words, a cheaper critic that samples | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S6` |
+| [ ] `P38-e1.S7` | `todo` | An honest confirmation: the cost line, the cheaper run, a loose document's translation | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S7` |
+| [ ] `P38-e1.S8` | `todo` | Desk check: v1 and v2 sized on paper, three sample confirmations | `qa` | `works/phases/active/P38-e1/slices/P38-e1.S8` |
+| [ ] `P38-e1.S9` | `todo` | Release the knowledge plugin as 0.9.0 | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S9` |
 | [ ] `P38-e1.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P38-e1/slices/P38-e1.REVIEW` |
 
 ## Phase P39-hk: Glossary: term definitions on hover or tap

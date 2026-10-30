@@ -3,12 +3,12 @@
   "phase_id": "P38-e1",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-30T23:45:48+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-30T23:58:02+09:00",
+  "completed_at": "2026-10-31T00:20:40+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut S1–S9 as a declared chain (S4, S5 high) from the P50-4b/P48-q4 cost evidence; breakdown and cost-evidence topics written",
   "validation": {
     "required": [],
     "last_run": null,

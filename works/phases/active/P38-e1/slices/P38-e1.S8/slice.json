@@ -1,0 +1,35 @@
+{
+  "id": "P38-e1.S8",
+  "phase_id": "P38-e1",
+  "name": "Desk check: v1 and v2 sized on paper, three sample confirmations",
+  "kind": "qa",
+  "status": "todo",
+  "order": 80,
+  "depends_on": [
+    "P38-e1.S7"
+  ],
+  "depends_declared": true,
+  "created_at": "2026-10-31T00:12:54+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": null,
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}
