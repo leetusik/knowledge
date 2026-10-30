@@ -18,6 +18,7 @@
 |---|---|---|---|---|---|---|
 | `default` | `P37-1p` | planned | `P37-1p.DECOMP` | 0/2 | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
+| `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `P38-e1` | in flight 0/2 | `P38-e1.DECOMP` | 0/2 | `.claude/worktrees/P38-e1-right-size_explain_runs_plugin_0.9.0` | local copy |
 
 ## Active Phases
 
@@ -42,7 +43,7 @@
 | [x] `P35-a4` | `done` | `pass` | Explain documents: about the subject, standalone | `none` | `works/phases/active/P35-a4` |
 | [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.D1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [ ] `P37-1p` | `planned` | `pending` | Drop the knowledge graph | `P37-1p.DECOMP` | `works/phases/active/P37-1p` |
-| [ ] `P38-e1` | `planned` | `pending` | Right-size explain runs (plugin 0.9.0) | `P38-e1.DECOMP` | `works/phases/active/P38-e1` |
+| [ ] `P38-e1` | `planned` | `pending` | Right-size explain runs (plugin 0.9.0) | `P38-e1.DECOMP` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
 | [ ] `P39-hk` | `planned` | `pending` | Glossary: term definitions on hover or tap | `P39-hk.DECOMP` | `works/phases/active/P39-hk` |
 
 ## Phase P21: Web document deletion

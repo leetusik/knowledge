@@ -255,7 +255,15 @@
       "review_status": "pending",
       "current_slice": "P38-e1.DECOMP",
       "slice_count": 2,
-      "done_slice_count": 0
+      "done_slice_count": 0,
+      "execution": {
+        "mode": "parallel",
+        "branch": "phase/P38-e1-right-size_explain_runs_plugin_0.9.0",
+        "worktree": "/Users/sugang/projects/personal/knowledge/.claude/worktrees/P38-e1-right-size_explain_runs_plugin_0.9.0",
+        "consolidation": "pending",
+        "base_branch": "main"
+      },
+      "consolidation": "pending"
     },
     {
       "id": "P39-hk",
@@ -273,5 +281,5 @@
   "deferred_open_count": 67,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-30T23:45:53+09:00"
+  "last_rebuilt_at": "2026-10-30T23:53:36+09:00"
 }
