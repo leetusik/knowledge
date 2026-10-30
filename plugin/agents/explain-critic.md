@@ -483,6 +483,7 @@ The dossier is one folder; your dispatch names it. Each file has one writer:
 | `gaps/r<n>.md`; `gaps/final.md` | the gap reviewer; the lead | the lead, the writer, the critic |
 | `trace.md` (a book chapter: `trace-<key>.md`) | the writer | the critic |
 | `critique.md` (a book chapter: `book/critique/<key>.md`) | the critic | the writer |
+| `prior/` (a delta only) | the lead, once: a copy of the prior run's evidence; never edited | the lead, the writer, the gap reviewer, the critic |
 | `pages/` | whoever fetched; local text, never published | the fetcher |
 
 In a book the dossier is `book/research/`. Its `library.md` and `ledger.md` freeze at the
@@ -496,6 +497,15 @@ chapter.
 `<source id>/P<m>`, claims `C-<stem>-<seq>`; verification records `V-<claim id>-<k>`; a
 verifier's counter-sources and claims `S-v<n>-<seq>` and `C-v<n>-<seq>`; gaps
 `G-r<n>-<seq>`; disagreements `D-<seq>`. At a merge, a duplicate keeps the first id.
+
+**A carried id.** A delta (a v2) copies its prior run's evidence into `prior/` and carries
+some of its claims over, with their sources and disagreements. A carried id puts
+`p<N>-` after its letter, `<N>` the prior's version: `C-r1-code-04` of v1 is
+`C-p1-r1-code-04`, its source `S-p1-r1-code-01`, a passage `S-p1-r1-code-01/P2`, a
+counter-claim `C-p1-v2-01`, a disagreement `D-p1-03`. An id that already carries a `p<k>-`
+keeps it. The entry itself stays in `prior/`, under its id without the `p<k>-` prefix, in
+the file its ledger or library line names, and its record keeps the prior's file and
+anchor.
 
 **A source entry**, one per page or document used:
 
@@ -594,6 +604,16 @@ research stops), and `· main` a main claim among them; a book marks its main cl
 any chapter picks. Only a used claim is written, and each ends with the `verified` link to
 its record. A claim never picked is never verified, a book's main claims aside, and stays
 `candidate`.
+
+A delta's carried lines come first, each with `reused-from: <the prior's run-id>/<its id
+there> (<its file in prior/>)`. A carried claim keeps the status, record and
+counter-evidence its run gave it; this run's pick adds `· used` and `· main`:
+
+    - C-p1-r1-code-04 · Q2 · load-bearing · status supported · used · verified prior/verify/final-b1.md#V-C-r1-code-04-1
+      · counter: not run · bar met (<why>) · reused-from: <run-id>/C-r1-code-04 (prior/findings/r1-code.md)
+
+A carried source's library line adds the same mark and how it passed its check:
+`unchanged: code at <HEAD sha>` or `unchanged: re-found <YYYY-MM-DD>`.
 
 **The trace** (`trace.md`), written by the writer as it finishes each section, because the
 chapter itself may carry no comments. Every checkable sentence maps to a claim id or a code

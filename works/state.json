@@ -1,9 +1,9 @@
 {
   "current_phase": "P38-e1",
-  "current_slice": "P38-e1.S5",
-  "next_slice": "P38-e1.S6",
+  "current_slice": "P38-e1.S6",
+  "next_slice": "P38-e1.S7",
   "waiting_on_operator": null,
   "mode": "phase",
   "stream": "phase/P38-e1-right-size_explain_runs_plugin_0.9.0",
-  "updated_at": "2026-10-31T00:54:44+09:00"
+  "updated_at": "2026-10-31T01:21:08+09:00"
 }

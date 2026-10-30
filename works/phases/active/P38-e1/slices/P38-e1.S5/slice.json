@@ -3,15 +3,15 @@
   "phase_id": "P38-e1",
   "name": "Delta mode for a v2: research what changed, reuse the prior's verified claims by content check",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 50,
   "depends_on": [
     "P38-e1.S4"
   ],
   "depends_declared": true,
   "created_at": "2026-10-31T00:12:49+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-31T00:55:23+09:00",
+  "completed_at": "2026-10-31T01:21:08+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -21,7 +21,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "A full v2 runs as a delta: D1d finds and copies the prior's dossier, content-checks sources, carries verified claims as C-p<N>-…, researches only the open share; 'from scratch' declines",
   "validation": {
     "required": [],
     "last_run": null,

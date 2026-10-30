@@ -48,10 +48,11 @@ stop below into its own stop, and re-dispatches a stopped span from disk.
 |---|---|---|---|
 | D0 brief | you | `brief.md`, once D0b passes | — |
 | D0b preflight | you and two probe agents | `run.md` | a probe call is denied; the web fails twice |
+| D1d delta (a v2 only, §3.1) | you; the recheck agents | `prior/`; the carried lines of `library.md` and `ledger.md` | — (no dossier: a plain run) |
 | D1 plan | you | `plan.md` | — |
 | D2 wave | researchers (B1, B2) | `findings/<stem>.md` | a load-bearing angle fails twice; a search limit |
 | D3 merge | you | `library.md`, `ledger.md`, `outline.md` | an entry count falls (fix it first) |
-| D3v, D3s | you (D3v sends no batch, §3.6) | statuses: the researchers' own, every claim `candidate` | — |
+| D3v, D3s | you (D3v sends no batch, §3.6) | statuses: the researchers' own, every new claim `candidate` | — |
 | D4 gap round | gap reviewer (B3), then D2–D3s | `gaps/r<n>.md` | complete, stalled, 3 rounds or the ceiling |
 | D5p pick | you | `· used` and `· main` on the ledger lines, within the claim cap | — |
 | D5, D5s | verifiers, on the used claims only, with counter-evidence on the main ones; you | `verify/final-b<k>.md`; statuses; the swap; disagreements; `gaps/final.md` | a batch fails twice |
@@ -65,7 +66,10 @@ stop below into its own stop, and re-dispatches a stopped span from disk.
 
 - **`full`**, the default: a research team in waves, up to 3 gap rounds, then the pick:
   only the claims the outline uses are verified, on another model, with counter-evidence
-  on the main ones; the evidence gate, the critic.
+  on the main ones; the evidence gate, the critic. A v2 runs it as a **delta** of its
+  prior when the prior's dossier is found and the operator did not decline it (§3.1): the
+  team researches only what changed, and the prior's verified claims whose sources still
+  say the same are carried over, not verified again.
 - **`quick`**: no research team: you research the angles yourself, then the pick and one
   verifier batch of the claims it uses, by the verifier agent on another model. The path
   stays D0b's, and every agent and file §3.9 lists stays. No gap rounds, no
@@ -99,7 +103,8 @@ re-dispatch goes on from `run.md` (§3.3).
 - **Never skip or shorten a stage** to save time, tokens or money. A budget, usage or turn
   limit that would cut one short stops the run at the last stage boundary, resumable, and
   `run.md` says so. Verification is sized to the claims the outline uses (§3.8), never
-  skipped.
+  skipped. A delta's carried claims skip no stage: each was verified by its own run, and
+  D1d re-checks its sources by content before carrying it (§3.1).
 - **English**, whatever the request's language, unless the operator names another (§1).
 
 ## 1. Resolve the topic, the mode and the placement
@@ -264,7 +269,9 @@ never a run artifact.
    confirmation's sketch says which: `none found`, or `none (the knowledge base did not
    answer)`. A new book has no prior (`prior: none`): the same book call on its slug
    only checks that no book holds it yet; one that does is said so, with a chapter of it
-   or another slug offered.
+   or another slug offered. A hit also looks for the prior's dossier, as D1d's step 1 does
+   (§3.1), with Glob and Grep only, so that the confirmation can say whether the run will
+   be a delta (step 7).
 
    **Then the cheap look**, for the sections step 6 drafts: at most **10 reads** in all,
    with no agents and no web search. Repo modes: Read, Glob and Grep the subject's files;
@@ -345,7 +352,12 @@ never a run artifact.
    outline and acceptance gates and says that each chapter's sections are signed at the
    outline gate, with no stop per chapter. A changed section line is folded in like any
    other. A book's cost line says a book is several runs' worth of research agents; with
-   `worktree: no` the line says it runs here, on this stream. Every web search, the agents' included, counts against the
+   `worktree: no` the line says it runs here, on this stream. A v2's cost line offers the
+   delta (§3.1) when step 5 found the prior's dossier: the run researches only what changed
+   since the prior and carries over the prior's verified claims whose sources still say the
+   same. Its decline word is `from scratch`: in the operator's reply, it makes the run a
+   plain `full` run that reads the prior as one source. With no dossier found, the line says
+   `delta: none (no dossier)`. Every web search, the agents' included, counts against the
    session's cap (`CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`, 200 by default): say so for
    a `full` run, and that a long one is best started in a session of its own.
 
@@ -510,7 +522,7 @@ D0b passes:
     - reader: <who; a novice unless the request says otherwise> · purpose: <what they can do afterwards>
     - must-cover: <the items the request names> | none · leave-out: <items> | none
     - trusted sources: <names or sites> | none · lang: <LANG> · placement: loose | <book>/<key>
-    - prior: none | <PRIOR_REL_PATH> v<PRIOR_VERSION> · open: <each dimension the request leaves unstated>
+    - prior: none | <PRIOR_REL_PATH> v<PRIOR_VERSION>[ · delta: declined] · open: <each dimension the request leaves unstated>
     - sections: signed: 1. <Heading> — <what it answers>; … | not signed up front
 
 In an explain phase the brief's fields come from `intent.md`'s `## Explain`, and its
@@ -520,7 +532,10 @@ below. **The signed sections** come from the confirmation create-phase recorded 
 shown, with any line the operator's reply changed folded in (a book's: its chapters).
 With no `Sections` block there (a confirmation drafted without one, create-phase's own
 included), the brief says `sections: not signed up front`, D1 drafts the skeleton as
-below, and the report says so (§8). A phase or slice subject is what the system now does and why; its records are
+below, and the report says so (§8). From the same record, a v2 whose request or reply
+carries the words `from scratch` has declined the delta (below), and its brief's `prior:`
+line says `delta: declined`; the confirmation's own text names those words and never
+counts. A phase or slice subject is what the system now does and why; its records are
 evidence (§4, *The subject, not the records*).
 
 **The prior version: is this an update to an existing chapter or document?**
@@ -592,6 +607,87 @@ the CLI:
 
 Either way, write a **complete, standalone chapter** (a version is a full replacement,
 not a diff): keep what still holds, correct what changed, add what is new.
+
+**The delta: a v2 researches what changed.** A `full` run whose `prior:` names a version
+runs as a **delta** of that prior: it researches only what changed since the prior, and
+carries over the prior's verified claims whose sources still say the same. It is how
+`full` runs with a prior, not another `run:` value, and it skips no stage: each carried
+claim was verified by its own run, and D1d re-checks every source it rests on by content
+before carrying it; nothing is proved again, and nothing unchecked is carried. The prior's
+text is still read, and its ids carried forward, as above. A v1, `quick`, `no-research` and
+a translation run no D1d. A `full` v2 the operator declined (`delta: declined`, D0) only
+logs `D1d: delta: none (declined)`; then, as with no dossier found, D1–D9 run as written,
+with the prior read as one source.
+
+**D1d, the delta** (you, and the recheck below), once D0b has passed and before D1:
+
+1. **Find the prior's dossier,** read-only, in this order; the first place that has it
+   wins.
+   - **The explain phase that published it.** Grep the `result.md` of every slice of the
+     workspace's phases (§1 step 1), active and archived (`active/*/slices/*/result.md`,
+     `archived/*/slices/*/result.md`), for `PRIOR_REL_PATH`. A hit whose `## Published`
+     table (or report line) records that `rel_path` at version `PRIOR_VERSION`, in a phase
+     whose `intent.md` has a `## Explain` heading, names it: its dossier is that phase's
+     `doc/` (a chapter a book phase wrote: its `book/research/`, with that chapter's
+     overlays, B9).
+   - **A legacy dossier**, which a run of an earlier version of this skill kept in
+     `<KB_EXPLAIN_STATE>/<run-id>/`: Grep `<KB_EXPLAIN_STATE>/*/response.json` for
+     `PRIOR_REL_PATH`, and take the one whose `"version"` is `PRIOR_VERSION`.
+   - **None** (a prior published from another repository, an archived phase pruned, a run
+     older than dossiers), two different dossiers in one place, or one with no `ledger.md`
+     or `verify/`: log `D1d: delta: none (no dossier)` and go on as a plain `full` run.
+     Never a stop.
+2. **Copy its evidence** into `<DOSSIER>/prior/` by this command (a book chapter's overlays
+   and `run-ch<k>.md` added to the names). Nothing in `prior/` is edited again, and every
+   id there keeps its prior form:
+
+       python3 -c 'import os,shutil,sys; s,d=sys.argv[1:3]; os.makedirs(d, exist_ok=True); [shutil.copytree(os.path.join(s,n), os.path.join(d,n), dirs_exist_ok=True) if os.path.isdir(os.path.join(s,n)) else shutil.copy2(os.path.join(s,n), d) for n in sys.argv[3:] if os.path.exists(os.path.join(s,n))]; print("ok")' <the prior's dossier> <DOSSIER>/prior brief.md plan.md run.md library.md ledger.md findings verify prior
+
+3. **Check each source by content, never a claim.** The claims in play are the prior's
+   **verified** ones: a ledger line `supported`, `partial` (with its narrower claim) or
+   `contested` (with its `D-` entry, both of whose sides it rests on) that links a
+   `verified` record. Check every source they rest on:
+   - **Code:** one `git diff --name-only <the source's commit> HEAD -- <every path its
+     claims cite>`. A range in a file it does not list is unchanged. A range in a listed
+     file is hashed at `HEAD`, at the same lines, by B9's form: the same 16 hex digits,
+     unchanged; anything else, changed. A `@WORKTREE` range is hashed from the file; one
+     with no range or hash is changed. A claim about what the code never, only or always
+     does is changed whenever its file changed. A commit `git` does not know: every range
+     of that source is changed.
+   - **Web:** one fresh fetch a source, its passages re-found verbatim by the recheck. The
+     reference is the passage text in the prior's findings or verify file (its `pages/`
+     were never committed). A source recorded `quote-match: approximate` cannot be re-found
+     verbatim: changed, and not fetched.
+   - A source that fails its check, or cannot be fetched, is **changed**.
+4. **Carry** each claim in play whose every source is unchanged into `library.md` and
+   `ledger.md`, written here first and kept by every merge (§3.6): under a carried id
+   (B9), with its status (a `partial` with its narrower claim), its record, its
+   counter-evidence and `reused-from:`. Its sources come across the same way, each library
+   line saying how it passed, and so does each `D-` entry it names. A carried code claim
+   holds at `HEAD`, at its lines. Its question field is the prior's (`p<N>-Q<k>`) until D3
+   maps it. Every other claim in play is a **lead**: D1 leaves its question open (§3.4),
+   and the researcher who owns that question gets it in `known already` (§3.5), to find
+   again, never to cite.
+5. **Log it** (§3.3) last: the dossier, the sources unchanged and changed (each changed
+   one with why) and the claims carried. A `full` v2 with no `D1d` line runs D1d again,
+   whole.
+
+**The recheck** (plugin and generic paths: a general subagent on a cheap model named on
+the call, `haiku` on Claude Code, like D0b's probes; sequential: you) re-finds the
+passages: one agent per 20 sources at most, sent in one message as a wave is (§3.5), each
+prompted with these lines, filled (`<id>` the source's id in `prior/`). One that fails
+twice leaves its sources changed, and the run goes on:
+
+    You check saved passages against fresh copies of their pages, and judge nothing: one fetch
+    a source, no search, no WebFetch, no other call, each command as written, one to a call.
+    For each source: curl -sS --max-time 30 -L --create-dirs -A "Mozilla/5.0 (compatible; knowledge-explain)" -o <DOSSIER>/pages/prior/<id>.<html | pdf> -w '%{http_code} %{content_type}\n' '<url>'
+    then, an html one: python3 -I <TOOLS>/pagetext.py <DOSSIER>/pages/prior/<id>.html <DOSSIER>/pages/prior/<id>.txt
+    or a pdf one: pdftotext <DOSSIER>/pages/prior/<id>.pdf <DOSSIER>/pages/prior/<id>.txt
+    Then, for each file listed: python3 -I <TOOLS>/pagetext.py --check <file> <DOSSIER>/pages/prior
+    Reply with one line a source: `<id>: unchanged` when every passage listed for it printed
+    `found`; otherwise `<id>: changed (<the status line, or the passages NOT FOUND>)`.
+    sources (the url is a wayback snapshot's `id_` form when the prior read it from one):
+      <id> · html | pdf · <url> · passages: P<m>, … · file: <DOSSIER>/prior/<its findings or verify file>
 
 **Translation** (the user asks for the chapter in another language, `lang=<xx>`, and an
 existing variant of the same chapter is the source): fetch the source variant's `source`,
@@ -717,6 +813,7 @@ before your next action, so that a compaction, a crash or a usage limit loses no
     ## Preflight
     - path: plugin | generic | sequential · probe: <call: ok, …> · pdftotext: yes | no
     ## Log
+    - D1d: prior v<N> (<its run-id>) at <its dossier> · sources: unchanged <a> (code <c> · web <w>), changed <b> (<id: why>, …) · claims carried <k> of <m> | delta: none (no dossier | declined)
     - D2 r1: dispatched <stem> (<agent id>), … · returned <stem> (<status>), … · failed … · queued …
     - D3 r1: sources <n> · claims <n> (last merge: <n> · <n>)
     - D4 r1: <the gaps verdict> → round 2 | stop: complete | stalled | capped: rounds | capped: ceiling
@@ -748,8 +845,9 @@ disk:
 3. **Go on from the recorded stage.** In an unfinished wave or batch, dispatch again only
    the agents whose output file is missing (a D5 batch: the used claims that have no
    record yet); merge the findings and verify files the indexes do not list yet; a
-   question left `not searched` goes back to its angle. Research stopped (D4's stop in the
-   log; `quick`: its D3s) and no `D5p` line: run the pick (§3.8), whole. A `run.md` from
+   question left `not searched` goes back to its angle. A `full` v2 with no `D1d` line:
+   D1d first, whole; with one, D1d never runs again (§3.1). Research stopped (D4's stop in
+   the log; `quick`: its D3s) and no `D5p` line: run the pick (§3.8), whole. A `run.md` from
    an earlier version of this skill that logged `D3v` batches: send none of them again
    (§3.6).
 4. **The resume note,** the operator's answer to an evidence-gate stop, which the
@@ -771,9 +869,12 @@ disk:
       · per round: ≤ 2 · budget: <target> / <cap> tool calls
       (a book's line instead: tier: <n> (breadth <…> · nesting <…> · exploration <…>) · wave 1: <n>
       · per round: ≤ <n> · budget: <target> / <cap> tool calls · ceiling: <n>)
+      (a delta's instead: size: W <n> words · delta v<N>: <o> of <q> questions open → W_Δ <d>
+      → <r> researchers (<c> code · <w> web) · new claims ≤ <d ÷ 25> · claims ≤ <C> · carried <k>
+      · ceiling 8 · per round: ≤ 2 · budget: <target> / <cap> tool calls)
     ## Scouting
     ## Questions
-    - Q1 · load-bearing: yes | no (<why>) · angle: <angle-id> · from: ask | must-cover | expert | gap G-…
+    - Q1 · load-bearing: yes | no (<why>) · angle: <angle-id> | carried (p<N>-Q<k>, …) · from: ask | must-cover | expert | gap G-…
     ## Outline skeleton
     ## Angles
     - <angle-id> (<name>; web | code): owns <…> · not yours: <…> · questions: Q1, … | dropped (<why>)
@@ -781,8 +882,18 @@ disk:
 
 1. **Scouting,** at most 5 tool calls: 1–3 short broad searches, and the tables of contents
    of 1–3 existing treatments; in repo modes also the diff, `git log --stat` and the file list.
+   A delta (§3.1) scouts what changed since its prior instead: `git diff --stat <the
+   prior's commit>..HEAD` over the subject's paths; `git log --since=<the prior's date>`
+   over them and the workspace's records (a phase or slice subject's own, and those a
+   must-cover item names); the signed sections marked `new` or `renamed`; the must-cover
+   items `prior/brief.md` lacks; and D1d's leads.
 2. **Questions,** 8–20: the explicit asks, every must-cover item, and 3–5 things an expert
-   would expect a chapter for this reader to cover. Mark each load-bearing or not.
+   would expect a chapter for this reader to cover. Mark each load-bearing or not. In a
+   delta, a question the carried claims answer (its prior question, in `prior/plan.md`,
+   was `answered` or `contested`, and D1d carried the claims that answered it) takes
+   `angle: carried (p<N>-Q<k>, …)` and no researcher. Every other question is **open**:
+   a new section's, a new must-cover item's, one the diff or the records since touch, one
+   a lead serves, and one the prior left thin.
 3. **An outline skeleton** in §4.2's order, with the questions each section answers,
    grouped by the subject's ideas, never by slice or record (§4, *The subject, not the
    records*). With signed sections (D0), the skeleton **is** the signed sections, in
@@ -801,7 +912,16 @@ disk:
      cases, as another; web researchers take the outside angles, merged into at most 2. Above 3,500
      words that is **2 code + 2 web**. A general subject: every researcher on the web, each
      a merge of step 5's angles.
-   - **A prior:** a v2 with a usable prior is sized by §3.1's delta.
+   - **A prior:** a v2 whose delta runs (§3.1: its prior's dossier found, the delta not
+     declined) is sized the same way on its **changed share**, `W_Δ = W × open ÷ all
+     questions` (step 2), rounded to the nearest 100; any other v2 is sized as a v1 is.
+     Wave 1 by `W_Δ`: no open question → no researcher (D2 sends nothing, and D3 merges
+     the carried lines alone before the gap review, §3.7); ≤ 1,000 → 1; then the rungs
+     above.
+     The researchers follow the open questions' evidence: code researchers for the
+     changed code and the records since, web researchers for the rest, none on a side
+     with no open question. Their claim shares sum to `W_Δ ÷ 25`. The pick's cap stays
+     `C`, the carried claims counted in it (§3.8).
    - **Gap rounds:** at most 2 researchers a round. The **ceiling is 8** dispatches,
      researchers and gap reviewers, re-dispatches included, verifier batches not; the 3-round
      bound stays, and the ceiling binds first.
@@ -815,7 +935,9 @@ disk:
      verifies, to `C` too (§3.8).
 
    For example, a codebase document with no prior and no stated budget: `W` 4,800 → 4
-   researchers (2 code · 2 web) · claims ≤ 192 · ceiling 8.
+   researchers (2 code · 2 web) · claims ≤ 192 · ceiling 8. Its delta, with 8 of its 20
+   questions open: `W_Δ` 1,900 → 2 researchers (1 code · 1 web) · new claims ≤ 76 ·
+   claims ≤ 192 · ceiling 8.
 
    A **book** (§9.2) is sized by its tier: the highest of three axes. Breadth: one domain
    (1), 2–5 subtopics (2), more than 5 or disjoint domains (3). Nesting: one-step inference
@@ -832,7 +954,8 @@ disk:
    gap-reviewer dispatches, re-dispatches included, but not verifier batches. Caps, ceilings
    and the claim cap are loop safety, not targets; they size each stage, and never let a
    stage be skipped or shortened (the card).
-5. **Angles, each with an owner.** Every question has exactly one owning angle. An angle
+5. **Angles, each with an owner.** Every question has exactly one owning angle (a delta's
+   carried question: `carried`, step 2). An angle
    with no questions is dropped, with a one-line reason. An angle's `not yours` is what the
    others own. For any subject:
    - **foundations**: definitions, the core mechanism, prerequisites (today's tools are
@@ -876,8 +999,9 @@ the rest (§8).
 
 1. **Fill each researcher's dispatch** from its role section (B1 web, B2 code): the stem
    `r<n>-<angle-id>`, absolute dossier and tools paths, its questions with their
-   load-bearing marks, `not yours`, `known already` (the ledger's ids on those questions),
-   `queries already run` (the query log), the brief's trusted sources and leave-out, the
+   load-bearing marks, `not yours`, `known already` (the ledger's ids on those questions;
+   in a delta also D1d's leads on them, each with its file in `prior/`, to find again,
+   §3.1), `queries already run` (the query log), the brief's trusted sources and leave-out, the
    plan's budget, and `claims: ≤ <n>`, its share of the claim cap (§3.4 step 4; a book's
    researchers get `claims: none`). A code researcher gets the repository, which is the session's working folder (its
    `git` runs there, never with `-C`), and `commit`: the full sha of `HEAD` written
@@ -914,11 +1038,14 @@ the rest (§8).
 1. Read each new findings file by its entries: find `### S-` and `### C-` (Grep, or
    `grep -n`), then Read the ranges you need.
 2. **`library.md`**: one line per source (B9). A source whose canonical URL is listed
-   already keeps the first id; the new id goes on that line's `merged:`.
+   already keeps the first id; the new id goes on that line's `merged:`. A delta's
+   carried lines (D1d, §3.1) stay, and are listed first.
 3. **`ledger.md`**: one line per claim (B9), status `candidate`; a claim with the same
    meaning as a listed one is merged the same way. A conflict a researcher recorded with
    both passages becomes a `D-<seq>` entry under `## Disagreements`, `status: open`.
-   Never settle one.
+   Never settle one. A carried line keeps its status and record; its question field
+   becomes the plan's questions it answers, in place of its `p<N>-Q<k>` (a carried
+   question names its prior ones, §3.4 step 2).
 4. **`outline.md`**: the plan's skeleton, each section with its questions, each question
    with its state (B8: as its findings files report it, until D5s sets it from the
    verify records) and its claim ids. Every index lists ids in full, never as ranges:
@@ -944,7 +1071,9 @@ again at D5 (§3.8).
 
 **D3s, the round's states** (you): every claim stays `candidate`, and each question takes
 the state its findings files report (B8), marked `(reported)`; two reports that differ are
-both written, each with its stem. Set them in `outline.md` and `ledger.md`. A question
+both written, each with its stem. A delta's carried claims keep their statuses, and a
+carried question takes the state they give it (B8), unmarked. Set them in `outline.md`
+and `ledger.md`. A question
 reported `thin`, `not found` or `not searched`, and a load-bearing claim on weak support
 (one secondary source, a partial fit, rung 3 alone), are the next gap review's to weigh
 (B3), inside the cap.
@@ -981,12 +1110,14 @@ other claim stays `candidate`, never verified and never written, unless the swap
 writer gap (§4) picks it. Among the used claims, mark the **main claims** (`· main`): the
 load-bearing claims that are evaluative, comparative, consensus or "best practice";
 numbers and statistics; superlatives; resting on one source; a vendor's claim about itself
-used beyond the attributed form; the claims the quiz will test; flagged exceptional. Write
+used beyond the attributed form; the claims the quiz will test; flagged exceptional. A
+delta's carried claims (§3.1) are picked like any other and count toward `C`. Write
 the `D5p` log line last: a pick with no `D5p` line is done again, whole.
 
 **D5, the final verification,** sized to the used claims. Batch every `· used` claim that
-has no verify record yet (in a run resumed from a `D3v` log, §3.6, also each used main
-claim that has had no counter-evidence search; each claim goes once), grouped by source,
+has no verify record yet (a carried claim has its prior's, §3.1; in a run resumed from a
+`D3v` log, §3.6, or a delta, also each used main claim that has had no counter-evidence
+search; each claim goes once), grouped by source,
 about 15 claims to a batch, and send the batches as a wave (`knowledge:verifier`, B4;
 generic: a subagent on `sonnet`): batch ids `final-b<k>`, output `verify/final-b<k>.md`,
 counter-evidence ids `v<k>` (one per batch), `researchers_model:` its researchers' model.
@@ -1007,19 +1138,20 @@ becomes a `D-…` entry with `nature: version/time` or `scope/conditions` and
 counter-page is only a lead. Never settle a disagreement.
 
 - **The swap.** A used claim left `unsupported`, `contradicted`, `candidate`, or `partial`
-  in a way that leaves its question open (B8), is swapped once for an unpicked `candidate`
-  that serves the same question or must-cover item: the failed claim loses its `· used`,
-  and the swap takes it, marked `· used · swap for <the failed id>` (and `· main` by the
-  criteria above). Send the swaps in one more small batch, the next `final-b<k>`, as D5
-  does, and apply it the same way. A swap is never swapped again; a failed claim with no
+  in a way that leaves its question open (B8), is swapped once for an unpicked `candidate`,
+  or an unpicked carried claim (§3.1), that serves the same question or must-cover item:
+  the failed claim loses its `· used`, and the swap takes it, marked `· used · swap for
+  <the failed id>` (and `· main` by the criteria above). Send the swaps that have no
+  record yet in one more small batch, the next `final-b<k>`, as D5 does, and apply it the
+  same way. A swap is never swapped again; a failed claim with no
   candidate to swap stays used, for D6 to state as B8 allows (hedged and attributed) or
   leave out. A used claim given new support later (the `trust` round, a writer's top-up)
   is re-verified once (B4's `re-verify`), never twice.
 - **The records.** Set each question's state in `outline.md` and `ledger.md` from its used
   claims (B8), in place of the reported one. Every used claim now ends with a verify record
   its ledger line links (`verified verify/final-b<k>.md#V-<claim id>-<n>`, B9; a run
-  resumed from a `D3v` log may keep a `verify/r<n>-b<k>.md` one): the records the critic
-  reads (B5).
+  resumed from a `D3v` log may keep a `verify/r<n>-b<k>.md` one, and a carried claim its
+  prior's, under `prior/verify/`): the records the critic reads (B5).
 
 Then write **`gaps/final.md`**: every load-bearing question that is neither
 `answered` nor `contested`, and every load-bearing gap still open, each with how the
@@ -1144,7 +1276,8 @@ at the first paragraph or `##` heading.
 1. **The skeleton:** `body.md` as the outline's path: every heading with its id and, under
    it, its one-line purpose and deliverable, so the whole path stands before any section.
 2. **Each section in order**, replacing its purpose line: load only its claim entries and
-   passages (`grep -n` the ids, Read those ranges) and its code ranges at their commit,
+   passages (`grep -n` the ids, Read those ranges; a carried claim's under its prior id,
+   in the `prior/` file its ledger line names, B9) and its code ranges at their commit,
    write it, and append its lines to `<DOSSIER>/trace.md` (B9) before the next.
 3. **The reader pass:** read the whole draft as the brief's reader doing each task in
    `## Reader's task`, fix what slows them (the prose rules, transitions, repetition),
@@ -1199,8 +1332,9 @@ at the first paragraph or `##` heading.
   `candidate` that serves it, or, in `full` while the gap rounds and the ceiling have room,
   run one targeted top-up (D2–D3s, counted against both). Either way the claims it adds are
   marked `· used` and verified once, in one more `final-b<k>` batch (§3.8: D5, then D5s),
-  before a sentence rests on them. With neither, leave it out or state it as open, and add
-  it to `gaps/final.md` and `run.md`.
+  before a sentence rests on them; an unpicked carried claim that serves it (§3.1) is
+  marked `· used` with no batch, since it has its record. With neither, leave it out or
+  state it as open, and add it to `gaps/final.md` and `run.md`.
 
 The grammar below is the one the server enforces. It is **CommonMark + GFM** (tables with
 alignment, `~~strikethrough~~`, autolinks) plus exactly three extensions:
@@ -1727,7 +1861,10 @@ merged back; nothing is written twice. A stopped run's first line is its stop in
    fallback (§2), a skipped check.
 3. **The research:** the size (a document) or the tier (a book), researchers, rounds and
    the stop reason; claims by status, and the pick's `used <n> of <m>` (§3.8); the
-   gate's counts. `quick` names what it skipped; `no-research` says it was the operator's
+   gate's counts. A v2 adds its delta (§3.1): `delta: reused <n> claims from v<N> ·
+   re-researched <m> questions` (`<n>` the carried claims the pick used, `<m>` the open
+   questions and the gap rounds' ones), or `delta: none (<why>)`: `no dossier`, or
+   `declined`. `quick` names what it skipped; `no-research` says it was the operator's
    choice, with no web research and no "Best practices & next steps". Then
    `sections: <n> signed · <m> delivered`, and each cut section with why (§3.10); or
    `sections: not signed up front` when D0 found none (§3.1).
@@ -2659,6 +2796,7 @@ The dossier is one folder; your dispatch names it. Each file has one writer:
 | `gaps/r<n>.md`; `gaps/final.md` | the gap reviewer; the lead | the lead, the writer, the critic |
 | `trace.md` (a book chapter: `trace-<key>.md`) | the writer | the critic |
 | `critique.md` (a book chapter: `book/critique/<key>.md`) | the critic | the writer |
+| `prior/` (a delta only) | the lead, once: a copy of the prior run's evidence; never edited | the lead, the writer, the gap reviewer, the critic |
 | `pages/` | whoever fetched; local text, never published | the fetcher |
 
 In a book the dossier is `book/research/`. Its `library.md` and `ledger.md` freeze at the
@@ -2672,6 +2810,15 @@ chapter.
 `<source id>/P<m>`, claims `C-<stem>-<seq>`; verification records `V-<claim id>-<k>`; a
 verifier's counter-sources and claims `S-v<n>-<seq>` and `C-v<n>-<seq>`; gaps
 `G-r<n>-<seq>`; disagreements `D-<seq>`. At a merge, a duplicate keeps the first id.
+
+**A carried id.** A delta (a v2) copies its prior run's evidence into `prior/` and carries
+some of its claims over, with their sources and disagreements. A carried id puts
+`p<N>-` after its letter, `<N>` the prior's version: `C-r1-code-04` of v1 is
+`C-p1-r1-code-04`, its source `S-p1-r1-code-01`, a passage `S-p1-r1-code-01/P2`, a
+counter-claim `C-p1-v2-01`, a disagreement `D-p1-03`. An id that already carries a `p<k>-`
+keeps it. The entry itself stays in `prior/`, under its id without the `p<k>-` prefix, in
+the file its ledger or library line names, and its record keeps the prior's file and
+anchor.
 
 **A source entry**, one per page or document used:
 
@@ -2770,6 +2917,16 @@ research stops), and `· main` a main claim among them; a book marks its main cl
 any chapter picks. Only a used claim is written, and each ends with the `verified` link to
 its record. A claim never picked is never verified, a book's main claims aside, and stays
 `candidate`.
+
+A delta's carried lines come first, each with `reused-from: <the prior's run-id>/<its id
+there> (<its file in prior/>)`. A carried claim keeps the status, record and
+counter-evidence its run gave it; this run's pick adds `· used` and `· main`:
+
+    - C-p1-r1-code-04 · Q2 · load-bearing · status supported · used · verified prior/verify/final-b1.md#V-C-r1-code-04-1
+      · counter: not run · bar met (<why>) · reused-from: <run-id>/C-r1-code-04 (prior/findings/r1-code.md)
+
+A carried source's library line adds the same mark and how it passed its check:
+`unchanged: code at <HEAD sha>` or `unchanged: re-found <YYYY-MM-DD>`.
 
 **The trace** (`trace.md`), written by the writer as it finishes each section, because the
 chapter itself may carry no comments. Every checkable sentence maps to a claim id or a code
