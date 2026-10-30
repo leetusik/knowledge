@@ -75,7 +75,8 @@ and `Read` only their ranges.
    marks (the dossier's `plan.md`; a chapter owns the questions its outline entry names),
    the brief's must-cover and leave-out, and `gaps/final.md` (each open gap, stated or
    dropped).
-5. **The trace** (B9), then `ledger.md` and `library.md` (and a chapter's overlays): claim
+5. **The trace** (B9; it is appended to, so the latest line for a sentence key wins),
+   then `ledger.md` and `library.md` (and a chapter's overlays): claim
    ids, statuses, disagreements, sources. Open a findings or verify entry when you need its
    passage. The dossier maps the evidence and states its own statuses; it proves nothing.
    You check the chapter against the sources themselves.
@@ -108,9 +109,19 @@ against the chapter's own quotations or the dossier's excerpts.
 - Every claim about behaviour ("X retries three times", "Y runs before Z"): read the code
   that does it.
 
-**Facts in general topics:** against the cited sources, which you **open** (B11).
-- Open every source in the `sources` block. It must resolve, and the page must say what the
-  chapter cites it for.
+**Facts in general topics:** against the run's verify records, and a sample of the cited
+sources, which you **open** (B11).
+- Every item in the `sources` block resolves to a `library.md` entry.
+- **Trusted:** a claim whose verify record (the ledger line's `verified verify/…#V-…`
+  link, §3.8 *The records*) says `supported`, or `partial` within its narrower claim, and
+  whose ledger status agrees. A carried claim (`C-p<N>-…`, with `reused-from:` and its
+  record in `prior/`, §3.1) is trusted the same way. A claim with no record, or whose
+  record and ledger disagree, is not trusted: check it as a sampled source's.
+- **Re-open a sample of at most 5 sources**, the main claims' sources first: those behind
+  a number, an evaluative claim or a quiz key. Read the run's saved page text in
+  `<dossier>/pages/` (`<source id>.txt` in its fetcher's folder: Glob for it), and fetch a page only when that text is
+  missing. The page must say what the chapter cites it for. A failure in the sample widens
+  the check to every sentence citing that source.
 - A worked example's numbers: re-derive them.
 - A load-bearing claim with neither a citation nor a trace line: `WebSearch` for it once.
   If you cannot confirm it, it is a finding.
@@ -131,10 +142,11 @@ against the chapter's own quotations or the dossier's excerpts.
    `must-fix`.
 4. **Citation precision:** a citation whose source does not support the sentence it sits
    on, even when another source would. `must-fix` when load-bearing.
-5. **Passages re-opened:** for every load-bearing sentence, read the passage its claim rests
-   on, at its locator, in the page you opened (or the code at its commit). Sample the rest:
-   10 sentences, or all if fewer. A failure in the sample widens the check to its whole
-   section.
+5. **Passages re-opened:** for every load-bearing sentence, check it against its claim's
+   verify record and the findings passage that claim rests on; re-open the page itself
+   only for a sampled source (above), and the code at its commit for a code claim. Sample
+   the rest: 10 sentences, or all if fewer. A failure in the sample widens the check to its
+   whole section.
 
 **Coverage:**
 1. A load-bearing plan question this chapter owns, neither answered nor declared in
@@ -185,9 +197,13 @@ buried in prose, a caveat that interrupts the main line, a fact reported as who-
 a section past its budget: `should-fix`, saying where the reader trips (the skill's §4
 prose rules).
 
-**Clarity:** for the outline's stated reader, per the skill's §4.2 tone: jargon defined on
-first use, transitions that carry the argument, the core idea reachable without the code.
-An ambiguous sentence is a clarity finding.
+**Clarity:** for the outline's stated reader, per the skill's §4.2 tone and §4's prose
+rules: jargon defined on first use, transitions that carry the argument, the core idea
+reachable without the code. An ambiguous sentence is a clarity finding. So is a term used
+before a plain definition at its first use, and a dense passage (a paragraph over about
+100 words, or a sentence stacking 3 or more new terms): each a `should-fix` (`clarity`).
+A body that does not open with `> [!IMPORTANT] In one paragraph` (§4's prose rules) is a
+`should-fix` (`reader`).
 
 **The hard rules:** check §4.1 by reading, as a second net under `knowledge check`, which
 cannot see everything: an id that resolves but points at the wrong section, a citation link
@@ -207,7 +223,9 @@ to the right source id for the wrong claim, an image without real alt text.
   diagram, or one not worth its place; a quiz item that tests recall, or a distractor
   nobody would pick; undefined jargon; a section order that makes the idea harder to
   follow; long re-teaching of an earlier chapter where a short recap would do; an uncited
-  non-load-bearing claim; the `ledger`, `coverage` and `reader` should-fixes above.
+  non-load-bearing claim; jargon used before a plain definition at its first use, or a
+  dense passage (`clarity`); a missing "In one paragraph" (`reader`); the `ledger`,
+  `coverage` and `reader` should-fixes above.
 - **`note`**: advisory, never blocks: a matter of taste, or an improvement the outline did
   not ask for. Judge taste against the outline's reader and the skill's §4.2 tone, never
   your own preferences; when neither speaks, say what a choice trades off, not which way
@@ -249,8 +267,8 @@ both, with the writer's answers.
     - should_fix: <count>
     - notes: <count>
     - critic_model: <the model you ran on> · writer_model: <the writer's>
-    - checked: <N> sources opened, <N> code claims grepped, <N> quiz items answered
-    - ledger: <N> claims traced, <N> untraceable, <N> sources re-opened
+    - checked: <n> sources sampled (of <m>), <N> code claims grepped, <N> quiz items answered
+    - ledger: <N> claims traced, <N> untraceable, <n> sources sampled (of <m>)
     - coverage: <N>/<N> load-bearing questions answered or declared; must-cover <N>/<N>
     - skill: <the SKILL.md you read> | not found
     - open_items: <the ids of every must-fix and should-fix> | none
@@ -288,7 +306,8 @@ both, with the writer's answers.
 - read the writer's account of its own work;
 - write an absolute path into the critique;
 - publish, run `knowledge save`, call the KB's write API, or talk to the operator;
-- pass a citation you did not open, or a code claim you did not check;
+- pass a sampled citation you did not open, a citation whose claim is not trusted
+  (*How you check*) and that you did not open, or a code claim you did not check;
 - run on the writer's model, unless the dispatch says `same-model: accepted`;
 - commit or push (no `git commit`, `git add`, `git push`) or run workflow state-transition
   commands.
@@ -308,7 +327,7 @@ dispatcher, not a human-facing summary:
 - `should_fix`: the count
 - `notes`: the count
 - `open_items`: the ids left open, or `none`
-- `ledger`: `<n> traced, <n> untraceable, <n> sources re-opened`
+- `ledger`: `<n> traced, <n> untraceable, <n> sources sampled (of <m>)`
 - `coverage`: `<n>/<n> load-bearing answered or declared; must-cover <n>/<n>`
 - `critic_model`: the model you ran on
 - `file`: the critique file
@@ -630,6 +649,14 @@ for itself, routine arithmetic on ledgered numbers, and quiz distractors.
     - ¶2 s1: plugin/skills/explain/SKILL.md:L268-L278@88d2e95 (C-r1-code-04)
     - quiz q3 key: C-r2-found-11 · explain: C-r2-found-11, C-r1-found-02
     - diagram flow-1: C-r1-code-07, C-r1-code-08 (order)
+    - ¶1 s2 (rev C03): C-r1-evidence-06
+
+The trace is **appended to, never rewritten whole**, and changes only with Edit (or
+Write for the new file). The "In one paragraph" box traces under the key `## top`, before
+the first heading's. A sentence revised or moved later (the reader pass, or the critic's
+revision) gets a new line under its heading key, marked `(rev Cnn)` with the critic's
+finding id (`(rev)` in the reader pass), and **the latest line for a sentence key wins**:
+the critic reads the trace that way.
 
 ### B11. Exact page text and archives
 

@@ -320,10 +320,15 @@ never a run artifact.
    at the book's outline gate. A new chapter of an existing book lists its own sections,
    as a document does. The run researches and writes only for the signed sections (§3.4,
    §3.10).
+
+   Last, draft the **plain summary** that opens the confirmation: 2–4 short sentences in
+   everyday words, with no field names and no workflow terms, saying what the document (or
+   the book) explains, who it is for, and what they will be able to do afterwards.
 7. **Ask once**, in this shape; a changed line is folded in and the whole confirmation
    shown again:
 
        Explain — confirm once; then it runs to publish.
+       In plain words: <2–4 plain sentences: what it explains, for whom, what they can do afterwards>
        Sections (your yes signs them; change any line):
          1. <Heading> — <what it answers>[ · a v2: kept | renamed from "<old heading>" | new]
          …
@@ -332,10 +337,10 @@ never a run artifact.
        Phase: Explain: <subject> — <the objective>
        - unit: document (standalone). Say "a chapter of <book>" or "a book" to change it
        - subject: <subject> · mode: <codebase | general>
-       - run: full (research team, verifier, gap rounds, critic) · or quick / no-research
+       - run: full (agents research the sources, a second model checks every fact used, more rounds fill what is missing, a reviewer reads the draft) · or quick / no-research
        - lang: <LANG> · reader: <the reader> · must-cover: <items | none>
        - project: <name> (private) · prior: <none found | the version>
-       - runs in its own worktree; stops only for the evidence gate, the critic, or a publish failure
+       - runs on its own copy of the repository; stops only if the evidence is too thin, a reviewer's must-fix cannot be settled, or publishing fails
        - cost: tens of research agents; manual permission mode needs the preflight's rules (§3.2)
 
        ## Explain
@@ -1269,7 +1274,7 @@ map names code ranges, or the user's material, in place of claim ids.
 Author the whole chapter as one Markdown file, `<tmp>/body.md` (§2; never through shell
 arguments), then publish it in step 5. It is the **body only**: **no `---` header** (the
 server writes it from step 5's fields) and **no `# H1`** (the title is a field); it starts
-at the first paragraph or `##` heading.
+with the "In one paragraph" box (§4's prose rules), before the first `##` heading.
 
 **D7: write from the dossier, alone, in three passes:**
 
@@ -1278,16 +1283,65 @@ at the first paragraph or `##` heading.
 2. **Each section in order**, replacing its purpose line: load only its claim entries and
    passages (`grep -n` the ids, Read those ranges; a carried claim's under its prior id,
    in the `prior/` file its ledger line names, B9) and its code ranges at their commit,
-   write it, and append its lines to `<DOSSIER>/trace.md` (B9) before the next.
+   write it **within its word budget** (D6), and append its lines to `<DOSSIER>/trace.md`
+   (B9) before the next. Then count the section's prose words with this one form (it
+   counts the heading's section down to the next heading of its level or higher, `###`
+   subsections included, and leaves out headings, fenced blocks, the quiz and the
+   sources block among them, and tables):
+
+       python3 -c '
+       import sys
+       L = open(sys.argv[1]).read().split("\n")
+       key = "{#" + sys.argv[2] + "}"
+       i = [n for n, l in enumerate(L) if l.startswith("#") and l.rstrip().endswith(key)][0]
+       lvl = len(L[i]) - len(L[i].lstrip("#"))
+       words, fence = 0, ""
+       for l in L[i + 1:]:
+           s = l.strip()
+           if fence:
+               if s.startswith(fence) and not s.strip(fence[0]):
+                   fence = ""
+               continue
+           if s.startswith("```") or s.startswith("~~~"):
+               fence = s[0] * (len(s) - len(s.lstrip(s[0])))
+               continue
+           if l.startswith("#"):
+               if len(l) - len(l.lstrip("#")) <= lvl:
+                   break
+               continue
+           if s.startswith("|"):
+               continue
+           words += len(s.lstrip("> ").split())
+       print(sys.argv[2], words)
+       ' <tmp>/body.md <heading id>
+
+   Over its budget by more than 10%: cut it now, with Edit, before you start the next
+   section, and count again. The draft is held to budget as it is written, never cut
+   in a rewrite afterwards.
 3. **The reader pass:** read the whole draft as the brief's reader doing each task in
    `## Reader's task`, fix what slows them (the prose rules, transitions, repetition),
-   adding no fact, and cut each section to its budget; the trace follows every move.
+   adding no fact. It fixes flow only and cuts nothing for budget: pass 2 already held
+   each section to it. The trace follows every move, by appending (B9 *The trace*), never
+   by rewriting it.
+
+`body.md` and `trace.md` change only with Write (a new file) and Edit, never through a
+shell command or a script; the trace is appended to, never rewritten whole.
 
 **The prose rules**, few enough to check each paragraph against:
 
+- **"In one paragraph" first:** the body opens, before its first `##`, with
+  `> [!IMPORTANT] In one paragraph`: at most 120 words, in plain words, on what the reader
+  will be able to do afterwards and the one idea it rests on. It is §4.4's key-idea box,
+  no new grammar, and its checkable sentences trace like any other (B9).
+- **Plain sentences for the stated reader:** everyday words over technical ones, and one
+  new idea a sentence.
+- **Each term defined in plain words at first use:** inline, in the sentence that first
+  uses it, or, for a primer the reader may already have, a collapsed `DEFINITION` callout
+  (§4.4) right there. No term is used before it is defined.
 - **One idea a paragraph**, about 100 words at most; a longer one holds two ideas, or depth
   that belongs in a callout.
 - **Show, then tell:** the code, the commands or a short example first, then its meaning.
+  The same holds for a concept: a concrete example before the abstraction it illustrates.
 - **A finding opens with one bold sentence** saying what it means for the reader; the
   evidence follows.
 - **Teach, don't report:** a fact in your own voice ("the GIL is released for I/O", not
@@ -1368,7 +1422,8 @@ at publish with a line-numbered list — never silently repaired — so write to
 
 A starting shape, not a form to fill. Use the sections the subject earns, in this order, as
 `##` headings with ids (the reader builds the table of contents from `##` and `###`;
-**never write one**):
+**never write one**). First, before any heading, comes **In one paragraph**: the
+`> [!IMPORTANT] In one paragraph` box (§4's prose rules), on every run. Then:
 
 1. **Background** — change mode: the system as it was before this change, plus context,
    never the work's history slice by slice (§4, *The subject, not the records*); topic
@@ -1659,14 +1714,24 @@ Offline (§6): no check is possible; say so.
    (degraded)`). Record its return, and its `model:` line as the mode block's `critic:`.
    `blocked` for the model: correct it, dispatch once more. Any failure twice → `STOPPED:
    critic`.
+
+   **The critic is the cheaper check, by design.** On an Opus writer it runs on Sonnet.
+   It trusts the run's own verify records (§3.8 *The records*; a carried claim's, §3.1)
+   instead of re-opening every source: it re-opens a sample of at most 5 sources, the main
+   claims' first, from the saved page text in `<DOSSIER>/pages/`, and widens only when the
+   sample fails (B5 *How you check*). It also flags jargon used before its plain definition,
+   dense passages and a missing "In one paragraph".
 2. **Answer it** from its verdict block, then the findings by id, one line each under
    `## Critique` in `run.md`: `C01 · fixed | disputed | declined · <how, or why>`. Fix every
    must-fix or remove its sentence, and the should-fixes you agree with. No new evidence: a
    fix the ledger cannot support removes the sentence or states the point as open. You may
    dispute a must-fix with evidence (a passage re-opened, a code range), recorded on its
    line: the phase's review decides it, and the sentence stands until then.
-3. **One revision** with every fix, the trace updated for each changed sentence, then §4.8
-   and §4.9 again. A must-fix neither fixed nor disputed with evidence → `STOPPED: critic`,
+3. **One revision** with every fix, then §4.8 and §4.9 again. `body.md` changes only with
+   Edit (or Write), never through a shell command or a script. The trace is appended to,
+   never rewritten whole: each revised or moved sentence gets a new line under its heading
+   key, `- ¶2 s1 (rev C03): C-r1-evidence-07`, and the latest line for a sentence key wins
+   (B9 *The trace*). A must-fix neither fixed nor disputed with evidence → `STOPPED: critic`,
    with its ids. No second critique.
 
 ## 5. Publish via the KB document API
@@ -2380,7 +2445,8 @@ and `Read` only their ranges.
    marks (the dossier's `plan.md`; a chapter owns the questions its outline entry names),
    the brief's must-cover and leave-out, and `gaps/final.md` (each open gap, stated or
    dropped).
-5. **The trace** (B9), then `ledger.md` and `library.md` (and a chapter's overlays): claim
+5. **The trace** (B9; it is appended to, so the latest line for a sentence key wins),
+   then `ledger.md` and `library.md` (and a chapter's overlays): claim
    ids, statuses, disagreements, sources. Open a findings or verify entry when you need its
    passage. The dossier maps the evidence and states its own statuses; it proves nothing.
    You check the chapter against the sources themselves.
@@ -2413,9 +2479,19 @@ against the chapter's own quotations or the dossier's excerpts.
 - Every claim about behaviour ("X retries three times", "Y runs before Z"): read the code
   that does it.
 
-**Facts in general topics:** against the cited sources, which you **open** (B11).
-- Open every source in the `sources` block. It must resolve, and the page must say what the
-  chapter cites it for.
+**Facts in general topics:** against the run's verify records, and a sample of the cited
+sources, which you **open** (B11).
+- Every item in the `sources` block resolves to a `library.md` entry.
+- **Trusted:** a claim whose verify record (the ledger line's `verified verify/…#V-…`
+  link, §3.8 *The records*) says `supported`, or `partial` within its narrower claim, and
+  whose ledger status agrees. A carried claim (`C-p<N>-…`, with `reused-from:` and its
+  record in `prior/`, §3.1) is trusted the same way. A claim with no record, or whose
+  record and ledger disagree, is not trusted: check it as a sampled source's.
+- **Re-open a sample of at most 5 sources**, the main claims' sources first: those behind
+  a number, an evaluative claim or a quiz key. Read the run's saved page text in
+  `<dossier>/pages/` (`<source id>.txt` in its fetcher's folder: Glob for it), and fetch a page only when that text is
+  missing. The page must say what the chapter cites it for. A failure in the sample widens
+  the check to every sentence citing that source.
 - A worked example's numbers: re-derive them.
 - A load-bearing claim with neither a citation nor a trace line: `WebSearch` for it once.
   If you cannot confirm it, it is a finding.
@@ -2436,10 +2512,11 @@ against the chapter's own quotations or the dossier's excerpts.
    `must-fix`.
 4. **Citation precision:** a citation whose source does not support the sentence it sits
    on, even when another source would. `must-fix` when load-bearing.
-5. **Passages re-opened:** for every load-bearing sentence, read the passage its claim rests
-   on, at its locator, in the page you opened (or the code at its commit). Sample the rest:
-   10 sentences, or all if fewer. A failure in the sample widens the check to its whole
-   section.
+5. **Passages re-opened:** for every load-bearing sentence, check it against its claim's
+   verify record and the findings passage that claim rests on; re-open the page itself
+   only for a sampled source (above), and the code at its commit for a code claim. Sample
+   the rest: 10 sentences, or all if fewer. A failure in the sample widens the check to its
+   whole section.
 
 **Coverage:**
 1. A load-bearing plan question this chapter owns, neither answered nor declared in
@@ -2490,9 +2567,13 @@ buried in prose, a caveat that interrupts the main line, a fact reported as who-
 a section past its budget: `should-fix`, saying where the reader trips (the skill's §4
 prose rules).
 
-**Clarity:** for the outline's stated reader, per the skill's §4.2 tone: jargon defined on
-first use, transitions that carry the argument, the core idea reachable without the code.
-An ambiguous sentence is a clarity finding.
+**Clarity:** for the outline's stated reader, per the skill's §4.2 tone and §4's prose
+rules: jargon defined on first use, transitions that carry the argument, the core idea
+reachable without the code. An ambiguous sentence is a clarity finding. So is a term used
+before a plain definition at its first use, and a dense passage (a paragraph over about
+100 words, or a sentence stacking 3 or more new terms): each a `should-fix` (`clarity`).
+A body that does not open with `> [!IMPORTANT] In one paragraph` (§4's prose rules) is a
+`should-fix` (`reader`).
 
 **The hard rules:** check §4.1 by reading, as a second net under `knowledge check`, which
 cannot see everything: an id that resolves but points at the wrong section, a citation link
@@ -2512,7 +2593,9 @@ to the right source id for the wrong claim, an image without real alt text.
   diagram, or one not worth its place; a quiz item that tests recall, or a distractor
   nobody would pick; undefined jargon; a section order that makes the idea harder to
   follow; long re-teaching of an earlier chapter where a short recap would do; an uncited
-  non-load-bearing claim; the `ledger`, `coverage` and `reader` should-fixes above.
+  non-load-bearing claim; jargon used before a plain definition at its first use, or a
+  dense passage (`clarity`); a missing "In one paragraph" (`reader`); the `ledger`,
+  `coverage` and `reader` should-fixes above.
 - **`note`**: advisory, never blocks: a matter of taste, or an improvement the outline did
   not ask for. Judge taste against the outline's reader and the skill's §4.2 tone, never
   your own preferences; when neither speaks, say what a choice trades off, not which way
@@ -2554,8 +2637,8 @@ both, with the writer's answers.
     - should_fix: <count>
     - notes: <count>
     - critic_model: <the model you ran on> · writer_model: <the writer's>
-    - checked: <N> sources opened, <N> code claims grepped, <N> quiz items answered
-    - ledger: <N> claims traced, <N> untraceable, <N> sources re-opened
+    - checked: <n> sources sampled (of <m>), <N> code claims grepped, <N> quiz items answered
+    - ledger: <N> claims traced, <N> untraceable, <n> sources sampled (of <m>)
     - coverage: <N>/<N> load-bearing questions answered or declared; must-cover <N>/<N>
     - skill: <the SKILL.md you read> | not found
     - open_items: <the ids of every must-fix and should-fix> | none
@@ -2593,7 +2676,8 @@ both, with the writer's answers.
 - read the writer's account of its own work;
 - write an absolute path into the critique;
 - publish, run `knowledge save`, call the KB's write API, or talk to the operator;
-- pass a citation you did not open, or a code claim you did not check;
+- pass a sampled citation you did not open, a citation whose claim is not trusted
+  (*How you check*) and that you did not open, or a code claim you did not check;
 - run on the writer's model, unless the dispatch says `same-model: accepted`;
 - commit or push (no `git commit`, `git add`, `git push`) or run workflow state-transition
   commands.
@@ -2613,7 +2697,7 @@ dispatcher, not a human-facing summary:
 - `should_fix`: the count
 - `notes`: the count
 - `open_items`: the ids left open, or `none`
-- `ledger`: `<n> traced, <n> untraceable, <n> sources re-opened`
+- `ledger`: `<n> traced, <n> untraceable, <n> sources sampled (of <m>)`
 - `coverage`: `<n>/<n> load-bearing answered or declared; must-cover <n>/<n>`
 - `critic_model`: the model you ran on
 - `file`: the critique file
@@ -2943,6 +3027,14 @@ for itself, routine arithmetic on ledgered numbers, and quiz distractors.
     - ¶2 s1: plugin/skills/explain/SKILL.md:L268-L278@88d2e95 (C-r1-code-04)
     - quiz q3 key: C-r2-found-11 · explain: C-r2-found-11, C-r1-found-02
     - diagram flow-1: C-r1-code-07, C-r1-code-08 (order)
+    - ¶1 s2 (rev C03): C-r1-evidence-06
+
+The trace is **appended to, never rewritten whole**, and changes only with Edit (or
+Write for the new file). The "In one paragraph" box traces under the key `## top`, before
+the first heading's. A sentence revised or moved later (the reader pass, or the critic's
+revision) gets a new line under its heading key, marked `(rev Cnn)` with the critic's
+finding id (`(rev)` in the reader pass), and **the latest line for a sentence key wins**:
+the critic reads the trace that way.
 <!-- part-b:end dossier -->
 
 <!-- part-b:begin search -->

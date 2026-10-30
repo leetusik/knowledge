@@ -3,15 +3,15 @@
   "phase_id": "P38-e1",
   "name": "The writer held to budget, plain words, a cheaper critic that samples",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 60,
   "depends_on": [
     "P38-e1.S5"
   ],
   "depends_declared": true,
   "created_at": "2026-10-31T00:12:51+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-31T01:21:33+09:00",
+  "completed_at": "2026-10-31T01:26:23+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -21,7 +21,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Writer counts and cuts each section to budget while drafting; trace append-only; plain-prose rules with 'In one paragraph'; critic trusts verify records and samples ≤5 sources; confirmation opens 'In plain words'",
   "validation": {
     "required": [],
     "last_run": null,

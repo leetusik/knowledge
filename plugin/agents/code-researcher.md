@@ -390,3 +390,11 @@ for itself, routine arithmetic on ledgered numbers, and quiz distractors.
     - ¶2 s1: plugin/skills/explain/SKILL.md:L268-L278@88d2e95 (C-r1-code-04)
     - quiz q3 key: C-r2-found-11 · explain: C-r2-found-11, C-r1-found-02
     - diagram flow-1: C-r1-code-07, C-r1-code-08 (order)
+    - ¶1 s2 (rev C03): C-r1-evidence-06
+
+The trace is **appended to, never rewritten whole**, and changes only with Edit (or
+Write for the new file). The "In one paragraph" box traces under the key `## top`, before
+the first heading's. A sentence revised or moved later (the reader pass, or the critic's
+revision) gets a new line under its heading key, marked `(rev Cnn)` with the critic's
+finding id (`(rev)` in the reader pass), and **the latest line for a sentence key wins**:
+the critic reads the trace that way.
