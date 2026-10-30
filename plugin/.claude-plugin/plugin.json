@@ -1,6 +1,6 @@
 {
   "name": "knowledge",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Explain a topic, a code change or a general subject as a native chapter — Markdown with typed blocks for diagrams, figures, callouts and a quiz, plus a cited best-practices section — in your own knowledge base. It runs as an explain phase in a workflow workspace (v86 or later): one confirmation, then research, write, check and a private publish. One setup skill connects the hosted KB or scaffolds your own.",
   "author": {
     "name": "leetusik"

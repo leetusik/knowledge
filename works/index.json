@@ -208,13 +208,13 @@
       "order": 17,
       "path": "works/phases/active/P35-a4",
       "review_status": "pending",
-      "current_slice": "P35-a4.S2",
+      "current_slice": "P35-a4.REVIEW",
       "slice_count": 4,
-      "done_slice_count": 2
+      "done_slice_count": 3
     }
   ],
   "deferred_open_count": 67,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-30T15:51:05+09:00"
+  "last_rebuilt_at": "2026-10-30T15:52:54+09:00"
 }

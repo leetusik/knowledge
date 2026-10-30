@@ -3,15 +3,15 @@
   "phase_id": "P35-a4",
   "name": "Release the knowledge plugin as 0.8.0",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 20,
   "depends_on": [
     "P35-a4.S1"
   ],
   "depends_declared": true,
   "created_at": "2026-10-30T15:40:44+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-30T15:51:21+09:00",
+  "completed_at": "2026-10-30T15:52:54+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -21,7 +21,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Released the knowledge plugin as 0.8.0 (plugin.json, setup's plugin_version); the landing counts the skill at 2,771 lines",
   "validation": {
     "required": [],
     "last_run": null,
