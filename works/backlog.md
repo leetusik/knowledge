@@ -17,7 +17,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `P38-e1` | in flight 9/11 | `P38-e1.S9` | 9/11 | `.` | working tree |
+| `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `P38-e1` | in flight 10/12 | `P38-e1.S9` | 10/12 | `.` | working tree |
 | `default` | `P37-1p` | planned | `P37-1p.DECOMP` | 0/2 | - | branch main |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
@@ -322,6 +322,7 @@ _Read live from branch `main`, where this phase advances._
 | [x] `P38-e1.S6` | `done` | The writer held to budget, plain words, a cheaper critic that samples | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S6` |
 | [x] `P38-e1.S7` | `done` | An honest confirmation: the cost line, the cheaper run, a loose document's translation | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S7` |
 | [x] `P38-e1.S8` | `done` | Desk check: v1 and v2 sized on paper, three sample confirmations | `qa` | `works/phases/active/P38-e1/slices/P38-e1.S8` |
+| [x] `P38-e1.F1` | `done` | apply the desk check's 15 findings | `fix` | `works/phases/active/P38-e1/slices/P38-e1.F1` |
 | [ ] `P38-e1.S9` | `todo` | Release the knowledge plugin as 0.9.0 | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S9` |
 | [ ] `P38-e1.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P38-e1/slices/P38-e1.REVIEW` |
 

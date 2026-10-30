@@ -335,15 +335,17 @@ never a run artifact.
          …
          [a v2: <old heading> — dropped]
          Quiz and Sources close it, as in every document.
-       Cost: <the agents> · ≈ $<a>–<b> at list price (the cost table, below) · cheaper: <delta | quick> ≈ $<c>
+       Cost: <the agents> · ≈ $<a>–<b> at list price, plus a few dollars for the explain phase around it (the explain skill's cost table)[ · <the clause below that applies>]
        Phase: Explain: <subject> — <the objective>
        - unit: document (standalone). Say "a chapter of <book>" or "a book" to change it
        - subject: <subject> · mode: <codebase | general>
-       - run: full (agents research the sources, a second model checks every fact used, more rounds fill what is missing, a reviewer reads the draft) · or quick / no-research
-       - lang: <LANG> · reader: <the reader> · must-cover: <items | none>
-       - project: <name> (private) · prior: <none found | the version>
-       - runs on its own copy of the repository; stops only if the evidence is too thin, a reviewer's must-fix cannot be settled, or publishing fails
-       - permissions: manual permission mode needs the preflight's rules (§3.2)
+       - run: full (agents research the sources, a second model checks every fact used, more rounds fill what is missing, a reviewer reads the draft) · or say "quick" (one agent researches alone, no reviewer) or "no-research" (<this repository | your own material> only, no web)
+       - lang: <LANG> · reader: <the reader>
+       - must-cover: <none | <n> items, each in a section above>
+       - project: <name> (private) · earlier version: <none found | v<N>>
+       - runs on its own copy of the repository; stops only if the evidence is too thin, the reviewer finds an error the run cannot fix, or publishing fails
+       - permissions: if you approve tool calls by hand, first add the rules listed in the explain skill's §3.2
+       - web searches: every search, the agents' included, counts against this session's limit (200 by default); start a long run in a fresh session
 
        ## Explain
 
@@ -355,37 +357,46 @@ never a run artifact.
        Why: <field — reason>; … (one clause for each value you chose; the rest are the request's words or the defaults)
        Reply yes, or change any line.
 
-   A book's `Sections` block lists its chapters (step 6), and its stops line adds its
-   outline and acceptance gates and says that each chapter's sections are signed at the
-   outline gate, with no stop per chapter. A changed section line is folded in like any
-   other. With `worktree: no` the stops line says it runs here, on this stream. Every web
-   search, the agents' included, counts against the session's cap
-   (`CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`, 200 by default): say so for a `full` run,
-   and that a long one is best started in a session of its own.
+   A book's `Sections` block lists its chapters (step 6), its run line drops the
+   `· or say "quick" …` offer (a book is always `full`), and its stops line adds the
+   outline and acceptance gates in plain words: `stops twice for your yes: once to sign
+   every chapter's sections together, once to accept the finished book; otherwise only
+   if …`. A changed section line is folded in like any other. With `worktree: no` the
+   stops line says it runs here, in this folder. Every web search, the agents' included,
+   counts against the session's cap (`CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`, 200 by
+   default): a `full` run says so on its `- web searches:` line, with the advice to start
+   a long run in a session of its own.
 
    **The `Cost:` line** says, in plain words, what the proposed run costs: the agents it
-   sends (researchers, verifier batches, gap reviews, the critic) and about how many
-   dollars at list price, taken from the cost table below and citing it. On a subscription,
-   read the dollars as usage, not as a bill. It offers the cheaper run when there is one;
-   it never chooses it, and the operator's reply decides:
+   sends, named as a newcomer would (research agents, fact-check batches on a second
+   model, extra rounds to fill gaps, the reviewer), and about how many dollars at list
+   price, taken from the cost table below and citing it, plus the explain phase around it,
+   a few dollars. On a subscription, read the dollars as usage, not as a bill. It adds one
+   more clause only when one of the cases below applies (the template's `[ · … ]`); it
+   never chooses a cheaper run itself, and the operator's reply decides:
    - **A v2 whose prior's dossier step 5 found:** the run is a delta of the prior (§3.1):
      it researches only what changed since the prior and carries over the prior's verified
      claims whose sources still say the same. The run line reads `- run: full — as a delta
-     of v<N> (researches only what changed since <the prior's date>)`, the cost line prices
-     the delta, and both add `say "from scratch" for a full rerun ≈ $<the v1 price>`. The
+     of v<N> (researches only what changed since <the prior's date>)`. The cost line prices
+     the delta, counts `a check that v<N>'s sources still say the same` among its agents,
+     and adds `say "from scratch" for a full rerun ≈ $<the v1 price>`, said there only. The
      decline word `from scratch`, in the operator's reply, makes the run a plain `full` run
      that reads the prior as one source.
-   - **A v2 with no dossier found:** the cost line says `delta: none (no dossier)` and
-     prices a v1.
+   - **A v2 with no dossier found:** the cost line adds `no research saved from v<N> to
+     reuse` and prices a v1.
    - **A narrow subject** (one question, one file or function, or the request's own
-     "short"): the cost line adds `cheaper: say "quick"` with its cost. `quick` stays the
-     operator's word; the run card's "Never choose `quick` or `no-research` yourself"
-     binds you here too.
-   - **A book:** several runs' worth of research agents, not metered yet.
+     "short"): the cost line adds `cheaper: say "quick" ≈ $<the table's quick price>
+     (projected)`. `quick` stays the operator's word; the run card's "Never choose `quick`
+     or `no-research` yourself" binds you here too.
+   - **A book:** several runs' worth of research agents, not metered yet, so its cost line
+     has no dollar figure and no phase clause.
    - **A translation** (the request asks for a published document or chapter in another
-     language, §3.1 *Translation*): `run: full` stays, the `lang:` line names the source
-     (`ko (translated from en v2)`), there is no `Sections` block (the sections are the
-     source's), and the cost line says one write span, with no research and no critic.
+     language, §3.1 *Translation*): `run: full` stays, but its run line reads `- run: full
+     (a translation: one writer, no research and no reviewer)`, with no offer and no
+     `- web searches:` line; the `lang:` line names the source (`ko (translated from en
+     v2)`); there is no `Sections` block (the sections are the source's); and the cost
+     line says one writer, with no research and no reviewer, ≈ $3 plus ≈ $5 for the
+     explain phase around it (the table's row).
 
    **The cost table**, the one place these numbers live (measured on plugin 0.8.0 runs,
    projected for 0.9.0; list price, the workspace's own phase around the run not
@@ -393,11 +404,11 @@ never a run artifact.
 
    | Run | What it sends | ≈ $ at list price |
    |---|---|---|
-   | v1 document (measured on a codebase subject) | 4 researchers (2 code, 2 web), ~14 verifier batches, ≤ 1 gap round, the critic | $35–45 |
-   | v2 delta | 1–2 code and 0–1 web researchers, ~5 verifier batches plus the recheck of the prior's sources, 0–1 gap round, the critic | $25–38 |
-   | translation | one write span: no research, no critic | $3 |
-   | `quick` | the lead alone, one verifier batch, no critic | not metered yet |
-   | book | a whole-book research, then a top-up, a write and a critic per chapter | not metered yet |
+   | v1 document (a codebase subject; projected) | 4 research agents (2 read the code, 2 search the web), about 14 fact-check batches on a second model, at most 1 extra round to fill gaps, 1 reviewer | $35–45 |
+   | v2 delta | 1–2 research agents reading the code and 0–1 searching the web, about 5 fact-check batches on a second model, a check that v<N>'s sources still say the same, at most 1 extra round to fill gaps, 1 reviewer | $25–38 |
+   | translation | one writer: no research, no reviewer | $3 (the explain phase around it adds ≈ $5 today) |
+   | `quick` | one agent researches alone, 1 fact-check batch on a second model, no reviewer | $15–25 (projected; not metered yet) |
+   | book | several runs' worth: research for the whole book, then for each chapter more research, a writer and a reviewer | not metered yet |
 
    **Ask only in an interactive session** (on Claude Code, `AskUserQuestion` is among
    your tools; it is not under `claude -p` or in a subagent): show the confirmation and
@@ -1807,6 +1818,7 @@ Otherwise use the **curl** form further down; both send the same request.
       [--book <book> --book-kind <codebase|subject> --book-title "<Book title>" \
        --chapter <key> --position <n> --chapter-title "<Chapter title>" \
        --chapter-source phase=P<N> --chapter-source slice=P<N>.S<k>] \
+      [--slug <source slug>-<xx>] \
       [--translated-from <xx>@<version>] \
       [--new-version --rel-path <PRIOR_REL_PATH>] \
       [--asset <name>=<path> ...]
