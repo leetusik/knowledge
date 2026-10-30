@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P35-a4`
-- Current slice: `P35-a4.F1`
-- Next slice: `P35-a4.REVIEW`
+- Current slice: `P35-a4.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Open deferred jobs: `67`
 - Workspace version: `v86`
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P35-a4` | in_progress | `P35-a4.F1` | 3/5 | - | working tree |
+| `default` | `P35-a4` | in_progress | `P35-a4.REVIEW` | 4/5 | - | working tree |
 
 ## Active Phases
 
@@ -38,7 +38,7 @@
 | [x] `P-8jbf` | `done` | `pass` | Wide reader on big screens | `none` | `works/phases/active/P-8jbf` |
 | [x] `P33-n3` | `done` | `pass` | Explain front door | `none` | `works/phases/active/P33-n3` |
 | [x] `P34-n0` | `done` | `pass` | Keep private documents off the public repo | `none` | `works/phases/active/P34-n0` |
-| [ ] `P35-a4` | `in_progress` | `changes_requested` | Explain documents: about the subject, standalone | `P35-a4.F1` | `works/phases/active/P35-a4` |
+| [ ] `P35-a4` | `in_progress` | `changes_requested` | Explain documents: about the subject, standalone | `P35-a4.REVIEW` | `works/phases/active/P35-a4` |
 
 ## Phase P21: Web document deletion
 
@@ -278,5 +278,5 @@
 | [x] `P35-a4.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P35-a4/slices/P35-a4.DECOMP` |
 | [x] `P35-a4.S1` | `done` | Explain rules: teach the subject, not the work records, and stand alone | `implementation` | `works/phases/active/P35-a4/slices/P35-a4.S1` |
 | [x] `P35-a4.S2` | `done` | Release the knowledge plugin as 0.8.0 | `implementation` | `works/phases/active/P35-a4/slices/P35-a4.S2` |
-| [ ] `P35-a4.F1` | `todo` | Critic holds every document to the subject, standalone and title rules | `fix` | `works/phases/active/P35-a4/slices/P35-a4.F1` |
+| [x] `P35-a4.F1` | `done` | Critic holds every document to the subject, standalone and title rules | `fix` | `works/phases/active/P35-a4/slices/P35-a4.F1` |
 | [ ] `P35-a4.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P35-a4/slices/P35-a4.REVIEW` |

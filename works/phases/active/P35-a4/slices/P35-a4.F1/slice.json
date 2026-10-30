@@ -3,12 +3,12 @@
   "phase_id": "P35-a4",
   "name": "Critic holds every document to the subject, standalone and title rules",
   "kind": "fix",
-  "status": "todo",
+  "status": "done",
   "order": 30,
   "depends_on": [],
   "created_at": "2026-10-30T16:11:44+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-10-30T16:12:26+09:00",
+  "completed_at": "2026-10-30T16:28:38+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "The critic holds the subject, standalone and title rules as reader must-fixes (never declinable), judges the title it now receives, and requires a chapter to recap what it takes from an earlier one; landing counts 2,793",
   "validation": {
     "required": [],
     "last_run": null,

@@ -1560,3 +1560,6 @@
 {"ts": "2026-10-30T16:11:44+09:00", "type": "slice_status_changed", "slice": "P35-a4.REVIEW", "old_status": "in_progress", "new_status": "changes_requested"}
 {"ts": "2026-10-30T16:11:44+09:00", "type": "phase_reviewed", "phase": "P35-a4", "verdict": "changes_requested", "reviewer": "slice-executor"}
 {"ts": "2026-10-30T16:11:44+09:00", "type": "slice_created", "phase": "P35-a4", "slice": "P35-a4.F1"}
+{"ts": "2026-10-30T16:12:26+09:00", "type": "slice_status_changed", "slice": "P35-a4.F1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-10-30T16:28:38+09:00", "type": "executor_dispatched", "slice": "P35-a4.F1", "phase": "P35-a4", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-10-30T16:28:38+09:00", "type": "slice_status_changed", "slice": "P35-a4.F1", "old_status": "in_progress", "new_status": "done"}

@@ -37,9 +37,12 @@ degraded)`.
     draft: <path> · critique: <path you write> · dossier: <path>
     skill: <path to the explain SKILL.md> · scratch: <folder> | none
     writer_model: <id>[ · same-model: accepted]
+    title: <the title it will publish>[ · kept][ · book: <a new book's title>]
     chapter: slice: <id> · phase: P<N> · key: <key> · plan: <the chapter slice's plan.md>
 
-A single document's critique is `<dossier>/critique.md`. A chapter's is
+`kept` marks an existing chapter's title; `book:`, sent with one chapter of a new book, is
+that book's title. With no `title:` line, the spec's publish fields name the draft's. A
+single document's critique is `<dossier>/critique.md`. A chapter's is
 `book/critique/<key>.md`, and its dossier is `book/research/`: the book's frozen
 `library.md` and `ledger.md`, the chapter's overlays `library-ch<k>.md` and
 `ledger-ch<k>.md`, and its trace `trace-<key>.md`. With no scratch folder, make one with
@@ -78,7 +81,8 @@ and `Read` only their ranges.
    You check the chapter against the sources themselves.
 6. **The earlier chapters** (a chapter only), only as far as the order rule needs: their
    `##`/`###` headings and the terms they define (`Grep` them), and the body of any chapter
-   the outline lists as this one's prerequisite.
+   the outline lists as this one's prerequisite: what this chapter must recap, never what
+   its reader already knows.
 7. **The explain skill** (`skill:`; otherwise the `knowledge` plugin's `installPath` in
    `~/.claude/plugins/installed_plugins.json`, plus `/skills/explain/SKILL.md`). It is the
    writer's contract and your yardstick: read §3 (research), §4's prose rules, §4.1 (hard
@@ -158,23 +162,28 @@ test what the outline says this chapter's quiz tests, **in the case the outline 
 loose document is not a bound chapter, a placed chapter is not an unplaced one). An item
 that changes the case is a `must-fix` when its key is then wrong.
 
-**Order and prerequisites:** walk the chapter as the outline's stated reader who has read
-only the earlier chapters (none, for a single document). A term or idea used before this
-chapter or an earlier one introduces it is a finding; so is leaning on a link (`chapter:`,
-`doc:`, a source or a file) where the reader needs the idea (a `reader` must-fix, below),
-and so is re-teaching at length what an earlier chapter covers where a short recap would
-do (`chapter:` links to unpublished siblings are expected warnings, not defects).
+**Order and prerequisites:** walk the chapter as the outline's stated reader, reading it
+alone (a book's chapter too: the skill's §4, *Standalone*). A term or idea used before the
+chapter introduces it is a finding. An idea an earlier chapter teaches needs a short recap
+here (a `chapter:` link may follow, as an extra): relying on it silently, or leaning on a
+link (`chapter:`, `doc:`, a source or a file) where the reader needs the idea, is a
+`reader` must-fix (below); re-teaching it at length where a short recap would do is a
+should-fix (`chapter:` links to unpublished siblings are expected warnings, not defects).
 
 **The reader:** as the stated reader, do each task in `## Reader's task` (none: the spec's
-purpose) from the chapter alone, opening no link, file or source. A task it does not serve,
-or its deliverable missing: `must-fix`; so is a chapter organised by slices or work
-records, or one its reader cannot follow without opening a link, a file or a source. An
-id as a sentence's subject or in a heading, a deferred job's id, a work record named where
-plain words would do, or a lone "see X" in place of an explanation: `should-fix` (the
-skill's §4, *The subject, not the records* and *Standalone*). A paragraph holding two
-ideas or past about 100 words, a step buried in prose, a caveat that interrupts the main
-line, a fact reported as who-said-what, a section past its budget: `should-fix`, saying
-where the reader trips (the skill's §4 prose rules).
+purpose) from the chapter alone, opening no link, file, source, or other chapter or
+document. A task it does not serve, or its deliverable missing: `must-fix`. So is every
+departure from the skill's §4, *The subject, not the records* and *Standalone*: a chapter
+organised by slices or work records; a phase or slice id in a heading, or anywhere but a
+sentence's trailing mark; a deferred job's id; a record named as a workspace artifact as
+the subject of any clause; a lone "see X", or a file or doc named in place of
+what it says; and any passage its reader cannot follow without opening a link, a file, a
+source, or another chapter or document. So is a new title (`title:`, `book:` included)
+that names the work instead of what the text explains, even one the spec gives (the
+skill's §1 title rule). A paragraph holding two ideas or past about 100 words, a step
+buried in prose, a caveat that interrupts the main line, a fact reported as who-said-what,
+a section past its budget: `should-fix`, saying where the reader trips (the skill's §4
+prose rules).
 
 **Clarity:** for the outline's stated reader, per the skill's §4.2 tone: jargon defined on
 first use, transitions that carry the argument, the core idea reachable without the code.
@@ -192,8 +201,8 @@ to the right source id for the wrong claim, an image without real alt text.
   requires to be cited (§4.5) with no citation; the `ledger`, `coverage` and `reader`
   must-fixes above; a diagram that is wrong or contradicts the text; a quiz key that is
   wrong or has two defensible answers, or an `explain` that teaches the wrong thing; a
-  §4.1 hard-rule violation; an idea used before it is introduced, here or in an earlier
-  chapter; something the outline says this chapter covers or tests that is missing.
+  §4.1 hard-rule violation; an idea used before the chapter introduces it; something the
+  outline says this chapter covers or tests that is missing.
 - **`should-fix`**: the chapter is right but weaker than it should be. An unlabelled
   diagram, or one not worth its place; a quiz item that tests recall, or a distractor
   nobody would pick; undefined jargon; a section order that makes the idea harder to
@@ -217,8 +226,9 @@ it is not a finding.
 **What never counts against the chapter:** following its spec or the outline; a gap
 declared in `gaps/final.md` and honoured as declared; a warning `knowledge check` reports
 for a `chapter:` link to a sibling not yet published; a short recap of an earlier chapter's
-idea; a phase or slice id used only as the small trailing mark; a choice the spec made that
-you would have made differently (a `note` at most).
+idea; a phase or slice id used only as the small trailing mark; a work record attributed in
+B7's plain words; a `kept` title; a choice the spec made that you would have made
+differently (a `note` at most).
 
 **The verdict:** `pass` means no `must-fix` is open; anything else is `revise`. Never `pass`
 with an open `must-fix`. A `should-fix` or `note` never blocks.

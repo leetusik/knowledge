@@ -678,7 +678,8 @@ disk:
 2. **Questions,** 8–20: the explicit asks, every must-cover item, and 3–5 things an expert
    would expect a chapter for this reader to cover. Mark each load-bearing or not.
 3. **An outline skeleton** in §4.2's order, with the questions each section answers,
-   grouped by the subject's ideas, never by slice or record.
+   grouped by the subject's ideas, never by slice or record (§4, *The subject, not the
+   records*).
 4. **The tier:** the highest of three axes. Breadth: one domain (1), 2–5 subtopics (2), more
    than 5 or disjoint domains (3). Nesting: one-step inference (1), 2–3 dependent
    sub-questions (2), 4 or more (3). Exploration: fully specified (1), 1–2 unspecified
@@ -711,7 +712,8 @@ disk:
      in execution order for a flow and dependencies first for a structure;
    - **history behind it** (a code researcher): `git log` and `git blame`, commit messages,
      design, phase and slice notes, as evidence of why it is this way, never the
-     chapter's structure (the field's history is history);
+     chapter's structure (§4, *The subject, not the records*; the field's history is
+     history);
    - **how others solve it** (a web researcher): comparable implementations and the
      standard patterns this code follows or departs from (definitions are foundations).
 
@@ -877,8 +879,9 @@ say `quick`, and what it skipped.
 no ledger: you read the repository yourself, by mode. **Change mode:** the real change,
 not your memory of it (`git diff <base>..<head>`, `git log --stat`, `git show <ref>`), then
 the changed files and the code around them, and a phase's or slice's plan and result notes
-if the repository keeps them, as evidence, never the chapter's structure. **Topic mode:** the real code, configs, compose files and
-scripts that make the topic work here. **General mode:** only what the user gave you and
+if the repository keeps them, as evidence, never the chapter's structure (§4, *The subject,
+not the records*). **Topic mode:** the real code, configs, compose files and scripts that
+make the topic work here. **General mode:** only what the user gave you and
 what the conversation established. Write `brief.md` and `run.md` (`run: no-research`) to
 `<DOSSIER>` at once; the drafts follow there. The
 chapter has no "Best practices & next steps" section and no sources block unless the user
@@ -895,9 +898,10 @@ the reader's task; the research supports it, never leads it.**
    the commands to run, the test that guards the behaviour.
 2. **The path:** §4.2's sections, the middle ones in the order the reader meets the work
    (code: the order it runs; a phase or slice: the system's ideas and flow, never slice
-   order; a general subject: the decision or the steps as the reader takes them). Each task gets the section that delivers it, ending in its deliverable;
-   each heading carries a one-line purpose, its tasks and a word budget: the fewest words
-   that deliver them (a single document mostly 3,000–5,000 in all).
+   order (§4, *The subject, not the records*); a general subject: the decision or the steps
+   as the reader takes them). Each task gets the section that delivers it, ending in its
+   deliverable; each heading carries a one-line purpose, its tasks and a word budget: the
+   fewest words that deliver them (a single document mostly 3,000–5,000 in all).
 3. **Each finding goes in the step it changes** (a race in the step that has it, and in the
    checklist line that guards it), never in a section of caveats. A claim earns the main
    line by changing what the reader does or understands there; secondary depth (another
@@ -963,10 +967,12 @@ at the first paragraph or `##` heading.
 - **The subject, not the records:** for a phase, a slice or a change, the reader wants what
   the system now does and why. The workspace's records (a phase's intent and notebook, a
   slice's `result.md`, a deferred job) are evidence, never the subject or the structure:
-  sections follow the system's ideas and flow, never slice order, and no sentence takes a
-  record or an id as its subject. A phase or slice id appears at most as a small trailing
-  mark, "(P30)", after the plain-words statement, never in a heading; a deferred job's id
-  never appears: say in plain words what is still open. Not "The P24.S1 result adds that a
+  sections follow the system's ideas and flow, never slice order, and no sentence takes an
+  id, or a record named as a workspace artifact (a `result.md`, "the P24.S1 result", "the
+  decomposition recorded"), as its subject; the change named in plain words is allowed
+  (B7's attributed form). A phase or slice id appears at most as a small trailing mark,
+  "(P30)", after the plain-words statement, never in a heading; a deferred job's id never
+  appears: say in plain words what is still open. Not "The P24.S1 result adds that a
   background task could run before the body reached the client", but "A background task
   could run before the body reached the client, which the change that introduced the
   worker found (P24)".
@@ -1030,19 +1036,21 @@ A starting shape, not a form to fill. Use the sections the subject earns, in thi
 **never write one**):
 
 1. **Background** — change mode: the system as it was before this change, plus context,
-   never the work's history slice by slice; topic mode: what this is and why it exists
-   here; general mode: what the subject is and what the reader needs to already know.
+   never the work's history slice by slice (§4, *The subject, not the records*); topic
+   mode: what this is and why it exists here; general mode: what the subject is and what
+   the reader needs to already know.
    Offer a deeper beginner background in a `> [!SKIP] Skip this if you already know …`
    callout, then the narrower relevant part.
 2. **Intuition** — the core idea in essence, with **concrete toy data** and a diagram;
    change mode: why the change and what it buys; topic mode: the mental model; general
    mode: the idea through a worked example.
 3. **Code** — change mode walks the diff, grouped and ordered logically (a phase or slice:
-   the system as it now works, by idea, never slice by slice); topic mode walks the real
-   implementation here (fenced code with a `title="path"`). In **general mode** this
-   section is **Worked examples** instead: real numbers, real cases, step by step. Its
-   subsections, and any section a task needs ("Should you use it today?"), follow
-   the reader's path (§3.10), each task's section ending in its deliverable.
+   the system as it now works, by idea, never slice by slice; §4, *The subject, not the
+   records*); topic mode walks the real implementation here (fenced code with a
+   `title="path"`). In **general mode** this section is **Worked examples** instead: real
+   numbers, real cases, step by step. Its subsections, and any section a task needs
+   ("Should you use it today?"), follow the reader's path (§3.10), each task's section
+   ending in its deliverable.
 4. **Best practices & next steps** — on every run but `no-research` (§4.5), where it is
    absent and the report says so.
 5. **Quiz** — a `quiz` block of about 5 items (§4.5). Always last before the sources.
@@ -1306,8 +1314,10 @@ Offline (§6): no check is possible; say so.
        draft: <DOSSIER>/body.md · critique: <DOSSIER>/critique.md · dossier: <DOSSIER>
        skill: <this file> · scratch: <DOSSIER>/pages/critic
        writer_model: <your model id>
+       title: <the title §5 will publish>[ · kept]
 
-   The scratch folder sits in the dossier's git-ignored `pages/`, where §3.2's rules reach
+   `kept` marks an existing chapter's title, which §1's title rule keeps. The scratch
+   folder sits in the dossier's git-ignored `pages/`, where §3.2's rules reach
    (a `mktemp -d` one is outside them) and nothing it fetches is committed. A host that
    cannot pick another model adds `same-model: accepted`
    (`critic: same model (degraded)`); on the sequential path you play it (`lead
@@ -1554,7 +1564,9 @@ committed with each slice except `pages/` (write `pages/.gitignore`, `*` then
 1. **D0–D0b:** the brief from `intent.md`'s `## Explain` (subject, mode, reader, depth,
    must-cover, leave-out, trusted sources, `lang: en`), placement `book <slug>`.
 2. **D1:** 20–60 questions; the skeleton is a draft chapter list with each chapter's
-   questions, the chapters following the subject's ideas, never one per slice by default; tier usually 3, the heaviest angles split by the book's parts.
+   questions, the chapters following the subject's ideas, never one per slice by default
+   (§4, *The subject, not the records*); tier usually 3, the heaviest angles split by the
+   book's parts.
 3. **D2–D4:** waves of at most 10 (wave 1 in up to two); at most 3 gap rounds of at most 6
    researchers, against the chapter list; a ceiling of 45 researcher and gap-reviewer
    dispatches.
@@ -1959,9 +1971,12 @@ degraded)`.
     draft: <path> · critique: <path you write> · dossier: <path>
     skill: <path to the explain SKILL.md> · scratch: <folder> | none
     writer_model: <id>[ · same-model: accepted]
+    title: <the title it will publish>[ · kept][ · book: <a new book's title>]
     chapter: slice: <id> · phase: P<N> · key: <key> · plan: <the chapter slice's plan.md>
 
-A single document's critique is `<dossier>/critique.md`. A chapter's is
+`kept` marks an existing chapter's title; `book:`, sent with one chapter of a new book, is
+that book's title. With no `title:` line, the spec's publish fields name the draft's. A
+single document's critique is `<dossier>/critique.md`. A chapter's is
 `book/critique/<key>.md`, and its dossier is `book/research/`: the book's frozen
 `library.md` and `ledger.md`, the chapter's overlays `library-ch<k>.md` and
 `ledger-ch<k>.md`, and its trace `trace-<key>.md`. With no scratch folder, make one with
@@ -2000,7 +2015,8 @@ and `Read` only their ranges.
    You check the chapter against the sources themselves.
 6. **The earlier chapters** (a chapter only), only as far as the order rule needs: their
    `##`/`###` headings and the terms they define (`Grep` them), and the body of any chapter
-   the outline lists as this one's prerequisite.
+   the outline lists as this one's prerequisite: what this chapter must recap, never what
+   its reader already knows.
 7. **The explain skill** (`skill:`; otherwise the `knowledge` plugin's `installPath` in
    `~/.claude/plugins/installed_plugins.json`, plus `/skills/explain/SKILL.md`). It is the
    writer's contract and your yardstick: read §3 (research), §4's prose rules, §4.1 (hard
@@ -2080,23 +2096,28 @@ test what the outline says this chapter's quiz tests, **in the case the outline 
 loose document is not a bound chapter, a placed chapter is not an unplaced one). An item
 that changes the case is a `must-fix` when its key is then wrong.
 
-**Order and prerequisites:** walk the chapter as the outline's stated reader who has read
-only the earlier chapters (none, for a single document). A term or idea used before this
-chapter or an earlier one introduces it is a finding; so is leaning on a link (`chapter:`,
-`doc:`, a source or a file) where the reader needs the idea (a `reader` must-fix, below),
-and so is re-teaching at length what an earlier chapter covers where a short recap would
-do (`chapter:` links to unpublished siblings are expected warnings, not defects).
+**Order and prerequisites:** walk the chapter as the outline's stated reader, reading it
+alone (a book's chapter too: the skill's §4, *Standalone*). A term or idea used before the
+chapter introduces it is a finding. An idea an earlier chapter teaches needs a short recap
+here (a `chapter:` link may follow, as an extra): relying on it silently, or leaning on a
+link (`chapter:`, `doc:`, a source or a file) where the reader needs the idea, is a
+`reader` must-fix (below); re-teaching it at length where a short recap would do is a
+should-fix (`chapter:` links to unpublished siblings are expected warnings, not defects).
 
 **The reader:** as the stated reader, do each task in `## Reader's task` (none: the spec's
-purpose) from the chapter alone, opening no link, file or source. A task it does not serve,
-or its deliverable missing: `must-fix`; so is a chapter organised by slices or work
-records, or one its reader cannot follow without opening a link, a file or a source. An
-id as a sentence's subject or in a heading, a deferred job's id, a work record named where
-plain words would do, or a lone "see X" in place of an explanation: `should-fix` (the
-skill's §4, *The subject, not the records* and *Standalone*). A paragraph holding two
-ideas or past about 100 words, a step buried in prose, a caveat that interrupts the main
-line, a fact reported as who-said-what, a section past its budget: `should-fix`, saying
-where the reader trips (the skill's §4 prose rules).
+purpose) from the chapter alone, opening no link, file, source, or other chapter or
+document. A task it does not serve, or its deliverable missing: `must-fix`. So is every
+departure from the skill's §4, *The subject, not the records* and *Standalone*: a chapter
+organised by slices or work records; a phase or slice id in a heading, or anywhere but a
+sentence's trailing mark; a deferred job's id; a record named as a workspace artifact as
+the subject of any clause; a lone "see X", or a file or doc named in place of
+what it says; and any passage its reader cannot follow without opening a link, a file, a
+source, or another chapter or document. So is a new title (`title:`, `book:` included)
+that names the work instead of what the text explains, even one the spec gives (the
+skill's §1 title rule). A paragraph holding two ideas or past about 100 words, a step
+buried in prose, a caveat that interrupts the main line, a fact reported as who-said-what,
+a section past its budget: `should-fix`, saying where the reader trips (the skill's §4
+prose rules).
 
 **Clarity:** for the outline's stated reader, per the skill's §4.2 tone: jargon defined on
 first use, transitions that carry the argument, the core idea reachable without the code.
@@ -2114,8 +2135,8 @@ to the right source id for the wrong claim, an image without real alt text.
   requires to be cited (§4.5) with no citation; the `ledger`, `coverage` and `reader`
   must-fixes above; a diagram that is wrong or contradicts the text; a quiz key that is
   wrong or has two defensible answers, or an `explain` that teaches the wrong thing; a
-  §4.1 hard-rule violation; an idea used before it is introduced, here or in an earlier
-  chapter; something the outline says this chapter covers or tests that is missing.
+  §4.1 hard-rule violation; an idea used before the chapter introduces it; something the
+  outline says this chapter covers or tests that is missing.
 - **`should-fix`**: the chapter is right but weaker than it should be. An unlabelled
   diagram, or one not worth its place; a quiz item that tests recall, or a distractor
   nobody would pick; undefined jargon; a section order that makes the idea harder to
@@ -2139,8 +2160,9 @@ it is not a finding.
 **What never counts against the chapter:** following its spec or the outline; a gap
 declared in `gaps/final.md` and honoured as declared; a warning `knowledge check` reports
 for a `chapter:` link to a sibling not yet published; a short recap of an earlier chapter's
-idea; a phase or slice id used only as the small trailing mark; a choice the spec made that
-you would have made differently (a `note` at most).
+idea; a phase or slice id used only as the small trailing mark; a work record attributed in
+B7's plain words; a `kept` title; a choice the spec made that you would have made
+differently (a `note` at most).
 
 **The verdict:** `pass` means no `must-fix` is open; anything else is `revise`. Never `pass`
 with an open `must-fix`. A `should-fix` or `note` never blocks.
