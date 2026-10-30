@@ -290,7 +290,8 @@ never a run artifact.
      **chapter**: `none`, or `<key> — "<title>" · position <n>` · **prior**: from step 5;
      a new book's or chapter's `<title>` follows §1's title rule;
    - **run**: RUN (a book is always `full`: a `quick` or `no-research` asked for a book is
-     said so, never applied) · **lang**: `<LANG> (translations: none)`;
+     said so, never applied; a translation keeps `full`) · **lang**: `<LANG> (translations:
+     none)`, or for a translation the source it comes from, `ko (translated from en v2)`;
    - **reader**: who it is for, what they already know, and what they will do with it (a
      novice unless the request says otherwise; a chapter: the book's reader) ·
      **depth**: `one document`, `one chapter`, or `about <n> chapters`;
@@ -332,6 +333,7 @@ never a run artifact.
          …
          [a v2: <old heading> — dropped]
          Quiz and Sources close it, as in every document.
+       Cost: <the agents> · ≈ $<a>–<b> at list price (the cost table, below) · cheaper: <delta | quick> ≈ $<c>
        Phase: Explain: <subject> — <the objective>
        - unit: document (standalone). Say "a chapter of <book>" or "a book" to change it
        - subject: <subject> · mode: <codebase | general>
@@ -339,7 +341,7 @@ never a run artifact.
        - lang: <LANG> · reader: <the reader> · must-cover: <items | none>
        - project: <name> (private) · prior: <none found | the version>
        - runs on its own copy of the repository; stops only if the evidence is too thin, a reviewer's must-fix cannot be settled, or publishing fails
-       - cost: tens of research agents; manual permission mode needs the preflight's rules (§3.2)
+       - permissions: manual permission mode needs the preflight's rules (§3.2)
 
        ## Explain
 
@@ -354,15 +356,46 @@ never a run artifact.
    A book's `Sections` block lists its chapters (step 6), and its stops line adds its
    outline and acceptance gates and says that each chapter's sections are signed at the
    outline gate, with no stop per chapter. A changed section line is folded in like any
-   other. A book's cost line says a book is several runs' worth of research agents; with
-   `worktree: no` the line says it runs here, on this stream. A v2's cost line offers the
-   delta (§3.1) when step 5 found the prior's dossier: the run researches only what changed
-   since the prior and carries over the prior's verified claims whose sources still say the
-   same. Its decline word is `from scratch`: in the operator's reply, it makes the run a
-   plain `full` run that reads the prior as one source. With no dossier found, the line says
-   `delta: none (no dossier)`. Every web search, the agents' included, counts against the
-   session's cap (`CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`, 200 by default): say so for
-   a `full` run, and that a long one is best started in a session of its own.
+   other. With `worktree: no` the stops line says it runs here, on this stream. Every web
+   search, the agents' included, counts against the session's cap
+   (`CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`, 200 by default): say so for a `full` run,
+   and that a long one is best started in a session of its own.
+
+   **The `Cost:` line** says, in plain words, what the proposed run costs: the agents it
+   sends (researchers, verifier batches, gap reviews, the critic) and about how many
+   dollars at list price, taken from the cost table below and citing it. On a subscription,
+   read the dollars as usage, not as a bill. It offers the cheaper run when there is one;
+   it never chooses it, and the operator's reply decides:
+   - **A v2 whose prior's dossier step 5 found:** the run is a delta of the prior (§3.1):
+     it researches only what changed since the prior and carries over the prior's verified
+     claims whose sources still say the same. The run line reads `- run: full — as a delta
+     of v<N> (researches only what changed since <the prior's date>)`, the cost line prices
+     the delta, and both add `say "from scratch" for a full rerun ≈ $<the v1 price>`. The
+     decline word `from scratch`, in the operator's reply, makes the run a plain `full` run
+     that reads the prior as one source.
+   - **A v2 with no dossier found:** the cost line says `delta: none (no dossier)` and
+     prices a v1.
+   - **A narrow subject** (one question, one file or function, or the request's own
+     "short"): the cost line adds `cheaper: say "quick"` with its cost. `quick` stays the
+     operator's word; the run card's "Never choose `quick` or `no-research` yourself"
+     binds you here too.
+   - **A book:** several runs' worth of research agents, not metered yet.
+   - **A translation** (the request asks for a published document or chapter in another
+     language, §3.1 *Translation*): `run: full` stays, the `lang:` line names the source
+     (`ko (translated from en v2)`), there is no `Sections` block (the sections are the
+     source's), and the cost line says one write span, with no research and no critic.
+
+   **The cost table**, the one place these numbers live (measured on plugin 0.8.0 runs,
+   projected for 0.9.0; list price, the workspace's own phase around the run not
+   included):
+
+   | Run | What it sends | ≈ $ at list price |
+   |---|---|---|
+   | v1 document (measured on a codebase subject) | 4 researchers (2 code, 2 web), ~14 verifier batches, ≤ 1 gap round, the critic | $35–45 |
+   | v2 delta | 1–2 code and 0–1 web researchers, ~5 verifier batches plus the recheck of the prior's sources, 0–1 gap round, the critic | $25–38 |
+   | translation | one write span: no research, no critic | $3 |
+   | `quick` | the lead alone, one verifier batch, no critic | not metered yet |
+   | book | a whole-book research, then a top-up, a write and a critic per chapter | not metered yet |
 
    **Ask only in an interactive session** (on Claude Code, `AskUserQuestion` is among
    your tools; it is not under `claude -p` or in a subagent): show the confirmation and
@@ -692,17 +725,25 @@ twice leaves its sources changed, and the run goes on:
     sources (the url is a wayback snapshot's `id_` form when the prior read it from one):
       <id> · html | pdf · <url> · passages: P<m>, … · file: <DOSSIER>/prior/<its findings or verify file>
 
-**Translation** (the user asks for the chapter in another language, `lang=<xx>`, and an
-existing variant of the same chapter is the source): fetch the source variant's `source`,
+**Translation** (the user asks for a chapter or a loose document in another language,
+`lang=<xx>`, and a published version of it is the source): fetch the source's `source`,
 translate the prose, and **keep every id verbatim** — heading ids, block ids, quiz item
-and option ids, source ids, asset names. Ids are never translated. Publish it as the
-`lang` variant of the same book and key, with `translated_from` = the source's language
-and version. If the quiz item or option ids differ from the source version's, the server
-refuses it (422 `translation-quiz-ids`); heading and block id differences come back as
-warnings.
+and option ids, source ids, asset names. Ids are never translated. Where it goes:
 
-A translation runs no research stage: it skips D0b–D5g, keeps its draft in `<DOSSIER>`,
-and goes from here to §4.
+- **A chapter:** the `lang` variant of the same book and key, with `translated_from` =
+  the source's language and version.
+- **A loose document:** a **new loose document** of its own, slug `<source slug>-<xx>`,
+  with a title in that language, published with `--slug <source slug>-<xx> --lang <xx>
+  --translated-from <src lang>@<version>` (the curl form sets `"slug"` and
+  `translated_from`). **Never** `--new-version --rel-path` onto the source: the
+  translation would become the source's next version and replace it. The server answers
+  a loose source with a `translation-source-missing` warning; it is harmless.
+
+If the quiz item or option ids differ from the source version's, the server refuses it
+(422 `translation-quiz-ids`); heading and block id differences come back as warnings.
+
+A translation is **one write span**: no research and no critic. It skips D0b–D5g, keeps
+its draft in `<DOSSIER>`, goes from here to §4, then §4.8–§4.9 and §5 (§4.10).
 
 ### 3.2 D0b: the preflight
 
@@ -1691,7 +1732,7 @@ Offline (§6): no check is possible; say so.
 
 ### 4.10 D8: the critic, one revision, then publish
 
-`quick` goes straight to §5; `full` and `no-research` get the critic first.
+`quick` and a translation go straight to §5; `full` and `no-research` get the critic first.
 
 1. **Dispatch it** (B5) in the foreground, and wait (a headless session stops a background
    agent after ten idle minutes), on a model of the family other than yours, named on the
@@ -1775,12 +1816,16 @@ Otherwise use the **curl** form further down; both send the same request.
   A loose document sends neither; in general mode it sends `--subject`.
 - `--new-version --rel-path` is for a **loose** document's re-explain (`PRIOR` from step 3).
   A chapter needs neither: re-sending the same book, key and `--lang` is its next version.
+- A **loose document's translation** is a new document, never a new version of its
+  source (§3.1 *Translation*): it sends `--slug <source slug>-<xx>`, `--lang <xx>` and
+  `--translated-from <src lang>@<version>`, and no `--new-version` or `--rel-path`.
 - The CLI reads its key from `$KB_API_TOKEN` or the config, the same as step 2; never set
   it on the command line (`KB_API_TOKEN=… knowledge` matches no rule). If it is not
   installed or says no API key is configured, use the curl form below.
 
 **The curl form.** Write `<tmp>/meta.json` with exactly the fields you need — note
-`"format": "native"`. Leave `date`, `slug`, `overwrite` and `commit` unset (API defaults):
+`"format": "native"`. Leave `date`, `slug`, `overwrite` and `commit` unset (API defaults;
+a loose document's translation sets `slug`, below):
 
     {
       "title": "<Title>",
@@ -1800,6 +1845,8 @@ Otherwise use the **curl** form further down; both send the same request.
 
 Drop every field that does not apply: `book` and `chapter` only for a placed chapter,
 `subject` only for a loose general-mode document, `translated_from` only for a translation.
+A loose document's translation also sets `"slug": "<source slug>-<xx>"`, the one case
+that sets `slug`, and never `new_version` or `rel_path` (§3.1 *Translation*).
 For a loose document's **new version** add `"new_version": true, "rel_path":
 "<PRIOR_REL_PATH>"` (keep `project` and `format` identical to the target: changing either
 is a 422). Merge the body in — and the images, if any: each as `name|media-type|path`
