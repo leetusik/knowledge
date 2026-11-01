@@ -1,0 +1,35 @@
+{
+  "id": "P38-e1.S2",
+  "phase_id": "P38-e1",
+  "name": "Sections proposed at the confirmation and signed there; the run researches only for them",
+  "kind": "implementation",
+  "status": "done",
+  "order": 20,
+  "depends_on": [
+    "P38-e1.S1"
+  ],
+  "depends_declared": true,
+  "created_at": "2026-10-31T00:12:44+09:00",
+  "started_at": "2026-10-31T00:26:53+09:00",
+  "completed_at": "2026-10-31T00:30:49+09:00",
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "The confirmation proposes the sections (a book: its chapters); the yes signs them; D1/D6 follow them; an uncarried section is cut and reported",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

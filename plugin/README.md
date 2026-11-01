@@ -11,8 +11,9 @@ two skills:
   in a workflow workspace (v86 or later): it drafts the run, asks you **once**,
   and on your yes hands it to the workspace's `create-phase`, which runs it to a
   private publish. Research comes first and is its own stage: a
-  team of research agents opens and quotes real sources, a verifier on a second
-  model checks every load-bearing claim, gap rounds fill what is missing, and an
+  team of research agents, sized to the document, opens and quotes real sources, a
+  verifier on a second model checks the claims the document uses, gap rounds fill
+  what is missing, and an
   evidence gate stops the run before writing when the evidence is too thin. The
   chapter (Background, Intuition, Code or worked examples, a cited "Best
   practices & next steps" section, a quiz) is written only from that evidence,
@@ -26,7 +27,10 @@ two skills:
   post to your own tenant — no server to run, one key serves every repo. **Scaffold**
   (full control): stand up your own self-hosted KB from scratch — a MkDocs Material site,
   a FastAPI + SQLite document API, an interactive knowledge graph, and a GitHub Pages
-  publishing workflow. Run it once after install and pick a mode.
+  publishing workflow. Run it once after install and pick a mode. The key never
+  enters the transcript: the explain skill's resolver writes it to a `0600` header
+  file that every KB call passes by path, or leaves it to the `knowledge` CLI, which
+  reads it itself.
 
 ## Install
 
@@ -49,15 +53,24 @@ researches or writes by itself. It finds the workspace and checks it is ready,
 looks for a live explain phase on the same subject (and offers to resume it or
 start a new version), looks up the published prior version, then shows the
 proposed phase and its `## Explain` block (unit, subject, run, language, reader,
-project, always private) and asks once. Change any line and it shows the whole
+project, always private) and asks once. Above that block it proposes the
+document's **sections** (at most 6, each with the question it answers), and your
+yes signs them: the run researches and writes only for those. A **`Cost:` line**
+says in plain words which agents the run sends and about how many dollars that is
+at list price (on a subscription, read it as usage, not a bill); it never picks a
+cheaper run for you. Change any line and it shows the whole
 confirmation again; reply yes and it hands the proposal to `create-phase`, which
 creates the explain phase in its own worktree and runs it to publish. It stops
 only for the evidence gate, the critic, or a publish failure. Headless
 (`claude -p`), it prints the confirmation and creates nothing.
 
-- **full** (the default): research agents in waves, verified on another model, up
-  to 3 gap rounds, counter-evidence on the main claims, the evidence gate, the
-  critic.
+- **full** (the default): research agents in waves, the team sized by the
+  document's length (at most about 4 researchers), only the claims the document
+  uses fact-checked on a second model, up to 3 gap rounds, counter-evidence on the
+  main claims, the evidence gate, the critic. A **v2** of a published document
+  runs as a delta of the earlier version: it researches only what changed since
+  then and keeps the earlier verified claims whose sources still say the same.
+  Say "from scratch" in your reply for a full rerun instead.
 - **`quick`**: no research team: the lead researches the angles itself, but
   keeps the probe agents, the plan, the findings and the reader's outline in the same
   dossier, and one batch by the verifier agent on another model; no gap rounds, no
@@ -68,7 +81,11 @@ only for the evidence gate, the critic, or a publish failure. Headless
   run stops and says so.
 - `book=<slug>` makes it a chapter of that book when the book exists, else a new
   book of that slug (a book is always `full`); `lang=<xx>` writes it in another
-  language (English by default, whatever language you ask in).
+  language (English by default, whatever language you ask in). Asking for a
+  published document or chapter in another language is a **translation**: one
+  cheap write, with no research and no critic. A chapter's translation is that
+  chapter's language variant; a loose document's translation is a document of its
+  own (`<slug>-<xx>`), never a new version of the original.
 - **Resuming** is the workspace's: a stopped explain phase goes on from its
   `run.md` with `/do-whole-phase <P>` (and asking `/knowledge:explain` again on
   the same subject offers exactly that). There is no project copy: the draft is

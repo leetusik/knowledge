@@ -1,0 +1,35 @@
+{
+  "id": "P38-e1.S4",
+  "phase_id": "P38-e1",
+  "name": "Verify only the claims the outline uses",
+  "kind": "implementation",
+  "status": "done",
+  "order": 40,
+  "depends_on": [
+    "P38-e1.S3"
+  ],
+  "depends_declared": true,
+  "created_at": "2026-10-31T00:12:48+09:00",
+  "started_at": "2026-10-31T00:35:34+09:00",
+  "completed_at": "2026-10-31T00:54:44+09:00",
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "Only used claims are verified: D3v sends no batch, a new D5p pick marks used/main within the cap, D5 verifies them, D5s swaps a failure once; resume holds at every stage",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

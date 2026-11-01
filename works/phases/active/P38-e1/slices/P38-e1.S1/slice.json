@@ -1,0 +1,33 @@
+{
+  "id": "P38-e1.S1",
+  "phase_id": "P38-e1",
+  "name": "The KB key never printed: header file and CLI for every KB call",
+  "kind": "implementation",
+  "status": "done",
+  "order": 10,
+  "depends_on": [],
+  "depends_declared": true,
+  "created_at": "2026-10-31T00:12:41+09:00",
+  "started_at": "2026-10-31T00:21:22+09:00",
+  "completed_at": "2026-10-31T00:26:22+09:00",
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "The resolver prints KB_API_TOKEN_SET/KB_AUTH_HEADER, never the key; KB calls use a 0600 auth.header or the knowledge CLI; a tiny resolver test",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

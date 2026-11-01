@@ -1,0 +1,11 @@
+{
+  "id": "D87-2g",
+  "title": "Setup's verify step puts the pasted KB key on the command line",
+  "status": "deferred",
+  "source": "P38-e1.REVIEW",
+  "reason": "plugin/skills/setup/SKILL.md §C5 runs curl -H 'Authorization: Bearer <vk_>' with the key the user just pasted, so it lands in the transcript; outside P38-e1's item 6, which covered the explain skill",
+  "trigger": "the next edit of the setup skill, or the operator's word",
+  "created_at": "2026-10-31T02:23:59+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

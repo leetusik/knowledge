@@ -249,13 +249,13 @@
       "id": "P38-e1",
       "name": "Right-size explain runs (plugin 0.9.0)",
       "objective": "Cut a knowledge:explain run's cost to what the document needs: a delta mode that reuses a recent prior's verified evidence; a research team sized by the document's word budget (top tier for books only); verify only the claims the outline uses; the critic on another model, sampling sources instead of re-opening all; the writer held to its section budgets; a KB resolver that never prints the API key; a metered cost line with a cheaper option in the confirmation. Ships as plugin 0.9.0.",
-      "status": "planned",
+      "status": "done",
       "order": 20,
       "path": "works/phases/active/P38-e1",
-      "review_status": "pending",
-      "current_slice": "P38-e1.DECOMP",
-      "slice_count": 2,
-      "done_slice_count": 0,
+      "review_status": "pass",
+      "current_slice": null,
+      "slice_count": 12,
+      "done_slice_count": 12,
       "execution": {
         "mode": "parallel",
         "branch": "phase/P38-e1-right-size_explain_runs_plugin_0.9.0",
@@ -278,8 +278,8 @@
       "done_slice_count": 0
     }
   ],
-  "deferred_open_count": 67,
+  "deferred_open_count": 71,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-10-30T23:53:36+09:00"
+  "last_rebuilt_at": "2026-11-01T23:37:21+09:00"
 }
