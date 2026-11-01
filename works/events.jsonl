@@ -1634,3 +1634,4 @@
 {"ts": "2026-11-01T23:37:21+09:00", "type": "phase_reviewed", "phase": "P38-e1", "verdict": "pass", "reviewer": "slice-executor"}
 {"ts": "2026-11-01T23:37:22+09:00", "type": "phase_consolidation_owed", "phase": "P38-e1", "notes": 21}
 {"ts": "2026-11-01T23:38:03+09:00", "type": "doc_version_created", "doc": "qa", "version": "v2611011438_p38-e1_gate_section_explain_front-door_lines_expect_the_plain_summary_sections_and_cost_line_add_v2_full_v1_and_kb-key_lines", "source": "P38-e1.REVIEW"}
+{"ts": "2026-11-01T23:38:27+09:00", "type": "phase_parallel_torndown", "phase": "P38-e1", "branch": "phase/P38-e1-right-size_explain_runs_plugin_0.9.0"}
