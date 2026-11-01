@@ -1,11 +1,11 @@
 ---
 doc_id: qa
-version: v2610280645
-created_at: 2026-10-28T15:45:23+09:00
-commit: 2fedc85d176afd0c5cad432087efca2e37666d70
-source: P34-n0.REVIEW
-summary: P34-n0.REVIEW gate: Regression Checklist adds the private-publish gate, the tenant #1 visibility-toggle mirror and the public-repo footprint lines
-previous: v2610271204_p33-n3.review_gate_regression_checklist_replaces_three_p32_single-document-engine_explain_lines_with_front-door_lines_and_adds_the_book_confirmation_and_citation-check_lines
+version: v2611011438
+created_at: 2026-11-01T23:38:03+09:00
+commit: 6d7f2d7a4c8c8bea57a1d969e733e17d1c6efe6b
+source: P38-e1.REVIEW
+summary: P38-e1 gate section: explain front-door lines expect the plain summary, sections and cost line; add v2, full v1 and KB-key lines
+previous: v2610280645_p34-n0.review_gate_regression_checklist_adds_the_private-publish_gate_the_tenant_1_visibility-toggle_mirror_and_the_public-repo_footprint_lines
 ---
 
 # QA
@@ -330,10 +330,12 @@ apply there; use *In-app graph label focus (P22)* instead._
 - [ ] Explain front door, headless (replaces P32's `quick` single-document
       line): `/knowledge:explain <a subject> quick` under `claude -p
       --plugin-dir plugin` in this v86+ workspace prints one confirmation
-      (the unit line, `run: quick`, the seventeen-line `## Explain` block in
+      (`In plain words:`, a `Sections` list, a `Cost:` line from the skill's
+      cost table, `run: quick`, the seventeen-line `## Explain` block in
       create-phase's order, a `Why:` line) and stops; `git status`,
       `works/phases/active/` and `git worktree list` are unchanged: no phase,
-      commit or worktree (P33-n3)
+      commit or worktree; it writes nothing but the resolver's 0600
+      `auth.header` (P33-n3; updated P38-e1)
 - [ ] Explain front door, a repeat (replaces P32's 15-minute repeat line):
       `/knowledge:explain <the subject of a live explain phase>` (an
       `^## Explain$` heading in its `intent.md`, `phase.json` not `done`) names
@@ -356,10 +358,26 @@ apply there; use *In-app graph label focus (P22)* instead._
       `web/src/content/marketing/content.ts` (`lede`, `pane.meta`) equals
       `wc -l web/public/SKILL.md` (P32)
 - [ ] Explain front door, a book: `/knowledge:explain <a phase id>, as a book`
-      under `claude -p` proposes `unit: book`, the phase's own book `p<N>`
-      titled "P<N>: <phase name>" (kind codebase), `run: full` and `outline
-      sign-off: on`, adds the outline and acceptance gates to its stops line,
-      and creates nothing (P33-n3)
+      under `claude -p` proposes `unit: book`, the phase's book `p<N>` titled
+      for what it explains (at most a trailing "(P<N>)", kind codebase), its
+      chapters as the `Sections`, `run: full` with no `quick` offer, a `Cost:`
+      line with no dollar figure and "stops twice for your yes", and creates
+      nothing (P33-n3; updated P38-e1)
+- [ ] Explain front door, a v2: `/knowledge:explain <a published document's
+      subject>` under `claude -p` shows "earlier version: v<N>" and sections
+      marked kept, renamed, new or dropped; with v<N>'s research found, the
+      run line reads "as a delta of v<N>" and the `Cost:` line offers "from
+      scratch", else it says "no research saved from v<N> to reuse" at the v1
+      price; it creates nothing (P38-e1)
+- [ ] Explain front door, a full v1: `/knowledge:explain <a codebase subject>`
+      under `claude -p` prices "4 research agents (2 read the code, 2 search
+      the web) … ≈ $35–45 at list price" from the skill's cost table, offers
+      "quick" and "no-research" in plain words on the run line, and ends its
+      list with the `- web searches:` line (P38-e1)
+- [ ] Explain KB key: `uv run pytest tests/test_explain_resolver.py -q`
+      passes, and a headless front-door run's log holds no key: the resolver
+      prints `KB_API_TOKEN_SET` and `KB_AUTH_HEADER`, and every KB call passes
+      `-H @<KB_AUTH_HEADER>` or goes through the `knowledge` CLI (P38-e1)
 - [ ] Explain skill interface: P33-n3's citation check
       (`topics/citations.md`, run from the repo root) exits 0 with
       `missing=0`: every `§N *Heading*` the installed workspace cites, and

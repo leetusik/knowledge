@@ -5,11 +5,10 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P37-1p`
+- Current slice: `P37-1p.DECOMP`
+- Next slice: `P37-1p.REVIEW`
 - Waiting on operator: `none`
-- Stream: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `71`
 - Workspace version: `v89`
 
@@ -17,9 +16,9 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `P38-e1` | ready to merge | `none` | 12/12 | `.` | working tree |
-| `default` | `P37-1p` | planned | `P37-1p.DECOMP` | 0/2 | - | branch main |
-| `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
+| `default` | `P37-1p` | planned | `P37-1p.DECOMP` | 0/2 | - | working tree |
+| `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
+| `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `P38-e1` | merged — awaiting consolidation | `none` | 12/12 | `.claude/worktrees/P38-e1-right-size_explain_runs_plugin_0.9.0` | worktree |
 
 ## Active Phases
 
@@ -290,7 +289,7 @@
 
 ## Phase P36-1s: Hermes: a chat agent beside the reader
 
-_Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader`, where this phase advances._
+_Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader`, where this phase advances._
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
@@ -302,14 +301,14 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 
 ## Phase P37-1p: Drop the knowledge graph
 
-_Read live from branch `main`, where this phase advances._
-
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [ ] `P37-1p.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P37-1p/slices/P37-1p.DECOMP` |
 | [ ] `P37-1p.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P37-1p/slices/P37-1p.REVIEW` |
 
 ## Phase P38-e1: Right-size explain runs (plugin 0.9.0)
+
+_Read live from its worktree `.claude/worktrees/P38-e1-right-size_explain_runs_plugin_0.9.0`, where this phase advances._
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
