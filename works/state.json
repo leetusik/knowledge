@@ -1,9 +1,9 @@
 {
-  "current_phase": "P38-e1",
+  "current_phase": null,
   "current_slice": null,
   "next_slice": null,
-  "waiting_on_operator": "P38-e1",
-  "mode": "waiting",
+  "waiting_on_operator": null,
+  "mode": "idle",
   "stream": "phase/P38-e1-right-size_explain_runs_plugin_0.9.0",
-  "updated_at": "2026-10-31T02:24:21+09:00"
+  "updated_at": "2026-11-01T23:37:21+09:00"
 }
