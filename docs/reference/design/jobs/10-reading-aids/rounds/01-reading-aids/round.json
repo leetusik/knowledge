@@ -1,0 +1,18 @@
+{
+  "schema": 2,
+  "round": "01-reading-aids",
+  "title": "Reading aids: terms, glossary, formulas",
+  "slice": "P39-hk.D1",
+  "status": "open",
+  "opened_at": "2026-11-02T16:13:34+09:00",
+  "closed_at": null,
+  "supersedes": [],
+  "signoff_words": null,
+  "canvas_version": null,
+  "critique": "critic",
+  "pages": [
+    "terms",
+    "formulas",
+    "print"
+  ]
+}

@@ -1699,3 +1699,5 @@
 {"ts": "2026-11-02T16:13:09+09:00", "type": "executor_dispatched", "slice": "P39-hk.DECOMP", "phase": "P39-hk", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-02T16:13:09+09:00", "type": "slice_status_changed", "slice": "P39-hk.DECOMP", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-11-02T16:13:10+09:00", "type": "acceptance_required", "phase": "P39-hk"}
+{"ts": "2026-11-02T16:13:33+09:00", "type": "slice_status_changed", "slice": "P39-hk.D1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-02T18:37:31+09:00", "type": "slice_status_changed", "slice": "P39-hk.D1", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}

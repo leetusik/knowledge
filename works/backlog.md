@@ -8,7 +8,7 @@
 - Current phase: `P39-hk`
 - Current slice: `P39-hk.D1`
 - Next slice: `P39-hk.R1`
-- Waiting on operator: `none`
+- Waiting on operator: `P39-hk.D1`
 - Stream: `phase/P39-hk-explain_what_was_built` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `73`
 - Workspace version: `v89`
@@ -334,7 +334,7 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P39-hk.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P39-hk/slices/P39-hk.DECOMP` |
-| [ ] `P39-hk.D1` | `todo` | Design the reading aids: term window, glossary section, formulas | `co-work` | `works/phases/active/P39-hk/slices/P39-hk.D1` |
+| [~] `P39-hk.D1` | `pending` | Design the reading aids: term window, glossary section, formulas | `co-work` | `works/phases/active/P39-hk/slices/P39-hk.D1` |
 | [ ] `P39-hk.R1` | `todo` | Settle the glossary and formula grammar, the math engine and the term window wiring | `research` | `works/phases/active/P39-hk/slices/P39-hk.R1` |
 | [ ] `P39-hk.S1` | `todo` | Explain front door: suggested reader and shape, codebase-only, research-phase offer | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S1` |
 | [ ] `P39-hk.S2` | `todo` | Explain writes from the phases' records and the code: the evidence model | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S2` |

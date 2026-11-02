@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Terms: a chapter's marked terms, their window and its glossary</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+[data-proto="state-bar"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0;padding:8px 16px;background:#eceef1;border-bottom:1px dashed #6b717a;color:#2f3338;font:12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+[data-proto="state-bar"] [role="group"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+[data-proto="state-bar"] button{display:inline-flex;align-items:center;box-sizing:border-box;height:24px;margin:0;padding:0 10px;border:1px solid #6b717a;border-radius:4px;background:#f7f8fa;color:#2f3338;font:inherit;line-height:1;cursor:pointer}
+[data-proto="state-bar"] button[aria-pressed="true"]{background:#ffffff;border-color:#2f3338;font-weight:600}
+[data-proto="state-bar"] button:focus-visible{outline:2px solid #2f3338;outline-offset:2px}
+[data-proto="state-bar"] .tm-sb-name{font-weight:600}
+
+/* ---- The signed neighbours, shown as they are (never changed by this job): copied value for value ----
+   The quiz at rest (04-quiz, quiz.css), the sources list (02-figures, figures.css) and the highlight's popover
+   (05-annotations, annot.css). Only the rules these copies use; every value is the signed one. */
+.qz { --qz-nfs: calc(var(--rd-fs) * 1.18); --qz-hang: calc(var(--qz-nfs) * 1.75); margin: calc(var(--kb-space-xl) * var(--rd-k)) 0 0; border-top: 1px solid var(--kb-border-strong); }
+.qz__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--kb-space-xs) var(--kb-space-md); padding-top: calc(var(--kb-space-sm) * var(--rd-k)); }
+.qz__label { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; line-height: 1.4; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.qz__count { margin: 0; font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.qz__count.is-off { visibility: hidden; }
+.qz__title { margin: calc(var(--kb-space-xs) * var(--rd-k)) 0 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.18em; line-height: 1.25; letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word; }
+.qz__title:lang(ko) { word-break: keep-all; }
+.qz__items { list-style: none; margin: calc(var(--kb-space-sm) * var(--rd-k)) 0 0; padding: 0; border-bottom: 1px solid var(--kb-border-strong); }
+.qz__li { margin: 0; padding: 0; }
+.qz-vh { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; border: 0; white-space: nowrap; clip-path: inset(50%); pointer-events: none; }
+.qz-item { display: grid; grid-template-columns: var(--qz-hang) minmax(0, 1fr); column-gap: var(--kb-space-sm); align-items: baseline; padding: calc(var(--kb-space-lg) * var(--rd-k)) 0; }
+.qz-n { position: relative; display: grid; place-items: center; width: 1.75em; height: 1.75em; border-radius: 50%; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--qz-nfs); line-height: 1; color: var(--kb-secondary); font-variant-numeric: lining-nums tabular-nums; }
+.qz-body { min-width: 0; }
+.qz-q { margin: 0; text-wrap: pretty; overflow-wrap: break-word; }
+.qz-q:lang(ko) { word-break: keep-all; }
+.qz-hint { margin: calc(var(--kb-space-xs) * var(--rd-k)) 0 0; font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); }
+.qz-opts { list-style: none; margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--kb-space-md); }
+.qz-opt { position: relative; margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--kb-space-sm); align-items: start; align-content: center; min-height: var(--kb-tap); padding: 0.5rem 0.85rem 0.5rem 0.55rem; border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-sm); background: var(--kb-surface); }
+.qz-opt__text { min-width: 0; font-size: var(--rd-fs); line-height: 1.5; overflow-wrap: break-word; }
+.qz-key { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; margin-top: calc((var(--rd-fs) * 1.5 - 1.75rem) / 2); border: 1.5px solid var(--kb-secondary); border-radius: 50%; background: var(--kb-surface); font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 700; line-height: 1; color: var(--kb-secondary); }
+.fg-src { list-style: none; margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; padding: 0; display: flex; flex-direction: column; gap: calc(var(--kb-space-xs) * var(--rd-k)); font-family: var(--font-body); font-size: var(--rd-fs-s); line-height: 1.45; color: var(--kb-ink); }
+.fg-src__item { display: grid; grid-template-columns: 2.4em minmax(0, 1fr); gap: 0 var(--kb-space-xs); margin-inline: calc(var(--kb-space-sm) * -1); padding: var(--kb-space-sm); border-radius: var(--kb-radius-sm); }
+.fg-src__n { font-weight: var(--kb-weight-semibold); font-variant-numeric: tabular-nums; color: var(--kb-secondary); }
+.fg-src__body { display: flex; flex-direction: column; min-width: 0; }
+.fg-src__title { margin: 0; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; }
+.fg-src__meta { margin: 0; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.fg-src :lang(ko), .fg-src:lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.an-box { display: flex; flex-direction: column; gap: var(--kb-space-sm); padding: var(--kb-space-sm) var(--kb-space-md) var(--kb-space-md); border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius); background: var(--kb-surface); color: var(--kb-ink); box-shadow: var(--kb-shadow-raise); font-family: var(--font-body); }
+.an-box__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--kb-space-sm); }
+.an-box__k { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.an-box__where { margin: 0; font-size: 0.8125rem; color: var(--kb-secondary); overflow-wrap: anywhere; }
+.an-box__where:lang(ko) { word-break: keep-all; }
+.an-box__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--kb-space-xs) var(--kb-space-sm); }
+.an-box__actions--split { justify-content: space-between; }
+.an-box__rule { margin: 0; border: 0; height: 1px; background: var(--kb-border); }
+.an-box .rd-btn--secondary { background: var(--kb-surface); border-color: var(--kb-border-strong); color: var(--kb-ink); }
+.an-box .rd-btn--secondary:hover { border-color: var(--kb-accent); color: var(--kb-accent-strong); }
+.an-box__x { flex: none; margin: calc(var(--kb-space-xs) * -1) calc(var(--kb-space-sm) * -1) 0 0; }
+.an-pop { box-sizing: border-box; max-height: min(32rem, 70vh); overflow-y: auto; }
+.an-pop > * { flex-shrink: 0; }
+.an-pop:focus { outline: none; }
+.an-pop:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.an-del { color: var(--kb-status-revoked-ink); }
+.an-del:hover { color: var(--kb-status-revoked-ink); background: var(--kb-status-revoked-soft); }
+.an-btn-w { display: inline-grid; }
+.an-btn-w > * { grid-area: 1 / 1; }
+.an-btn-w > [aria-hidden="true"] { visibility: hidden; }
+.an-rev { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.15rem var(--kb-space-sm); width: 100%; min-height: var(--kb-tap); padding: 0.35rem 0; border: 0; background: transparent; color: var(--kb-ink); cursor: pointer; text-align: left; font-family: var(--font-body); }
+.an-rev__track { grid-row: 1 / span 2; position: relative; width: 2.25rem; height: 1.25rem; border-radius: var(--kb-radius-pill); border: 1.5px solid var(--kb-secondary); background: var(--kb-surface); transition: background var(--rd-ease), border-color var(--rd-ease); }
+.an-rev__thumb { position: absolute; top: 2px; left: 2px; width: calc(1.25rem - 7px); height: calc(1.25rem - 7px); border-radius: 50%; background: var(--kb-secondary); transition: transform var(--rd-ease), background var(--rd-ease); }
+.an-rev[aria-checked="true"] .an-rev__track { background: var(--kb-accent); border-color: var(--kb-accent); }
+.an-rev[aria-checked="true"] .an-rev__thumb { transform: translateX(1rem); background: var(--rd-on-accent); }
+.an-rev__label { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); }
+.an-rev__label b { font-weight: var(--kb-weight-semibold); color: var(--kb-accent-strong); }
+.an-rev__sub { font-size: 0.8125rem; color: var(--kb-secondary); line-height: 1.35; }
+.an-rev:hover .an-rev__track { border-color: var(--kb-accent); }
+/* The popover floats as 05-annotations floats it (.an-float: 24rem, centred on the highlight, 8 px under it) */
+.tm-note { position: absolute; z-index: 15; width: min(24rem, calc(100% - 2 * var(--rd-gut))); }
+.tm-note[data-placed="0"] { visibility: hidden; }
+
+/* A hyphenated term or name never breaks at its hyphen (t-통계량, CONDITIONAL-GO); a share stays one value */
+.tm-nobr { white-space: nowrap; }
+/* F32 (join): Read more and Show less start on the swap box's start edge */
+.tm-root .ra-swap > * { text-align: start; }
+
+/* The page's stage: the reader fills the board (desk), or sits in a screen-sized scroll box (the edge, the phones) */
+.tm-root { min-height: 100vh; background: var(--kb-paper); }
+/* A boxed view hangs from the state bar, so the reader's top bar keeps its place in every state */
+.tm-stage--box { display: flex; justify-content: center; padding: 0 var(--kb-space-lg) var(--kb-space-xl); }
+.tm-stage--screen { padding-inline: 0; }
+.tm-box { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--kb-border-strong); border-top: 0; }
+.tm-box--screen { width: 100%; height: 900px; --tm-vh: 900px; border-inline: 0; }
+.tm-box--p390 { width: min(390px, 100%); height: 844px; --tm-vh: 844px; }
+.tm-box--p320 { width: min(320px, 100%); height: 568px; --tm-vh: 568px; }
+.tm-box .tm-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+/* In a screen-sized box the top bar stays on top, as in the product */
+.tm-box .tm-top { position: sticky; top: 0; z-index: 10; }
+/* Under the section's h2 (whose rule already opens it) the list needs no second opening hairline */
+.tm-article .ra-gl { border-top: 0; }
+/* The dividers run on the column, as the h2's rule does; only the arrived entry's ground bleeds into the gutter (F6) */
+.tm-article .ra-gl .ra-gl__item { position: relative; border-bottom: 0; }
+.tm-article .ra-gl .ra-gl__item::after { content: ""; position: absolute; left: var(--kb-space-md); right: var(--kb-space-md); bottom: 0; height: 1px; background: var(--kb-border); }
+.tm-article { position: relative; }
+.tm-article .ra-float { width: min(var(--ra-win-w), 100% - 2 * var(--rd-gut)); }
+/* The phone sheet sits on the bottom edge of the visible area: the box's (a phone view) or the window's */
+.tm-sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; }
+.tm-sheet--fixed { position: fixed; }
+.tm-box .ra-sheet { max-height: calc(var(--tm-vh) * 0.6); }
+.tm-box .ra-sheet--long { max-height: calc(var(--tm-vh) * 0.85); }
+</style>
+</helmet>
+<div class="tm-root" data-theme="{{ theme }}" id="top" ref="{{ setRoot }}" onmousedown="{{ down }}" onkeydown="{{ rootKey }}">
+
+<div data-proto="state-bar">
+<span>Prototype only · jump to a state:</span>
+<div role="group" aria-labelledby="tm-sb-name">
+<span class="tm-sb-name" id="tm-sb-name">Terms</span>
+<sc-for list="{{ presets }}" as="p" hint-placeholder-count="15"><button type="button" aria-pressed="{{ p.pressed }}" onclick="{{ p.go }}">{{ p.label }}</button></sc-for>
+</div>
+</div>
+
+<div class="{{ stageCls }}">
+<div class="{{ frameCls }}" data-theme="{{ theme }}" ref="{{ setFrame }}"><div class="rd-in">
+<div class="tm-scroll" ref="{{ setScroll }}" style="{{ scrollStyle }}">
+<div class="tm-top"><dc-import name="Shell" bare="{{ true }}" lang="{{ lang }}" on-lang="{{ setLang }}" hint-size="100%,59px"></dc-import></div>
+<main class="tm-article" ref="{{ setArticle }}">
+
+<sc-if value="{{ isEn }}" hint-placeholder-val="{{ true }}">
+<div class="rd-flow rd-prose" lang="en">
+<h2 class="rd-h rd-h2" id="tm-sec-1">Scoring a run</h2>
+<p class="rd-p">The rule asks whether the average gain stands clear of its noise, and it answers with a <a class="ra-term tm-nobr" id="tm-tstat-1" href="#gl-tstat" aria-haspopup="dialog" aria-expanded="{{ tm.tstat.exp }}" aria-controls="tw-tstat" onclick="{{ tm.tstat.click }}" onkeydown="{{ tm.tstat.key }}" onmouseenter="{{ tm.tstat.enter }}" onmouseleave="{{ tm.tstat.leave }}">t-statistic</a>.</p>
+<p class="rd-p">The scorer takes each event’s P&amp;L in % of <a class="ra-term" id="tm-k-1" href="#gl-k" aria-haspopup="dialog" aria-expanded="{{ tm.k.exp }}" aria-controls="tw-k" onclick="{{ tm.k.click }}" onkeydown="{{ tm.k.key }}" onmouseenter="{{ tm.k.enter }}" onmouseleave="{{ tm.k.leave }}">K</a> and computes <math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math> and <math class="ra-m" alttext="t equals s times the square root of n"><mi>t</mi><mo>=</mo><mi>s</mi><mo>×</mo><msqrt><mi>n</mi></msqrt></math>. Thirty events averaging <span class="tm-nobr">+0.10 % of K</span> with an sd of <span class="tm-nobr">0.25 %</span> give <math class="ra-m" alttext="t approximately 2.19"><mi>t</mi><mo>≈</mo><mn>2.19</mn></math>, just over B6’s 2.0; fifteen such events give 1.55, enough for <span class="tm-nobr">CONDITIONAL-GO’s</span> 1.5 but not for B6.</p>
+<p class="rd-p">Every figure in this chapter comes from a <a class="ra-term" id="tm-walkforward-1" href="#gl-walkforward" aria-haspopup="dialog" aria-expanded="{{ tm.walkforward.exp }}" aria-controls="tw-walkforward" onclick="{{ tm.walkforward.click }}" onkeydown="{{ tm.walkforward.key }}" onmouseenter="{{ tm.walkforward.enter }}" onmouseleave="{{ tm.walkforward.leave }}">walk-forward backtest</a>, so each result is <a class="ra-term" id="tm-oos-1" href="#gl-oos" aria-haspopup="dialog" aria-expanded="{{ tm.oos.exp }}" aria-controls="tw-oos" onclick="{{ tm.oos.click }}" onkeydown="{{ tm.oos.key }}" onmouseenter="{{ tm.oos.enter }}" onmouseleave="{{ tm.oos.leave }}">out-of-sample</a> for the tuning before it and free of <a class="ra-term" id="tm-lookahead-1" href="#gl-lookahead" aria-haspopup="dialog" aria-expanded="{{ tm.lookahead.exp }}" aria-controls="tw-lookahead" onclick="{{ tm.lookahead.click }}" onkeydown="{{ tm.lookahead.key }}" onmouseenter="{{ tm.lookahead.enter }}" onmouseleave="{{ tm.lookahead.leave }}">look-ahead bias</a>. Why one good figure is not enough is the subject of <a class="rd-a" href="#tm-sec-2">Many trials, one bar</a>. The rule also caps the worst <a class="ra-term" id="tm-drawdown-1" href="#gl-drawdown" aria-haspopup="dialog" aria-expanded="{{ tm.drawdown.exp }}" aria-controls="tw-drawdown" onclick="{{ tm.drawdown.click }}" onkeydown="{{ tm.drawdown.key }}" onmouseenter="{{ tm.drawdown.enter }}" onmouseleave="{{ tm.drawdown.leave }}">drawdown</a> and takes a <a class="ra-term" id="tm-haircut-1" href="#gl-haircut" aria-haspopup="dialog" aria-expanded="{{ tm.haircut.exp }}" aria-controls="tw-haircut" onclick="{{ tm.haircut.click }}" onkeydown="{{ tm.haircut.key }}" onmouseenter="{{ tm.haircut.enter }}" onmouseleave="{{ tm.haircut.leave }}">haircut</a> off every result.</p>
+<h2 class="rd-h rd-h2" id="tm-sec-2">Counting the trials</h2>
+<p class="rd-p">Picking the best of many backtests flatters it. The <a class="ra-term" id="tm-dsr-1" href="#gl-dsr" aria-haspopup="dialog" aria-expanded="{{ tm.dsr.exp }}" aria-controls="tw-dsr" onclick="{{ tm.dsr.click }}" onkeydown="{{ tm.dsr.key }}" onmouseenter="{{ tm.dsr.enter }}" onmouseleave="{{ tm.dsr.leave }}">deflated Sharpe ratio (DSR)</a> answers this. It is a probability, that the true <a class="ra-term" id="tm-sharpe-1" href="#gl-sharpe" aria-haspopup="dialog" aria-expanded="{{ tm.sharpe.exp }}" aria-controls="tw-sharpe" onclick="{{ tm.sharpe.click }}" onkeydown="{{ tm.sharpe.key }}" onmouseenter="{{ tm.sharpe.enter }}" onmouseleave="{{ tm.sharpe.leave }}">Sharpe ratio</a> beats a bar, with the bar raised for the number of trials.</p>
+<p class="rd-p">The scorer takes the <a class="ra-term" id="tm-participation-1" href="#gl-participation" aria-haspopup="dialog" aria-expanded="{{ tm.participation.exp }}" aria-controls="tw-participation" onclick="{{ tm.participation.click }}" onkeydown="{{ tm.participation.key }}" onmouseenter="{{ tm.participation.enter }}" onmouseleave="{{ tm.participation.leave }}">participation ratio</a> of the trials’ correlation matrix, <math class="ra-m" alttext="the square of the sum of e, divided by the sum of e squared"><mrow><mo stretchy="false">(</mo><mo lspace="0">∑</mo><mi>e</mi><msup><mo stretchy="false">)</mo><mn>2</mn></msup></mrow><mo>÷</mo><mo>∑</mo><msup><mi>e</mi><mn>2</mn></msup></math> over its <a class="ra-term" id="tm-eigenvalue-1" href="#gl-eigenvalue" aria-haspopup="dialog" aria-expanded="{{ tm.eigenvalue.exp }}" aria-controls="tw-eigenvalue" onclick="{{ tm.eigenvalue.click }}" onkeydown="{{ tm.eigenvalue.key }}" onmouseenter="{{ tm.eigenvalue.enter }}" onmouseleave="{{ tm.eigenvalue.leave }}">eigenvalues</a> <math class="ra-m" alttext="e"><mi>e</mi></math>: ten perfectly correlated trials count as 1, ten independent ones as 10.</p>
+<p class="rd-p"><mark class="an-m" onclick="{{ markClick }}">The <a class="ra-term" id="tm-psr-1" href="#gl-psr" aria-haspopup="dialog" aria-expanded="{{ tm.psr.exp }}" aria-controls="tw-psr" onclick="{{ tm.psr.click }}" onkeydown="{{ tm.psr.key }}" onmouseenter="{{ tm.psr.enter }}" onmouseleave="{{ tm.psr.leave }}">probabilistic Sharpe ratio (PSR)</a> turns a Sharpe ratio into a probability:</mark> that the true one exceeds a chosen threshold, allowing for non-Normal returns; it rises with a longer record and positive skew and falls with fatter tails.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{ isKo }}" hint-placeholder-val="{{ false }}">
+<div class="rd-flow rd-prose" lang="ko">
+<h2 class="rd-h rd-h2" id="tm-sec-1">실행 채점하기</h2>
+<p class="rd-p">규칙은 평균 수익이 잡음보다 뚜렷하게 큰지를 묻고, 그 답을 <a class="ra-term tm-nobr" id="tm-tstat-1" href="#gl-tstat" aria-haspopup="dialog" aria-expanded="{{ tm.tstat.exp }}" aria-controls="tw-tstat" onclick="{{ tm.tstat.click }}" onkeydown="{{ tm.tstat.key }}" onmouseenter="{{ tm.tstat.enter }}" onmouseleave="{{ tm.tstat.leave }}">t-통계량</a>으로 냅니다.</p>
+<p class="rd-p">스코어러는 각 이벤트의 손익을 <a class="ra-term" id="tm-k-1" href="#gl-k" aria-haspopup="dialog" aria-expanded="{{ tm.k.exp }}" aria-controls="tw-k" onclick="{{ tm.k.click }}" onkeydown="{{ tm.k.key }}" onmouseenter="{{ tm.k.enter }}" onmouseleave="{{ tm.k.leave }}">K</a> 대비 %로 받아 <math class="ra-m" alttext="s는 평균 나누기 sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math>와 <math class="ra-m" alttext="t는 s 곱하기 n의 제곱근"><mi>t</mi><mo>=</mo><mi>s</mi><mo>×</mo><msqrt><mi>n</mi></msqrt></math>을 계산합니다. 평균 <span class="tm-nobr">K 대비 +0.10 %</span>, sd <span class="tm-nobr">0.25 %</span>인 이벤트 서른 개면 <math class="ra-m" alttext="t는 약 2.19"><mi>t</mi><mo>≈</mo><mn>2.19</mn></math>로 B6의 2.0을 조금 넘고, 그런 이벤트 열다섯 개는 1.55로 <span class="tm-nobr">CONDITIONAL-GO</span>의 1.5에는 충분하지만 B6에는 못 미칩니다.</p>
+<p class="rd-p">이 장의 모든 수치는 <a class="ra-term" id="tm-walkforward-1" href="#gl-walkforward" aria-haspopup="dialog" aria-expanded="{{ tm.walkforward.exp }}" aria-controls="tw-walkforward" onclick="{{ tm.walkforward.click }}" onkeydown="{{ tm.walkforward.key }}" onmouseenter="{{ tm.walkforward.enter }}" onmouseleave="{{ tm.walkforward.leave }}">워크포워드 백테스트</a>에서 나옵니다. 그래서 각 결과는 그 앞의 조정에 대해 <a class="ra-term" id="tm-oos-1" href="#gl-oos" aria-haspopup="dialog" aria-expanded="{{ tm.oos.exp }}" aria-controls="tw-oos" onclick="{{ tm.oos.click }}" onkeydown="{{ tm.oos.key }}" onmouseenter="{{ tm.oos.enter }}" onmouseleave="{{ tm.oos.leave }}">표본 외</a>이고, <a class="ra-term" id="tm-lookahead-1" href="#gl-lookahead" aria-haspopup="dialog" aria-expanded="{{ tm.lookahead.exp }}" aria-controls="tw-lookahead" onclick="{{ tm.lookahead.click }}" onkeydown="{{ tm.lookahead.key }}" onmouseenter="{{ tm.lookahead.enter }}" onmouseleave="{{ tm.lookahead.leave }}">미래 참조 편향</a>이 없습니다. 좋은 수치 하나로 부족한 이유는 <a class="rd-a" href="#tm-sec-2">시도가 많으면 기준도 높게</a>에서 다룹니다. 규칙은 최악의 <a class="ra-term" id="tm-drawdown-1" href="#gl-drawdown" aria-haspopup="dialog" aria-expanded="{{ tm.drawdown.exp }}" aria-controls="tw-drawdown" onclick="{{ tm.drawdown.click }}" onkeydown="{{ tm.drawdown.key }}" onmouseenter="{{ tm.drawdown.enter }}" onmouseleave="{{ tm.drawdown.leave }}">낙폭</a>에도 한도를 두고, 모든 결과에서 <a class="ra-term" id="tm-haircut-1" href="#gl-haircut" aria-haspopup="dialog" aria-expanded="{{ tm.haircut.exp }}" aria-controls="tw-haircut" onclick="{{ tm.haircut.click }}" onkeydown="{{ tm.haircut.key }}" onmouseenter="{{ tm.haircut.enter }}" onmouseleave="{{ tm.haircut.leave }}">헤어컷</a>만큼 깎습니다.</p>
+<h2 class="rd-h rd-h2" id="tm-sec-2">시도 횟수 세기</h2>
+<p class="rd-p">여러 백테스트 중 가장 좋은 것을 고르면 결과가 부풀려집니다. <a class="ra-term" id="tm-dsr-1" href="#gl-dsr" aria-haspopup="dialog" aria-expanded="{{ tm.dsr.exp }}" aria-controls="tw-dsr" onclick="{{ tm.dsr.click }}" onkeydown="{{ tm.dsr.key }}" onmouseenter="{{ tm.dsr.enter }}" onmouseleave="{{ tm.dsr.leave }}">디플레이티드 샤프 비율(DSR)</a>이 이 문제에 답합니다. 실제 <a class="ra-term" id="tm-sharpe-1" href="#gl-sharpe" aria-haspopup="dialog" aria-expanded="{{ tm.sharpe.exp }}" aria-controls="tw-sharpe" onclick="{{ tm.sharpe.click }}" onkeydown="{{ tm.sharpe.key }}" onmouseenter="{{ tm.sharpe.enter }}" onmouseleave="{{ tm.sharpe.leave }}">샤프 비율</a>이 기준선을 넘을 확률이며, 기준선은 시도 횟수만큼 높아집니다.</p>
+<p class="rd-p">스코어러는 시도들의 상관행렬에서 <a class="ra-term" id="tm-participation-1" href="#gl-participation" aria-haspopup="dialog" aria-expanded="{{ tm.participation.exp }}" aria-controls="tw-participation" onclick="{{ tm.participation.click }}" onkeydown="{{ tm.participation.key }}" onmouseenter="{{ tm.participation.enter }}" onmouseleave="{{ tm.participation.leave }}">참여 비율</a>을 구합니다. 그 <a class="ra-term" id="tm-eigenvalue-1" href="#gl-eigenvalue" aria-haspopup="dialog" aria-expanded="{{ tm.eigenvalue.exp }}" aria-controls="tw-eigenvalue" onclick="{{ tm.eigenvalue.click }}" onkeydown="{{ tm.eigenvalue.key }}" onmouseenter="{{ tm.eigenvalue.enter }}" onmouseleave="{{ tm.eigenvalue.leave }}">고유값</a> <math class="ra-m" alttext="e"><mi>e</mi></math>로 <math class="ra-m" alttext="e의 합의 제곱 나누기 e 제곱의 합"><mrow><mo stretchy="false">(</mo><mo lspace="0">∑</mo><mi>e</mi><msup><mo stretchy="false">)</mo><mn>2</mn></msup></mrow><mo>÷</mo><mo>∑</mo><msup><mi>e</mi><mn>2</mn></msup></math>를 계산하며, 완전히 같이 움직이는 시도 열 개는 1로, 서로 독립인 시도 열 개는 10으로 셉니다.</p>
+<p class="rd-p"><mark class="an-m" onclick="{{ markClick }}"><a class="ra-term" id="tm-psr-1" href="#gl-psr" aria-haspopup="dialog" aria-expanded="{{ tm.psr.exp }}" aria-controls="tw-psr" onclick="{{ tm.psr.click }}" onkeydown="{{ tm.psr.key }}" onmouseenter="{{ tm.psr.enter }}" onmouseleave="{{ tm.psr.leave }}">확률적 샤프 비율(PSR)</a>은 샤프 비율을 확률로 바꿉니다.</mark> 정규분포가 아닌 수익까지 감안해 실제 비율이 정한 기준을 넘을 확률을 내며, 기록이 길고 왜도가 양수일수록 오르고 꼬리가 두꺼울수록 내려갑니다.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{ hasWin }}" hint-placeholder-val="{{ false }}">
+<div class="ra-float" data-placed="{{ placed }}" style="{{ floatStyle }}" onmouseenter="{{ floatEnter }}" onmouseleave="{{ floatLeave }}" onkeydown="{{ floatKey }}">
+<dc-import name="Gloss" form="window" term-id="{{ openId }}" lang="{{ lang }}" long="{{ long }}" on-toggle="{{ toggleLong }}" on-close="{{ closeWin }}" on-glossary="{{ toGloss }}" bare="{{ true }}" hint-size="448px,240px"></dc-import>
+</div>
+</sc-if>
+
+<sc-if value="{{ note }}" hint-placeholder-val="{{ false }}">
+<div class="an-box an-pop tm-note" role="dialog" aria-label="Highlight" tabindex="-1" data-placed="{{ notePlaced }}" style="{{ noteStyle }}">
+<div class="an-box__head"><p class="an-box__k">Highlight</p><button type="button" class="rd-btn rd-btn--quiet an-box__x" onclick="{{ closeNote }}">Close</button></div>
+<p class="an-box__where" lang="{{ lang }}">{{ noteWhere }}</p>
+<div class="an-box__actions"><button type="button" class="rd-btn rd-btn--secondary"><span class="an-btn-w"><span>Add note</span><span aria-hidden="true">Edit note</span><span aria-hidden="true">Save note</span></span></button></div>
+<hr class="an-box__rule"><button type="button" class="an-rev" role="switch" aria-checked="{{ noteRev }}" onclick="{{ toggleRev }}"><span class="an-rev__track" aria-hidden="true"><span class="an-rev__thumb"></span></span><span class="an-rev__label">Review this · <b>{{ noteRevWord }}</b></span><span class="an-rev__sub">{{ noteRevSub }}</span></button>
+<hr class="an-box__rule"><div class="an-box__actions an-box__actions--split"><button type="button" class="rd-btn rd-btn--quiet an-del">Delete highlight</button></div>
+</div>
+</sc-if>
+
+<div class="rd-flow rd-prose">
+<section class="qz" id="check" aria-label="{{ quiz.aria }}">
+<div class="qz__head"><p class="qz__label" lang="en">Quiz · 1 question</p><p class="qz__count is-off" aria-hidden="true" lang="en">0 of 1 answered</p></div>
+<p class="qz__title" id="check--title" lang="{{ lang }}">{{ quiz.title }}</p>
+<ol class="qz__items"><li class="qz__li" id="check--bar"><div class="qz-item"><span class="qz-n" aria-hidden="true">1</span><div class="qz-body"><span class="qz-vh">Question 1 of 1</span><p class="qz-q" id="check--bar-q" lang="{{ lang }}">{{ quiz.q }}</p><p class="qz-hint" lang="en">Choose one answer.</p><div role="group" aria-labelledby="check--bar-q"><ul class="qz-opts" aria-label="Answers to question 1"><sc-for list="{{ quiz.opts }}" as="o" hint-placeholder-count="4"><li class="qz-opt"><span class="qz-key">{{ o.k }}</span><span class="qz-opt__text" lang="{{ lang }}">{{ o.t }}</span></li></sc-for></ul></div></div></div></li></ol>
+</section>
+<h2 class="rd-h rd-h2" id="glossary">Glossary</h2>
+<dc-import name="Gloss" form="list" lang="{{ lang }}" target="{{ target }}" back="{{ hasBack }}" back-href="{{ backHref }}" on-back="{{ goBack }}" bare="{{ true }}" hint-size="100%,3000px"></dc-import>
+<h2 class="rd-h rd-h2" id="sources-list" lang="en">Sources</h2>
+<ol class="fg-src" id="sources" aria-label="Sources"><li class="fg-src__item" id="src-1"><span class="fg-src__n">[1]</span><div class="fg-src__body" lang="{{ lang }}"><p class="fg-src__title">{{ src.title }}</p><p class="fg-src__meta">{{ src.meta }}</p></div></li></ol>
+</div>
+</main>
+</div>
+<sc-if value="{{ hasSheet }}" hint-placeholder-val="{{ false }}">
+<div class="{{ sheetWrapCls }}">
+<dc-import name="Gloss" form="sheet" term-id="{{ openId }}" lang="{{ lang }}" long="{{ long }}" on-toggle="{{ toggleLong }}" on-close="{{ closeWin }}" on-glossary="{{ toGloss }}" bare="{{ true }}" hint-size="100%,320px"></dc-import>
+</div>
+</sc-if>
+</div></div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"lang":{"editor":"enum","options":["en","ko"],"default":"en"},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"term":{"editor":null},"from":{"editor":null},"onBack":{"editor":null},"onState":{"editor":null},"$preview":{"width":1440,"height":5330}}'>
+// The page "terms" (frame.md F15): a chapter's marked terms, their window (F3) or phone sheet (F4), the longer
+// definition (F5) and the chapter's glossary (F6). Every term, definition and label comes from Gloss (F12).
+const TM_BASE = { view: 'desk', theme: 'light', lang: 'en', open: null, mode: null, long: false, note: false, target: null, from: null };
+const TM_PRESETS = [
+  ['Rest', {}],
+  ['Hover open', { open: 'dsr', mode: 'hover' }],
+  ['Focus open', { open: 'sharpe', mode: 'focus' }],
+  ['Longer open', { open: 'dsr', mode: 'focus', long: true }],
+  ['No longer definition', { open: 'eigenvalue', mode: 'focus' }],
+  ['Edge: right and bottom', { view: 'screen', open: 'participation', mode: 'focus' }],
+  ['Phone 390', { view: 'p390', open: 'dsr', mode: 'focus' }],
+  ['Phone 320', { view: 'p320', open: 'psr', mode: 'focus' }],
+  ['In a highlight', { open: 'psr', mode: 'focus' }],
+  ['Highlight’s note open', { note: true }],
+  ['Korean', { lang: 'ko', open: 'dsr', mode: 'focus' }],
+  ['Glossary: arrived', { target: 'dsr', from: 'dsr' }],
+  ['Dark', { theme: 'dark' }],
+  ['Dark: open', { theme: 'dark', open: 'dsr', mode: 'focus', long: true }],
+  ['Dark: glossary', { theme: 'dark', target: 'dsr', from: 'dsr' }],
+];
+const TM_IDS = ['tstat', 'k', 'walkforward', 'oos', 'lookahead', 'drawdown', 'haircut', 'dsr', 'sharpe', 'participation', 'eigenvalue', 'psr'];
+const TM_KEYS = Object.keys(TM_BASE);
+// The chapter's quiz and sources, the same fixture as the print page (Print.dc.html), shown in their signed web form
+const NB = ' ';
+const TM_QUIZ = {
+  en: { aria: 'Quiz: Check the bar', title: 'Check the bar',
+    q: 'Fifteen events average +0.10' + NB + '%' + NB + 'of' + NB + 'K with an sd of 0.25' + NB + '%. Which bar does their t clear?',
+    opts: [{ k: 'A', t: 'B6’s 2.0' }, { k: 'B', t: 'CONDITIONAL-GO’s 1.5' }, { k: 'C', t: 'Both' }, { k: 'D', t: 'Neither' }] },
+  ko: { aria: 'Quiz: 기준 확인', title: '기준 확인',
+    q: '이벤트 열다섯 개가 평균 K' + NB + '대비' + NB + '+0.10' + NB + '%, sd 0.25' + NB + '%입니다. 이 이벤트들의 t는 어느 기준을 넘습니까?',
+    opts: [{ k: 'A', t: 'B6의 2.0' }, { k: 'B', t: 'CONDITIONAL-GO의 1.5' }, { k: 'C', t: '둘 다' }, { k: 'D', t: '둘 다 아님' }] },
+};
+const TM_SRC = { en: { title: '[SOURCE TITLE]', meta: '[AUTHOR] · [YEAR]' }, ko: { title: '[출처 제목]', meta: '[저자] · [연도]' } };
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = Object.assign({}, TM_BASE, this.fromProps(p), { place: null, notePlace: null, pad: 0, narrowDesk: false });
+    this.seq = 0;
+    this.t = null;
+    this.jobs = { target: this.state.target };
+    this.refs = { root: null, frame: null, scroll: null, article: null };
+    this.repLang = this.state.lang; this.repTheme = this.state.theme;
+  }
+  // The flow (join, C02): report the chapter's language and theme, however they changed (the Shell's switch, a preset),
+  // so the next part opens in them
+  report() {
+    const s = this.state;
+    if (!this.props.onState || (s.lang === this.repLang && s.theme === this.repTheme)) return;
+    this.repLang = s.lang; this.repTheme = s.theme;
+    this.props.onState({ lang: s.lang, theme: s.theme });
+  }
+  componentDidMount() {
+    this.onResize = () => this.measure(true);
+    window.addEventListener('resize', this.onResize);
+    this.measure(false);
+    if (this.state.target) this.forceUpdate();
+  }
+  // The page contract (frame.md F15): lang, theme, the glossary entry to arrive at (term) and where to go back to (from:
+  // a term id on this page, or any other value, which the way back hands to on-back)
+  fromProps(P) {
+    const term = TM_IDS.indexOf(P.term) >= 0 ? P.term : null;
+    return {
+      lang: P.lang === 'ko' ? 'ko' : 'en',
+      theme: P.theme === 'dark' ? 'dark' : 'light',
+      target: term,
+      from: term ? (P.from || null) : null,
+    };
+  }
+  componentWillUnmount() {
+    window.removeEventListener('resize', this.onResize);
+    clearTimeout(this.t);
+  }
+  rem() { return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16; }
+  q(sel) { return this.refs.root ? this.refs.root.querySelector(sel) : null; }
+  termEl(id) { return id ? this.q('#tm-' + id + '-1') : null; }
+  boxed() { return this.state.view !== 'desk'; }
+  narrow() { const v = this.state.view; return v === 'p390' || v === 'p320' || this.state.narrowDesk; }
+  measure(resized) {
+    const f = this.refs.frame;
+    if (!f) return;
+    const narrowDesk = window.innerWidth < 40 * this.rem();
+    if (narrowDesk !== this.state.narrowDesk) { this.seq++; this.jobs = { sheet: true }; this.setState({ narrowDesk, place: null, pad: 0 }); }
+    else if (resized && this.state.open) { this.seq++; this.jobs = {}; this.setState({ place: null }); }
+  }
+  // Run fn on each animation frame until it returns true (a child board mounts a frame or two later)
+  later(name, fn) {
+    const seq = this.seq;
+    let n = 0;
+    const step = () => {
+      if (seq !== this.seq || n++ > 60) return;
+      if (!fn()) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  // The visible reading area: the window, cut to the scroll box in a boxed view
+  visible() {
+    let top = 0, bottom = window.innerHeight;
+    if (this.boxed() && this.refs.scroll) {
+      const r = this.refs.scroll.getBoundingClientRect();
+      top = Math.max(top, r.top); bottom = Math.min(bottom, r.bottom);
+      const bar = this.q('.tm-top');
+      if (bar) top = Math.max(top, bar.getBoundingClientRect().bottom);
+    }
+    return { top, bottom };
+  }
+  // F3: below the anchor, its left edge on the anchor's first line; shifted left to end on the column's right edge;
+  // above the anchor when the visible area has no room below. Never over the anchor.
+  placeFor(anchor, h, w) {
+    const art = this.refs.article;
+    const a = art.getBoundingClientRect();
+    const rs = anchor.getClientRects();
+    const first = rs[0], last = rs[rs.length - 1];
+    const col = art.querySelector('.rd-p').getBoundingClientRect();
+    const colL = col.left - a.left, colR = col.right - a.left;
+    let left = first.left - a.left;
+    if (left + w > colR) left = colR - w;
+    if (left < Math.min(colL, 8)) left = Math.min(colL, 8);
+    const gap = 0.35 * this.rem();
+    const vis = this.visible();
+    const roomBelow = vis.bottom - last.bottom, roomAbove = first.top - vis.top;
+    if (roomBelow >= h + gap || roomBelow >= roomAbove) return { left, top: last.bottom - a.top + gap };
+    return { left, bottom: a.bottom - first.top + gap };
+  }
+  // The highlight's popover, placed as 05-annotations places it: centred on the highlight, kept inside the column,
+  // 8 px under its last line
+  notePlaceFor(mark, w) {
+    const a = this.refs.article.getBoundingClientRect();
+    const col = this.refs.article.querySelector('.rd-p').getBoundingClientRect();
+    const r = mark.getBoundingClientRect(), rs = mark.getClientRects(), last = rs[rs.length - 1];
+    const colL = col.left - a.left, colR = col.right - a.left;
+    const left = Math.max(colL, Math.min((r.left + r.right) / 2 - a.left - w / 2, colR - w));
+    return { left, top: last.bottom - a.top + 8 };
+  }
+  styleOf(p) {
+    if (!p) return 'left: 0px; top: 0px';
+    return 'left: ' + Math.round(p.left) + 'px; ' + (p.top !== undefined ? 'top: ' + Math.round(p.top) + 'px' : 'bottom: ' + Math.round(p.bottom) + 'px');
+  }
+  componentDidUpdate(prev) {
+    this.report();
+    const P = this.props;
+    if (prev && (prev.lang !== P.lang || prev.theme !== P.theme || prev.term !== P.term || prev.from !== P.from)) {
+      this.apply(this.fromProps(P));
+      return;
+    }
+    const s = this.state;
+    if (this.jobs.scroll) { const kind = this.jobs.scroll; this.jobs.scroll = null; this.presetScroll(kind); }
+    if (s.open && !this.narrow() && !s.place && this.jobs.place !== this.seq) {
+      this.jobs.place = this.seq;
+      this.later('place', () => {
+        const fl = this.q('.ra-float'), win = fl && fl.querySelector('.ra-win'), term = this.termEl(this.state.open);
+        if (!fl || !win || !term || !this.refs.article) return false;
+        const place = this.placeFor(term, win.offsetHeight, fl.offsetWidth);
+        this.setState({ place }, () => {
+          if (this.jobs.focus) { this.jobs.focus = false; const w = this.q('#tw-' + this.state.open); if (w) w.focus({ preventScroll: true }); }
+        });
+        return true;
+      });
+    }
+    if (s.open && this.narrow() && this.jobs.sheet) {
+      this.jobs.sheet = false;
+      this.later('sheet', () => this.fitSheet());
+    }
+    if (s.note && !s.notePlace && this.jobs.note !== this.seq) {
+      this.jobs.note = this.seq;
+      this.later('note', () => {
+        const n = this.q('.tm-note'), mark = this.q('mark.an-m');
+        if (!n || !mark || !this.refs.article) return false;
+        this.setState({ notePlace: this.notePlaceFor(mark, n.offsetWidth) });
+        return true;
+      });
+    }
+    if (this.jobs.target) {
+      const id = this.jobs.target;
+      this.jobs.target = null;
+      this.later('target', () => {
+        const el = this.q('#gl-' + id);
+        if (!el || el.className.indexOf('is-target') < 0) return false;
+        el.scrollIntoView({ block: 'start' });
+        el.focus({ preventScroll: true });
+        return true;
+      });
+    }
+  }
+  // F4: the page scrolls so the term sits kb-space-md above the sheet's top edge; room is made under the text
+  fitSheet() {
+    const sheet = this.q('.tm-sheet .ra-sheet'), term = this.termEl(this.state.open);
+    if (!sheet || !term) return false;
+    const h = Math.ceil(sheet.getBoundingClientRect().height);
+    const go = () => {
+      const rs = term.getClientRects();
+      const delta = rs[rs.length - 1].bottom - (sheet.getBoundingClientRect().top - this.rem());
+      if (this.boxed() && this.refs.scroll) this.refs.scroll.scrollTop += delta;
+      else window.scrollBy(0, delta);
+      if (this.jobs.focus) { this.jobs.focus = false; const w = this.q('#tw-' + this.state.open); if (w) w.focus({ preventScroll: true }); }
+    };
+    if (Math.abs(h - this.state.pad) > 1) this.setState({ pad: h }, go);
+    else go();
+    return true;
+  }
+  presetScroll(kind) {
+    const sc = this.refs.scroll;
+    if (this.boxed() && sc) sc.scrollTop = 0;
+    if (kind === 'edge' && sc) {
+      const term = this.termEl(this.state.open);
+      if (term) { const r = term.getBoundingClientRect(), b = sc.getBoundingClientRect(); sc.scrollTop += r.bottom - (b.bottom - 4 * this.rem()); }
+    } else if (kind === 'term' && !this.boxed()) {
+      const term = this.termEl(this.state.open);
+      if (term) term.scrollIntoView({ block: 'center' });
+    } else if (kind === 'mark' && !this.boxed()) {
+      const m = this.q('mark.an-m');
+      if (m) m.scrollIntoView({ block: 'center' });
+    } else if (kind === 'top' && !this.boxed()) {
+      window.scrollTo(0, 0);
+    }
+  }
+  apply(p) {
+    clearTimeout(this.t);
+    this.seq++;
+    const next = Object.assign({}, TM_BASE, p, { place: null, notePlace: null, noteRev: false, pad: 0 });
+    this.jobs = {
+      focus: !!next.open && next.mode === 'focus',
+      sheet: !!next.open,
+      target: next.target,
+      scroll: next.target ? null : (next.view === 'screen' ? 'edge' : (next.open ? 'term' : (next.note ? 'mark' : 'top'))),
+    };
+    this.setState(next);
+  }
+  openTerm(id, mode) {
+    clearTimeout(this.t);
+    const s = this.state;
+    if (s.open === id && s.place) {
+      if (mode === 'focus') { this.setState({ mode }); const w = this.q('#tw-' + id); if (w) w.focus({ preventScroll: true }); }
+      return;
+    }
+    this.seq++;
+    this.jobs = { focus: mode === 'focus', sheet: true };
+    this.setState({ open: id, mode, long: false, place: null, note: false, notePlace: null });
+  }
+  close(focusTerm) {
+    clearTimeout(this.t);
+    const id = this.state.open;
+    this.seq++;
+    this.jobs = {};
+    this.setState({ open: null, mode: null, long: false, place: null, pad: 0 }, () => {
+      if (focusTerm && id) { const t = this.termEl(id); if (t) t.focus({ preventScroll: true }); }
+    });
+  }
+  renderVals() {
+    const s = this.state;
+    const narrow = this.narrow();
+    const tm = {};
+    TM_IDS.forEach((id) => {
+      tm[id] = {
+        exp: s.open === id ? 'true' : 'false',
+        click: (e) => {
+          if (e) { e.preventDefault(); e.stopPropagation(); }
+          if (this.state.open === id && this.state.mode !== 'hover') this.close(false);
+          else this.openTerm(id, 'focus');
+        },
+        key: (e) => {
+          if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); this.openTerm(id, 'focus'); }
+          else if (e.key === 'Escape' && this.state.open === id) { e.preventDefault(); this.close(true); }
+        },
+        enter: () => {
+          if (this.narrow()) return;
+          clearTimeout(this.t);
+          const c = this.state;
+          if (c.open === id || (c.open && c.mode !== 'hover')) return;
+          this.t = setTimeout(() => this.openTerm(id, 'hover'), 250);
+        },
+        leave: () => {
+          clearTimeout(this.t);
+          const c = this.state;
+          if (c.open === id && c.mode === 'hover') this.t = setTimeout(() => this.close(false), 200);
+        },
+      };
+    });
+    const presets = TM_PRESETS.map(([label, p]) => {
+      const full = Object.assign({}, TM_BASE, p);
+      const pressed = TM_KEYS.every((k) => full[k] === s[k]);
+      return { label, pressed: pressed ? 'true' : 'false', go: () => this.apply(p) };
+    });
+    const boxed = s.view !== 'desk';
+    const ko = s.lang === 'ko';
+    return {
+      theme: s.theme,
+      lang: s.lang,
+      isEn: s.lang !== 'ko',
+      isKo: s.lang === 'ko',
+      presets,
+      tm,
+      stageCls: boxed ? 'tm-stage tm-stage--box' + (s.view === 'screen' ? ' tm-stage--screen' : '') : 'tm-stage',
+      frameCls: 'rd-frame' + (boxed ? ' tm-box tm-box--' + s.view : ''),
+      scrollStyle: s.pad ? 'padding-bottom: ' + s.pad + 'px' : '',
+      hasWin: !!s.open && !narrow,
+      hasSheet: !!s.open && narrow,
+      sheetWrapCls: 'tm-sheet' + (boxed ? '' : ' tm-sheet--fixed'),
+      openId: s.open || 'dsr',
+      long: !!s.long,
+      placed: s.place ? '1' : '0',
+      floatStyle: this.styleOf(s.place),
+      note: !!s.note,
+      notePlaced: s.notePlace ? '1' : '0',
+      noteStyle: this.styleOf(s.notePlace),
+      noteWhere: ko ? '시도가 많으면 기준도 높게' : 'Many trials, one bar',
+      noteRev: s.noteRev ? 'true' : 'false',
+      noteRevWord: s.noteRev ? 'On' : 'Off',
+      noteRevSub: s.noteRev ? 'It is a card in your reviews.' : 'Turn on to make it a review card.',
+      toggleRev: () => this.setState({ noteRev: !this.state.noteRev }),
+      quiz: ko ? TM_QUIZ.ko : TM_QUIZ.en,
+      src: ko ? TM_SRC.ko : TM_SRC.en,
+      target: s.target || undefined,
+      hasBack: !!s.target && !!s.from && (TM_IDS.indexOf(s.from) >= 0 || !!this.props.onBack),
+      backHref: TM_IDS.indexOf(s.from) >= 0 ? '#tm-' + s.from + '-1' : '#top',
+      setRoot: (el) => { this.refs.root = el; },
+      setFrame: (el) => { this.refs.frame = el; },
+      setScroll: (el) => { this.refs.scroll = el; },
+      setArticle: (el) => { this.refs.article = el; },
+      setLang: (code) => { this.seq++; this.jobs = {}; this.setState({ lang: code === 'ko' ? 'ko' : 'en', open: null, mode: null, long: false, place: null, note: false, notePlace: null, target: null, from: null, pad: 0 }); },
+      toggleLong: (v) => { this.jobs.sheet = true; this.setState({ long: !!v }); },
+      closeWin: () => this.close(true),
+      toGloss: (id) => {
+        const from = this.state.open || id;
+        this.seq++;
+        this.jobs = { target: id };
+        this.setState({ open: null, mode: null, long: false, place: null, pad: 0, target: id, from });
+      },
+      goBack: () => {
+        const from = this.state.from;
+        if (TM_IDS.indexOf(from) < 0) { if (this.props.onBack) this.props.onBack({ from, lang: this.state.lang, theme: this.state.theme }); return; }
+        this.seq++;
+        this.jobs = {};
+        this.setState({ target: null, from: null }, () => {
+          const t = this.termEl(from);
+          if (t) { t.scrollIntoView({ block: 'center' }); t.focus({ preventScroll: true }); }
+        });
+      },
+      floatEnter: () => clearTimeout(this.t),
+      floatLeave: () => { if (this.state.mode === 'hover') { clearTimeout(this.t); this.t = setTimeout(() => this.close(false), 200); } },
+      // Tab past the window's last control closes it and carries on in the text; Shift+Tab out of it goes back to the term
+      floatKey: (e) => {
+        if (e.key !== 'Tab') return;
+        const fl = this.q('.ra-float');
+        if (!fl) return;
+        const f = Array.prototype.slice.call(fl.querySelectorAll('button, a[href]'));
+        const at = document.activeElement;
+        const id = this.state.open;
+        const term = this.termEl(id);
+        if (!e.shiftKey && at === f[f.length - 1]) { if (term) term.focus({ preventScroll: true }); this.close(false); }
+        else if (e.shiftKey && (at === f[0] || at === fl.querySelector('.ra-win'))) { e.preventDefault(); this.close(true); }
+      },
+      markClick: (e) => {
+        if (e && e.target && e.target.closest && e.target.closest('.ra-term')) return;
+        clearTimeout(this.t);
+        this.seq++;
+        this.jobs = {};
+        this.setState({ note: true, notePlace: null, open: null, mode: null, long: false, place: null, pad: 0 });
+      },
+      closeNote: () => { this.seq++; this.setState({ note: false, notePlace: null }); },
+      down: (e) => {
+        const t = e.target, c = this.state;
+        if (!t || !t.closest || t.closest('[data-proto="state-bar"]')) return;
+        if (c.open && !t.closest('.ra-float, .tm-sheet, .ra-term')) this.close(false);
+        if (c.note && !t.closest('.tm-note, mark.an-m')) { this.seq++; this.setState({ note: false, notePlace: null }); }
+      },
+      rootKey: (e) => {
+        if (e.key === 'Escape' && this.state.note) { this.seq++; this.setState({ note: false, notePlace: null }); const m = this.q('mark.an-m .ra-term'); if (m) m.focus({ preventScroll: true }); }
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

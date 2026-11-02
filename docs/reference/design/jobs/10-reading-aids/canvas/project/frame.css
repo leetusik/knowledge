@@ -1,0 +1,378 @@
+@import url("https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..700&family=Noto+Serif+KR:wght@200..900&display=swap");
+
+/* The frame of 10-reading-aids / 01-reading-aids. Every board links it after ds/kb/tokens.css.
+   Part 1 is the signed reader the reading aids live in, copied value for value from the signed canvases
+   (01-reader, 05-annotations, 09-legacy-and-print; the product's web/src/app/reader.css): the frame, the column,
+   the prose, links, buttons, the top bar, the highlight, the way back and the :target mark. Never restyled here.
+   Part 2 is the frame's five layout primitives. Part 3 is the reading aids (this job): the term marker, the inline
+   formula, the definition window and its phone sheet, the glossary, the display formula block, and paper.
+   The ledger that explains each choice is rounds/01-reading-aids/frame.md (F1 ...). */
+
+/* ======================= Part 1 · the signed reader (copied) ======================= */
+
+/* The math face: STIX Two Math (OFL), a system face on every Apple device the operator reads on; the build
+   self-hosts it beside Literata (frame.md F8). The canvas has no network for it, so it is named locally. */
+@font-face { font-family: "RA Math"; src: local("STIX Two Math"), local("STIXTwoMath-Regular"); font-display: swap; }
+
+[data-theme="light"], .rd-frame:not([data-theme]) {
+  --rd-on-accent: #fbfaf5;
+  --an-mark: #f5dc8a; --an-mark-2: #eccb66; --an-edge: #8a6a2a;
+}
+[data-theme="dark"] {
+  --rd-on-accent: #16130f;
+  --an-mark: #4a3c17; --an-mark-2: #574720; --an-edge: #c8a15e;
+}
+
+html, body { margin: 0; }
+
+.rd-frame {
+  --font-reading: "Literata", "Noto Serif KR", "Nanum Myeongjo", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", Georgia, serif;
+  --font-display: "Fraunces", "Noto Serif KR", "Nanum Myeongjo", "Pretendard", Georgia, serif;
+  --font-math: "RA Math", "STIX Two Math", "Cambria Math", math;
+  --rd-fs: 1.125rem;
+  --rd-k: 1.125;
+  --rd-lead: 1.65;
+  --rd-fs-s: calc(var(--rd-fs) * 0.8333);
+  --rd-measure: 36rem;
+  --rd-top-h: 3.5rem;
+  --rd-line: 3px;
+  --rd-gut: var(--kb-app-gutter-phone);
+  --rd-ease: 0.15s ease;
+  position: relative;
+  container: rd / inline-size;
+  box-sizing: border-box;
+  background: var(--kb-surface);
+  color: var(--kb-ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+.rd-frame *, .rd-frame *::before, .rd-frame *::after { box-sizing: border-box; }
+.rd-in { display: contents; }
+@container rd (min-width: 40rem) { .rd-in { --rd-gut: var(--kb-app-gutter); } }
+@container rd (min-width: 90rem) { .rd-in { --rd-gut: var(--kb-app-gutter-wide); } }
+/* The wide screen (P-8jbf): from a 1600 px window the column is 44rem and the text 20 px. */
+@media screen and (min-width: 100rem) {
+  .rd-article { --rd-measure: 44rem; --rd-fs: 1.25rem; --rd-k: 1.25; --rd-fs-s: calc(var(--rd-fs) * 0.8333); }
+}
+
+.rd-frame :is(a, button, summary, [tabindex]):focus-visible {
+  outline: var(--kb-focus-w) solid var(--kb-accent);
+  outline-offset: var(--kb-focus-offset);
+}
+
+/* Buttons (kb-appbtn values) */
+.rd-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--kb-space-xs);
+  min-height: var(--kb-tap); padding: 0.55rem 1rem;
+  border: 1px solid transparent; border-radius: var(--kb-radius-sm);
+  font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.2;
+  white-space: nowrap; cursor: pointer; text-decoration: none; background: transparent; color: var(--kb-ink);
+  transition: color var(--rd-ease), background var(--rd-ease), border-color var(--rd-ease);
+}
+.rd-btn--quiet { color: var(--kb-secondary); padding-inline: 0.75rem; }
+.rd-btn--quiet:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+.rd-btn:active { transform: translateY(1px); }
+
+/* The progress line and the top bar (in flow on the canvas: a Page scrolls as a document) */
+.rd-line { position: relative; height: var(--rd-line); background: var(--kb-border); }
+.rd-line__fill { display: block; height: 100%; background: var(--kb-accent); }
+.rd-top {
+  height: var(--rd-top-h);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--kb-space-xs);
+  padding-inline: calc(var(--rd-gut) - 0.6rem);
+  background: var(--kb-surface); border-bottom: 1px solid var(--kb-border);
+  font-size: 0.9375rem;
+}
+.rd-top__start { display: flex; align-items: center; gap: var(--kb-space-xs); min-width: 0; }
+.rd-top__end { display: flex; align-items: center; gap: var(--kb-space-xs); }
+.rd-logo { display: inline-flex; align-items: center; justify-content: center; width: var(--kb-tap); height: var(--kb-tap); border-radius: var(--kb-radius-sm); flex: none; }
+.rd-logo img { width: 22px; height: 22px; display: block; }
+.rd-logo:hover { background: var(--kb-surface-sunken); }
+.rd-back {
+  display: inline-flex; align-items: center; gap: 0.3rem; min-height: var(--kb-tap); min-width: 0; max-width: 100%;
+  padding-inline: 0.4rem; border-radius: var(--kb-radius-sm);
+  color: var(--kb-ink); text-decoration: none; font-weight: var(--kb-weight-medium);
+}
+.rd-back__chev { color: var(--kb-secondary); flex: none; }
+.rd-back__long, .rd-back__short { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-back__long { display: none; }
+.rd-back:hover .rd-back__long, .rd-back:hover .rd-back__short { text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-tbtn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: var(--kb-tap); padding-inline: 0.7rem;
+  border: 0; border-radius: var(--kb-radius-sm); background: transparent; cursor: pointer; white-space: nowrap;
+  font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-decoration: none;
+}
+.rd-tbtn:hover { background: var(--kb-surface-sunken); }
+.rd-lang { display: inline-flex; align-items: stretch; border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius-sm); padding: 1px; gap: 1px; }
+.rd-lang__opt {
+  min-height: var(--kb-tap); padding-inline: 0.6rem; border: 0; border-radius: calc(var(--kb-radius-sm) - 1px);
+  background: transparent; color: var(--kb-secondary); font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); cursor: pointer;
+}
+.rd-lang__opt:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+.rd-lang__opt[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); }
+@container rd (min-width: 40rem) {
+  .rd-back__long { display: inline; }
+  .rd-back__short { display: none; }
+  .rd-top { column-gap: var(--kb-space-sm); }
+}
+
+/* One track: everything shares the text column's two edges, at every width */
+.rd-flow {
+  display: grid;
+  grid-template-columns:
+    [full-start] minmax(var(--rd-gut), 1fr)
+    [text-start] min(100% - 2 * var(--rd-gut), var(--rd-measure))
+    [text-end] minmax(var(--rd-gut), 1fr) [full-end];
+}
+.rd-flow > * { grid-column: text; min-width: 0; }
+
+/* The prose kit */
+.rd-prose { font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink); padding-bottom: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rd-prose:lang(ko), .rd-prose :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.rd-prose > :first-child { margin-top: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rd-h { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; scroll-margin-top: calc(var(--rd-top-h) + var(--kb-space-md)); }
+.rd-h2 { margin: calc(var(--kb-space-2xl) * var(--rd-k)) 0 calc(var(--kb-space-md) * var(--rd-k)); padding-bottom: calc(var(--kb-space-sm) * var(--rd-k)); border-bottom: 1px solid var(--kb-border); font-size: 1.45em; line-height: 1.2; letter-spacing: var(--kb-tracking-display); }
+.rd-h3 { margin: calc(var(--kb-space-xl) * var(--rd-k)) 0 calc(var(--kb-space-sm) * var(--rd-k)); font-size: 1.18em; line-height: 1.25; }
+.rd-h:lang(ko) { word-break: keep-all; }
+.rd-p { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; text-wrap: pretty; hanging-punctuation: first; }
+.rd-prose strong { font-weight: 650; }
+.rd-prose em { font-style: italic; }
+.rd-prose em:lang(ko), .rd-prose em :lang(ko) { font-style: normal; font-weight: var(--kb-weight-semibold); }
+
+/* Links: accent, always underlined */
+.rd-a { color: var(--kb-accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; text-decoration-color: color-mix(in srgb, var(--kb-accent) 55%, transparent); }
+.rd-a:hover { color: var(--kb-accent-strong); text-decoration-color: var(--kb-accent-strong); text-decoration-thickness: 2px; }
+
+/* The highlight (05-annotations, as signed): a member's own paint, never changed by this job */
+mark.an-m {
+  background: var(--an-mark); color: var(--kb-ink); padding: 0; border-radius: 0;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
+  box-shadow: inset 0 -1px 0 var(--an-edge);
+}
+
+/* The way back (the sources list's, 02-figures as built): a chevron, a word, 44 px tall */
+.fg-back { display: inline-flex; align-items: center; justify-content: center; gap: 0.3em; min-height: var(--kb-tap); min-width: var(--kb-tap); font-family: var(--font-body); font-weight: var(--kb-weight-semibold); color: var(--kb-accent); text-decoration: none; }
+.fg-back:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.fg-back__chev { color: var(--kb-secondary); }
+
+/* ======================= Part 2 · the five primitives ======================= */
+/* Every page arranges with these; the gap is a kb-space step, set by --f-gap (default md). */
+.f-stack { display: flex; flex-direction: column; gap: var(--f-gap, var(--kb-space-md)); }
+.f-stack > * { margin: 0; }
+.f-cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--f-gap, var(--kb-space-sm)); }
+.f-cluster--between { justify-content: space-between; }
+.f-cluster--end { justify-content: flex-end; }
+.f-cluster--base { align-items: baseline; }
+/* sidebar: the side holds its width, the main takes the rest and wraps under it below --f-main */
+.f-sidebar { display: flex; flex-wrap: wrap; gap: var(--f-gap, var(--kb-space-lg)); }
+.f-sidebar > :first-child { flex: 1 1 var(--f-side, 16rem); }
+.f-sidebar > :last-child { flex: 999 1 var(--f-main, 30rem); min-width: 0; }
+.f-center { box-sizing: content-box; max-width: var(--f-max, var(--kb-app-max-w)); margin-inline: auto; padding-inline: var(--f-pad, var(--kb-app-gutter)); }
+.f-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(var(--f-min, 18rem), 100%), 1fr)); gap: var(--f-gap, var(--kb-space-lg)); align-items: start; }
+
+/* ======================= Part 3 · the reading aids ======================= */
+
+/* Frame tokens (frame.md F9): one control height, the window's width, the formula steps */
+.rd-frame, .ra-paper {
+  --ra-ctl: var(--kb-tap);                        /* every control in a window, sheet, entry: 44 px */
+  --ra-win-w: 28rem;                              /* the window's width on desktop and iPad */
+  --ra-math-k: 1;                                 /* inline math at the text's size: STIX Two Math's caps match Literata's (65.7 vs 66.2 per 100), its x-height is 5 % taller */
+  --ra-display-k: 1.5;                            /* a display formula: 1.5 x the text */
+  --ra-line: var(--kb-secondary);                 /* the term marker's dotted line */
+}
+
+/* ---------- The term marker (F2) ---------- */
+/* Ink text with a dotted line under it: "has a definition". A link is accent text with a solid line; a highlight is a
+   painted ground. Hover turns the dots accent; open makes the line solid accent; focus is the system ring. */
+.ra-term {
+  color: inherit; cursor: help;
+  text-decoration-line: underline; text-decoration-style: dotted; text-decoration-color: var(--ra-line);
+  text-decoration-thickness: 0.09em; text-underline-offset: 0.24em; text-decoration-skip-ink: none;
+  border-radius: 2px;
+  transition: text-decoration-color var(--rd-ease, 0.15s ease);
+}
+.ra-term:hover { text-decoration-color: var(--kb-accent); }
+.ra-term[aria-expanded="true"] { text-decoration-style: solid; text-decoration-color: var(--kb-accent); text-decoration-thickness: 2px; }
+.ra-term:lang(ko) { text-underline-offset: 0.28em; }
+/* Inside a member's highlight the dots take the ink, so they hold on the paint (F2) */
+mark.an-m .ra-term { --ra-line: var(--kb-ink); }
+/* Only one floating thing at a time: while a term's window is open, the highlight's own pointer stays plain */
+.ra-term.is-static { cursor: auto; }
+
+/* ---------- The inline formula (F7) ---------- */
+math.ra-m {
+  font-family: var(--font-math); font-size: calc(1em * var(--ra-math-k));
+  math-style: compact; white-space: nowrap;
+}
+/* Canvas only: Chromium's MathML leaves 0.38em of empty advance after a radical set in STIX Two Math (measured: 16.7 px
+   at 42.4 px). The build's engine (R1) must set √n with no trailing space; this cancels the artefact, nothing more. */
+.ra-m msqrt { margin-inline-end: -0.38em; }
+.ra-m mi, .ra-m mn, .ra-m mo { font-family: var(--font-math); }
+/* One unbreakable run (F22, F23): a hyphenated term or name, and a share with its sign, unit and particle */
+.ra-keep { white-space: nowrap; }
+
+/* ---------- The definition window (F3, F4) ---------- */
+.ra-win {
+  width: min(var(--ra-win-w), 100%);
+  display: flex; flex-direction: column; gap: var(--kb-space-sm);
+  padding: var(--kb-space-sm) var(--kb-space-sm) var(--kb-space-xs) var(--kb-space-md);
+  border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius);
+  background: var(--kb-surface); color: var(--kb-ink); box-shadow: var(--kb-shadow-raise);
+  font-family: var(--font-body); font-size: 1rem; line-height: 1.4; text-align: left;
+}
+.ra-win:focus { outline: none; }
+.ra-win:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.ra-win__head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: var(--kb-space-sm); }
+.ra-win__names { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; padding-top: calc((var(--ra-ctl) - var(--rd-fs) * 1.3) / 2); }
+.ra-win__term { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--rd-fs); line-height: 1.3; color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word; }
+.ra-win__term:lang(ko) { word-break: keep-all; }
+.ra-win__alias { margin: 0; font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); }
+.ra-win__body { display: flex; flex-direction: column; gap: var(--kb-space-sm); padding-right: var(--kb-space-xs); }
+.ra-def { margin: 0; font-family: var(--font-reading); font-size: var(--rd-fs); line-height: 1.55; color: var(--kb-ink); text-wrap: pretty; }
+.ra-def:lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.ra-def--long { padding-top: var(--kb-space-sm); border-top: 1px solid var(--kb-border); }
+.ra-win__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--kb-space-sm); margin-left: calc(var(--kb-space-sm) * -1); }
+.ra-win__foot--end { justify-content: flex-end; }
+/* "Read more" and "Show less" share one box as wide as the longer label, so the toggle never moves the foot */
+.ra-swap { display: inline-grid; }
+.ra-swap > * { grid-area: 1 / 1; text-align: start; } /* F32: both labels start on the box's start edge */
+.ra-swap > [aria-hidden="true"] { visibility: hidden; }
+.ra-more { color: var(--kb-accent); padding-inline: calc(var(--kb-space-sm) - 1px); }
+.ra-more:hover { color: var(--kb-accent-strong); background: var(--kb-surface-sunken); }
+.ra-go { display: inline-flex; align-items: center; min-height: var(--ra-ctl); padding-inline: var(--kb-space-sm); border-radius: var(--kb-radius-sm); font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.2; color: var(--kb-accent); text-decoration: none; white-space: nowrap; }
+.ra-go:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.ra-win .ra-close { flex: none; }
+/* Where the window floats: the page sets top/left from the term (F3); hidden until placed, so it never jumps */
+.ra-float { position: absolute; z-index: 15; }
+.ra-float[data-placed="0"] { visibility: hidden; }
+@media (prefers-reduced-motion: no-preference) {
+  .ra-float[data-placed="1"] .ra-win { animation: ra-in 0.15s ease-out; }
+}
+@keyframes ra-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- The phone form: a sheet from the bottom, no scrim (F4) ---------- */
+.ra-sheet {
+  display: flex; flex-direction: column; max-height: 60vh;
+  background: var(--kb-surface); color: var(--kb-ink); box-shadow: var(--kb-shadow-overlay);
+  border-radius: var(--kb-radius) var(--kb-radius) 0 0; border-top: 1px solid var(--kb-border-strong);
+  font-family: var(--font-body);
+}
+.ra-sheet--long { max-height: 85vh; }
+.ra-sheet:focus { outline: none; }
+.ra-sheet:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: calc(var(--kb-focus-offset) * -1); }
+.ra-sheet__head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: var(--kb-space-sm); padding: var(--kb-space-xs) calc(var(--rd-gut) - 0.6rem) 0 var(--rd-gut); flex: none; }
+.ra-sheet__body { overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: var(--kb-space-sm); padding: 0 var(--rd-gut) var(--kb-space-xs); }
+.ra-sheet__foot { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--kb-space-sm); padding: var(--kb-space-xs) calc(var(--rd-gut) - 0.6rem) var(--kb-space-sm); border-top: 1px solid var(--kb-border); }
+.ra-sheet__foot--end { justify-content: flex-end; }
+
+/* ---------- The glossary (F5, F6, F17, F25) ---------- */
+/* The opening hairline is drawn only for the list shown alone (its Components board); in the chapter the h2's own rule
+   opens it and the page drops this line (F17) */
+.ra-gl { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--kb-border); }
+.ra-gl__item {
+  position: relative;
+  display: flex; flex-direction: column; gap: calc(var(--kb-space-xs) * var(--rd-k));
+  margin: 0 calc(var(--kb-space-md) * -1); padding: calc(var(--kb-space-md) * var(--rd-k)) var(--kb-space-md);
+  scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + var(--kb-space-md));
+}
+/* The divider runs the column's width (the h2 rule's two edges); only the arrived entry's ground bleeds (F25) */
+.ra-gl__item::after { content: ""; position: absolute; left: var(--kb-space-md); right: var(--kb-space-md); bottom: 0; height: 1px; background: var(--kb-border); }
+/* The entry a window's link led to: the sources list's :target mark, a sunken ground and a hairline box */
+.ra-gl__item.is-target, .ra-gl__item:target { background: var(--kb-surface-sunken); box-shadow: inset 0 0 0 1px var(--kb-border-strong); }
+.ra-gl__term { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1em; line-height: 1.3; color: var(--kb-ink); text-wrap: balance; }
+.ra-gl__term:lang(ko) { word-break: keep-all; }
+.ra-gl__alias { margin: 0; font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); }
+.ra-gl__def { margin: 0; font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink); text-wrap: pretty; }
+.ra-gl__def:lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.ra-gl__def + .ra-gl__def { margin-top: calc(var(--kb-space-xs) * var(--rd-k)); }
+.ra-gl__back { margin: 0; font-size: 0.8125rem; }
+
+/* ---------- The display formula block (F7) ---------- */
+.ra-mb {
+  margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0;
+  padding-block: calc(var(--kb-space-md) * var(--rd-k));
+  border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border);
+  display: flex; flex-direction: column; gap: calc(var(--kb-space-sm) * var(--rd-k));
+}
+.ra-mb__eq { position: relative; overflow-x: auto; overflow-y: hidden; padding-block: var(--kb-space-xs); scrollbar-width: thin; }
+.ra-mb__eq:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+/* A row wider than the column scrolls inside its own box; the side with more takes a fade (the tables' cue) */
+.ra-mb__eq.is-more-end { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
+.ra-mb__eq.is-more-start { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); }
+.ra-mb__eq.is-more-start.is-more-end { -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); }
+.ra-mb__eq math { display: block math; margin: 0; font-family: var(--font-math); font-size: calc(var(--rd-fs) * var(--ra-display-k)); text-align: left; width: max-content; }
+/* Steps (one relation a row) align on their relation: a grid of three math cells a row, the left side set to the
+   right, the sign centred, the right side to the left; cells share the math baseline. Spoken whole from aria-label. */
+.ra-steps__grid {
+  display: grid; grid-template-columns: max-content max-content max-content; align-items: baseline;
+  column-gap: 0.28em; row-gap: 0.2em; width: max-content;
+  font-family: var(--font-math); font-size: calc(var(--rd-fs) * var(--ra-display-k));
+}
+.ra-steps__grid > * { margin: 0; }
+.ra-steps__grid > :nth-child(3n+1) { justify-self: end; }
+.ra-steps__grid > :nth-child(3n+2) { justify-self: center; }
+.ra-steps__grid > :nth-child(3n) { justify-self: start; }
+.ra-steps__grid math { font-size: 1em; width: auto; }
+.ra-paper .ra-steps__grid { font-size: 21.33px; }
+.ra-mb__cap { display: flex; flex-direction: column; gap: calc(var(--kb-space-sm) * var(--rd-k)); margin: 0; }
+.ra-mb__read { margin: 0; font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink); text-wrap: pretty; }
+.ra-mb__read:lang(ko) { word-break: keep-all; }
+.ra-mb__where { margin: 0; font-family: var(--font-reading); font-style: italic; font-size: var(--rd-fs-s); line-height: 1.5; color: var(--kb-secondary); }
+.ra-mb__where:lang(ko) { font-style: normal; }
+/* One symbol column per chapter (F27): the widest legend symbol plus room, 5.25 × the symbol size, so every legend's
+   meanings start on one edge; bounded so 200 % text keeps room for the meanings (as on Formulas) */
+.ra-legend {
+  display: grid; grid-template-columns: minmax(max-content, min(calc(var(--rd-fs) * 5.25), 28%)) minmax(0, 1fr); align-items: baseline;
+  column-gap: var(--kb-space-md); row-gap: calc(var(--kb-space-xs) * var(--rd-k)); margin: 0;
+}
+.ra-legend dt { margin: 0; font-family: var(--font-math); font-size: var(--rd-fs); line-height: 1.5; color: var(--kb-ink); white-space: nowrap; }
+.ra-legend dt math { font-family: var(--font-math); font-size: 1em; }
+.ra-legend dd { margin: 0; font-family: var(--font-reading); font-size: var(--rd-fs-s); line-height: 1.5; color: var(--kb-ink); text-wrap: pretty; }
+.ra-legend dd:lang(ko) { word-break: keep-all; }
+
+/* ---------- Paper (F10): the signed paper sheet's palette and sizes (09-legacy-and-print, kb-print.css) ---------- */
+.ra-paper {
+  --pp-paper: #ffffff; --pp-sunken: #f4f1ea; --pp-border: #c9c2b3; --pp-ink: #1b1714; --pp-sec: #4a433a; --pp-hint: #6d665a;
+  --pp-read: "Literata", "Noto Serif KR", "Nanum Myeongjo", Georgia, serif;
+  --pp-disp: "Fraunces", "Noto Serif KR", "Nanum Myeongjo", Georgia, serif;
+  --pp-body: "Source Sans 3", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-math: "RA Math", "STIX Two Math", "Cambria Math", math;
+  --rd-fs: 14px; --rd-k: 1; --rd-fs-s: 12px; --rd-lead: 1.55;
+  --ra-line: var(--pp-hint);
+  box-sizing: border-box;
+  font-family: var(--pp-read); font-size: 14px; line-height: 1.55; color: var(--pp-ink); background: var(--pp-paper);
+}
+.ra-paper *, .ra-paper *::before, .ra-paper *::after { box-sizing: border-box; }
+.ra-paper p { text-wrap: pretty; }
+.ra-paper :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+/* On paper the marker is a quiet dotted line in the paper's hint grey: plain prose, no control */
+.ra-paper .ra-term { cursor: auto; text-decoration-thickness: 1px; text-underline-offset: 0.22em; }
+.ra-paper math.ra-m { font-size: calc(1em * var(--ra-math-k)); }
+/* The paper glossary entry: kept whole on its page */
+.ra-pgl { break-inside: avoid; display: flex; flex-direction: column; gap: 2px; padding-block: 8px; border-bottom: 1px solid var(--pp-border); }
+.ra-pgl__term { margin: 0; font: 600 14px/1.35 var(--pp-disp); color: var(--pp-ink); }
+.ra-pgl__alias { margin: 0; font: 12px/1.45 var(--pp-body); color: var(--pp-sec); }
+.ra-pgl__def { margin: 0; font: 14px/1.55 var(--pp-read); color: var(--pp-ink); }
+.ra-pgl__def + .ra-pgl__def { margin-top: 4px; }
+/* The paper formula: no band to cut, kept whole with its reading and legend */
+.ra-paper .ra-mb { break-inside: avoid; margin: 0; padding-block: 12px; border-color: var(--pp-border); gap: 8px; }
+.ra-paper .ra-mb__eq { overflow: visible; padding-block: 2px; }
+.ra-paper .ra-mb__eq math { font-size: 21.33px; }
+.ra-paper .ra-steps__grid math { font-size: 1em; }
+.ra-paper .ra-mb__read { font-size: 14px; line-height: 1.55; color: var(--pp-ink); }
+.ra-paper .ra-mb__where { font-size: 12px; color: var(--pp-sec); }
+.ra-paper .ra-legend { grid-template-columns: 5.25em minmax(0, 1fr); row-gap: 2px; column-gap: 12px; }
+.ra-paper .ra-legend dt { font-size: 14px; color: var(--pp-ink); }
+.ra-paper .ra-legend dd { font-size: 14px; line-height: 1.5; color: var(--pp-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ra-term, .rd-btn { transition: none; }
+}
+
+/* ---------- Components boards (canvas layout for the states; never built) ---------- */
+.ra-board { padding: var(--kb-space-lg); display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--kb-space-xl) var(--kb-space-lg); background: var(--kb-paper); font-family: var(--font-body); color: var(--kb-ink); }
+.ra-board__cell { display: flex; flex-direction: column; gap: var(--kb-space-xs); min-width: 0; }
+.ra-board__cap { margin: 0; font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); }
+.ra-board__row { flex-basis: 100%; height: 0; }

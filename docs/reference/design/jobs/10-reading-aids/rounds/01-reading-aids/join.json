@@ -1,0 +1,89 @@
+{
+  "entry": "Main.dc.html",
+  "related": [
+    "terms",
+    "formulas",
+    "print"
+  ],
+  "unrelated": [],
+  "wiring": [
+    "Main mounts Terms, Formulas and Print one at a time (dc-import), holding page, lang, theme, term, from and back, and reserving the Terms bar's height at every width (the tallest page's bar)",
+    "Formulas 'In the glossary →' (window and sheet) emits on-open-terms { term, from: 'formulas:<block>:<term>', lang, theme }; Main opens Terms at that glossary entry",
+    "Terms' arrived entry '‹ Back to the text' emits on-back { from, lang, theme } when from is not a term on its page; Main returns to Formulas with from, which scrolls to and focuses that very term",
+    "Formulas alone: the glossary link is Terms.dc.html (was #to:terms)",
+    "Main's canvas-only foot strip: the chapter's three parts (in the product one scrolling chapter and the browser's print) and each page alone",
+    "Each page emits on-state { lang, theme } (Print { lang }) when its language or theme changes (its Shell switch or a preset); Main keeps it outside its state and opens the next part in it (F35)"
+  ],
+  "settled": {
+    "F17": [
+      "terms-FG1"
+    ],
+    "F18": [
+      "terms-FG2",
+      "formulas-T1"
+    ],
+    "F19": [
+      "terms-FG4"
+    ],
+    "F20": [
+      "terms-FG5",
+      "formulas-FG1"
+    ],
+    "F21": [
+      "terms-FG3",
+      "formulas-FG2",
+      "formulas-FG3"
+    ],
+    "F22": [
+      "terms-FG6"
+    ],
+    "F23": [
+      "terms-FG7"
+    ],
+    "F24": [
+      "terms-FG8",
+      "formulas-C10",
+      "terms-C03"
+    ],
+    "F25": [
+      "terms-FG9",
+      "terms-C05"
+    ],
+    "F26": [
+      "print-FG1"
+    ],
+    "F27": [
+      "print-FG5",
+      "formulas-C07"
+    ],
+    "F28": [
+      "print-FG2"
+    ],
+    "F29": [
+      "print-FG3"
+    ],
+    "F30": [
+      "print-FG4"
+    ],
+    "F31": [
+      "print-G1"
+    ],
+    "F32": [
+      "frame-A1",
+      "terms-C04",
+      "formulas-A1"
+    ],
+    "F33": [
+      "join wiring: the way back across pages"
+    ],
+    "F34": [
+      "critique C05: a placeholder share's keep"
+    ],
+    "F35": [
+      "critique C02: lang and theme carried across the parts"
+    ],
+    "F36": [
+      "critique C06: a legend meaning's long word breaks at 200 % text"
+    ]
+  }
+}

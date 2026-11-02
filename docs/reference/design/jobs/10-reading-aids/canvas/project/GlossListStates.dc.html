@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The chapter's glossary and its paper appendix, every state</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.gl-col { width: 640px; padding-block: 0 var(--kb-space-lg); }
+.gl-paper { width: 680px; padding: 24px 32px; }
+.gl-head { flex-basis: 100%; margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; color: var(--kb-ink); }
+</style>
+</helmet>
+<div class="ra-board" data-theme="light" id="top">
+<p class="gl-head">The glossary in the chapter: 12 terms, A to Z in the chapter's language</p>
+<div class="ra-board__cell"><p class="ra-board__cap">Reached from a window: the entry marked, with the way back</p><div class="rd-frame gl-col" data-theme="light"><div class="rd-flow rd-prose"><dc-import name="Gloss" form="list" target="dsr" back="{{ true }}" bare="{{ true }}" hint-size="100%,2600px"></dc-import></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Dark, at rest</p><div class="rd-frame gl-col" data-theme="dark"><div class="rd-flow rd-prose"><dc-import name="Gloss" form="list" anchors="{{ false }}" bare="{{ true }}" hint-size="100%,2600px"></dc-import></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Korean chapter: 가나다 order, the entry marked</p><div class="rd-frame gl-col" data-theme="light"><div class="rd-flow rd-prose" lang="ko"><dc-import name="Gloss" form="list" lang="ko" target="participation" anchors="{{ false }}" bare="{{ true }}" hint-size="100%,2600px"></dc-import></div></div></div>
+<div class="ra-board__row"></div>
+<p class="gl-head">The paper appendix: every entry whole, the longer definitions included</p>
+<div class="ra-board__cell"><p class="ra-board__cap">A4 and letter, the sheet's text width</p><div class="ra-paper gl-paper"><dc-import name="Gloss" form="paper" bare="{{ true }}" hint-size="100%,1600px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Korean chapter on paper</p><div class="ra-paper gl-paper" lang="ko"><dc-import name="Gloss" form="paper" lang="ko" bare="{{ true }}" hint-size="100%,1600px"></dc-import></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2100,"height":5800}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

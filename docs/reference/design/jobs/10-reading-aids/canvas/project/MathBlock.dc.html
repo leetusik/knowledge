@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The display formula block</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.ra-mb-alone { padding: var(--kb-space-lg) 0; }
+</style>
+</helmet>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}" lang="{{ lang }}" id="{{ rootId }}"><div class="{{ innerCls }}">
+<figure class="{{ figCls }}" aria-label="{{ figAria }}">
+<div class="{{ eqCls }}" ref="{{ setEq }}" tabindex="{{ eqTab }}" role="{{ eqRole }}" aria-label="{{ eqAria }}" onscroll="{{ onEqScroll }}">
+<sc-if value="{{ isT }}" hint-placeholder-val="{{ true }}"><div class="ra-steps" role="math" aria-label="{{ alt }}"><div class="ra-steps__grid" aria-hidden="true"><math display="block"><mrow><mi>s</mi></mrow></math><math display="block"><mo>=</mo></math><math display="block"><mrow><mfrac><mi>mean</mi><mi>sd</mi></mfrac></mrow></math><math display="block"><mrow><mi>t</mi></mrow></math><math display="block"><mo>=</mo></math><math display="block"><mrow><mi>s</mi><mo>×</mo><msqrt><mi>n</mi></msqrt></mrow></math></div></div></sc-if>
+<sc-if value="{{ isN }}" hint-placeholder-val="{{ false }}"><math display="block" alttext="{{ alt }}"><mrow><mi>N</mi><mo>=</mo><mfrac><msup><mrow><mo>(</mo><munder><mo>∑</mo><mi>i</mi></munder><msub><mi>e</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup><mrow><munder><mo>∑</mo><mi>i</mi></munder><msubsup><mi>e</mi><mi>i</mi><mn>2</mn></msubsup></mrow></mfrac></mrow></math></sc-if>
+<sc-if value="{{ isP }}" hint-placeholder-val="{{ false }}"><div class="ra-steps" role="math" aria-label="{{ alt }}"><div class="ra-steps__grid" aria-hidden="true"><math display="block"><mrow><mi>λ</mi></mrow></math><math display="block"><mo>=</mo></math><math display="block"><mrow><mi>rate</mi><mo>×</mo><mi>time</mi></mrow></math><math display="block"><mrow><mi>P</mi><mo stretchy="false">(</mo><mtext>no event</mtext><mo stretchy="false">)</mo></mrow></math><math display="block"><mo>=</mo></math><math display="block"><mrow><msup><mi>e</mi><mrow><mo>−</mo><mi>λ</mi></mrow></msup></mrow></math></div></div></sc-if>
+<sc-if value="{{ isW }}" hint-placeholder-val="{{ false }}"><div class="ra-steps" role="math" aria-label="{{ alt }}"><div class="ra-steps__grid" aria-hidden="true"><math display="block"><mrow><mi>t</mi></mrow></math><math display="block"><mo>=</mo></math><math display="block"><mrow><mrow><mo>(</mo><mfrac><mi>mean</mi><mi>sd</mi></mfrac><mo>)</mo></mrow><mo>×</mo><msqrt><mi>n</mi></msqrt></mrow></math><span></span><math display="block"><mo>=</mo></math><math display="block"><mrow><mrow><mo>(</mo><mfrac><mn>0.10</mn><mn>0.25</mn></mfrac><mo>)</mo></mrow><mo>×</mo><msqrt><mn>30</mn></msqrt></mrow></math><span></span><math display="block"><mo>≈</mo></math><math display="block"><mrow><mn>0.40</mn><mo>×</mo><mn>5.48</mn></mrow></math><span></span><math display="block"><mo>≈</mo></math><math display="block"><mrow><mn>2.19</mn></mrow></math></div></div></sc-if>
+<sc-if value="{{ isC }}" hint-placeholder-val="{{ false }}"><math display="block" alttext="{{ alt }}"><mrow><mi>t</mi><mo>=</mo><mrow><mo>(</mo><mfrac><mi>mean</mi><mi>sd</mi></mfrac><mo>)</mo></mrow><mo>×</mo><msqrt><mi>n</mi></msqrt><mo>=</mo><mrow><mo>(</mo><mfrac><mn>0.10</mn><mn>0.25</mn></mfrac><mo>)</mo></mrow><mo>×</mo><msqrt><mn>30</mn></msqrt><mo>≈</mo><mn>0.40</mn><mo>×</mo><mn>5.48</mn><mo>≈</mo><mn>2.19</mn></mrow></math></sc-if>
+</div>
+<figcaption class="ra-mb__cap">
+<p class="ra-mb__read"><sc-for list="{{ f.read }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if></sc-for></p>
+<p class="ra-mb__where">{{ whereWord }}</p>
+<dl class="ra-legend">
+<sc-for list="{{ rows }}" as="row" hint-placeholder-count="4">
+<dt><sc-if value="{{ row.s.t }}" hint-placeholder-val="{{ true }}"><math alttext="t"><mi>t</mi></math></sc-if><sc-if value="{{ row.s.s }}" hint-placeholder-val="{{ false }}"><math alttext="s"><mi>s</mi></math></sc-if><sc-if value="{{ row.s.n }}" hint-placeholder-val="{{ false }}"><math alttext="n"><mi>n</mi></math></sc-if><sc-if value="{{ row.s.mean }}" hint-placeholder-val="{{ false }}"><math alttext="mean"><mi>mean</mi></math></sc-if><sc-if value="{{ row.s.sd }}" hint-placeholder-val="{{ false }}"><math alttext="s d"><mi>sd</mi></math></sc-if><sc-if value="{{ row.s.N }}" hint-placeholder-val="{{ false }}"><math alttext="N"><mi>N</mi></math></sc-if><sc-if value="{{ row.s.ei }}" hint-placeholder-val="{{ false }}"><math alttext="e i"><msub><mi>e</mi><mi>i</mi></msub></math></sc-if><sc-if value="{{ row.s.sum }}" hint-placeholder-val="{{ false }}"><math alttext="sum over i"><msub><mo>∑</mo><mi>i</mi></msub></math></sc-if><sc-if value="{{ row.s.lam }}" hint-placeholder-val="{{ false }}"><math alttext="lambda"><mi>λ</mi></math></sc-if><sc-if value="{{ row.s.rate }}" hint-placeholder-val="{{ false }}"><math alttext="rate"><mi>rate</mi></math></sc-if><sc-if value="{{ row.s.time }}" hint-placeholder-val="{{ false }}"><math alttext="time"><mi>time</mi></math></sc-if><sc-if value="{{ row.s.P }}" hint-placeholder-val="{{ false }}"><math alttext="P of no event"><mrow><mi>P</mi><mo stretchy="false">(</mo><mtext>no event</mtext><mo stretchy="false">)</mo></mrow></math></sc-if><sc-if value="{{ row.s.e }}" hint-placeholder-val="{{ false }}"><math alttext="e"><mi>e</mi></math></sc-if></dt>
+<dd><sc-for list="{{ row.runs }}" as="r" hint-placeholder-count="2"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if><sc-if value="{{ r.isTerm }}" hint-placeholder-val="{{ false }}"><a class="{{ r.cls }}" href="{{ r.href }}" role="button" tabindex="{{ r.tab }}" aria-haspopup="dialog" aria-expanded="{{ r.expanded }}" data-term="{{ r.id }}" onclick="{{ r.open }}" onkeydown="{{ r.key }}">{{ r.v }}</a></sc-if></sc-for></dd>
+</sc-for>
+</dl>
+</figcaption>
+</figure>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"formula":{"editor":"enum","options":["tstat","participation","poisson","worked","chain"],"default":"tstat"},"lang":{"editor":"enum","options":["en","ko"],"default":"en"},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"paper":{"editor":"boolean","default":false},"glossary":{"editor":null},"open":{"editor":null},"bare":{"editor":null},"onTerm":{"editor":null},"$preview":{"width":720,"height":560}}'>
+// The shared formulas (frame.md F7 and the fixture F12): the same in every language; only the words around them change.
+// In a reading or a legend's text, {braces} mark one unbreakable run (F22, F23); a hyphenated legend term is kept whole.
+const RA_FORMULAS = {
+  tstat: {
+    alt: { en: 's equals mean over sd; t equals s times the square root of n', ko: 's는 평균 나누기 sd, t는 s 곱하기 n의 제곱근' },
+    read: {
+      en: 'Divide the average P&L per event by its spread, then multiply by the square root of the number of events: four times the events doubles the result.',
+      ko: '이벤트당 평균 손익을 그 흔들림으로 나눈 뒤 이벤트 수의 제곱근을 곱합니다. 이벤트가 네 배면 결과는 두 배가 됩니다.',
+    },
+    legend: [
+      { sym: 't', en: [['the ', null], ['t-statistic', 'tstat'], [': how far the average P&L sits from zero, in standard errors', null]], ko: [['', null], ['t-통계량', 'tstat'], [': 평균 손익이 0에서 표준오차 몇 개만큼 떨어져 있는지', null]] },
+      { sym: 's', en: [['the per-event ', null], ['Sharpe ratio', 'sharpe']], ko: [['이벤트당 ', null], ['샤프 비율', 'sharpe']] },
+      { sym: 'n', en: [['the number of events', null]], ko: [['이벤트 수', null]] },
+      { sym: 'mean', en: [['the average P&L per event, in %\u00a0of\u00a0', null], ['K', 'k']], ko: [['이벤트당 평균 손익, ', null], ['K', 'k'], ['\u00a0대비\u00a0%', null]] },
+      { sym: 'sd', en: [['the standard deviation of the P&L per event: how much it varies', null]], ko: [['이벤트당 손익의 표준편차: 얼마나 흔들리는지', null]] },
+    ],
+  },
+  participation: {
+    alt: { en: 'N equals the square of the sum of e i, over the sum of e i squared', ko: 'N은 e i 합의 제곱 나누기 e i 제곱의 합' },
+    read: {
+      en: 'Square the sum of the eigenvalues and divide by the sum of their squares: ten perfectly correlated trials count as 1, ten independent ones as 10.',
+      ko: '고유값의 합을 제곱해 고유값 제곱의 합으로 나눕니다. 완전히 같이 움직이는 시도 열 개는 1로, 독립인 시도 열 개는 10으로 셉니다.',
+    },
+    legend: [
+      { sym: 'N', en: [['the ', null], ['participation ratio', 'participation'], [': how many independent trials the set is worth', null]], ko: [['', null], ['참여 비율', 'participation'], [': 시도들이 독립 시도 몇 개에 해당하는지', null]] },
+      { sym: 'ei', en: [['the i-th ', null], ['eigenvalue', 'eigenvalue'], [' of the trials’ correlation matrix', null]], ko: [['시도들의 상관행렬의 i번째 ', null], ['고유값', 'eigenvalue']] },
+      { sym: 'sum', en: [['add up over every eigenvalue, from i = 1 to the number of trials', null]], ko: [['i = 1부터 시도 횟수까지 모든 고유값을 더함', null]] },
+    ],
+  },
+  poisson: {
+    alt: { en: 'lambda equals rate times time; P of no event equals e to the minus lambda', ko: '람다는 비율 곱하기 시간, 이벤트 없음의 확률은 e의 마이너스 람다 제곱' },
+    read: {
+      en: 'The longer the stretch, the more events you expect, and the chance of seeing none at all falls fast toward zero.',
+      ko: '구간이 길수록 기대하는 이벤트가 많아지고, 하나도 보지 못할 확률은 빠르게 0에 가까워집니다.',
+    },
+    legend: [
+      { sym: 'lam', en: [['the number of events you expect over the stretch', null]], ko: [['구간 동안 기대하는 이벤트 수', null]] },
+      { sym: 'rate', en: [['events per unit of time, steady and independent', null]], ko: [['단위 시간당 이벤트 수, 일정하고 서로 독립', null]] },
+      { sym: 'time', en: [['the length of the stretch', null]], ko: [['구간의 길이', null]] },
+      { sym: 'P', en: [['the chance of seeing no event at all', null]], ko: [['이벤트를 하나도 보지 못할 확률', null]] },
+      { sym: 'e', en: [['Euler’s number, about 2.718', null]], ko: [['오일러 수, 약 2.718', null]] },
+    ],
+  },
+  worked: {
+    alt: { en: 't equals mean over sd times the square root of n, equals 0.10 over 0.25 times the square root of 30, about 0.40 times 5.48, about 2.19', ko: 't는 평균 나누기 sd 곱하기 n의 제곱근, 0.10 나누기 0.25 곱하기 30의 제곱근, 약 0.40 곱하기 5.48, 약 2.19' },
+    read: {
+      en: 'Thirty events averaging {+0.10 % of K} with a spread of {0.25 %} give a {t-statistic} of about 2.19, just over B6’s 2.0.',
+      ko: '평균 {K 대비 +0.10 %,} {흔들림 0.25 %인} 이벤트 서른 개면 {t-통계량은} 약 2.19로, B6의 2.0을 조금 넘습니다.',
+    },
+    legend: [
+      { sym: 't', en: [['the ', null], ['t-statistic', 'tstat']], ko: [['', null], ['t-통계량', 'tstat']] },
+      { sym: 'mean', en: [['+0.10\u00a0%\u00a0of\u00a0', null], ['K', 'k'], [', the average P&L per event', null]], ko: [['', null], ['K', 'k'], ['\u00a0대비\u00a0+0.10\u00a0%, 이벤트당 평균 손익', null]] },
+      { sym: 'sd', en: [['{0.25 % of K}, the spread of the P&L per event', null]], ko: [['{K 대비 0.25 %,} 이벤트당 손익의 흔들림', null]] },
+      { sym: 'n', en: [['30, the number of events', null]], ko: [['30, 이벤트 수', null]] },
+    ],
+  },
+};
+RA_FORMULAS.chain = RA_FORMULAS.worked;
+
+const raKeep = (str) => (str || '').split(/(\{[^}]*\})/).filter(Boolean).map((x) => (x[0] === '{' ? { v: x.slice(1, -1), isKeep: true } : { v: x, isText: true }));
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { more: '' };
+    this.eq = null;
+  }
+  setEq = (el) => {
+    if (this.eq === el) return;
+    if (this.ro) { this.ro.disconnect(); this.ro = null; }
+    this.eq = el;
+    if (el && typeof ResizeObserver !== 'undefined') {
+      this.ro = new ResizeObserver(() => this.measure());
+      this.ro.observe(el);
+    }
+    if (el) setTimeout(() => this.measure(), 0);
+  };
+  measure = () => {
+    const el = this.eq;
+    if (!el) return;
+    const over = el.scrollWidth - el.clientWidth > 1;
+    let more = '';
+    if (over) {
+      const start = el.scrollLeft > 1;
+      const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+      more = (start ? ' is-more-start' : '') + (end ? ' is-more-end' : '') + ' is-over';
+    }
+    if (more !== this.state.more) this.setState({ more });
+  };
+  componentWillUnmount() { if (this.ro) this.ro.disconnect(); }
+  renderVals() {
+    const P = this.props;
+    const id = RA_FORMULAS[P.formula] ? P.formula : 'tstat';
+    const F = RA_FORMULAS[id];
+    const lang = P.lang === 'ko' ? 'ko' : 'en';
+    const paper = !!P.paper;
+    const bare = !!P.bare;
+    const gl = !!P.glossary;
+    const open = P.open || null;
+    const over = this.state.more.indexOf('is-over') >= 0;
+    const call = (tid) => (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      if (P.onTerm) P.onTerm(tid, e && e.currentTarget);
+    };
+    const key = (tid) => (e) => {
+      if (!e) return;
+      if (e.key === ' ' || e.key === 'Spacebar' || (e.key === 'Enter' && !gl)) {
+        e.preventDefault();
+        if (P.onTerm) P.onTerm(tid, e.currentTarget);
+      }
+    };
+    const rows = F.legend.map((r) => ({
+      s: { [r.sym]: true },
+      runs: [].concat(...r[lang].map(([v, tid]) => (tid ? [{ isTerm: true, v, id: tid, cls: 'ra-term' + (/-/.test(v) ? ' ra-keep' : '') }] : raKeep(v)))).map((x) => ({
+        isText: !!x.isText, isKeep: !!x.isKeep, isTerm: !!x.isTerm, v: x.v, cls: x.cls, id: x.id,
+        href: x.id && gl ? '#gl-' + x.id : undefined,
+        tab: x.id && !gl ? 0 : undefined,
+        expanded: x.id ? (open === x.id ? 'true' : 'false') : undefined,
+        open: x.id ? call(x.id) : undefined,
+        key: x.id ? key(x.id) : undefined,
+      })),
+    }));
+    return {
+      f: { read: raKeep(F.read[lang]) },
+      lang,
+      alt: F.alt[lang],
+      whereWord: lang === 'ko' ? '여기서' : 'where',
+      rows,
+      isT: id === 'tstat', isN: id === 'participation', isP: id === 'poisson', isW: id === 'worked', isC: id === 'chain',
+      figAria: (lang === 'ko' ? '수식: ' : 'Formula: ') + F.alt[lang],
+      figCls: 'ra-mb',
+      eqCls: 'ra-mb__eq' + (paper ? '' : this.state.more),
+      eqTab: over && !paper ? 0 : undefined,
+      eqRole: over && !paper ? 'region' : undefined,
+      eqAria: over && !paper ? (lang === 'ko' ? '수식, 옆으로 스크롤됩니다' : 'Formula, scrolls sideways') : undefined,
+      onEqScroll: this.measure,
+      setEq: this.setEq,
+      wrapCls: bare ? 'rd-in' : (paper ? 'ra-paper ra-mb-alone' : 'rd-frame rd-in'),
+      wrapTheme: bare || paper ? undefined : (P.theme === 'dark' ? 'dark' : 'light'),
+      innerCls: bare ? 'rd-in' : (paper ? 'ra-paper-in' : 'rd-flow rd-prose ra-mb-alone'),
+      rootId: bare ? undefined : 'top',
+    };
+  }
+}
+</script>
+</body>
+</html>
