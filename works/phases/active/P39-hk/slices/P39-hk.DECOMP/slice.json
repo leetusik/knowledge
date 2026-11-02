@@ -3,7 +3,7 @@
   "phase_id": "P39-hk",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "pending",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-30T23:45:53+09:00",
@@ -28,5 +28,10 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "pending": {
+    "kind": "decision",
+    "on_words": "the operator's word on where P39-hk runs: 'worktree' starts it in its own worktree as its intent records (parallel-start, then /do-whole-phase there); 'here' runs it on the default stream. Either way its design canvas waits for the operator's literal sign-off",
+    "since": "2026-11-02T15:21:39+09:00"
   }
 }

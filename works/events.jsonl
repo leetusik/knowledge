@@ -1679,3 +1679,4 @@
 {"ts": "2026-11-02T15:21:19+09:00", "type": "acceptance_opened", "phase": "P37-1p"}
 {"ts": "2026-11-02T15:21:19+09:00", "type": "deferred_created", "deferred": "D88-gd", "source": "P37-1p.REVIEW"}
 {"ts": "2026-11-02T15:21:19+09:00", "type": "deferred_created", "deferred": "D89-zf", "source": "P37-1p.REVIEW"}
+{"ts": "2026-11-02T15:21:39+09:00", "type": "slice_status_changed", "slice": "P39-hk.DECOMP", "old_status": "todo", "new_status": "pending", "stop_kind": "decision"}

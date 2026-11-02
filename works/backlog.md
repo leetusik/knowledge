@@ -331,5 +331,5 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P39-hk.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P39-hk/slices/P39-hk.DECOMP` |
+| [~] `P39-hk.DECOMP` | `pending` | decompose phase | `decomposition` | `works/phases/active/P39-hk/slices/P39-hk.DECOMP` |
 | [ ] `P39-hk.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |
