@@ -1,15 +1,13 @@
 # Knowledge Base
 
-### 🗺️ [**Explore my knowledge graph → knowledge.hi2vi.com/@leetusik/graph**](https://knowledge.hi2vi.com/@leetusik/graph)
+### 🗺️ [**Explore my library → knowledge.hi2vi.com/@leetusik**](https://knowledge.hi2vi.com/@leetusik)
 
-*Start there — an interactive map of everything in this library. No sign-up
-needed; click any node to read that explainer.*
-
-[![Interactive knowledge graph of this library](.github/knowledge-graph.png)](https://knowledge.hi2vi.com/@leetusik/graph)
+*Start there — every explainer in this library, in one place. No sign-up
+needed; open any one to read it.*
 
 **Live site → <https://knowledge.hi2vi.com>** — the hosted product; sign in to
 browse your own library, or jump straight to the public
-[knowledge map](https://knowledge.hi2vi.com/@leetusik/graph) above.
+[library](https://knowledge.hi2vi.com/@leetusik) above.
 
 Technical explainers written from real project work. When I solve something
 non-trivial, a coding agent (Claude Code / Codex) researches the actual code
@@ -17,12 +15,11 @@ and writes a beginner-friendly explainer here — grounded in the real repo, no
 invented claims. The library grows as I work.
 
 What started as a personal knowledge base is now a small hosted product with
-four ways in: a free **web app** (sign up, browse/search/read, share, an
-in-app graph), a Claude Code **plugin** (self-host your own KB), a standalone
-**CLI** (drive it from a terminal or a coding agent), and an **MCP retrieval
-service** (`search` + `fetch_document` tools for any AI agent). This README
-covers the plugin and CLI install paths; the web app needs no install — just
-sign up.
+four ways in: a free **web app** (sign up, browse/search/read, share), a
+Claude Code **plugin** (self-host your own KB), a standalone **CLI** (drive it
+from a terminal or a coding agent), and an **MCP retrieval service** (`search` +
+`fetch_document` tools for any AI agent). This README covers the plugin and CLI
+install paths; the web app needs no install — just sign up.
 
 ## Install the plugin
 
@@ -77,7 +74,7 @@ skill is also published, copyable and downloadable, at
   into this same repo.
 - **Publish path** — the API is hosted at <https://knowledge.hi2vi.com> behind
   one nginx edge that also fronts a Next.js web app (`/` — the primary human
-  surface: sign up, browse/search/read, an in-app graph, sharing) and an MCP
+  surface: sign up, browse/search/read, sharing) and an MCP
   retrieval service (`/mcp`) any AI agent can call. A doc written on the box is
   live the instant it's saved — *fresh-on-write*, no CI build or CDN lag — and a
   manual-dispatch `Production Deploy` GitHub Action reconciles the box from
@@ -94,12 +91,10 @@ skill is also published, copyable and downloadable, at
   at write time (local paths become repo basenames; URLs pass through), so no
   filesystem details leak to the public site.
 - **Pretty share links** — a hosted org can claim a durable public slug and get
-  readable URLs (`/@{org}/{project}/{doc-slug}`, `/@{org}/graph`); the old
+  readable URLs (`/@{org}/{project}/{doc-slug}`); the old
   `/documents/{id}` and `/graph/{uuid}` links keep resolving forever.
-- **Knowledge map** — the hosted app draws an interactive
-  [graph](https://knowledge.hi2vi.com/@leetusik/graph) of the library
-  client-side. The **local** MkDocs site (below) builds its own static graph the
-  same way it always has: `graph.json` emitted at build time by a MkDocs hook
+- **Knowledge map** — the **local** MkDocs site (below) builds a static graph
+  of the library: `graph.json` emitted at build time by a MkDocs hook
   (`scripts/graph_hook.py`) and drawn client-side with vendored, no-CDN
   JavaScript — that copy is what self-hosters and the plugin scaffold get.
 

@@ -3,13 +3,13 @@
   "phase_id": "P37-1p",
   "name": "landing graph section, motif and copy out",
   "kind": "implementation",
-  "status": "pending",
+  "status": "done",
   "order": 50,
   "depends_on": [],
   "depends_declared": true,
   "created_at": "2026-11-02T13:32:52+09:00",
   "started_at": "2026-11-02T13:53:10+09:00",
-  "completed_at": null,
+  "completed_at": "2026-11-02T14:01:54+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -19,7 +19,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Landing drops the graph band, motif and every graph clause (copy, pricing, metadata); README hero links /@leetusik, screenshot deleted; browser-checked at 4 viewports (Claude in Chrome, sugang profile)",
   "validation": {
     "required": [],
     "last_run": null,
@@ -29,10 +29,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "operator-action",
-    "on_words": "the operator connects Claude in Chrome in the sugang profile; the orchestrator reads its deviceId and re-dispatches S5's browser leg only (code is done, uncommitted in the tree)",
-    "since": "2026-11-02T13:56:35+09:00"
   }
 }

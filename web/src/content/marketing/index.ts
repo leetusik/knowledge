@@ -13,7 +13,6 @@ export {
   FEATURE_CONNECT,
   AGENT_QUICKSTART,
   FEATURE_SKILL,
-  FEATURE_GRAPH,
   PRICING,
   FINAL_CTA,
   FOOTER,
@@ -34,12 +33,3 @@ export type {
 
 export { HERO_TERMINAL, CONNECT_TERMINAL } from "./terminals";
 export type { Terminal, TermLine, TermSeg, TermTone } from "./terminals";
-
-export { GRAPH_MOTIF } from "./graph-motif";
-export type {
-  GraphMotif,
-  MotifNode,
-  MotifEdge,
-  MotifInk,
-  MotifNodeType,
-} from "./graph-motif";

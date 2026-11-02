@@ -5,8 +5,7 @@
  * color use Tailwind v4 utilities + the @theme tokens (globals.css); this file
  * carries only what utilities cannot cleanly express: the tonal-band custom-
  * property re-points, the tick / eyebrow pseudo-elements, the terminal syntax
- * inks, the numbered-step connectors, the search-highlight, and the graph plate
- * / panel / legend. Rebuilt from the design reference
+ * inks, the numbered-step connectors, and the search-highlight. Rebuilt from the design reference
  * `web/design/rounds/01-landing/output/marketing.css` (read-only) — NOT ported.
  *
  * The tonal-band mechanic (build-prompt §2): a dark band is a scoped context,
@@ -237,99 +236,6 @@
   color: inherit;
   border-radius: 3px;
   padding: 0 2px;
-}
-
-/* ── The knowledge-graph motif (feature · graph) ─────────────────────────────
- * Recessed --kb-surface-sunken plate; the canvas draws transparent over it and
- * reads the scheme-resolved --mkt-graph-* / --mkt-ink-* inks live. */
-.mkt-graph-plate {
-  position: relative;
-  border-radius: var(--radius-xl);
-  background: var(--kb-surface-sunken);
-  border: 1px solid var(--mkt-border);
-  overflow: hidden;
-  --mkt-ink-teal: var(--kb-ink-teal);
-  --mkt-ink-bronze: var(--kb-ink-bronze);
-  --mkt-ink-plum: var(--kb-ink-plum);
-  --mkt-graph-edge: #7c7362;
-  --mkt-graph-edge-active: var(--kb-ink-teal);
-  --mkt-graph-tag: var(--kb-secondary);
-  --mkt-graph-ghost: #7f7666;
-  --mkt-graph-focus: var(--kb-accent-strong);
-  --mkt-graph-halo: rgba(15, 111, 102, 0.22);
-  --mkt-graph-label: var(--kb-ink);
-  --mkt-graph-label-muted: var(--kb-secondary);
-  --mkt-graph-outline: var(--kb-surface-sunken);
-}
-[data-md-color-scheme="slate"] .mkt-graph-plate {
-  --mkt-ink-teal: var(--kb-ink-teal-dark);
-  --mkt-ink-bronze: var(--kb-ink-bronze-dark);
-  --mkt-ink-plum: var(--kb-ink-plum-dark);
-  --mkt-graph-edge: #6f6759;
-  --mkt-graph-edge-active: var(--kb-ink-teal-dark);
-  --mkt-graph-ghost: #6b6355;
-  --mkt-graph-halo: rgba(98, 189, 178, 0.25);
-}
-.mkt-graph-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-/* Floating info panel (project chip · title · meta · tags · read) */
-.mkt-graph-panel {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  width: min(58%, 268px);
-  padding: 16px 18px;
-  border-radius: var(--radius-lg);
-  background: var(--kb-surface);
-  border: 1px solid var(--mkt-border);
-  box-shadow: var(--kb-shadow-card);
-}
-.mkt-graph-chip {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  vertical-align: middle;
-}
-.mkt-graph-legend {
-  position: absolute;
-  left: 18px;
-  bottom: 18px;
-  padding: 12px 14px;
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--kb-surface) 88%, transparent);
-  border: 1px solid var(--mkt-border);
-  backdrop-filter: blur(3px);
-}
-.mkt-graph-ring {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  border: 1.5px solid var(--kb-secondary);
-  vertical-align: middle;
-}
-.mkt-graph-switch {
-  width: 26px;
-  height: 15px;
-  border-radius: 999px;
-  background: var(--color-green);
-  position: relative;
-  flex: none;
-}
-.mkt-graph-switch::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--kb-surface);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════

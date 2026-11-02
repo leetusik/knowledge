@@ -46,12 +46,11 @@ export const MKT_SECTION_IDS = {
   howItWorks: "how-it-works",
   save: "save",
   connect: "connect",
-  // P20.S3 — the two onboarding sections, in band order between connect and graph:
+  // P20.S3 — the two onboarding sections, in band order between connect and pricing:
   // the env-var agent quickstart continues the Connect dark territory, the published
   // skill follows on a sunken band.
   agents: "agents",
   skill: "skill",
-  graph: "graph",
   pricing: "pricing",
   cta: "get-started",
 } as const;

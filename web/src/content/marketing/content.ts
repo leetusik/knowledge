@@ -74,7 +74,7 @@ export const HERO = {
   id: MKT_SECTION_IDS.hero as MktSectionId,
   eyebrow: "FOR DEVELOPERS & THEIR CODING AGENTS",
   headline: "Knowledge that outlives the conversation.",
-  lede: "A durable, searchable home for what you and your coding agents figure out — saved straight from the terminal, browsed as a living graph, and read like a book. Not a runbook.",
+  lede: "A durable, searchable home for what you and your coding agents figure out — saved straight from the terminal and read like a book. Not a runbook.",
   ctas: [
     { label: "Get started — free", href: LINKS.signup, variant: "primary" },
     {
@@ -83,7 +83,7 @@ export const HERO = {
       variant: "secondaryOnDark",
     },
   ] satisfies MktCta[],
-  free: "The web app, hybrid search, the graph & the Claude Code connection — all free.",
+  free: "The web app, hybrid search & the Claude Code connection — all free.",
 };
 
 export const VALUE = {
@@ -96,7 +96,7 @@ export const VALUE = {
       index: "01",
       kicker: "WEB · The reading room",
       title: "",
-      body: "An authenticated workspace: a `docs/`-style tree of explainers, hybrid keyword + semantic search, and an interactive knowledge graph. Read like a book — Recent, Browse, prev/next.",
+      body: "An authenticated workspace: a `docs/`-style tree of explainers, and hybrid keyword + semantic search. Read like a book — Recent, Browse, prev/next.",
       chip: { label: "Free" },
       cta: { label: "Open the app →", href: LINKS.appEntry },
     },
@@ -267,23 +267,11 @@ export const FEATURE_SKILL = {
   },
 };
 
-export const FEATURE_GRAPH = {
-  id: MKT_SECTION_IDS.graph as MktSectionId,
-  eyebrow: "THE KNOWLEDGE GRAPH",
-  title: "See how your knowledge connects.",
-  ticks: [
-    "A quiet map — hover reveals the neighborhood",
-    "Drag to re-place, wheel / pinch to zoom",
-    "The legend is a lens, not a filter",
-    "Project inks (teal · bronze · plum), data-viz only",
-  ],
-};
-
 export const PRICING = {
   id: MKT_SECTION_IDS.pricing as MktSectionId,
   eyebrow: "PRICING",
   title: "Free while it matters.",
-  lede: "The web app, search, the graph, and the whole Claude Code connection are free — and stay free. The one paid surface is a retrieval API for agents, and it isn't here yet.",
+  lede: "The web app, search, and the whole Claude Code connection are free — and stay free. The one paid surface is a retrieval API for agents, and it isn't here yet.",
   tiers: [
     {
       name: "Free",
@@ -292,9 +280,8 @@ export const PRICING = {
       price: "$0 / forever",
       blurb: "Everything you need to build and browse a knowledge base",
       ticks: [
-        "The web reading room — tree, search & graph",
+        "The web reading room — tree & search",
         "Hybrid keyword + semantic search",
-        "The interactive knowledge graph",
         "Claude Code + the `knowledge` CLI",
         "Unlimited saves",
       ],

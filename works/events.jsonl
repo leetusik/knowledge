@@ -1657,3 +1657,9 @@
 {"ts": "2026-11-02T13:56:35+09:00", "type": "slice_status_changed", "slice": "P37-1p.S5", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}
 {"ts": "2026-11-02T13:56:41+09:00", "type": "executor_dispatched", "slice": "P37-1p.S2", "phase": "P37-1p", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "needs_operator", "note": null}
 {"ts": "2026-11-02T13:56:41+09:00", "type": "slice_status_changed", "slice": "P37-1p.S2", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}
+{"ts": "2026-11-02T13:57:59+09:00", "type": "slice_status_changed", "slice": "P37-1p.S2", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-11-02T13:57:59+09:00", "type": "slice_status_changed", "slice": "P37-1p.S5", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-11-02T13:59:36+09:00", "type": "executor_dispatched", "slice": "P37-1p.S2", "phase": "P37-1p", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "needs_operator", "note": "resumed browser leg: profile not signed in to :3030"}
+{"ts": "2026-11-02T13:59:36+09:00", "type": "slice_status_changed", "slice": "P37-1p.S2", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}
+{"ts": "2026-11-02T14:01:54+09:00", "type": "executor_dispatched", "slice": "P37-1p.S5", "phase": "P37-1p", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": "resumed browser leg passed"}
+{"ts": "2026-11-02T14:01:54+09:00", "type": "slice_status_changed", "slice": "P37-1p.S5", "old_status": "in_progress", "new_status": "done"}

@@ -20,12 +20,12 @@ export const metadata: Metadata = {
   title:
     "knowledge — Durable knowledge for developers and their coding agents",
   description:
-    "A durable, searchable home for what you and your coding agents figure out — saved from the terminal, browsed as a living graph, read like a book.",
+    "A durable, searchable home for what you and your coding agents figure out — saved from the terminal, read like a book.",
   alternates: { canonical: "/" },
   openGraph: {
     title: "knowledge — Knowledge that outlives the conversation",
     description:
-      "Durable knowledge for developers and their coding agents. Free web app, hybrid search, the knowledge graph, and the Claude Code connection.",
+      "Durable knowledge for developers and their coding agents. Free web app, hybrid search, and the Claude Code connection.",
     url: SITE.url,
     siteName: SITE.name,
     type: "website",

@@ -5,7 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // Shared server-rendered primitives for the landing. No client state — the whole
-// static page is the guaranteed baseline (Reveal + the header/graph islands are
+// static page is the guaranteed baseline (Reveal + the header/copy islands are
 // the only client code). Layout/spacing/type/color are Tailwind utilities on the
 // @theme tokens; the pseudo-elements + band re-points live in marketing.css.
 
