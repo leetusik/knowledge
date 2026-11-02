@@ -43,7 +43,7 @@
 | [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.D1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [x] `P37-1p` | `done` | `pass` | Drop the knowledge graph | `none` | `works/phases/active/P37-1p` |
 | [x] `P38-e1` | `done` | `pass` | Right-size explain runs (plugin 0.9.0) | `none` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
-| [ ] `P39-hk` | `planned` | `pending` | Glossary: term definitions on hover or tap | `P39-hk.DECOMP` | `works/phases/active/P39-hk` |
+| [ ] `P39-hk` | `planned` | `pending` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `P39-hk.DECOMP` | `works/phases/active/P39-hk` |
 
 ## Phase P21: Web document deletion
 
@@ -327,7 +327,7 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | [x] `P38-e1.S9` | `done` | Release the knowledge plugin as 0.9.0 | `implementation` | `works/phases/active/P38-e1/slices/P38-e1.S9` |
 | [x] `P38-e1.REVIEW` | `done` | phase review | `review` | `works/phases/active/P38-e1/slices/P38-e1.REVIEW` |
 
-## Phase P39-hk: Glossary: term definitions on hover or tap
+## Phase P39-hk: Explain what was built: phase-grounded, suggested shape, glossary, formulas
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|

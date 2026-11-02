@@ -1,10 +1,10 @@
-# Phase P39-hk: Glossary: term definitions on hover or tap
+# Phase P39-hk: Explain what was built: phase-grounded, suggested shape, glossary, formulas
 
 _Intent: see [intent.md](intent.md)._
 
 ## Objective
 
-Native chapters can carry a glossary: a validated glossary block and term: links the reader shows as a definition window on hover (desktop) or tap (phone), plus a glossary section; kept across translations and print; the explain skill writes and checks them. Designed on a signed canvas first (build-after, sign on canvas), then built in the server, reader and plugin. Runs after P38-e1 merges (both edit the explain skill).
+Explain documents come from what was built: the explain writes only from the code and the phases' records (no research of its own, codebase-only, a research phase offered first when no phase covers the subject), suggests the reader and the shape at its one confirmation, reads easily with visuals first, and carries a glossary (term links shown as a definition window on hover or tap, plus a glossary section) and typeset formulas with a plain-words legend, kept across translation and print. The glossary and formula surfaces are designed on a signed canvas first (build-after), then built in the server, reader, plugin and the workspace's explain route.
 
 ## Slices
 
