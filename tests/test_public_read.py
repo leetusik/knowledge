@@ -1,7 +1,7 @@
-"""The P19.S2 anonymous read surface: public-project doc/raw reads + the
-org-scoped public graph, and the negative non-leak guarantees.
+"""The P19.S2 anonymous read surface: public-project doc/raw reads and the
+negative non-leak guarantees.
 
-The trust boundary under test: a **public**-visibility project's docs and graph
+The trust boundary under test: a **public**-visibility project's docs
 are readable with no session (and cross-org), while **private** projects and
 nonexistent ids are indistinguishable 404s — never a 403, never a leak. Reuses
 the Postgres-gated harness + signup/create-project helpers from
@@ -140,74 +140,6 @@ def test_cross_org_user_sees_only_public(documents_client):
     # the member fast-path misses (cross-org) then the public path gates on visibility.
     assert client.get(f"/app/documents/{pub_id}", headers=b_headers).status_code == 200
     assert client.get(f"/app/documents/{secret_id}", headers=b_headers).status_code == 404
-
-
-def test_public_graph_is_org_scoped(documents_client):
-    client, _ = documents_client
-    a_headers, a_tenant = _signup(client, f"ga-{uuid4()}@example.com")
-    b_headers, b_tenant = _signup(client, f"gb-{uuid4()}@example.com")
-    a_pub = _project(client, a_headers, "pub")
-    _project(client, a_headers, "secret")  # private
-    _set_public(client, a_headers, a_pub)
-    _project(client, b_headers, "bonly")  # B has only a private project
-
-    _seed(a_tenant, "pub", slug="p", tags=["shown"])
-    secret_rel = "secret/2026-01-01-s.md"
-    _seed(a_tenant, "secret", slug="s", tags=["hidden"])
-
-    # Anonymous public graph for org A: only the public project's nodes/tags.
-    g = client.get("/app/graph", params={"org": a_tenant})
-    assert g.status_code == 200, g.text
-    graph = g.json()
-    node_ids = {n["id"] for n in graph["nodes"]}
-    assert secret_rel not in node_ids
-    assert "tag:hidden" not in node_ids and "tag:shown" in node_ids
-    assert [p["name"] for p in graph["projects"]] == ["pub"]
-    # P25.S4: no org slug claimed yet ⇒ the additive key is present and null, so
-    # the legacy /graph/{uuid} page serves exactly as today.
-    assert graph["canonical_path"] is None
-    # P28.S1: the same holds for the per-doc-node key on the public payload.
-    pub_node = next(n for n in graph["nodes"] if n["id"] == "pub/2026-01-01-p.md")
-    assert pub_node["canonical_path"] is None
-    assert pub_node["url"].startswith("/documents/")
-
-    # A nonexistent org and an org with zero public projects both → 404 (no leak).
-    assert client.get("/app/graph", params={"org": str(uuid4())}).status_code == 404
-    assert client.get("/app/graph", params={"org": b_tenant}).status_code == 404
-
-    # Bare unauthenticated call still 401; the member bare call sees the whole corpus.
-    assert client.get("/app/graph").status_code == 401
-    member = client.get("/app/graph", headers=a_headers).json()
-    assert {p["name"] for p in member["projects"]} == {"pub", "secret"}
-
-    # ── P25.S4: ?org= also accepts the org SLUG ──────────────────────────────
-    org = _set_slug(client, a_headers)
-    by_slug = client.get("/app/graph", params={"org": org})
-    assert by_slug.status_code == 200, by_slug.text
-    assert {n["id"] for n in by_slug.json()["nodes"]} == node_ids
-    assert by_slug.json()["canonical_path"] == f"/@{org}/graph"
-    # P28.S1: and now every public doc node carries its own pretty path beside the
-    # unchanged /documents/{id} url — this is the link a stranger actually shares.
-    pub_node = next(
-        n for n in by_slug.json()["nodes"] if n["id"] == "pub/2026-01-01-p.md"
-    )
-    assert pub_node["canonical_path"] == f"/@{org}/pub/p"
-    assert pub_node["url"].startswith("/documents/")
-    # The UUID form now reports the same pretty path (one org, one canonical URL).
-    assert client.get("/app/graph", params={"org": a_tenant}).json()[
-        "canonical_path"
-    ] == f"/@{org}/graph"
-
-    # An unclaimed, a reserved and a malformed slug are ONE indistinguishable 404 —
-    # never a 422, so the anonymous surface leaks no charset information.
-    for bad in [f"org-{uuid4().hex[:10]}", "dashboard", "NOT A SLUG"]:
-        assert client.get("/app/graph", params={"org": bad}).status_code == 404
-
-    # A member addressing their OWN org by slug still gets the member whole-corpus
-    # path (the fast-path compares RESOLVED tenant ids, not raw strings).
-    mine = client.get("/app/graph", params={"org": org}, headers=a_headers).json()
-    assert {p["name"] for p in mine["projects"]} == {"pub", "secret"}
-    assert mine["canonical_path"] == f"/@{org}/graph"
 
 
 def test_anonymous_reads_public_version_history(documents_client):

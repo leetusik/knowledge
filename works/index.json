@@ -243,7 +243,7 @@
       "review_status": "pending",
       "current_slice": "P37-1p.S3",
       "slice_count": 7,
-      "done_slice_count": 4
+      "done_slice_count": 5
     },
     {
       "id": "P38-e1",
@@ -281,5 +281,5 @@
   "deferred_open_count": 71,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-11-02T14:54:24+09:00"
+  "last_rebuilt_at": "2026-11-02T14:58:48+09:00"
 }

@@ -41,11 +41,10 @@ asserts a fresh tenant is fully isolated from tenant #1's corpus:
      private by default, so an anonymous GET /app/documents/{id} -> 404. A session
      PATCH /app/projects/{id} {"visibility":"public"} then flips it, and anonymously
      (no bearer): GET /app/documents/{id} -> 200 JSON with NO tenant_id key; its /raw
-     -> 200 + the P16 sandbox CSP header byte-for-byte; GET /app/graph?org={tenant}
-     -> 200 with the doc's rel_path among the nodes; GET /app/graph?org={random} ->
-     404 (no existence leak). With web pages in scope (default; --skip-web-pages
-     opts out when the Next app is not up), the same-origin public pages answer too:
-     anonymous GET {the 201 url} -> 200 HTML and GET /graph/{tenant} -> 200 HTML.
+     -> 200 + the P16 sandbox CSP header byte-for-byte. With web pages in scope
+     (default; --skip-web-pages opts out when the Next app is not up), the
+     same-origin public pages answer too: anonymous GET {the 201 url} -> 200 HTML,
+     and the retired GET /graph/{tenant} -> a 307 to the org's library (/@{org}).
      A PATCH back to private then restores the 404 (anonymous doc read) and, with web
      pages in scope, a /login redirect on the doc page — an instant-toggle round-trip
      that leaves the throwaway tenant private.
@@ -144,7 +143,6 @@ def _run_public_link_leg(
         return "public-link leg aborted at html write"
     doc = r.json()
     doc_id = doc.get("id")
-    rel_path = doc.get("rel_path")
     url = doc.get("url")
     # S4 mode-aware save URL — value assertion on the frozen `url` key.
     if not isinstance(url, str) or not url.endswith(f"/documents/{doc_id}"):
@@ -201,28 +199,6 @@ def _run_public_link_leg(
         if csp != "sandbox allow-scripts; frame-ancestors 'self'":
             failures.append(f"[public] /raw CSP sandbox header wrong/absent: {csp!r}")
 
-    if tenant_uuid:
-        r = client.get(f"{base_url}/app/graph", params={"org": tenant_uuid})
-        if r.status_code != 200:
-            failures.append(
-                f"[public] anon GET /app/graph?org={{tenant}}: expected 200, got "
-                f"{r.status_code} {r.text}"
-            )
-        else:
-            node_ids = {n.get("id") for n in r.json().get("nodes", [])}
-            if rel_path not in node_ids:
-                failures.append(
-                    f"[public] public graph missing the public doc node {rel_path!r}: {sorted(node_ids)}"
-                )
-    else:
-        failures.append("[public] no tenant uuid from signup payload; cannot probe the public graph")
-
-    r = client.get(f"{base_url}/app/graph", params={"org": str(uuid.uuid4())})
-    if r.status_code != 404:
-        failures.append(
-            f"[public] anon GET /app/graph?org={{random}}: expected 404, got {r.status_code} {r.text}"
-        )
-
     # --- 5. same-origin public web pages (skippable when the Next app is down) --
     if not skip_web_pages and isinstance(url, str):
         r = client.get(url)
@@ -232,11 +208,13 @@ def _run_public_link_leg(
                 f"{r.status_code} {r.headers.get('content-type')!r}"
             )
         if tenant_uuid:
+            # P37: the graph page is retired; the old link 307s to the org's library.
             r = client.get(f"{base_url}/graph/{tenant_uuid}")
-            if r.status_code != 200 or "text/html" not in r.headers.get("content-type", ""):
+            loc = r.headers.get("location", "")
+            if r.status_code != 307 or not loc.startswith("/@"):
                 failures.append(
-                    f"[public] anon GET /graph/{{tenant}} (public graph page): expected 200 HTML, "
-                    f"got {r.status_code} {r.headers.get('content-type')!r}"
+                    f"[public] anon GET /graph/{{tenant}} (retired graph link): expected a 307 "
+                    f"to /@{{org}}, got {r.status_code} location={loc!r}"
                 )
 
     # --- 6. toggle back to private -> the anonymous surface closes again -------
@@ -309,7 +287,7 @@ def _run_org_journey(
         return "org journey aborted at signup"
     body = r.json()
     session = {"Authorization": f"Bearer {body.get('token')}"}
-    tenant_uuid = (body.get("tenant") or {}).get("id")  # for the P19 public-graph probe
+    tenant_uuid = (body.get("tenant") or {}).get("id")  # for the retired /graph/{tenant} redirect probe
     default_project = body.get("project")
     if not isinstance(default_project, dict) or default_project.get("name") != "default":
         failures.append(

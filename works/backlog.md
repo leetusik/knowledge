@@ -7,7 +7,7 @@
 
 - Current phase: `P37-1p`
 - Current slice: `P37-1p.S3`
-- Next slice: `P37-1p.S4`
+- Next slice: `P37-1p.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `71`
 - Workspace version: `v89`
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P37-1p` | planned | `P37-1p.S3` | 4/7 | - | working tree |
+| `default` | `P37-1p` | planned | `P37-1p.S3` | 5/7 | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
@@ -305,8 +305,8 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | [x] `P37-1p.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P37-1p/slices/P37-1p.DECOMP` |
 | [x] `P37-1p.S1` | `done` | public graph links redirect to the library | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S1` |
 | [x] `P37-1p.S2` | `done` | member graph page, nav and dashboard link out | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S2` |
-| [ ] `P37-1p.S3` | `todo` | graph stylesheets out, public grid rule kept | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S3` |
-| [ ] `P37-1p.S4` | `todo` | graph API out on both sides of the template | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S4` |
+| [ ] `P37-1p.S3` | `in_progress` | graph stylesheets out, public grid rule kept | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S3` |
+| [x] `P37-1p.S4` | `done` | graph API out on both sides of the template | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S4` |
 | [x] `P37-1p.S5` | `done` | landing graph section, motif and copy out | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S5` |
 | [ ] `P37-1p.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P37-1p/slices/P37-1p.REVIEW` |
 

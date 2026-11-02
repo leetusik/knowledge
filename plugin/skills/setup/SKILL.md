@@ -338,7 +338,7 @@ mutation) with exactly this shape, filling the **non-secret** params only:
 
     {
       "plugin": "knowledge",
-      "plugin_version": "0.9.0",
+      "plugin_version": "0.9.1",
       "rendered_at": "<YYYY-MM-DD>",
       "params": {
         "KB_SITE_NAME": "<site title>",
@@ -352,7 +352,7 @@ mutation) with exactly this shape, filling the **non-secret** params only:
       }
     }
 
-`plugin_version` is `0.9.0` — the current plugin version; it never contains a
+`plugin_version` is `0.9.1` — the current plugin version; it never contains a
 secret. (On re-render, overwrite the marker with the new params and today's
 `rendered_at`.)
 

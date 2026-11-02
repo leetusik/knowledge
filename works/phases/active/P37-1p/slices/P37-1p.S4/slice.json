@@ -3,7 +3,7 @@
   "phase_id": "P37-1p",
   "name": "graph API out on both sides of the template",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 40,
   "depends_on": [
     "P37-1p.S1",
@@ -11,8 +11,8 @@
   ],
   "depends_declared": true,
   "created_at": "2026-11-02T13:32:52+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-02T14:55:50+09:00",
+  "completed_at": "2026-11-02T14:58:48+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -22,7 +22,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "GET /app/graph gone from root and template in parity (graph_api.py, router, tests); manifest updated; smoke expects S1's 307; plugin 0.9.1 (plugin.json + setup SKILL.md marker); pytest 172 pass, parity and plugin validate green",
   "validation": {
     "required": [],
     "last_run": null,
