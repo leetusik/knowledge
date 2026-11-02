@@ -7,7 +7,8 @@ import { loginHref } from "@/lib/next-path";
 // stays in every state"). Signed out: the public shell, whose "Sign in" returns to this page.
 // Signed in (a member or not): the app shell, with no item current. The page, its loading and
 // failed states and its not-found all render inside it, because they are children of this layout.
-// The group has no other route: `/@{org}/graph`, the documents and the reader keep their own.
+// The group has no other route: the documents and the reader keep their own, and `/@{org}/graph`
+// (a redirect here since P37-1p retired the graph) keeps its own not-found.
 export default async function OrgLibraryLayout({
   params,
   children,

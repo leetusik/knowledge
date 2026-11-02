@@ -1644,3 +1644,6 @@
 {"ts": "2026-11-02T13:37:15+09:00", "type": "executor_dispatched", "slice": "P37-1p.DECOMP", "phase": "P37-1p", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-02T13:37:15+09:00", "type": "slice_status_changed", "slice": "P37-1p.DECOMP", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-11-02T13:37:15+09:00", "type": "acceptance_required", "phase": "P37-1p"}
+{"ts": "2026-11-02T13:38:36+09:00", "type": "slice_status_changed", "slice": "P37-1p.S1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-02T13:47:00+09:00", "type": "executor_dispatched", "slice": "P37-1p.S1", "phase": "P37-1p", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-02T13:47:01+09:00", "type": "slice_status_changed", "slice": "P37-1p.S1", "old_status": "in_progress", "new_status": "done"}

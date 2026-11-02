@@ -56,7 +56,7 @@ export const requireIdentity = cache(
 
 /**
  * The `(public)` optional-identity guard — the anonymous-capable sibling of
- * `requireIdentity`, added for P19's public doc/graph surfaces. It NEVER redirects
+ * `requireIdentity`, added for P19's public doc/graph surfaces (the graph retired in P37-1p). It NEVER redirects
  * and NEVER throws for the unauthenticated case: it returns the caller's context
  * when a live session resolves, or `null` when the visitor is anonymous.
  *
@@ -71,7 +71,7 @@ export const requireIdentity = cache(
  *
  * The caller decides what a `null` means for its surface: the public doc page
  * renders the anonymous view; a private/nonexistent read then 404s server-side
- * (404-never-403), which the page turns into `/login` (docs) or `notFound()` (graph).
+ * (404-never-403), which the page turns into `/login` (docs) or `notFound()` (library).
  *
  * `cache()` dedupes per request, exactly like `requireIdentity`.
  */

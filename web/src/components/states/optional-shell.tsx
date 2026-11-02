@@ -22,9 +22,9 @@ import { optionalIdentity } from "@/lib/auth-guards";
  * stranger gets the anonymous shell whose one action IS Sign in. A `not-found.tsx`
  * may be an async server component, so it can make the same call.
  *
- * NOT used by the two public GRAPH not-founds: their pages render `<PublicShell>`
- * unconditionally, signed in or not, so mirroring the page means `<PublicShell>`
- * there too.
+ * Also used by the two old public graph routes' not-founds (redirects to the
+ * org's library since P37-1p retired the graph): they render the library's
+ * constant 404 in the shell the library's own layout would pick, this one.
  *
  * `optionalIdentity()` is `cache()`d, so when the miss came from a page that had
  * already called it this costs no second `/auth/me`. It reads the session cookie,

@@ -8,9 +8,9 @@
  * guard is written to **fail closed**: anything it does not positively recognise as
  * an in-app path becomes the default landing (`/library`), and it never throws.
  *
- * THE ACCEPTED SHAPE — the contract `P28.S6`'s public-graph gate line must match
- * (it emits `/login?next={publicBase}/documents/{id}` with `publicBase = "/@{org}"`,
- * which is exactly this shape):
+ * THE ACCEPTED SHAPE — the contract `P28.S6`'s public-graph gate line had to match
+ * (retired with the graph in P37-1p; it emitted `/login?next={publicBase}/documents/{id}`
+ * with `publicBase = "/@{org}"`, which is exactly this shape):
  *
  *   - a **same-origin relative path**: one leading `/`, then anything a URL allows,
  *     with an optional `?query` and `#hash` — e.g. `/@acme/handbook/onboarding`,

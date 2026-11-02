@@ -1,33 +1,17 @@
-import Link from "next/link";
+import { LibraryNotFound } from "@/components/library/library-states";
+import { OptionalShell } from "@/components/states/optional-shell";
 
-import { PublicShell } from "@/components/public-shell";
-import { Editorial } from "@/components/states";
-import { appButtonClass } from "@/components/ui";
-import { GRAPH, STATES } from "@/content";
-
-// P19, restated on round 03 §5 (P28.S3) — the UUID public-graph branded
-// not-found. Reached by the page's `notFound()` for a malformed org id OR an org
-// with no public projects (which also covers a nonexistent org — 404-never-403,
-// so the two are indistinguishable).
-//
-// EDITORIAL now, not `.kb-empty` (§5.3), and it brings a shell for the same
-// reason as its pretty-URL twin: `(public)` has no `layout.tsx`, so this file
-// used to render bare on `<body>`. `<PublicShell>` unconditionally, mirroring
-// this route's own page. The CTA is unchanged — the marketing home, not a member
-// surface.
+// P19 — the branded not-found of `/graph/{org_uuid}`, which P37-1p turned into a redirect
+// to the org's library. Reached by the page's `notFound()` for a malformed org id OR the
+// library endpoint's one indistinguishable 404 (an unknown org, or one showing this caller
+// nothing), so it is the library's own constant 404 ("Library not found", `06-library`
+// §9), with the same shell the library's layout gives it: the app shell signed in, the
+// public shell signed out. The app has no root `not-found.tsx`, so dropping this file
+// would fall to Next's unbranded 404.
 export default function PublicGraphNotFound() {
   return (
-    <PublicShell>
-      <Editorial
-        code={STATES.notFoundCode}
-        title={GRAPH.notFound.title}
-        sub={GRAPH.notFound.sub}
-        actions={
-          <Link href="/" className={appButtonClass("primary")}>
-            {GRAPH.notFound.backLabel}
-          </Link>
-        }
-      />
-    </PublicShell>
+    <OptionalShell>
+      {(signedIn) => <LibraryNotFound signedIn={signedIn} />}
+    </OptionalShell>
   );
 }

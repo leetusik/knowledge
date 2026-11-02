@@ -1,53 +1,39 @@
-import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
-import { GraphCanvas } from "@/app/(app)/graph/graph-canvas";
-import { PublicShell } from "@/components/public-shell";
-import { GRAPH } from "@/content";
 import { optionalIdentity } from "@/lib/auth-guards";
-import { getGraph } from "@/lib/knowledge/app";
+import { getOrgLibrary } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
-import type { KbGraph } from "@/lib/knowledge/types";
+import type { KbOrgLibrary } from "@/lib/knowledge/types";
+import { orgSegment } from "@/lib/reader-href";
 
-// P19 — the public, org-scoped knowledge graph at `/graph/{org_uuid}`, outside the
-// `(app)` auth gate. It renders the SAME ported `<GraphCanvas>` the member `/graph`
-// page uses (composition, no new engine), wrapped in <PublicShell>. Optional-
-// identity: an anonymous or cross-org visitor sees only the addressed org's PUBLIC
-// projects (nodes/edges/tag-hubs); a member viewing their own org id sees the full
-// map. knowledge's `GET /app/graph?org=` is the boundary — an org with no public
-// projects (which also covers a nonexistent org) is a 404, so existence never leaks.
+// P19 gave this route the public org graph at `/graph/{org_uuid}`; P37-1p retired the
+// hosted graph, so it now only forwards old shared links to the org's library,
+// `/@{orgSegment}` — the org slug, or the tenant UUID for a slug-less org (`/@{uuid}` is a
+// working library URL under OQ26). Temporary (307), not permanent, because org slugs are
+// mutable: a 308 would be cached past a slug change.
 //
-// A malformed org id short-circuits to the branded not-found (never a /login bounce —
-// the graph surface has no member-only affordance to gate behind login). A node's
-// `url` is `/documents/{id}`, which resolves to the optional-identity doc page.
-//
-// P25.S4 — this route is now the LEGACY form and forwards: once the org has claimed a
-// slug, the response carries `canonical_path` and the visitor is 307-redirected to the
-// pretty `/@{org}/graph`. Unlike the document page's redirect this fires on BOTH
-// identity branches — this page has no member-only affordance to preserve, so a member
-// loses nothing by landing on the pretty URL. Temporary (307), not permanent, because
-// org slugs are mutable: a 308 would be cached past a slug change. One-way — the pretty
-// page never bounces back, so there is no loop — and a slug-less org (`canonical_path`
-// null, and legacy mode) keeps being served here exactly as before: no link breaks.
-export const metadata: Metadata = { title: GRAPH.title };
+// The org resolves through the library endpoint itself (`GET /app/orgs/{org}/library
+// ?scope=public`, which tries the UUID first), with the caller's optional token, so the
+// redirect adds no gate of its own: the library owns visibility. Its one indistinguishable
+// 404 (an unknown org, or one showing this caller nothing) becomes the branded not-found
+// here too, so no existence leaks. A malformed id is that not-found before any call.
 
-// The org selector on THIS route is a tenant UUID; the slug form lives at
-// `/@{org}/graph` (the backend's `?org=` accepts either).
+// The org selector on THIS route is a tenant UUID; the slug form is `/@{org}`.
 const ORG_UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Fetch the org's graph with the caller's (optional) token, mapping a 404 (no public
- * projects / nonexistent org — 404-never-403, indistinguishable) to the branded
- * not-found. The mapping lives OUTSIDE the render so `notFound()` (which signals by
- * throwing) is never swallowed; any other fault rethrows to the error boundary.
+ * Resolve the org through its public library with the caller's (optional) token, mapping
+ * a 404 to the branded not-found. The mapping lives OUTSIDE the render so `notFound()`
+ * (which signals by throwing) is never swallowed; any other fault rethrows to the error
+ * boundary, so a real outage never masquerades as a missing org.
  */
-async function loadGraph(
+async function loadLibrary(
   token: string | undefined,
   org: string,
-): Promise<KbGraph> {
+): Promise<KbOrgLibrary> {
   try {
-    return await getGraph(token, { org });
+    return await getOrgLibrary(token, org, "public");
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) notFound();
     throw error;
@@ -65,30 +51,8 @@ export default async function PublicGraphPage({
   if (!ORG_UUID.test(org)) notFound();
 
   const ctx = await optionalIdentity();
-  const graph = await loadGraph(ctx?.token, org);
+  const library = await loadLibrary(ctx?.token, org);
 
-  // The org has a pretty URL — forward to it (307, top level, outside any try so the
-  // redirect's own throw is never swallowed). `null` ⇒ serve as today.
-  if (graph.canonical_path) redirect(graph.canonical_path);
-
-  return (
-    <PublicShell>
-      {/* .mainhead — org-neutral eyebrow + Fraunces title + sub (no tenant name). */}
-      <div className="mb-[1.3rem]">
-        <div className="kb-app-eyebrow">{GRAPH.eyebrow}</div>
-        <h1 className="kb-app-title" style={{ marginTop: "0.35rem" }}>
-          {GRAPH.title}
-        </h1>
-        <p className="kb-app-sub">{GRAPH.sub}</p>
-      </div>
-
-      {/* Round 05 §4.6 / §9 (P28.S6) — the LEGACY UUID route, reached only by a
-          slug-less org (a slugged one was 307'd to `/@{org}/graph` above). Same
-          stranger's panel; `publicBase` is this route. Note a slug-less org also
-          has `canonical_path: null` on every doc node, so the read links there
-          fall back to `/documents/{id}`, which is the optional-identity read
-          route and works anonymously — nothing is prefixed onto anything. */}
-      <GraphCanvas data={graph} publicBase={`/graph/${org}`} />
-    </PublicShell>
-  );
+  // Top level, outside any try, so the redirect's own throw is never swallowed.
+  redirect(`/@${encodeURIComponent(orgSegment(library.org))}`);
 }

@@ -14,8 +14,8 @@ import { parseReaderCookie, READER_COOKIE } from "@/lib/reader-cookie";
 // namespace); anything else is the constant not-found before any upstream call. An unknown org,
 // an org with nothing public (to anyone not a member) and a private project's address are one
 // indistinguishable 404. A signed-in reader (member or not) also sees their own progress.
-// The <title> is static, like the graph's: the client is `no-store`, so `generateMetadata`
-// would cost a second uncached fetch.
+// The <title> is static: the client is `no-store`, so `generateMetadata` would cost a
+// second uncached fetch.
 export const metadata: Metadata = { title: LIBRARY.metaTitle };
 
 function safeDecode(value: string): string {
