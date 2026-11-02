@@ -3,12 +3,12 @@
   "phase_id": "P39-hk",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "pending",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-30T23:45:53+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-02T15:56:23+09:00",
+  "completed_at": "2026-11-02T16:13:09+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut build-after: D1 reading-aids canvas (critic), R1 grammar+math engine beside S1 front door, S2 evidence model, S3 writing rules, S4 retire research machinery, S5 workspace handoff, then DECOMP2",
   "validation": {
     "required": [],
     "last_run": null,
@@ -28,10 +28,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "decision",
-    "on_words": "the operator's word on where P39-hk runs: 'worktree' starts it in its own worktree as its intent records (parallel-start, then /do-whole-phase there); 'here' runs it on the default stream. Either way its design canvas waits for the operator's literal sign-off",
-    "since": "2026-11-02T15:21:39+09:00"
   }
 }
