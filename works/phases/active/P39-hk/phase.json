@@ -29,5 +29,12 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "execution": {
+    "mode": "parallel",
+    "branch": "phase/P39-hk-explain_what_was_built",
+    "worktree": "/Users/sugang/projects/personal/knowledge/.claude/worktrees/P39-hk-explain_what_was_built",
+    "consolidation": "pending",
+    "base_branch": "main"
   }
 }

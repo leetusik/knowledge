@@ -276,11 +276,19 @@
       "review_status": "pending",
       "current_slice": "P39-hk.DECOMP",
       "slice_count": 2,
-      "done_slice_count": 0
+      "done_slice_count": 0,
+      "execution": {
+        "mode": "parallel",
+        "branch": "phase/P39-hk-explain_what_was_built",
+        "worktree": "/Users/sugang/projects/personal/knowledge/.claude/worktrees/P39-hk-explain_what_was_built",
+        "consolidation": "pending",
+        "base_branch": "main"
+      },
+      "consolidation": "pending"
     }
   ],
   "deferred_open_count": 73,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-11-02T15:56:07+09:00"
+  "last_rebuilt_at": "2026-11-02T15:56:17+09:00"
 }
