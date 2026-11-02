@@ -30,8 +30,8 @@
     "archive_path": null
   },
   "pending": {
-    "kind": "operator-action",
-    "on_words": "'switch account' (after the operator signs Claude Code in to the claude.ai account that holds the knowledge Design System and canvases 01-09): re-create the canvas there and publish round 01; 'publish here': publish to the current canvas with the kb system files sent from the local cache. Either way the round then stops at PENDING #1 for the sign-off",
-    "since": "2026-11-02T18:37:31+09:00"
+    "kind": "wave",
+    "on_words": "a literal sign-off ('accept', 'approved') signs round 01-reading-aids as drawn (design-sign, close, finish D1, then the R1 + S1 wave); any other words are feedback, recorded verbatim, and a superseding round 02 re-drafts the job",
+    "since": "2026-11-03T08:15:50+09:00"
   }
 }

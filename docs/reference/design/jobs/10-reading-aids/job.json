@@ -5,8 +5,44 @@
   "title": "Reading aids: terms, glossary, formulas",
   "canvas": {
     "url": "https://claude.ai/artifact/PndCPgBnCYWMR88qw7eApt",
-    "version": null,
-    "published": []
+    "version": "1793661304-517d",
+    "published": [
+      "project/Formulas.dc.html",
+      "project/Gloss.dc.html",
+      "project/GlossListStates.dc.html",
+      "project/GlossStates.dc.html",
+      "project/Main.dc.html",
+      "project/MarkStates.dc.html",
+      "project/MathBlock.dc.html",
+      "project/MathBlockStates.dc.html",
+      "project/MathInlineStates.dc.html",
+      "project/Print.dc.html",
+      "project/Shell.dc.html",
+      "project/ShellStates.dc.html",
+      "project/Terms.dc.html",
+      "project/assets/logo.svg",
+      "project/canvas.json",
+      "project/frame.css"
+    ],
+    "manifest": {
+      "project/Formulas.dc.html": 25530,
+      "project/Gloss.dc.html": 27827,
+      "project/GlossListStates.dc.html": 2501,
+      "project/GlossStates.dc.html": 5167,
+      "project/Main.dc.html": 6621,
+      "project/MarkStates.dc.html": 4720,
+      "project/MathBlock.dc.html": 15547,
+      "project/MathBlockStates.dc.html": 4783,
+      "project/MathInlineStates.dc.html": 5358,
+      "project/Print.dc.html": 22341,
+      "project/Shell.dc.html": 3210,
+      "project/ShellStates.dc.html": 1601,
+      "project/Terms.dc.html": 46690,
+      "project/assets/logo.svg": 519,
+      "project/canvas.json": 2878,
+      "project/frame.css": 26943
+    },
+    "system": "1792321604-e214"
   },
   "status": "open"
 }
