@@ -1,0 +1,33 @@
+{
+  "id": "P37-1p.S5",
+  "phase_id": "P37-1p",
+  "name": "landing graph section, motif and copy out",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 50,
+  "depends_on": [],
+  "depends_declared": true,
+  "created_at": "2026-11-02T13:32:52+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": null,
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

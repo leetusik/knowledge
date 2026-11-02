@@ -3,12 +3,12 @@
   "phase_id": "P37-1p",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-10-30T17:10:15+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-02T13:22:22+09:00",
+  "completed_at": "2026-11-02T13:37:15+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut five declared slices: S1 public graph links redirect, S2 member page/nav/dashboard line/web client, S3 graph CSS (high, shared grid rule moved), S4 graph API both sides + manifest + version bump, S5 landing and README copy",
   "validation": {
     "required": [],
     "last_run": null,
