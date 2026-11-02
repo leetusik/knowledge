@@ -1,14 +1,15 @@
 /* ==========================================================================
    Knowledge Base — DOCUMENT VIEWS layer  (Round 06 · P27.S5)
    --------------------------------------------------------------------------
-   Sits on top of console-r4.css (Round 04) and beside graph-r5.css (Round 05).
+   Sits on top of console-r4.css (Round 04); round 05's graph-r5.css sat beside
+   it until P37-1p retired the graph.
    It is the screen half of this round's delta; the paper half is print-r6.css,
    a separate file because it is a separate medium and a reviewer must be able
    to read the paper rules without reading these.
 
    ADDITIVE ONLY. No `--kb-*` name or value above this file changes, and
-   console.css / app-frame.css / console-responsive.css / console-r4.css /
-   graph-r5.css are never edited. In the repo this file REPLACES the bodies of
+   console.css / app-frame.css / console-responsive.css / console-r4.css
+   are never edited. In the repo this file REPLACES the bodies of
    `documents/[id]/prose.css` and `documents/[id]/explainer.css` — both were
    flagged at P12/P16 as on-token extensions awaiting a design pass, and this
    is that pass. Every value they had that survives is restated here.
@@ -28,8 +29,8 @@
    coarse-pointer test that decides whether the exit pill advertises Esc).
 
    Load order: kb-tokens.css → kb-console.css → app-frame.css →
-   kb-console-responsive.css → console-r4.css → graph-r5.css → THIS →
-   print-r6.css.
+   kb-console-responsive.css → console-r4.css → THIS → print-r6.css
+   (graph-r5.css sat before THIS until P37-1p deleted it).
    ========================================================================== */
 
 /* -------- Round 06 tokens (all new names; nothing renamed) --------------- */

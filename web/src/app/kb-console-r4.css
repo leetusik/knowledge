@@ -138,6 +138,8 @@
    the same 88rem the member console caps at above 90rem and centred — a visitor
    never gets a wider column than a member. The Sign in action is never hidden. */
 .kb-app--public .kb-app-main { max-width: var(--kb-app-max-w); margin-inline: auto; width: 100%; }
+/* Moved verbatim from round 05's `graph-r5.css:169` when P37-1p.S3 deleted the graph sheets: no rail, so one column, never round 03's 15rem rail track above 64rem. */
+.kb-app--public .kb-app-layout { grid-template-columns: minmax(0, 1fr); }
 .kb-topbar__signin { flex: none; }
 
 /* -------- Show-once key reveal on a phone (DECISION · Q6) ----------------- */

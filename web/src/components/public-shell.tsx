@@ -5,11 +5,12 @@ import { appButtonClass } from "@/components/ui";
 import { BRAND, PUBLIC_SHELL, SKIP_TO_CONTENT } from "@/content";
 
 /**
- * The anonymous public shell (P19) — the chrome the `(public)` doc + graph pages
- * render inside when the visitor has no session. It is COMPOSED 1:1 from the
- * authenticated `AppShell`'s already-designed pieces (no new CSS, no new tokens): the
- * same `.kb-app` light-scheme frame (carrying `data-md-color-scheme="default"`, which
- * the graph engine reads), the same sticky `.kb-topbar` sunken-paper band with the
+ * The anonymous public shell (P19) — the chrome the `(public)` pages (the library,
+ * past document versions, their not-founds) render inside when the visitor has no
+ * session. It is COMPOSED 1:1 from the authenticated `AppShell`'s already-designed
+ * pieces (no new CSS, no new tokens): the same `.kb-app` light-scheme frame (carrying
+ * `data-md-color-scheme="default"`, which the graph engine read until P37-1p retired
+ * the graph), the same sticky `.kb-topbar` sunken-paper band with the
  * same brand block, and the same `.kb-app-main` content padding. It drops everything
  * member-only — the workspace crumb, the user email, the rail, and Sign out — and
  * offers a single "Sign in" action in their place.
@@ -24,10 +25,11 @@ import { BRAND, PUBLIC_SHELL, SKIP_TO_CONTENT } from "@/content";
  *    never did. It is `flex: 1 1 auto` inside round 03's `min-height: 100dvh` column,
  *    so it is what stops ~250-370px of paper-coloured dead space sitting below a
  *    short public document (P28.S2 measured it and called it unpolished-not-broken;
- *    this closes it). Round 05's `graph-r5.css` collapses its rail track here —
- *    `.kb-app--public .kb-app-layout { grid-template-columns: minmax(0, 1fr) }` —
- *    because round 03's `.kb-app-layout` still declares a 15rem rail track that this
- *    shell has nothing to put in.
+ *    this closes it). Round 05's rule collapses its rail track here —
+ *    `.kb-app--public .kb-app-layout { grid-template-columns: minmax(0, 1fr) }`, in
+ *    `kb-console-r4.css` since P37-1p deleted `graph-r5.css` — because round 03's
+ *    `.kb-app-layout` still declares a 15rem rail track that this shell has nothing
+ *    to put in.
  *  - **the skip link**, reusing the ONE `SKIP_TO_CONTENT` constant the member shell
  *    and the marketing header already share. Its href is `#main-content`, which is
  *    the id `<main>` has always carried here; the record writes `#content`, same link
@@ -38,8 +40,9 @@ import { BRAND, PUBLIC_SHELL, SKIP_TO_CONTENT } from "@/content";
  * utilities are GONE: round 03 makes `.kb-topbar` sticky at `z-index: 40` itself, and
  * §4.2 is explicit that this shell must not add a second sticky context.
  *
- * NO `data-kb-scheme`: the public surfaces stay light in OS dark mode, because the
- * graph engine reads the scheme attribute and rounds 05/06 designed no dark graph.
+ * NO `data-kb-scheme`: the public surfaces stay light in OS dark mode (first because
+ * the since-retired graph engine read the scheme attribute and rounds 05/06 designed
+ * no dark graph).
  * NO toast region either — `AppShell` mounts one as a sibling of `.kb-app`, but round
  * 04 gives the public surfaces nothing to announce.
  *

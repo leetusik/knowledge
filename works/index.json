@@ -241,9 +241,9 @@
       "order": 19,
       "path": "works/phases/active/P37-1p",
       "review_status": "pending",
-      "current_slice": "P37-1p.S3",
+      "current_slice": "P37-1p.REVIEW",
       "slice_count": 7,
-      "done_slice_count": 5
+      "done_slice_count": 6
     },
     {
       "id": "P38-e1",
@@ -281,5 +281,5 @@
   "deferred_open_count": 71,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-11-02T14:58:48+09:00"
+  "last_rebuilt_at": "2026-11-02T15:03:44+09:00"
 }

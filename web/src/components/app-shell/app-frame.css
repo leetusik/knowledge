@@ -2,9 +2,10 @@
  * Knowledge Base — foldable rail (on-token extension).
  * --------------------------------------------------------------------------
  * The THIRD on-token extension added where the KB design handback shipped no specimen
- * (after the `.kb-prose` reader block and the `--kb-graph-*` token layer): the console
- * rail folds fully away, so a reader gets the whole width. No new token, no new color,
- * no new motion — a fold is a GRID change and nothing more.
+ * (after the `.kb-prose` reader block and the `--kb-graph-*` token layer, which P37-1p
+ * deleted with the graph): the console rail folds fully away, so a reader gets the
+ * whole width. No new token, no new color, no new motion — a fold is a GRID change and
+ * nothing more.
  *
  * It lives HERE rather than in `kb-console.css` on purpose: that file is copied verbatim
  * from `design/canvas/components/console/console.css`, the design round's handback, and

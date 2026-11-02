@@ -4,20 +4,10 @@
 @import "./kb-console.css";
 @import "./kb-console-responsive.css";
 @import "./kb-console-r4.css";
-/* The graph record (P28.S6). `graph-tokens.css` + `graph.css` were component
-   imports on `graph-canvas.tsx`, which put them in a LATER document sheet than
-   this one — so round 05's `graph-r5.css` lost every same-selector tie to the
-   sheet it is written to layer on top of (twelve of them, measured). Moving
-   both here, unedited, in front of `graph-r5.css`, restores round 05 §3's own
-   stated order inside ONE sheet with no rule duplicated, and is the order round
-   06 §1 already assumes. Cost: the graph's ~29 KB of CSS now loads on every
-   page. Do not reorder these three lines. */
-@import "./(app)/graph/graph-tokens.css";
-@import "./(app)/graph/graph.css";
-@import "./(app)/graph/graph-r5.css";
 /* The document-views record (round 06 §3.1, P28.S7) — the SCREEN half of round
-   06. It sits after `graph-r5.css` and before `kb-record-fixes.css`, which is the
-   chain round 06 §1 states. `kb-print.css` (P28.S8) goes immediately after this
+   06. It sits after the console sheets and before `kb-record-fixes.css`, which is
+   the chain round 06 §1 states (round 05's graph sheets sat between them until
+   P37-1p retired the graph). `kb-print.css` (P28.S8) goes immediately after this
    line, still before the corrections sheet. It replaces the bodies of the deleted
    `documents/[id]/prose.css` and `explainer.css`. */
 @import "./kb-docview.css";
@@ -240,9 +230,10 @@
   --kb-shadow-card: 0 1px 2px rgba(38, 33, 28, 0.04),
     0 10px 30px rgba(38, 33, 28, 0.06);
 
-  /* Data-viz categorical inks (the graph motif) — the documented accent
-   * extension, data-viz surfaces ONLY. Teal is the anchor; the `-dark` variants
-   * are the slate-scheme steps the motif picks up on the recessed plate. */
+  /* Data-viz categorical inks (made for the graph motif, which P37-1p retired) —
+   * the documented accent extension, data-viz surfaces ONLY. Teal is the anchor;
+   * the `-dark` variants are the slate-scheme steps for a recessed plate.
+   * `--kb-ink-bronze-dark` is still read by `marketing.css`. */
   --kb-ink-teal: #0f6f66;
   --kb-ink-bronze: #8a6a2a;
   --kb-ink-plum: #764f6c;
