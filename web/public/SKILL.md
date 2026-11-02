@@ -1,7 +1,7 @@
 ---
 name: explain
 description: Explain a topic, a code change in the current repo, or a general subject as a researched document in your own knowledge base (the one /knowledge:setup configured). /knowledge:explain asks one confirmation (a standalone document by default; a book or a chapter of a book only when asked) and, on your yes, hands it to the workflow workspace's create-phase, which runs it as an explain phase in its own worktree: research agents (sources opened and quoted, claims verified on a second model, gap rounds, an evidence gate), a native chapter written from that evidence (diagrams, a cited "Best practices & next steps" section, a quiz), a critic's check, then a private publish. Needs a workflow workspace v86 or later; without one it refuses and runs nothing. Use ONLY when the user wants an explanation persisted as a document (explain and document, write this up, document what we just changed, teach me X and save it) — NOT for ordinary questions that deserve a normal chat answer.
-argument-hint: <topic or change-ref> [quick|no-research] [book=<slug>] [lang=<xx>]
+argument-hint: <topic or change-ref> [book=<slug>] [lang=<xx>]
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash(curl -sS --max-time 5:*), Bash(curl -sS --max-time 30:*), Bash(python3 -c:*), Bash(python3 -I *knowledge-kb/explain/tools/pagetext.py *), Bash(pdftotext:*), Bash(knowledge --base-url:*), Bash(knowledge --version:*), WebSearch, WebFetch, Bash(git diff:*), Bash(git log:*), Bash(git show:*), Bash(git grep:*), Bash(git blame:*), Bash(git status:*), Bash(shasum -a 256:*), Bash(sha256sum:*), Bash(mktemp -d:*)
 ---
 
@@ -9,9 +9,11 @@ allowed-tools: Read, Grep, Glob, Write, Edit, Bash(curl -sS --max-time 5:*), Bas
 
 Produce an educational explainer — a **native chapter**: Markdown with a few typed
 blocks (figures, diagrams, SVG, quizzes, sources) that the knowledge base renders
-itself — about a topic **or a code change** in the current repo or conversation, or
-about a **general subject** with no repo behind it, and file it in **your** personal
-knowledge base (the one `/knowledge:setup` created). This skill produces a **saved
+itself — about a topic **or a code change** in the current repository: what its code does, told
+from the code itself and from what the workspace's phases recorded while building it. It
+files the chapter in **your** personal knowledge base (the one `/knowledge:setup`
+created). Explain is **codebase-only**: a subject with no code in this repository is
+declined plainly, and nothing is written (§1). This skill produces a **saved
 document**: if the user only asked a question and did not ask for anything to be saved,
 answer normally in chat and write no files.
 
@@ -62,20 +64,10 @@ stop below into its own stop, and re-dispatches a stopped span from disk.
 | D8 check, critic, revise, publish (§4.9–§5) | you; the critic (B5); the review publishes | the dossier line; `critique.md`; the revised draft; the KB | the check or a refusal twice; the critic fails twice; a must-fix left open |
 | D9 report (§8) | the review, then its orchestrator | the review's `## Report`; the closing report | — |
 
-**The run** (`## Explain`'s `run:`, §1's RUN; the report's first line names it):
-
-- **`full`**, the default: a research team in waves, up to 3 gap rounds, then the pick:
-  only the claims the outline uses are verified, on another model, with counter-evidence
-  on the main ones; the evidence gate, the critic. A v2 runs it as a **delta** of its
-  prior when the prior's dossier is found and the operator did not decline it (§3.1): the
-  team researches only what changed, and the prior's verified claims whose sources still
-  say the same are carried over, not verified again.
-- **`quick`**: no research team: you research the angles yourself, then the pick and one
-  verifier batch of the claims it uses, by the verifier agent on another model. The path
-  stays D0b's, and every agent and file §3.9 lists stays. No gap rounds, no
-  counter-evidence, no critic; the gate still holds.
-- **`no-research`**: only when the operator asked for it; never your choice. No web and no
-  team: the repository, or the user's own material, only (§3.9). The critic still runs.
+**The run** is one kind: there is no run choice to make (§1 offers none, and `## Explain`
+has no `run:` line). A v2 runs as a **delta** of its prior when the prior's dossier is
+found and the operator did not decline it (§3.1): only what changed is read again, and the
+prior's checked claims whose sources still say the same are carried over.
 
 **The dossier**, `<DOSSIER>` (§2), holds every file of the run, the drafts included (a
 book's drafts sit beside it, in `book/`). It is committed with its phase except the
@@ -90,7 +82,7 @@ keeps the dossier and names its path; the workspace turns it into its stop, and 
 re-dispatch goes on from `run.md` (§3.3).
 
 - Ask nobody anything during the run: decide, record the decision in `run.md`, and go
-  on. Never choose `quick` or `no-research` yourself.
+  on.
 - Loop safety is the only bound: at most 3 gap rounds, the dispatch ceiling (8 for a
   document, the tier's for a book; §3.4), one re-dispatch per failed agent, one
   re-verification per claim. Overflow is queued, never
@@ -113,20 +105,14 @@ This is the **front door**. It turns a request into one confirmation and, on the
 operator's literal yes, hands it to the workspace's `create-phase` explain route, which
 creates the explain phase and runs it. It reads, drafts and asks; it never researches,
 writes, publishes or creates anything itself. In order: the arguments, the mode, the unit
-and where it goes, then *The front door, step by step*.
+and where it goes, the reader and the shape, the phases that cover the subject, then
+*The front door, step by step*.
 
 **Arguments** = the skill arguments: $ARGUMENTS.
 
 Strip any of these **trailing standalone words** (they compose — any combination, any
 order) and remember each:
 
-- `quick` → RUN=`quick`: no research team, gap rounds, counter-evidence or critic; the
-  lead researches the angles itself, and every agent and file §3.9 lists stays.
-- `no-research` → RUN=`no-research`: no web research and no research team; a repo-only
-  chapter with no "Best practices & next steps" (§3.9). **Only the operator chooses it**,
-  with this word or in their own words. You never pick it: not for a small subject, and
-  not when the web fails (a failed preflight stops the run). The report labels the run.
-- `research` → nothing: research is the default. The word is accepted for old habits.
 - `book=<slug>` → BOOK: the operator asks for that book (lowercase-kebab slug): a
   chapter of it when it exists, a new book of that slug when it does not (below).
 - `lang=<xx>` → LANG: the chapter's language as a lowercase two- or three-letter code
@@ -134,16 +120,18 @@ order) and remember each:
   in English whatever language the request is written in. Another language only when the
   operator names one (`lang=ko`, or "in Korean" in their own words).
 
-Strip every trailing flag word before using the rest as the topic. `quick` and
-`no-research` are mutually exclusive; if both appear, the last one wins. With neither,
-RUN is `full`: the research team, the verifier, the gap rounds and the critic.
+Strip every trailing flag word before using the rest as the topic. There is no run
+choice: one writer drafts from the code and the phases' records, and one critic on a
+second model checks the draft. Words of earlier versions are flags no more, each dropped
+with one line when it trails the request: `quick`, `no-research` and `research` (there is
+one run), and `here` (there is no project copy, §7). `resume`, alone or followed by a run
+id, is answered with the live explain phases (the front door's step 4) and
+`/do-whole-phase <P>`, which resumes one, and nothing more. Any other use of these words is
+part of the topic.
 
-Two words of 0.6.0 are flags no more. A trailing `here` is dropped with one line: there
-is no project copy (§7). `resume`, alone or followed by a run id, is answered with the
-live explain phases (the front door's step 4) and `/do-whole-phase <P>`, which resumes
-one, and nothing more. Any other use of either word is part of the topic.
-
-**What remains after stripping is the TOPIC / change-ref.** Decide the MODE from it:
+**What remains after stripping is the TOPIC / change-ref.** Explain is
+**codebase-only**: every chapter explains what this repository's code does. Decide the
+MODE from the topic:
 
 - **Change mode** — the arguments name or point at a code change: a diff, a branch, a
   PR, a commit or commit range, a **phase** or a **slice**, or a phrase like "what we just
@@ -152,16 +140,16 @@ one, and nothing more. Any other use of either word is part of the topic.
 - **Topic mode** — the arguments name a concept, tool, subsystem, or file *of this repo*
   to explain. Also topic mode when the arguments are empty and the recent conversation is
   an analysis of this repo rather than a change you just made.
-- **General mode** — the subject has **no repo behind it**: finance, history, a paper, a
-  language, a skill the user is learning. It is general mode whenever you are not in a
-  git repo, or the topic is plainly not about the repo's code. There is no code to read:
-  the web and the conversation are the evidence, so the sources block (§4.6) is required.
+- **No code behind it** — the subject is not this repository's code (finance, history, a
+  paper, a language, a tool the repo does not use), or you are not in a git repository:
+  **decline plainly**, in one or two sentences, and write nothing: "Explain writes only
+  about this repository's code, from what its phases recorded. <The subject> is not in
+  this code, so nothing was created." An idea the code relies on (a hash, a retry policy)
+  is a topic-mode subject when the request is about how *this code* uses it; it is
+  explained only as far as the code and the records state it.
 - **Empty and none fits** → ask the user what to explain, then continue.
 
-All three modes produce the **same kind of chapter**, with the same recommended outline
-(§4.2). Only the lens differs, and §3 says how. In `## Explain`, change and topic
-mode are `mode: codebase` and general mode is `mode: general`; the outline still sets
-this MODE per chapter.
+Both modes produce the **same kind of chapter**; only the lens differs, and §3 says how.
 
 **The unit, and where it goes** (PLACEMENT). It is settled **once, at the start**, by the
 operator's yes to the one confirmation, and never asked again mid-run. Offered, never
@@ -169,9 +157,7 @@ imposed:
 
 - **A standalone document**, the default for every request, a phase or a slice included:
   `unit: document`, a **loose document** (`book: none`, `chapter: none`, `depth: one
-  document`). In general mode the loose document carries `subject` — a short display
-  label (`Finance`, `Linear algebra`) — and its **project is the subject's slug**
-  (`finance`, `linear-algebra`), not the directory you happen to be standing in.
+  document`).
 - **A chapter of an existing book**, only when the operator asks for one (in their own
   words, with `book=<slug>`, or at the confirmation): `unit: chapter`, `depth: one
   chapter`. The book must exist (the front door's step 5 reads it); a book that does not
@@ -192,12 +178,13 @@ imposed:
   For a phase or slice subject, the confirmation's unit line offers the chapter its rule
   names when that book exists; the default stays the standalone document.
 - **A book**, only when the operator asks for one (a book, chapters, a course, a series
-  or a multi-part guide; or `book=<slug>` naming no existing book): `unit: book`, `run:
-  full`, `outline sign-off: on`, `depth: about <n> chapters`. Its slug, title and kind: a
-  **phase or slice subject** gets that phase's own book, `p<N>` (a tailed or v73 id keeps
-  its form: `P46-k2` suggests `p46-k2`), titled by the rule below, kind `codebase`;
-  **anything else** is a named book: a repo's book is kind `codebase`; a book about a
-  general subject is kind `subject` with `subject` set to its label (`Finance`).
+  or a multi-part guide; or `book=<slug>` naming no existing book): `unit: book`,
+  `outline sign-off: on`, `depth: about <n> chapters`, kind `codebase`, its chapters
+  drawn from the phases that built the subject. Its slug and title: a **phase or slice
+  subject** gets that phase's own book, `p<N>` (a tailed or v73 id keeps its form:
+  `P46-k2` suggests `p46-k2`), titled by the rule below; **anything else** in the repo is
+  a named book. A book about a subject with no code behind it is declined, like any such
+  request.
 
 **The title rule.** A book's, a chapter's or a loose document's title says what the text
 explains, never the work that produced it: "How a review publishes privately (P30)", not
@@ -211,13 +198,86 @@ Do **not** invent a book the user did not ask for and the rules above do not nam
 topic too big for one document stays one document: its run scopes it down at D1 and the
 report suggests a book (§9.1); nothing asks mid-run.
 
+**The reader.** The `reader:` line is a **concrete guess** at this operator, made from the
+request, the conversation and their situation in the repository: who they are (the person
+who built the subject, someone about to change it, a collaborator new to the repo), what
+they already know (the language, the parts of the repo they have worked in, the phases
+they ran), what they are new to (the part of the subject the request circles), and what
+they will do with the chapter. Name each in a few words, from what you saw: "you, who
+built the reader's React side in P30, new to how a highlight's offsets are counted; you
+will change the anchor format". Never a stock reader ("a novice", "a developer", "a
+beginner"): when the request and the repo say nothing more, name what they do say and ask
+on that line. A chapter of a book takes the book's reader. Every later stage writes for
+this reader and the critic reads as them.
+
+**The shape.** The sections follow the subject, never a fixed outline. Draft them as the
+**questions this reader asks, in the order they ask them**, each a heading in plain words
+with a one-line answer: what they meet first, what puzzles them next, what they need before
+they can change it. Around them:
+
+- **Always:** the short "In one paragraph" box opens the chapter, and Sources close it.
+  Neither is listed among the sections.
+- **The Quiz** is suggested only when the subject earns it (several ideas the reader must
+  hold together, or a mechanism worth checking themselves on), with its reason in a few
+  words; the operator may drop it. A narrow subject gets none.
+- **Next steps** is suggested only when something on the subject is open in the
+  workspace: an open deferred job, an operator question not yet answered, a decision a
+  covering phase recorded but no slice has built. The line names what is open (`D86-sd`,
+  `OQ3 of P39-hk`), and §4 says how the part is written. Nothing open, no part. There is
+  no "Best practices" part.
+- **Other shapes:** beside the drafted shape, offer **one or two** other ways to cut the
+  same subject, one line each: a walk through one request from start to finish, the code
+  first and then why it is so, the history of how it came to be. The operator picks one,
+  edits any line, or keeps the drafted one; it is still the one confirmation.
+
+At most **6 content sections** in a document. A book lists its chapters the same way, each
+`<n>. <Chapter title> — <what it covers>`; each chapter's sections are signed later, at the
+book's outline gate. A new chapter of an existing book lists its own sections, as a
+document does. The run writes only for the signed sections (§3.4, §3.10).
+
+**The phases that cover the subject** (COVERAGE). The explain is told from what the
+workspace's phases recorded while building the subject, so the front door finds them from
+the records, and the confirmation names them:
+
+1. **The commits.** For the subject's files (the cheap look, step 5, names them), run
+   `git log --format=%s -- <paths>` and read each subject line for a phase id, `P<N>` or
+   `P<N>-<tail>`: in the scope (`merge(P39-hk): …`, `chore(P39-hk): …`) or at the head of
+   the summary (`feat(web): P30.S20 …`), as the workspace's Commit Convention writes them.
+   A slice id counts for its phase.
+2. **The phase records.** Grep the workspace's `phases/active/*/intent.md`,
+   `phases/active/*/phase.md` and their `phases/archived/` counterparts for the subject's
+   files, its key names and its plain name; a hit that is about the subject (not a passing
+   mention) counts.
+3. **The covering phases** are the phases both ways find, ordered by how much of the
+   subject each built, at most 6 named (the rest counted). A phase or slice subject is
+   covered by that phase, plus any later phase the commits name for its files.
+
+**None covers it** (the code is there, but no phase built or recorded it — older code, a
+vendored part, a commit with no phase id): the confirmation says so, and offers to
+**create a research phase first**, which reads the code and records its findings; the
+explain then runs from those findings afterwards, when the operator asks again, never
+automatically. The operator may instead say `yes` to explain from the code alone. The
+hand-off for the research phase (the front door's step 8) invokes the workspace's
+`create-phase` with the operator's request and this block, verbatim:
+
+    Research: <subject>
+    - subject: <subject, refined from the operator's words>
+    - paths: <the subject's files and folders, as the cheap look found them>
+    - question: what does this code do, and why is it built this way: <the reader's questions from the drafted shape, one a line>
+    - findings-only: yes — it reads the code and records findings in its phase's notebook and topics; it writes no product code
+    - then: an explain of <subject>, from these findings, only when the operator asks again (`/knowledge:explain <subject>`)
+
+`create-phase` treats it as any phase request: it confirms the name and the objective with
+the operator, creates the phase and stops; the operator runs it.
+
 ### The front door, step by step
 
 Read with Read, Glob and Grep; your only other calls are §2's resolver, one read of
 §3.1's prior lookup and, when that lookup finds a prior, one read of the prior itself for
-its headings (step 5's cheap look). Write nothing, anywhere, with one exception: the resolver's own
-header file (§2's `auth.header`), a credential cache beside the configuration it reads,
-never a run artifact.
+its headings (step 5's cheap look), and the coverage's `git log` calls (step 5). Write
+nothing, anywhere, with one exception: the resolver's own header file (§2's
+`auth.header`), a credential cache beside the configuration it reads, never a run
+artifact.
 
 1. **Find the workspace** in the working folder, the repository's root (read with Read; a
    missing file is an answer). A **nested** workspace has `workflow/.agentic-nested.json`
@@ -240,6 +300,8 @@ never a run artifact.
 3. **Refuse early** what the route would refuse (create-phase's *The explain route*, its
    refusals before anything is written), so the operator never confirms what it then
    turns down:
+   - **A subject with no code behind it** (MODE, above): decline plainly, in one or two
+     sentences, and stop.
    - **From inside a phase worktree** (the working folder's path runs through
      `.claude/worktrees/`, where every phase worktree lives): say "start an explain from
      the main checkout" and stop; a phase created here would land on another phase's
@@ -273,36 +335,41 @@ never a run artifact.
    (§3.1), with Glob and Grep only, so that the confirmation can say whether the run will
    be a delta (step 7).
 
-   **Then the cheap look**, for the sections step 6 drafts: at most **10 reads** in all,
-   with no agents and no web search. Repo modes: Read, Glob and Grep the subject's files;
-   a phase or slice subject reads its `intent.md`, its `phase.md`'s `## Now` and
-   `## Decisions`, and the heads of its slices' `result.md`. A prior (a v2): its `##` and
-   `###` headings, from one more KB read, §3.1's
+   **Then the cheap look**, for the reader, the shape and the coverage step 6 drafts: at
+   most **10 reads** in all, with no agents and no web search. Read, Glob and Grep the
+   subject's files, and note their paths for the coverage; a phase or slice subject reads
+   its `intent.md`, its `phase.md`'s `## Now` and `## Decisions`, and the heads of its
+   slices' `result.md`. Note what is open on the subject: the workspace's open deferred
+   jobs (`deferred/open/*/deferred.json`) and the covering phases' unanswered `## Operator
+   Questions`, for the shape's next-steps part. A prior (a v2): its `##` and `###`
+   headings, from one more KB read, §3.1's
    `knowledge --base-url <KB_API_BASE_URL> read <PRIOR_REL_PATH> --source`, or without the
-   CLI its `curl … -H @<KB_AUTH_HEADER>` form. General mode: the request and the subject's
-   ordinary map, as you already know it, with no search. The look sizes the list; it is
-   never research, and nothing it reads is evidence.
+   CLI its `curl … -H @<KB_AUTH_HEADER>` form. The look sizes the shape; it is never
+   research, and nothing it reads is evidence.
+
+   **Then the coverage** (COVERAGE, above): one `git log --format=%s -- <paths>` over the
+   subject's paths, and one Grep over the phase records, outside the 10 reads. It names
+   the covering phases, or finds none.
 6. **Draft the proposal:** the phase name `Explain: <subject>`, a one-sentence objective
-   (the unit, its reader, published private), and the seventeen lines of `## Explain`,
-   each field on its own line, exactly as create-phase's route writes them:
+   (the unit, its reader, published private), and the sixteen lines of `## Explain`,
+   each field on its own line, in this order:
    - **unit** (above) · **subject**: a phase id (`P30`), a slice id (`P30.S4`) or the
-     topic, refined from the operator's words · **mode**: `codebase` or `general`;
+     topic, refined from the operator's words · **phases**: the covering phases
+     (COVERAGE), `P30, P33-n3`, or `none`;
    - **book**: `none`; for a chapter, `<slug> — "<title>" (exists, <n> chapters, project
-     private)`; for a book, `<slug> — "<title>" (kind <codebase | subject>)` ·
+     private)`; for a book, `<slug> — "<title>" (kind codebase)` ·
      **chapter**: `none`, or `<key> — "<title>" · position <n>` · **prior**: from step 5;
      a new book's or chapter's `<title>` follows §1's title rule;
-   - **run**: RUN (a book is always `full`: a `quick` or `no-research` asked for a book is
-     said so, never applied; a translation keeps `full`) · **lang**: `<LANG> (translations:
-     none)`, or for a translation the source it comes from, `ko (translated from en v2)`;
-   - **reader**: who it is for, what they already know, and what they will do with it (a
-     novice unless the request says otherwise; a chapter: the book's reader) ·
+   - **lang**: `<LANG> (translations: none)`, or for a translation the source it comes
+     from, `ko (translated from en v2)`;
+   - **reader**: by *The reader* above (a chapter: the book's reader) ·
      **depth**: `one document`, `one chapter`, or `about <n> chapters`;
    - **must-cover**, **leave-out**, **trusted sources**: what the request names, or
      `none`;
-   - **project**: by §5's rule (repo modes: the repository's root folder name; general
-     mode: the subject's slug; a chapter: its book's project), shown as
-     `<name> (private)`: an existing private project of the operator's org, or a new
-     name, created private on its first publish · **visibility**: `private`, always;
+   - **project**: by §5's rule (the repository's root folder name; a chapter: its book's
+     project), shown as `<name> (private)`: an existing private project of the operator's
+     org, or a new name, created private on its first publish · **visibility**:
+     `private`, always;
    - **outline sign-off**: `off` (a book: `on`, fixed; `on` for a document or a chapter
      only when asked) · **worktree**: `yes`, or `no` when the operator says to run it
      here. The sections are signed at this confirmation whatever the field says, so for
@@ -310,17 +377,15 @@ never a run artifact.
      claims and word budgets, §3.10) before the write; for a book, the outline gate
      signs each chapter's sections (§9.2), with no stop per chapter.
 
-   Then draft the **sections**, which ride in the confirmation above the `## Explain`
-   block, never as a field. A document: a numbered list of its `##` sections in §4.2's
-   order, `<n>. <Heading> — <what it answers>`, at most **6 content sections**; Quiz and
-   Sources always close it and are not listed. Headings a newcomer understands, and each
-   one-line answer in plain words. A v2 marks each prior heading `kept`, `renamed` (with
-   its old heading) or `dropped`, and each addition `new`; a kept or renamed heading
-   carries its id (§3.1). A book lists its chapters the same way,
-   `<n>. <Chapter title> — <what it covers>`; each chapter's sections are signed later,
-   at the book's outline gate. A new chapter of an existing book lists its own sections,
-   as a document does. The run researches and writes only for the signed sections (§3.4,
-   §3.10).
+   There is no `run:` line and no `mode:` line: one run, and every subject is the
+   repository's code.
+
+   Then draft the **sections** by *The shape* above; they ride in the confirmation above
+   the `## Explain` block, never as a field. A document: a numbered list,
+   `<n>. <Heading> — <what it answers>`, then the Quiz line when the subject earns one,
+   then the other shapes. Headings this reader understands, and each one-line answer in
+   plain words. A v2 marks each prior heading `kept`, `renamed` (with its old heading) or
+   `dropped`, and each addition `new`; a kept or renamed heading carries its id (§3.1).
 
    Last, draft the **plain summary** that opens the confirmation: 2–4 short sentences in
    everyday words, with no field names and no workflow terms, saying what the document (or
@@ -330,85 +395,118 @@ never a run artifact.
 
        Explain — confirm once; then it runs to publish.
        In plain words: <2–4 plain sentences: what it explains, for whom, what they can do afterwards>
+       Reader: <the reader, by *The reader*> (change it if I guessed wrong)
        Sections (your yes signs them; change any line):
-         1. <Heading> — <what it answers>[ · a v2: kept | renamed from "<old heading>" | new]
+         1. <Heading> — <the reader's question it answers>[ · a v2: kept | renamed from "<old heading>" | new]
          …
+         [n. Next steps — <what is open: the deferred jobs, questions and unbuilt decisions it names>]
          [a v2: <old heading> — dropped]
-         Quiz and Sources close it, as in every document.
-       Cost: <the agents> · ≈ $<a>–<b> at list price, plus a few dollars for the explain phase around it (the explain skill's cost table)[ · <the clause below that applies>]
+         [Quiz — suggested: <why this subject earns one>; say "no quiz" to drop it]
+         The "In one paragraph" box opens it and Sources close it.
+       Other shapes (say "shape B" to take one instead):
+         B. <one line: another way to cut the same subject>
+         [C. <one line>]
+       Built by: <the covering phases, each with a few words on what it built> | no phase covers this code — see below
+       Cost: one writer and one critic on a second model, plus the explain phase around it[ · <the clause below that applies>]
        Phase: Explain: <subject> — <the objective>
        - unit: document (standalone). Say "a chapter of <book>" or "a book" to change it
-       - subject: <subject> · mode: <codebase | general>
-       - run: full (agents research the sources, a second model checks every fact used, more rounds fill what is missing, a reviewer reads the draft) · or say "quick" (one agent researches alone, no reviewer) or "no-research" (<this repository | your own material> only, no web)
-       - lang: <LANG> · reader: <the reader>
+       - subject: <subject> · lang: <LANG>
        - must-cover: <none | <n> items, each in a section above>
        - project: <name> (private) · earlier version: <none found | v<N>>
-       - runs on its own copy of the repository; stops only if the evidence is too thin, the reviewer finds an error the run cannot fix, or publishing fails
+       - runs on its own copy of the repository; stops only if the critic finds an error the run cannot fix, or publishing fails
        - permissions: if you approve tool calls by hand, first add the rules listed in the explain skill's §3.2
-       - web searches: every search, the agents' included, counts against this session's limit (200 by default); start a long run in a fresh session
 
        ## Explain
 
        - unit: document
        - subject: <subject>
-         … every field of step 6, one a line, in create-phase's order …
+         … every field of step 6, one a line, in its order …
        - worktree: yes
 
        Why: <field — reason>; … (one clause for each value you chose; the rest are the request's words or the defaults)
        Reply yes, or change any line.
 
-   A book's `Sections` block lists its chapters (step 6), its run line drops the
-   `· or say "quick" …` offer (a book is always `full`), and its stops line adds the
+   **When no phase covers the subject**, the `Built by:` line says so, and one paragraph
+   follows the `Why:` line in place of its last line:
+
+       No phase of this workspace built or recorded <the subject>, so the explain would have only the code to go on.
+       Reply "research first" to create a research phase that reads the code and records its findings
+       (it asks you to confirm its name, then stops; ask for the explain again once it is done),
+       or "yes" to explain from the code alone, or change any line.
+
+   A book's `Sections` block lists its chapters (step 6), and its stops line adds the
    outline and acceptance gates in plain words: `stops twice for your yes: once to sign
    every chapter's sections together, once to accept the finished book; otherwise only
-   if …`. A changed section line is folded in like any other. With `worktree: no` the
-   stops line says it runs here, in this folder. Every web search, the agents' included,
-   counts against the session's cap (`CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`, 200 by
-   default): a `full` run says so on its `- web searches:` line, with the advice to start
-   a long run in a session of its own.
+   if …`. A changed line, a picked shape or a dropped quiz is folded in like any other,
+   and the whole confirmation shown again. With `worktree: no` the stops line says it
+   runs here, in this folder.
 
-   **The `Cost:` line** says, in plain words, what the proposed run costs: the agents it
-   sends, named as a newcomer would (research agents, fact-check batches on a second
-   model, extra rounds to fill gaps, the reviewer), and about how many dollars at list
-   price, taken from the cost table below and citing it, plus the explain phase around it,
-   a few dollars. On a subscription, read the dollars as usage, not as a bill. It adds one
-   more clause only when one of the cases below applies (the template's `[ · … ]`); it
-   never chooses a cheaper run itself, and the operator's reply decides:
+   **A worked example** (topic mode, a document, in this repository):
+
+       Explain — confirm once; then it runs to publish.
+       In plain words: This explains how a highlight in the reader remembers exactly which words it covers, even after the page is re-rendered. It is for you, who built the reader's panels, and it shows how the offsets are counted so you can change the anchor format without breaking saved notes.
+       Reader: you, who built the reader's React side in P30; new to how the projection counts a highlight's characters; you will change the anchor format (change it if I guessed wrong)
+       Sections (your yes signs them; change any line):
+         1. What is saved when I highlight? — the anchor: a start and an end counted in characters of the chapter's text
+         2. Counted in what text? — the projection: the chapter's words with the markup taken out
+         3. Why don't figures and code shift the count? — what the projection skips, and how the page marks it
+         4. How does a saved highlight find its words again? — painting it back onto the rendered page
+         5. What breaks if I change the format? — the anchors already saved, and what P30 decided about them
+         Quiz — suggested: the count, the skips and the repaint must be held together; say "no quiz" to drop it
+         The "In one paragraph" box opens it and Sources close it.
+       Other shapes (say "shape B" to take one instead):
+         B. One highlight, followed from the click to the saved note and back onto the page
+         C. The code first (the projection, then the painter), then why it is built this way
+       Built by: P30 (highlights, notes and the anchor capture, slices S20–S21)
+       Cost: one writer and one critic on a second model, plus the explain phase around it
+       Phase: Explain: how a highlight remembers its words — one standalone document for its builder, published private
+       - unit: document (standalone). Say "a chapter of <book>" or "a book" to change it
+       - subject: how a highlight remembers its words · lang: en
+       - must-cover: none
+       - project: knowledge (private) · earlier version: none found
+       - runs on its own copy of the repository; stops only if the critic finds an error the run cannot fix, or publishing fails
+       - permissions: if you approve tool calls by hand, first add the rules listed in the explain skill's §3.2
+
+       ## Explain
+
+       - unit: document
+       - subject: how a highlight remembers its words
+       - phases: P30
+       - book: none
+       - chapter: none
+       - prior: none
+       - lang: en (translations: none)
+       - reader: you, who built the reader's React side in P30; new to how the projection counts a highlight's characters; will change the anchor format
+       - depth: one document
+       - must-cover: none
+       - leave-out: none
+       - trusted sources: none
+       - project: knowledge (private)
+       - visibility: private
+       - outline sign-off: off
+       - worktree: yes
+
+       Why: reader — you asked how your highlights survive a re-render; shape — the questions in the order a builder meets them; quiz — three ideas that must be held together
+       Reply yes, or change any line.
+
+   **The `Cost:` line** says, in plain words, what the run sends: **one writer and one
+   critic on a second model**, plus the explain phase around it. It has no dollar figure
+   and no cheaper option to choose. It adds one more clause only when one of the cases
+   below applies (the template's `[ · … ]`), and the operator's reply decides:
    - **A v2 whose prior's dossier step 5 found:** the run is a delta of the prior (§3.1):
-     it researches only what changed since the prior and carries over the prior's verified
-     claims whose sources still say the same. The run line reads `- run: full — as a delta
-     of v<N> (researches only what changed since <the prior's date>)`. The cost line prices
-     the delta, counts `a check that v<N>'s sources still say the same` among its agents,
-     and adds `say "from scratch" for a full rerun ≈ $<the v1 price>`, said there only. The
-     decline word `from scratch`, in the operator's reply, makes the run a plain `full` run
-     that reads the prior as one source.
-   - **A v2 with no dossier found:** the cost line adds `no research saved from v<N> to
-     reuse` and prices a v1.
-   - **A narrow subject** (one question, one file or function, or the request's own
-     "short"): the cost line adds `cheaper: say "quick" ≈ $<the table's quick price>
-     (projected)`. `quick` stays the operator's word; the run card's "Never choose `quick`
-     or `no-research` yourself" binds you here too.
-   - **A book:** several runs' worth of research agents, not metered yet, so its cost line
-     has no dollar figure and no phase clause.
+     it reads only what changed since the prior, from the phases since and the code, and
+     carries over the prior's checked claims whose sources still say the same. The cost
+     line adds `as a delta of v<N> (reads only what changed since <the prior's date>);
+     say "from scratch" to rewrite it whole`. The decline word `from scratch`, in the
+     operator's reply, makes the run a plain one that reads the prior as one source.
+   - **A v2 with no dossier found:** the cost line adds `no notes saved from v<N> to
+     reuse`.
+   - **A book:** one writer and one critic for each chapter, after the book's outline.
    - **A translation** (the request asks for a published document or chapter in another
-     language, §3.1 *Translation*): `run: full` stays, but its run line reads `- run: full
-     (a translation: one writer, no research and no reviewer)`, with no offer and no
-     `- web searches:` line; the `lang:` line names the source (`ko (translated from en
-     v2)`); there is no `Sections` block (the sections are the source's); and the cost
-     line says one writer, with no research and no reviewer, ≈ $3 plus ≈ $5 for the
-     explain phase around it (the table's row).
-
-   **The cost table**, the one place these numbers live (measured on plugin 0.8.0 runs,
-   projected for 0.9.0; list price, the workspace's own phase around the run not
-   included):
-
-   | Run | What it sends | ≈ $ at list price |
-   |---|---|---|
-   | v1 document (a codebase subject; projected) | 4 research agents (2 read the code, 2 search the web), about 14 fact-check batches on a second model, at most 1 extra round to fill gaps, 1 reviewer | $35–45 |
-   | v2 delta | 1–2 research agents reading the code and 0–1 searching the web, about 5 fact-check batches on a second model, a check that v<N>'s sources still say the same, at most 1 extra round to fill gaps, 1 reviewer | $25–38 |
-   | translation | one writer: no research, no reviewer | $3 (the explain phase around it adds ≈ $5 today) |
-   | `quick` | one agent researches alone, 1 fact-check batch on a second model, no reviewer | $15–25 (projected; not metered yet) |
-   | book | several runs' worth: research for the whole book, then for each chapter more research, a writer and a reviewer | not metered yet |
+     language, §3.1 *Translation*): the cost line reads `one writer, no critic (a
+     translation)`; the `lang:` line names the source (`ko (translated from en v2)`); and
+     there is no `Sections` block, no `Other shapes` and no `Built by:` line (the sections
+     and the evidence are the source's).
 
    **Ask only in an interactive session** (on Claude Code, `AskUserQuestion` is among
    your tools; it is not under `claude -p` or in a subagent): show the confirmation and
@@ -422,7 +520,15 @@ never a run artifact.
    their reply. Its explain route takes it as *A confirmed proposal*: it checks it,
    creates the phase, starts its worktree and runs it in `auto` to publish. Nothing else
    runs here. No Skill tool: print `/create-phase` with the request, the proposal and the
-   reply, to paste. Anything but a literal yes, or a changed line, creates nothing.
+   reply, to paste. Anything but a literal yes, a changed line or a picked shape creates
+   nothing.
+
+   **On "research first"** (no phase covers the subject): invoke the same `create-phase`
+   with the operator's request and the research block of *The phases that cover the
+   subject*, filled in, verbatim, and nothing else: no `## Explain` block, no explain
+   phase. No Skill tool: print `/create-phase` with the request and the block, to paste.
+   The explain does not follow by itself: once the research phase is done, the operator
+   asks again, and the front door then finds that phase as covering the subject.
 
 ## 2. Resolve the knowledge base configuration
 

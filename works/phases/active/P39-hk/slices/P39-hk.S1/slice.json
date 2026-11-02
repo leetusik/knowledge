@@ -3,13 +3,13 @@
   "phase_id": "P39-hk",
   "name": "Explain front door: suggested reader and shape, codebase-only, research-phase offer",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 20,
   "depends_on": [],
   "depends_declared": true,
   "created_at": "2026-11-02T16:09:32+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-03T08:20:20+09:00",
+  "completed_at": "2026-11-03T08:25:53+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -19,7 +19,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Explain front door rewritten: concrete reader, subject-shaped sections + 1-2 alternatives, codebase-only, coverage lookup with a research-phase offer, one writer + one critic",
   "validation": {
     "required": [],
     "last_run": null,
