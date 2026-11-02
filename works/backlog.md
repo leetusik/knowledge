@@ -7,7 +7,7 @@
 
 - Current phase: `P39-hk`
 - Current slice: `P39-hk.R1`
-- Next slice: `P39-hk.S2`
+- Next slice: `P39-hk.S3`
 - Waiting on operator: `none`
 - Stream: `phase/P39-hk-explain_what_was_built` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `73`
@@ -17,7 +17,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 3/10 | `P39-hk.R1` | 3/10 | `.` | working tree |
+| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 4/10 | `P39-hk.R1` | 4/10 | `.` | working tree |
 | `default` | - | idle | - | - | - | branch main |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
@@ -337,7 +337,7 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | [x] `P39-hk.D1` | `done` | Design the reading aids: term window, glossary section, formulas | `co-work` | `works/phases/active/P39-hk/slices/P39-hk.D1` |
 | [ ] `P39-hk.R1` | `in_progress` | Settle the glossary and formula grammar, the math engine and the term window wiring | `research` | `works/phases/active/P39-hk/slices/P39-hk.R1` |
 | [x] `P39-hk.S1` | `done` | Explain front door: suggested reader and shape, codebase-only, research-phase offer | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S1` |
-| [ ] `P39-hk.S2` | `todo` | Explain writes from the phases' records and the code: the evidence model | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S2` |
+| [x] `P39-hk.S2` | `done` | Explain writes from the phases' records and the code: the evidence model | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S2` |
 | [ ] `P39-hk.S3` | `todo` | Explain writing rules: visuals first, short paragraphs, subject-shaped outline, next steps | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S3` |
 | [ ] `P39-hk.S4` | `todo` | Retire the research agents and sync every copy, guard and promise | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S4` |
 | [ ] `P39-hk.S5` | `todo` | Workspace explain route: the handoff package for the bootstrap repo | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S5` |

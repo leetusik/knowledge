@@ -229,165 +229,114 @@ a diagram.
 
 ### B9. The dossier: files, ids and entries
 
-The dossier is one folder; your dispatch names it. Each file has one writer:
+The dossier is one folder, the run's record; your dispatch names it. Each file has one
+writer:
 
 | File | Written by | Read by |
 |---|---|---|
-| `brief.md`, `plan.md`, `outline.md`, `run.md` | the lead | the roles that need them |
-| `findings/<stem>.md` | one researcher; never edited after it returns | the lead, a verifier (named entries), the critic |
-| `library.md`, `ledger.md` | the lead: indexes that point at entries by id | the gap reviewer, the writer, the critic |
-| `verify/<batch id>.md` | one verifier | the lead, the critic |
-| `gaps/r<n>.md`; `gaps/final.md` | the gap reviewer; the lead | the lead, the writer, the critic |
-| `trace.md` (a book chapter: `trace-<key>.md`) | the writer | the critic |
-| `critique.md` (a book chapter: `book/critique/<key>.md`) | the critic | the writer |
-| `prior/` (a delta only) | the lead, once: a copy of the prior run's evidence; never edited | the lead, the writer, the gap reviewer, the critic |
-| `pages/` | whoever fetched; local text, never published | the fetcher |
+| `brief.md` | the writer, at D0 | the critic (a document's spec) |
+| `evidence.md` (a book: the book's, frozen at the outline's signature, and each chapter's overlay `evidence-ch<k>.md`) | the writer, at D1, and at D7 for a writer gap | the writer, the critic |
+| `outline.md` (a book: `book/outline.md`, and each chapter's map `outline-ch<k>.md`) | the writer, at D6 | the critic |
+| `body.md` (a book chapter: `book/<key>.md`) and `trace.md` (`trace-<key>.md`) | the writer, at D7 | the critic |
+| `critique.md` (a book chapter: `book/critique/<key>.md`) | the critic, once | the writer, the review |
+| `answers.md` (`answers-<key>.md`) | the writer, after the critique | the review |
 
-In a book the dossier is `book/research/`. Its `library.md` and `ledger.md` freeze at the
-outline signature; each chapter's lead then writes the overlays `library-ch<k>.md` and
-`ledger-ch<k>.md`: its top-up's lines, and a line of its own for each frozen claim the
-chapter uses, with the status its record gives, which wins over the frozen line for that
-chapter.
+A dossier from an earlier version of the explain skill (a `run.md`, a `ledger.md`,
+`findings/`, `verify/`) holds research: it is never read as evidence and never carried.
 
-**Ids** never change once given. `<stem>` is `r<n>-<angle>` (a book chapter's top-up:
-`ch<k>-r<n>-<angle>`) and `<seq>` is two digits: sources `S-<stem>-<seq>`, passages
-`<source id>/P<m>`, claims `C-<stem>-<seq>`; verification records `V-<claim id>-<k>`; a
-verifier's counter-sources and claims `S-v<n>-<seq>` and `C-v<n>-<seq>`; gaps
-`G-r<n>-<seq>`; disagreements `D-<seq>`. At a merge, a duplicate keeps the first id.
+**The evidence** is the code at the run's commit and the records of the phases that built
+the subject (the skill's §3.4): a phase's `intent.md`, its `phase.md` sections, its slices'
+`result.md`, its `topics/` files, and, for open items only, the workspace's open deferred
+jobs. Nothing else: no page, no search result, no other repository, no library's
+documentation, no knowledge of how such code usually works.
 
-**A carried id.** A delta (a v2) copies its prior run's evidence into `prior/` and carries
-some of its claims over, with their sources and disagreements. A carried id puts
-`p<N>-` after its letter, `<N>` the prior's version: `C-r1-code-04` of v1 is
-`C-p1-r1-code-04`, its source `S-p1-r1-code-01`, a passage `S-p1-r1-code-01/P2`, a
-counter-claim `C-p1-v2-01`, a disagreement `D-p1-03`. An id that already carries a `p<k>-`
-keeps it. The entry itself stays in `prior/`, under its id without the `p<k>-` prefix, in
-the file its ledger or library line names, and its record keeps the prior's file and
-anchor.
+**Ids** never change once given: evidence entries `E<nn>` (a chapter's overlay:
+`E-ch<k>-<nn>`), gaps `G<n>` (`G-ch<k>-<n>`), open items `O<n>` (`O-ch<k>-<n>`), and the
+critic's findings `C<nn>`.
 
-**A source entry**, one per page or document used:
+**A citation** is one repository path and line range at one commit, in the same form for
+the code and for the records:
 
-    ### S-r1-evidence-02
-    - url: <as opened> · canonical: <host and path, without tracking parameters>
-    - title: <as printed> · authors: <as printed> · publisher: <as printed>
-    - date: <published>[; updated <date>] · version: <the software, paper or page version> | n/a
-    - accessed: <YYYY-MM-DD> · read-via: curl | pdf → text | wayback <snapshot url> | webfetch
-      · quote-match: exact | approximate · archive: <snapshot url> | none | unavailable
-    - kind: spec | official docs | code | paper | dataset | review | textbook | news | analysis
-      | vendor engineering post | blog | forum | Q&A | aggregator | wiki | AI summary
-      | press release | other · peer-review: yes | no | n/a
-    - owner: <organization, vendor or funder> · upstream: <what it copies or reports> | none
-    - lateral: <one line: what leaving the page found about who is behind it>
-    - passages:
-      - P1 · <locator: § "<heading>" | p.<n> | <timestamp>>: "<verbatim passage>"[ · gloss: "<English>"]
+    web/src/lib/native/project.ts:L12-L40@88d2e95
+    works/phases/active/P30/phase.md:L41-L41@88d2e95
 
-A code source is one entry per repository and commit: `repo`, `commit` (the full sha) and
-its `date`, `kind: code`, `owner`, `peer-review: n/a`; its passages are the claims' ranges.
+The commit is the run's, its short sha here (its full sha is in `brief.md`). A **code**
+range carries a hash of its content, so that a checker, or a later version, can confirm
+the range by its content: the first 16 hex digits of
 
-**A claim entry:**
+    git show <commit>:<path> | sed -n '<a>,<b>p' | shasum -a 256
 
-    ### C-r1-evidence-05
-    - claim: <one molecular sentence>
-    - kind: fact | number | date | version | behaviour | definition | interpretation
-      | evaluation | comparison | consensus | prediction
-    - questions: Q<id>, … · load-bearing: yes | no (<one-line reason>)
-    - support: <source id>/P<m> · rung <n> · fit direct | partial · upstream self | <origin>
-      (one line per source)
-    - scope: <the version, date, population or conditions the passage attaches>
-    - confidence: high | medium | low · flags: none | speculation | superlative
-      | vendor-about-itself | exceptional
-    - conflicts: <source id>/P<m> "<the disagreeing passage>" | none
+(`sha256sum` where `shasum` is missing). Uncommitted code is cited `@WORKTREE`, hashed from
+the file and checked by content only. A behaviour ("X runs before Y") cites every range on
+its path, in order. A **record** range quotes its line or lines verbatim and needs no hash:
+its quote finds it again, in the phase's active or archived folder.
 
-Write claims **molecular**: one checkable proposition, with every modifier it needs (who,
-which version, when, under what conditions) and nothing more, and no pronouns: it must make
-sense alone. Keep the scope words ("in their benchmark", "for version 3", "on average"),
-and name a study and its year in a claim about its numbers. Never split a conditional, a
-comparison or a quantity from its condition. Leave an ambiguous source sentence unclaimed
-unless the source itself resolves it.
+**An entry** of `evidence.md`, one per range:
 
-**A code claim** cites `path:L<a>-L<b>@<short sha>`, with the excerpt verbatim (elisions
-marked `…`) and a hash of the whole range:
+    ### E03 · code · web/src/lib/native/project.ts:L12-L40@88d2e95
+    - does: <one plain line: what these lines do, read from them>
+    - excerpt-sha256 (first 16 hex): d379caa1059beb7b
+    - serves: <section ids> · from: v<N> E<nn> (a v2's carried entry) | none
 
-    - support: S-r1-code-01 · plugin/skills/explain/SKILL.md:L268-L278@88d2e95 · rung 1 · fit direct · upstream self
-      excerpt (L268–L270, L277–L278):
-        <the lines, verbatim>
-        …
-      excerpt-sha256 (L268–L278, first 16 hex): d379caa1059beb7b
+    ### E07 · record · works/phases/active/P30/phase.md:L41-L41@88d2e95
+    - phase: P30 · kind: intent | decision | note | result | finding | open
+    - says: "<the line, verbatim>"
+    - serves: <section ids> · disagrees: <the code entry that shows otherwise> | none · from: v<N> E<nn> | none
 
-The hash is the first 16 hex digits of
-`git show <commit>:<path> | sed -n '<a>,<b>p' | shasum -a 256` (`sha256sum` where
-`shasum` is missing), so a checker can confirm the range by its content when line numbers
-move. Uncommitted code is cited `@WORKTREE`, hashed from the file, and checked by content
-only. A behaviour claim ("X runs before Y") cites every range on its path, in order.
+**What an entry supports:**
 
-**A findings file**, `findings/<stem>.md`:
+- **A code entry** supports what those lines do at the commit, read from them, including
+  what they plainly do in their own language (a loop, a lock taken, a call made, a value
+  returned). A comment or docstring in them is the builders' account, like a record. It
+  never supports what a library, a protocol or an algorithm does inside, its history, its
+  alternatives or its best practice, unless the lines themselves say it.
+- **A record entry** supports what the phase recorded: what was asked, decided, found or
+  left open, and the reasons it gives. In the chapter's own voice when the code bears it
+  out; attributed in plain words when it is the builders' account the code cannot show
+  ("the change that built it chose this so that …", "the work's own tests show …"), its
+  phase id at most a trailing mark, "(P30)".
+- **The code wins** a disagreement about what the code does: the record's entry names the
+  code entry under `disagrees:`, and the chapter may say what was planned and what was
+  built.
+- **Nothing else supports a sentence.** What the reader would need beyond the code and the
+  records is a gap, written as one ("The records do not say why …"), never filled.
 
-    # Findings: <run-id> · round <n> · angle <angle-id>
-    - researcher: <model> · status: <status> · tool calls: <n>
-    ## Questions
-    - Q<id>: answered | thin | not found | contested | not searched — claims: C-…, … — note: <one line>
-    ## Sources
-    (source entries)
-    ## Claims
-    (claim entries)
-    ## Conflicts
-    - <claim id>: <source A>/P<m> says …; <source B>/P<m> says … (both quoted above); not settled
-    ## Speculation and flags
-    - <claim or source id>: <the flag, and the words that raised it>
-    ## Unused leads
-    - <url or path> — <why it may matter>
-    ## Queries
-    - "<query>" → useful | nothing new
+**`evidence.md`:**
 
-**The lead's indexes**, read and never written by a role. `library.md` lists each source id
-with the file that holds it, its canonical URL, its kind and the claims it supports.
-`ledger.md` holds one line per claim, with `merged:` listing duplicate ids:
+    # Evidence: <run-id>
+    - commit: <full sha> · phases: <the covering phases> | none (from the code alone)
+    - v2: <the line the skill's §3.4 *A v2* logs> (a v2 only)
+    ## Read
+    - P30: intent.md · phase.md (Decisions, Notes for later slices) · topics/anchors.md · slices S20, S21 (heads) | not found
+    - code: web/src/lib/native/project.ts · web/src/components/reader/paint.ts
+    ## Entries
+    (the entries, in the order read)
+    ## Gaps
+    - G1 · <what the reader needs here> · <section id> · the code shows: E03 · the records: none | E07 (what it leaves out) · disposition: stated ("<the words the chapter will use>") | dropped (<the section, adjusted>)
+    ## Open
+    - O1 · deferred job | operator question | unbuilt decision · <its citation> · "<its words>"
+    - entries: code <n> · records <n> · gaps <n> · open <n>
 
-    - C-r1-evidence-05 · Q7 · load-bearing · status supported · used · main · verified verify/final-b2.md#V-C-r1-evidence-05-1
-      · counter: none-found (<queries>) | D-03 · bar met (<why>) · used-in: <outline sections>
-
-and a `## Disagreements` section, which the lead records and never settles:
-
-    ### D-03
-    - claims: C-r1-practice-04 (side A), C-v2-01 (side B)
-    - side A: <source id>/P<m> "…" (rung 2); …
-    - side B: <source id>/P<m> "…" (rung 1); …
-    - nature: factual | version/time | definitional | scope/conditions | methodological
-    - prominence: <which side most independent rung-1 and rung-2 sources take: due weight, not a vote>
-    - would settle it: <the evidence that would decide it>
-    - status: open | resolved-by-scope
-
-On a ledger line, `· used` marks a claim the outline picked (the lead's pick, after
-research stops), and `· main` a main claim among them; a book marks its main claims before
-any chapter picks. Only a used claim is written, and each ends with the `verified` link to
-its record. A claim never picked is never verified, a book's main claims aside, and stays
-`candidate`.
-
-A delta's carried lines come first, each with `reused-from: <the prior's run-id>/<its id
-there> (<its file in prior/>)`. A carried claim keeps the status, record and
-counter-evidence its run gave it; this run's pick adds `· used` and `· main`:
-
-    - C-p1-r1-code-04 · Q2 · load-bearing · status supported · used · verified prior/verify/final-b1.md#V-C-r1-code-04-1
-      · counter: not run · bar met (<why>) · reused-from: <run-id>/C-r1-code-04 (prior/findings/r1-code.md)
-
-A carried source's library line adds the same mark and how it passed its check:
-`unchanged: code at <HEAD sha>` or `unchanged: re-found <YYYY-MM-DD>`.
+The last line closes the file; a file without it is unfinished.
 
 **The trace** (`trace.md`), written by the writer as it finishes each section, because the
-chapter itself may carry no comments. Every checkable sentence maps to a claim id or a code
-range: a fact, number, date, name, version, behaviour, cause, comparison, evaluation,
-attributed definition, piece of history or reason for a recommendation, the obvious ones
-too; and every quiz key and `explain`, and every diagram node, edge or table cell that
-asserts a fact. Exempt, and marked so: framing and signposting, the chapter's own analogies
-(marked as analogies), exercises and questions put to the reader, terms the chapter defines
-for itself, routine arithmetic on ledgered numbers, and quiz distractors.
+chapter itself may carry no comments. Every checkable sentence maps to an entry id: a fact,
+number, name, version, behaviour, cause, comparison, reason or piece of history, the
+obvious ones too; every quiz key and `explain`; every diagram node, edge or table cell that
+asserts a fact; every term's definition; and every formula with each symbol of its legend
+(the formula to the code entry that computes it, a symbol to the entry that names it). A
+stated gap maps to its `G` id. Exempt, and marked so: framing and signposting, the
+chapter's own analogies (marked as analogies, carrying no fact), exercises and questions
+put to the reader, routine arithmetic on an entry's numbers, and quiz distractors.
 
     ## <heading id>
-    - ¶1 s1: C-r1-evidence-05
+    - ¶1 s1: E03
     - ¶1 s2: framing
-    - ¶2 s1: plugin/skills/explain/SKILL.md:L268-L278@88d2e95 (C-r1-code-04)
-    - quiz q3 key: C-r2-found-11 · explain: C-r2-found-11, C-r1-found-02
-    - diagram flow-1: C-r1-code-07, C-r1-code-08 (order)
-    - ¶1 s2 (rev C03): C-r1-evidence-06
+    - ¶2 s1: E03, E07
+    - ¶3 s1: gap G1
+    - quiz q3 key: E05 · explain: E05, E07
+    - diagram flow-1: E03, E04 (order)
+    - ¶1 s2 (rev C03): E08
 
 The trace is **appended to, never rewritten whole**, and changes only with Edit (or
 Write for the new file). The "In one paragraph" box traces under the key `## top`, before

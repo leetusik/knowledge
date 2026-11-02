@@ -1709,3 +1709,6 @@
 {"ts": "2026-11-03T08:20:20+09:00", "type": "slice_status_changed", "slice": "P39-hk.S1", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-11-03T08:25:53+09:00", "type": "executor_dispatched", "slice": "P39-hk.S1", "phase": "P39-hk", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-03T08:25:53+09:00", "type": "slice_status_changed", "slice": "P39-hk.S1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-03T08:27:37+09:00", "type": "slice_status_changed", "slice": "P39-hk.S2", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-03T08:52:50+09:00", "type": "executor_dispatched", "slice": "P39-hk.S2", "phase": "P39-hk", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-03T08:52:50+09:00", "type": "slice_status_changed", "slice": "P39-hk.S2", "old_status": "in_progress", "new_status": "done"}
