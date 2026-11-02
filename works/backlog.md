@@ -5,10 +5,10 @@
 
 ## Pointer
 
-- Current phase: `P37-1p`
-- Current slice: `none`
-- Next slice: `none`
-- Waiting on operator: `P37-1p`
+- Current phase: `P39-hk`
+- Current slice: `P39-hk.DECOMP`
+- Next slice: `P39-hk.REVIEW`
+- Waiting on operator: `P39-hk.DECOMP`
 - Open deferred jobs: `73`
 - Workspace version: `v89`
 
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P37-1p` | pending | `none` | 6/7 | - | working tree |
+| `default` | `P39-hk` | planned | `P39-hk.DECOMP` | 0/2 | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
@@ -41,7 +41,7 @@
 | [x] `P34-n0` | `done` | `pass` | Keep private documents off the public repo | `none` | `works/phases/active/P34-n0` |
 | [x] `P35-a4` | `done` | `pass` | Explain documents: about the subject, standalone | `none` | `works/phases/active/P35-a4` |
 | [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.D1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
-| [~] `P37-1p` | `pending` | `pending` | Drop the knowledge graph | `P37-1p.REVIEW` | `works/phases/active/P37-1p` |
+| [x] `P37-1p` | `done` | `pass` | Drop the knowledge graph | `none` | `works/phases/active/P37-1p` |
 | [x] `P38-e1` | `done` | `pass` | Right-size explain runs (plugin 0.9.0) | `none` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
 | [ ] `P39-hk` | `planned` | `pending` | Glossary: term definitions on hover or tap | `P39-hk.DECOMP` | `works/phases/active/P39-hk` |
 
@@ -308,7 +308,7 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | [x] `P37-1p.S3` | `done` | graph stylesheets out, public grid rule kept | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S3` |
 | [x] `P37-1p.S4` | `done` | graph API out on both sides of the template | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S4` |
 | [x] `P37-1p.S5` | `done` | landing graph section, motif and copy out | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S5` |
-| [ ] `P37-1p.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P37-1p/slices/P37-1p.REVIEW` |
+| [x] `P37-1p.REVIEW` | `done` | phase review | `review` | `works/phases/active/P37-1p/slices/P37-1p.REVIEW` |
 
 ## Phase P38-e1: Right-size explain runs (plugin 0.9.0)
 

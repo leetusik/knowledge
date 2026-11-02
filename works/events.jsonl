@@ -1680,3 +1680,8 @@
 {"ts": "2026-11-02T15:21:19+09:00", "type": "deferred_created", "deferred": "D88-gd", "source": "P37-1p.REVIEW"}
 {"ts": "2026-11-02T15:21:19+09:00", "type": "deferred_created", "deferred": "D89-zf", "source": "P37-1p.REVIEW"}
 {"ts": "2026-11-02T15:21:39+09:00", "type": "slice_status_changed", "slice": "P39-hk.DECOMP", "old_status": "todo", "new_status": "pending", "stop_kind": "decision"}
+{"ts": "2026-11-02T15:34:53+09:00", "type": "phase_status_changed", "phase": "P37-1p", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-11-02T15:34:53+09:00", "type": "acceptance_cleared", "phase": "P37-1p"}
+{"ts": "2026-11-02T15:34:53+09:00", "type": "slice_status_changed", "slice": "P37-1p.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-02T15:34:53+09:00", "type": "phase_reviewed", "phase": "P37-1p", "verdict": "pass", "reviewer": "slice-executor"}
+{"ts": "2026-11-02T15:34:53+09:00", "type": "phase_consolidation_owed", "phase": "P37-1p", "notes": 15}

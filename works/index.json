@@ -237,13 +237,14 @@
       "id": "P37-1p",
       "name": "Drop the knowledge graph",
       "objective": "Remove the knowledge graph from the hosted product (the graph page and its nav entry, the public graph pages, the graph API, and the landing page's graph section and motif); old shared graph links redirect to the org's library; the plugin's starter template keeps its graph",
-      "status": "pending",
+      "status": "done",
       "order": 19,
       "path": "works/phases/active/P37-1p",
-      "review_status": "pending",
-      "current_slice": "P37-1p.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 7,
-      "done_slice_count": 6
+      "done_slice_count": 7,
+      "consolidation": "pending"
     },
     {
       "id": "P38-e1",
@@ -281,5 +282,5 @@
   "deferred_open_count": 73,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-11-02T15:21:19+09:00"
+  "last_rebuilt_at": "2026-11-02T15:34:53+09:00"
 }
