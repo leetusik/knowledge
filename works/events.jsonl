@@ -1649,3 +1649,11 @@
 {"ts": "2026-11-02T13:47:01+09:00", "type": "slice_status_changed", "slice": "P37-1p.S1", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-11-02T13:47:16+09:00", "type": "slice_status_changed", "slice": "P37-1p.S2", "old_status": "todo", "new_status": "pending", "stop_kind": "decision"}
 {"ts": "2026-11-02T13:47:16+09:00", "type": "slice_status_changed", "slice": "P37-1p.S5", "old_status": "todo", "new_status": "pending", "stop_kind": "decision"}
+{"ts": "2026-11-02T13:53:10+09:00", "type": "slice_status_changed", "slice": "P37-1p.S2", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-11-02T13:53:10+09:00", "type": "slice_status_changed", "slice": "P37-1p.S5", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-11-02T13:53:16+09:00", "type": "slice_status_changed", "slice": "P37-1p.S2", "old_status": "in_progress", "new_status": "in_progress"}
+{"ts": "2026-11-02T13:53:17+09:00", "type": "slice_status_changed", "slice": "P37-1p.S5", "old_status": "in_progress", "new_status": "in_progress"}
+{"ts": "2026-11-02T13:56:35+09:00", "type": "executor_dispatched", "slice": "P37-1p.S5", "phase": "P37-1p", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "needs_operator", "note": null}
+{"ts": "2026-11-02T13:56:35+09:00", "type": "slice_status_changed", "slice": "P37-1p.S5", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}
+{"ts": "2026-11-02T13:56:41+09:00", "type": "executor_dispatched", "slice": "P37-1p.S2", "phase": "P37-1p", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "needs_operator", "note": null}
+{"ts": "2026-11-02T13:56:41+09:00", "type": "slice_status_changed", "slice": "P37-1p.S2", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}
