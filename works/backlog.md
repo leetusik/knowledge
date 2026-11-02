@@ -6,9 +6,9 @@
 ## Pointer
 
 - Current phase: `P39-hk`
-- Current slice: `P39-hk.D1`
-- Next slice: `P39-hk.R1`
-- Waiting on operator: `P39-hk.D1`
+- Current slice: `P39-hk.R1`
+- Next slice: `P39-hk.S1`
+- Waiting on operator: `none`
 - Stream: `phase/P39-hk-explain_what_was_built` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `73`
 - Workspace version: `v89`
@@ -17,7 +17,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 1/10 | `P39-hk.D1` | 1/10 | `.` | working tree |
+| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 2/10 | `P39-hk.R1` | 2/10 | `.` | working tree |
 | `default` | - | idle | - | - | - | branch main |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
@@ -45,7 +45,7 @@
 | [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.D1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [x] `P37-1p` | `done` | `pass` | Drop the knowledge graph | `none` | `works/phases/active/P37-1p` |
 | [x] `P38-e1` | `done` | `pass` | Right-size explain runs (plugin 0.9.0) | `none` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
-| [ ] `P39-hk` | `planned` | `pending` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `P39-hk.D1` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
+| [ ] `P39-hk` | `planned` | `pending` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `P39-hk.R1` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
 
 ## Phase P21: Web document deletion
 
@@ -334,7 +334,7 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P39-hk.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P39-hk/slices/P39-hk.DECOMP` |
-| [~] `P39-hk.D1` | `pending` | Design the reading aids: term window, glossary section, formulas | `co-work` | `works/phases/active/P39-hk/slices/P39-hk.D1` |
+| [x] `P39-hk.D1` | `done` | Design the reading aids: term window, glossary section, formulas | `co-work` | `works/phases/active/P39-hk/slices/P39-hk.D1` |
 | [ ] `P39-hk.R1` | `todo` | Settle the glossary and formula grammar, the math engine and the term window wiring | `research` | `works/phases/active/P39-hk/slices/P39-hk.R1` |
 | [ ] `P39-hk.S1` | `todo` | Explain front door: suggested reader and shape, codebase-only, research-phase offer | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S1` |
 | [ ] `P39-hk.S2` | `todo` | Explain writes from the phases' records and the code: the evidence model | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S2` |

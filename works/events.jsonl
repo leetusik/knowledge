@@ -1703,3 +1703,5 @@
 {"ts": "2026-11-02T18:37:31+09:00", "type": "slice_status_changed", "slice": "P39-hk.D1", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}
 {"ts": "2026-11-03T08:15:13+09:00", "type": "slice_status_changed", "slice": "P39-hk.D1", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-11-03T08:15:50+09:00", "type": "slice_status_changed", "slice": "P39-hk.D1", "old_status": "in_progress", "new_status": "pending", "stop_kind": "wave"}
+{"ts": "2026-11-03T08:17:33+09:00", "type": "slice_status_changed", "slice": "P39-hk.D1", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-11-03T08:18:26+09:00", "type": "slice_status_changed", "slice": "P39-hk.D1", "old_status": "in_progress", "new_status": "done"}

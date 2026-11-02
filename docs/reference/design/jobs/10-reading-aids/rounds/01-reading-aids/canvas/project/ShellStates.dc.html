@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The reader's top bar in each width and theme</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.sh-wide { width: 1200px; }
+.sh-820 { width: 820px; }
+.sh-390 { width: 390px; }
+</style>
+</helmet>
+<div class="ra-board" data-theme="light" id="top">
+<div class="ra-board__cell"><p class="ra-board__cap">Desktop · English</p><div class="rd-frame sh-wide" data-theme="light"><dc-import name="Shell" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div>
+<div class="ra-board__row"></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Desktop · dark</p><div class="rd-frame sh-wide" data-theme="dark"><dc-import name="Shell" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div>
+<div class="ra-board__row"></div>
+<div class="ra-board__cell"><p class="ra-board__cap">iPad 820 · Korean chapter</p><div class="rd-frame sh-820" data-theme="light"><dc-import name="Shell" lang="ko" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Phone 390: the back link shortens to “Book”</p><div class="rd-frame sh-390" data-theme="light"><dc-import name="Shell" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1300,"height":460}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

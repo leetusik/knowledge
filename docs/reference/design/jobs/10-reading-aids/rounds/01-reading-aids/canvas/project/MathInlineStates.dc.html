@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The inline formula in a sentence, every state</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.mi-col { width: 640px; }
+.mi-320 { width: 320px; }
+.mi-paper { width: 680px; padding: 24px 32px; }
+.mi-paper p { margin: 0; }
+</style>
+</helmet>
+<div class="ra-board" data-theme="light" id="top">
+<div class="ra-board__cell"><p class="ra-board__cap">In a sentence: set as math, at the text’s size</p><div class="rd-frame mi-col" data-theme="light"><div class="rd-flow rd-prose"><p class="rd-p">The scorer takes each event’s P&amp;L in <span class="ra-keep">% of K</span> and computes <math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math> and <math class="ra-m" alttext="t equals s times the square root of n"><mi>t</mi><mo>=</mo><mi>s</mi><mo>×</mo><msqrt><mi>n</mi></msqrt></math>. Thirty events averaging <span class="ra-keep">+0.10 % of K</span> with an sd of <span class="ra-keep">0.25 %</span> give <math class="ra-m" alttext="t approximately 2.19"><mi>t</mi><mo>≈</mo><mn>2.19</mn></math>, just over B6’s 2.0; fifteen such events give 1.55, enough for <span class="ra-keep">CONDITIONAL-GO’s</span> 1.5 but not for B6.</p></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Powers, sums and a Greek letter in running text</p><div class="rd-frame mi-col" data-theme="light"><div class="rd-flow rd-prose"><p class="rd-p">The scorer takes the participation ratio of the trials’ correlation matrix, <math class="ra-m" alttext="the square of the sum of e, divided by the sum of e squared"><mrow><mo stretchy="false">(</mo><mo lspace="0">∑</mo><mi>e</mi><msup><mo stretchy="false">)</mo><mn>2</mn></msup></mrow><mo>÷</mo><mo>∑</mo><msup><mi>e</mi><mn>2</mn></msup></math> over its eigenvalues <math class="ra-m" alttext="e"><mi>e</mi></math>: ten perfectly correlated trials count as 1, ten independent ones as 10. With independent arrivals at a steady rate, the count over a stretch is Poisson with mean <math class="ra-m" alttext="lambda equals rate times time"><mi>λ</mi><mo>=</mo><mi>rate</mi><mo>×</mo><mi>time</mi></math>, and no event at all has probability <math class="ra-m" alttext="e to the minus lambda"><msup><mi>e</mi><mrow><mo>−</mo><mi>λ</mi></mrow></msup></math>.</p></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Dark</p><div class="rd-frame mi-col" data-theme="dark"><div class="rd-flow rd-prose"><p class="rd-p">The scorer takes each event’s P&amp;L in <span class="ra-keep">% of K</span> and computes <math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math> and <math class="ra-m" alttext="t equals s times the square root of n"><mi>t</mi><mo>=</mo><mi>s</mi><mo>×</mo><msqrt><mi>n</mi></msqrt></math>; no event at all has probability <math class="ra-m" alttext="e to the minus lambda"><msup><mi>e</mi><mrow><mo>−</mo><mi>λ</mi></mrow></msup></math>.</p></div></div></div>
+<div class="ra-board__row"></div>
+<div class="ra-board__cell"><p class="ra-board__cap">320 · a formula never breaks inside; the line breaks around it</p><div class="rd-frame mi-320" data-theme="light"><div class="rd-flow rd-prose"><p class="rd-p">The scorer takes each event’s P&amp;L in <span class="ra-keep">% of K</span> and computes <math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math> and <math class="ra-m" alttext="t equals s times the square root of n"><mi>t</mi><mo>=</mo><mi>s</mi><mo>×</mo><msqrt><mi>n</mi></msqrt></math>.</p></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Korean chapter: the formula is the same</p><div class="rd-frame mi-col" data-theme="light"><div class="rd-flow rd-prose" lang="ko"><p class="rd-p">스코어러는 각 이벤트의 손익을 <span class="ra-keep">K 대비 %로</span> 받아 <math class="ra-m" alttext="s는 평균 나누기 sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math>와 <math class="ra-m" alttext="t는 s 곱하기 n의 제곱근"><mi>t</mi><mo>=</mo><mi>s</mi><mo>×</mo><msqrt><mi>n</mi></msqrt></math>을 계산합니다. 이벤트 서른 개면 <math class="ra-m" alttext="t는 약 2.19"><mi>t</mi><mo>≈</mo><mn>2.19</mn></math>로, B6의 2.0을 조금 넘습니다.</p></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Paper</p><div class="ra-paper mi-paper"><p>The scorer takes each event’s P&amp;L in <span class="ra-keep">% of K</span> and computes <math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math> and <math class="ra-m" alttext="t equals s times the square root of n"><mi>t</mi><mo>=</mo><mi>s</mi><mo>×</mo><msqrt><mi>n</mi></msqrt></math>. Thirty events give <math class="ra-m" alttext="t approximately 2.19"><mi>t</mi><mo>≈</mo><mn>2.19</mn></math>, just over B6’s 2.0.</p></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2100,"height":620}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
