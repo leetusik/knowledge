@@ -8,7 +8,7 @@
 - Current phase: `P37-1p`
 - Current slice: `P37-1p.S2`
 - Next slice: `P37-1p.S3`
-- Waiting on operator: `none`
+- Waiting on operator: `P37-1p.S2`
 - Open deferred jobs: `71`
 - Workspace version: `v89`
 
@@ -304,10 +304,10 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 |---|---|---|---|---|
 | [x] `P37-1p.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P37-1p/slices/P37-1p.DECOMP` |
 | [x] `P37-1p.S1` | `done` | public graph links redirect to the library | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S1` |
-| [ ] `P37-1p.S2` | `todo` | member graph page, nav and dashboard link out | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S2` |
+| [~] `P37-1p.S2` | `pending` | member graph page, nav and dashboard link out | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S2` |
 | [ ] `P37-1p.S3` | `todo` | graph stylesheets out, public grid rule kept | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S3` |
 | [ ] `P37-1p.S4` | `todo` | graph API out on both sides of the template | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S4` |
-| [ ] `P37-1p.S5` | `todo` | landing graph section, motif and copy out | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S5` |
+| [~] `P37-1p.S5` | `pending` | landing graph section, motif and copy out | `implementation` | `works/phases/active/P37-1p/slices/P37-1p.S5` |
 | [ ] `P37-1p.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P37-1p/slices/P37-1p.REVIEW` |
 
 ## Phase P38-e1: Right-size explain runs (plugin 0.9.0)

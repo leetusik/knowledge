@@ -3,7 +3,7 @@
   "phase_id": "P37-1p",
   "name": "landing graph section, motif and copy out",
   "kind": "implementation",
-  "status": "todo",
+  "status": "pending",
   "order": 50,
   "depends_on": [],
   "depends_declared": true,
@@ -29,5 +29,10 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "pending": {
+    "kind": "decision",
+    "on_words": "the operator's answers to OQ3 (README hero), OQ2 (browser instrument) and OQ4 (current API on :8766) let S5 be planned and verified; then S5 starts beside S2",
+    "since": "2026-11-02T13:47:16+09:00"
   }
 }

@@ -3,7 +3,7 @@
   "phase_id": "P37-1p",
   "name": "member graph page, nav and dashboard link out",
   "kind": "implementation",
-  "status": "todo",
+  "status": "pending",
   "order": 20,
   "depends_on": [
     "P37-1p.S1"
@@ -31,5 +31,10 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "pending": {
+    "kind": "decision",
+    "on_words": "the operator's answers to OQ1 (dashboard URL line), OQ2 (browser: a dedicated Claude in Chrome profile's deviceId, or Aside) and OQ4 (restart :8766 on current code) let S2 be planned and verified; then S2 starts",
+    "since": "2026-11-02T13:47:16+09:00"
   }
 }
