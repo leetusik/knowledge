@@ -891,7 +891,7 @@
       ]
     },
     "operations": {
-      "latest": "v0025_p30_gate_operator_runtime_instrument_notes_-_aside_jpeg_screenshots_headless_chrome_cdp_as_the_narrow-viewport_instrument_for_the_reader_s_viewport_media_the_web_login_limiter_the_library_landing",
+      "latest": "v2611020616_p37-1p_gate_section_operator_runtime_names_claude_in_chrome_by_deviceid_its_fixed_window_the_scratch_standalone_build_check_aside_as_fallback",
       "current_path": "docs/current/operations.md",
       "versions": [
         {
@@ -1096,6 +1096,15 @@
           "source": "P30.REVIEW",
           "summary": "P30 gate: Operator Runtime instrument notes - Aside JPEG screenshots, headless Chrome CDP as the narrow-viewport instrument for the reader's viewport media, the web login limiter, the /library landing",
           "previous": "v0024_p28_gate_correct_the_operator_runtime_narrow-viewport_caveat_the_min-_720px_media_query_is_gone_the_console_is_container-query_driven_round_06_adds_real_viewport_media_and_record_the_true-css-viewport_harness"
+        },
+        {
+          "id": "v2611020616_p37-1p_gate_section_operator_runtime_names_claude_in_chrome_by_deviceid_its_fixed_window_the_scratch_standalone_build_check_aside_as_fallback",
+          "path": "docs/versions/operations/v2611020616_p37-1p_gate_section_operator_runtime_names_claude_in_chrome_by_deviceid_its_fixed_window_the_scratch_standalone_build_check_aside_as_fallback.md",
+          "created_at": "2026-11-02T15:16:56+09:00",
+          "commit": "e6064830160bbc57c2388ffae969df6a3418a420",
+          "source": "P37-1p.REVIEW",
+          "summary": "P37-1p gate section: Operator Runtime names Claude in Chrome by deviceId, its fixed window, the scratch standalone build check, Aside as fallback",
+          "previous": "v0025_p30_gate_operator_runtime_instrument_notes_-_aside_jpeg_screenshots_headless_chrome_cdp_as_the_narrow-viewport_instrument_for_the_reader_s_viewport_media_the_web_login_limiter_the_library_landing"
         }
       ]
     },
@@ -1218,7 +1227,7 @@
       ]
     },
     "qa": {
-      "latest": "v2611011438_p38-e1_gate_section_explain_front-door_lines_expect_the_plain_summary_sections_and_cost_line_add_v2_full_v1_and_kb-key_lines",
+      "latest": "v2611020616_p37-1p_gate_section_regression_checklist_retires_the_web-graph_lines_and_adds_the_old-graph-link_landing_public-grid_and_graph-api_checks",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1430,6 +1439,15 @@
           "source": "P38-e1.REVIEW",
           "summary": "P38-e1 gate section: explain front-door lines expect the plain summary, sections and cost line; add v2, full v1 and KB-key lines",
           "previous": "v2610280645_p34-n0.review_gate_regression_checklist_adds_the_private-publish_gate_the_tenant_1_visibility-toggle_mirror_and_the_public-repo_footprint_lines"
+        },
+        {
+          "id": "v2611020616_p37-1p_gate_section_regression_checklist_retires_the_web-graph_lines_and_adds_the_old-graph-link_landing_public-grid_and_graph-api_checks",
+          "path": "docs/versions/qa/v2611020616_p37-1p_gate_section_regression_checklist_retires_the_web-graph_lines_and_adds_the_old-graph-link_landing_public-grid_and_graph-api_checks.md",
+          "created_at": "2026-11-02T15:16:34+09:00",
+          "commit": "e6064830160bbc57c2388ffae969df6a3418a420",
+          "source": "P37-1p.REVIEW",
+          "summary": "P37-1p gate section: Regression Checklist retires the web-graph lines and adds the old-graph-link, landing, public-grid and graph-API checks",
+          "previous": "v2611011438_p38-e1_gate_section_explain_front-door_lines_expect_the_plain_summary_sections_and_cost_line_add_v2_full_v1_and_kb-key_lines"
         }
       ]
     },
@@ -1608,5 +1626,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-11-01T23:38:03+09:00"
+  "last_rebuilt_at": "2026-11-02T15:16:56+09:00"
 }

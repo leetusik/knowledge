@@ -1671,3 +1671,11 @@
 {"ts": "2026-11-02T14:58:48+09:00", "type": "slice_status_changed", "slice": "P37-1p.S4", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-11-02T15:03:44+09:00", "type": "executor_dispatched", "slice": "P37-1p.S3", "phase": "P37-1p", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-02T15:03:44+09:00", "type": "slice_status_changed", "slice": "P37-1p.S3", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-02T15:05:00+09:00", "type": "slice_status_changed", "slice": "P37-1p.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-02T15:16:34+09:00", "type": "doc_version_created", "doc": "qa", "version": "v2611020616_p37-1p_gate_section_regression_checklist_retires_the_web-graph_lines_and_adds_the_old-graph-link_landing_public-grid_and_graph-api_checks", "source": "P37-1p.REVIEW"}
+{"ts": "2026-11-02T15:16:56+09:00", "type": "doc_version_created", "doc": "operations", "version": "v2611020616_p37-1p_gate_section_operator_runtime_names_claude_in_chrome_by_deviceid_its_fixed_window_the_scratch_standalone_build_check_aside_as_fallback", "source": "P37-1p.REVIEW"}
+{"ts": "2026-11-02T15:21:19+09:00", "type": "executor_dispatched", "slice": "P37-1p.REVIEW", "phase": "P37-1p", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-02T15:21:19+09:00", "type": "phase_status_changed", "phase": "P37-1p", "old_status": "planned", "new_status": "pending"}
+{"ts": "2026-11-02T15:21:19+09:00", "type": "acceptance_opened", "phase": "P37-1p"}
+{"ts": "2026-11-02T15:21:19+09:00", "type": "deferred_created", "deferred": "D88-gd", "source": "P37-1p.REVIEW"}
+{"ts": "2026-11-02T15:21:19+09:00", "type": "deferred_created", "deferred": "D89-zf", "source": "P37-1p.REVIEW"}

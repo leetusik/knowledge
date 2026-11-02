@@ -1,11 +1,11 @@
 ---
 doc_id: qa
-version: v2611011438
-created_at: 2026-11-01T23:38:03+09:00
-commit: 6d7f2d7a4c8c8bea57a1d969e733e17d1c6efe6b
-source: P38-e1.REVIEW
-summary: P38-e1 gate section: explain front-door lines expect the plain summary, sections and cost line; add v2, full v1 and KB-key lines
-previous: v2610280645_p34-n0.review_gate_regression_checklist_adds_the_private-publish_gate_the_tenant_1_visibility-toggle_mirror_and_the_public-repo_footprint_lines
+version: v2611020616
+created_at: 2026-11-02T15:16:34+09:00
+commit: e6064830160bbc57c2388ffae969df6a3418a420
+source: P37-1p.REVIEW
+summary: P37-1p gate section: Regression Checklist retires the web-graph lines and adds the old-graph-link, landing, public-grid and graph-API checks
+previous: v2611011438_p38-e1_gate_section_explain_front-door_lines_expect_the_plain_summary_sections_and_cost_line_add_v2_full_v1_and_kb-key_lines
 ---
 
 # QA
@@ -240,11 +240,6 @@ apply there; use *In-app graph label focus (P22)* instead._
 - [ ] The `<!-- explain:recent -->` marker + bullet format is byte-intact
       (`server.documents` insert/remove round-trips the live `docs/index.md`).
 - [ ] `python3 scripts/workflow.py validate` passes.
-- [ ] Graph (`/graph` member, `/@{org}/graph` public): the map **fits inside the
-      plate at first paint** — no nodes off the frame — at phone, tablet and
-      desktop plate sizes, on a corpus of ~130 nodes (P28)
-- [ ] Graph dock (a small plate, `kbmain < 40rem`): the "Tags" pill's toggle
-      renders a visible box and turns the tag hubs off and back on (P28)
 - [ ] Project page (`/projects/{id}`): a **Documents** panel lists the five
       newest documents with an "All documents" link, and a failure of that panel
       alone leaves the rest of the page up with a working Retry (P28)
@@ -257,9 +252,10 @@ apply there; use *In-app graph label focus (P22)* instead._
       (wordmark · URL · version · printed date) and the **colophon** on paper,
       and the Export PDF control shows its hint, goes `Preparing…`, and clears
       on `afterprint` (P28)
-- [ ] Console at 390: dashboard, documents, project, graph and the
+- [ ] Console at 390: dashboard, documents, project and the
       past-version view show the **bottom navbar** and have **no horizontal
-      page scroll** (`documentElement.scrollWidth === 390`) (P28; updated P30)
+      page scroll** (`documentElement.scrollWidth === 390`) (P28; updated P30;
+      the graph page retired in P37-1p)
 - [ ] `/login?next=/@{org}/{project}/{slug}` returns to that path after sign-in,
       and a hostile `next` (`//evil.example.com`) falls closed to `/library`
       (P28; the landing moved to `/library` in P30)
@@ -404,6 +400,23 @@ apply there; use *In-app graph label focus (P22)* instead._
 - [ ] Public repo: GitHub `main`'s tree holds no path under a private
       project's footprint (`docs/<p>/`, `docs/.versions/<p>/`,
       `docs/.books/<p>/`), and its `docs/index.md` links into none (P34-n0)
+- [ ] Old graph links (replaces P28's two web-graph lines; the hosted graph is
+      retired): signed out, `/@{org}/graph` and `/graph/{tenant-uuid}` 307 to
+      the org's library `/@{slug}` (a slug-less org to `/@{uuid}`), which
+      renders; an unknown or malformed `/graph/{id}` and `/x/graph` show
+      "Library not found"; the member `/graph` goes to `/library` (signed out,
+      to `/login?next=%2Fgraph`) (P37-1p)
+- [ ] Landing `/`: no graph band, motif, `#graph` anchor or graph wording in
+      the copy, pricing ticks or metadata; the bands still alternate (skill
+      sunken, then pricing paper) at 390, 820, 1024 and 1440 (P37-1p)
+- [ ] Public shell grid: signed out, on `/@{org}` and a past version
+      `/documents/{id}/versions/{v}`, `.kb-app-layout` is one track when
+      `.kb-app` is 64rem or wider, with no empty 15rem rail column (the rule
+      lives in `kb-console-r4.css`) (P37-1p)
+- [ ] Graph API gone, template graph kept: `GET /app/graph` answers 404, and
+      `plugin/templates/kb/` still ships `scripts/graph_hook.py`,
+      `docs/graph.md`, `docs/javascripts/graph.js` and the `mkdocs.yml` hook
+      (P37-1p)
 
 ## Verifying the Guard Itself (negative-test pattern)
 

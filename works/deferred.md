@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `71`
+- Open: `73`
 - Promoted: `6`
 - Dropped: `14`
 
@@ -80,6 +80,8 @@
 | `D85-qk` | `deferred` | Workspace follow-ups for 0.9.0 explain runs (bootstrap repo) | P38-e1.REVIEW | the operator's answer to OQ1 at P38-e1's acceptance gate, or the next /update-workspace | `works/deferred/open/D85-qk` |
 | `D86-sd` | `deferred` | Explain skill wording follow-up after 0.9.0 | P38-e1.REVIEW | the start of P39-hk (which edits the same skill), or the next plugin release | `works/deferred/open/D86-sd` |
 | `D87-2g` | `deferred` | Setup's verify step puts the pasted KB key on the command line | P38-e1.REVIEW | the next edit of the setup skill, or the operator's word | `works/deferred/open/D87-2g` |
+| `D88-gd` | `deferred` | Landing hero h1 overflows at 390px | P37-1p.REVIEW | the next landing or marketing phase, or before a phone-focused launch | `works/deferred/open/D88-gd` |
+| `D89-zf` | `deferred` | Graph leftovers tidy-up | P37-1p.REVIEW | the next slice touching db.py, reader_api.py, books_api.py or the redirect routes, or a docs phase | `works/deferred/open/D89-zf` |
 | `D-pzs7` | `deferred` | Retire or redirect the orphaned document archive page | P-8jbf.DECOMP | the next reader or documents phase | `works/deferred/open/D-pzs7` |
 | `D-19n8` | `deferred` | Quiz Show answer button overflows a 390 phone at 200% root text | P-8jbf.REVIEW | the next reader or quiz phase, or a QA sweep | `works/deferred/open/D-19n8` |
 | `D-6pf9` | `deferred` | A long table's box state depends on resize history | P-8jbf.F1 | the next reader-tables phase or a QA sweep | `works/deferred/open/D-6pf9` |
