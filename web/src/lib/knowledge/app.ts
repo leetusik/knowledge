@@ -10,7 +10,6 @@ import type {
   KbDocumentsQuery,
   KbDocumentVersion,
   KbDocumentVersionsPage,
-  KbGraph,
   KbOrgLibrary,
   KbMintedCredential,
   KbProject,
@@ -657,45 +656,4 @@ export async function searchDocuments(
     `/app/search${documentsQueryString(query)}`,
     { token, signal },
   );
-}
-
-// ── /app/graph — the per-tenant knowledge map (P12.S6) ──────────────────────
-// The in-app graph's data source: the same `{version, projects, nodes, edges}`
-// contract the build-time mkdocs `graph.json` emits, but derived from the content
-// store for the caller's tenant. UNMETERED, session-scoped, tenant-scoped on the
-// backend. The graph route fetches this ONCE on the server and passes the payload
-// as a prop to the client `<GraphCanvas>` (no browser fetch / BFF proxy).
-
-/**
- * `GET /app/graph` → 200 a knowledge graph
- * (`{version, projects, nodes, edges, truncated}`). Two shapes, one route (P19):
- *   - BARE (`options.org` omitted, member bearer) — the in-app per-tenant map: the
- *     caller's whole corpus. `token` required in practice for this path (401 if
- *     absent), which is how the logged-in `/graph` page still calls it.
- *   - `?org={tenant_uuid | org_slug}` — the OPTIONAL-IDENTITY public view: only that
- *     org's public-project nodes/edges/tag-hubs. `token` is `string | undefined`
- *     here — a member viewing their own org gets the full map, an anonymous or
- *     cross-org caller gets the public subset, and an org with no public projects
- *     (or a nonexistent org) is a **404** (no existence leak).
- *
- * P25.S4: the selector accepts the **bare org slug** (no `@` — the prefix is a
- * web-plane routing marker) as well as a tenant UUID; the backend parses a UUID
- * first and falls back to a slug lookup, and an unknown/malformed/reserved slug is
- * the same indistinguishable **404**. The response carries the nullable
- * `canonical_path` (`/@{slug}/graph`) — consume it, never re-derive it.
- *
- * `org` is appended via `encodeURIComponent`; no `org` keeps the path BARE (no `?`),
- * byte-compatible with the pre-P19 logged-in call. A doc node's `url` is the read
- * route `/documents/{id}`.
- */
-export async function getGraph(
-  token: string | undefined,
-  options: { org?: string } = {},
-  signal?: AbortSignal,
-): Promise<KbGraph> {
-  const query =
-    options.org === undefined
-      ? ""
-      : `?org=${encodeURIComponent(options.org)}`;
-  return getJson<KbGraph>(`/app/graph${query}`, { token, signal });
 }

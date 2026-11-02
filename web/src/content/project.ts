@@ -83,8 +83,8 @@ export const PROJECT = {
     },
     /** Explains what public visibility means, once, beside the toggle. */
     hint: {
-      public: "Anyone with the link can read this project's documents and graph.",
-      private: "Only your org can read this project's documents and graph.",
+      public: "Anyone with the link can read this project's documents.",
+      private: "Only your org can read this project's documents.",
     },
   },
 

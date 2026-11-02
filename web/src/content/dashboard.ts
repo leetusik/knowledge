@@ -172,8 +172,8 @@ export const DASHBOARD = {
     placeholder: "e.g. hi2vi",
     submitLabel: "Save",
     submitPendingLabel: "Saving…",
-    /** Mono eyebrow beside the resulting pretty graph URL. */
-    graphUrlLabel: "Public graph",
+    /** Mono eyebrow beside the org's public library URL (`/@{slug}`, P37-1p). */
+    libraryUrlLabel: "Public library",
     /** Shown in place of that URL while no slug is claimed. */
     empty: "No public URL yet. Shared links keep using ids until you claim one.",
   },

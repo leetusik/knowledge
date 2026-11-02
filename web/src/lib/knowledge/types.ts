@@ -1,6 +1,6 @@
 // P12.S2 — shared shapes for knowledge's `/auth/*` JSON (server-side). Pure types,
 // no runtime values. S3–S6 extend this seam with the `/app/*` shapes (projects,
-// credentials, usage, documents, graph) as they add those calls — this file holds
+// credentials, usage, documents) as they add those calls — this file holds
 // the S2 subset only (identity + session).
 //
 // These mirror knowledge's serializers verbatim (`server/auth_api.py`
@@ -20,7 +20,7 @@ export interface KbTenant {
   name: string;
   /**
    * P25 — the org's public SLUG (`tenants.slug`), i.e. the `{org}` of every pretty
-   * share URL (`/@{slug}/{project}/{doc-slug}`, `/@{slug}/graph`). `null` until the
+   * share URL (`/@{slug}/{project}/{doc-slug}`, the library `/@{slug}`). `null` until the
    * operator claims one from the dashboard: the column is nullable with **no
    * backfill**, so a slug-less org keeps today's id/UUID links and nothing breaks.
    *
@@ -30,7 +30,7 @@ export interface KbTenant {
    * (`PATCH /app/tenant`); stored lowercase and GLOBALLY unique.
    *
    * It is the INPUT to the pretty URL, not the URL: a payload that already carries a
-   * `canonical_path` (documents, the graph) is always preferred over composing one
+   * `canonical_path` (documents) is always preferred over composing one
    * here — the backend assembles those once.
    */
   slug: string | null;
@@ -73,8 +73,8 @@ export interface KbProject {
   created_at: string;
   /**
    * Per-project read visibility (P19). `"private"` (the default for every new
-   * project) keeps docs/graph member-only; `"public"` exposes the project's docs +
-   * graph nodes to anonymous and cross-org readers. Toggled via
+   * project) keeps docs member-only; `"public"` exposes the project's docs
+   * to anonymous and cross-org readers. Toggled via
    * `PATCH /app/projects/{id}` (session-only); every `serialize_project` payload
    * carries it.
    */
@@ -539,72 +539,4 @@ export interface KbOrgLibrary {
   projects: { name: string; visibility: "private" | "public" }[];
   books: KbLibraryBook[];
   documents: KbLibraryDocument[];
-}
-
-// ── /app/graph shapes (P12.S6) ─────────────────────────────────────────────
-// Mirror the `server/graph_api.py` twin of `scripts/graph_hook.py`'s inversion —
-// the SAME `{version, projects, nodes, edges}` contract graph.json emits, so the
-// ported canvas renderer consumes it unchanged. Nodes are keyed on `rel_path`; a
-// doc node's `url` is the S5 read route `/documents/{db_id}`. The renderer reads
-// only `projects` / `nodes` / `edges` (and each node's fields) — the shapes are
-// intentionally permissive (`title`/`url`/`date`/`project`/`tags`/`degree` are
-// absent on tag + missing nodes) to match the emitted union.
-
-/** One project in the legend, `(-docs, name)`-ordered (the renderer inks by index). */
-export interface KbGraphProject {
-  name: string;
-  docs: number;
-}
-
-/**
- * One graph node. `type` discriminates: `doc` carries the full metadata (incl. the
- * `/documents/{id}` `url`); `tag` hubs and `missing` ghosts carry only `id`/`title`/
- * `degree`. Kept loose (all but `id`/`type` optional) so a single type covers the
- * union without narrowing the imperative engine.
- */
-export interface KbGraphNode {
-  id: string;
-  type: "doc" | "tag" | "missing";
-  title?: string;
-  /** Doc nodes only — the S5 read route `/documents/{db_id}`. */
-  url?: string;
-  /**
-   * P28.S1 — doc nodes only, ADDITIVE beside the unchanged `url`: the document's
-   * pretty public path `/@{org-slug}/{project}/{slug}`, or `null` when the tenant
-   * has claimed no slug, the row has no project/slug, or the row is a superseded
-   * duplicate that does not own the dateless path. It already starts with `/@{org}`,
-   * so nothing ever prefixes a `publicBase` onto it. `tag` and `missing` nodes do
-   * not carry the key at all — read it as `node.canonical_path ?? null`.
-   */
-  canonical_path?: string | null;
-  date?: string;
-  project?: string;
-  tags?: string[];
-  degree?: number;
-}
-
-/** One graph edge: `related` (doc→doc, `broken` into a ghost) or `tag` (doc→`tag:<t>`). */
-export interface KbGraphEdge {
-  source: string;
-  target: string;
-  kind: "related" | "tag";
-  /** `related` edge into an unresolved target (a `missing` ghost node). */
-  broken?: boolean;
-}
-
-/** `GET /app/graph` — the tenant's knowledge map (graph.json contract + `truncated`). */
-export interface KbGraph {
-  version: number;
-  projects: KbGraphProject[];
-  nodes: KbGraphNode[];
-  edges: KbGraphEdge[];
-  /** True when the corpus exceeded the node cap and the newest docs were graphed. */
-  truncated?: boolean;
-  /**
-   * P25.S4 — the org's PRETTY public graph path (`/@{org-slug}/graph`), or `null`
-   * when the org has claimed no slug (and in legacy mode). Built once in the
-   * backend and only consumed here: the legacy `/graph/{uuid}` page forwards to
-   * it, and nothing in TypeScript re-derives it.
-   */
-  canonical_path: string | null;
 }

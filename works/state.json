@@ -1,8 +1,8 @@
 {
   "current_phase": "P37-1p",
-  "current_slice": "P37-1p.S2",
-  "next_slice": "P37-1p.S3",
-  "waiting_on_operator": "P37-1p.S2",
-  "mode": "waiting",
-  "updated_at": "2026-11-02T13:59:36+09:00"
+  "current_slice": "P37-1p.S3",
+  "next_slice": "P37-1p.S4",
+  "waiting_on_operator": null,
+  "mode": "phase",
+  "updated_at": "2026-11-02T14:54:24+09:00"
 }

@@ -21,8 +21,8 @@
 //     busy region needs an accessible name and `aria-busy` alone gives it none.
 //
 // The 404 editorials reuse each surface's EXISTING `notFound {title, sub,
-// backLabel}` (documents / project / graph), so nothing is re-authored here and
-// no key is renamed — six pages and three exported copy types depend on them.
+// backLabel}` (documents / project; the graph's went with it in P37-1p), so nothing
+// is re-authored here and no key is renamed — the pages and copy types depend on them.
 
 export const STATES = {
   /**

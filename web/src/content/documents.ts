@@ -192,7 +192,7 @@ export const DOCUMENTS = {
    * trailing control on the read page's member branch. Mirrors `PROJECT.revoke`.
    *
    * The delete is HARD: the file, its database row, its search index entry, and its
-   * embeddings all go, and a public document's shared URL and graph edges break with
+   * embeddings all go, and a public document's shared URL breaks with
    * it. There is no trash and no undo, so the copy says so and promises nothing about
    * recovery.
    */

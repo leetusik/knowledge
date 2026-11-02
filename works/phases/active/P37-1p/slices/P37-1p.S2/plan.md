@@ -87,3 +87,7 @@ pass_effort=yes
 attribution=Claude Opus 5.5
 explore_model=haiku
 explore_effort=xhigh
+
+## Browser leg (resumed 2026-11-02, after the operator connected the profile)
+
+deviceId=c14e5b18-f250-45f1-b92e-4a08a31197b5 — `list_connected_browsers`, then `select_browser` on exactly this id, before any other browser tool. Run only the browser leg of `## Verification`, in your own tab; update `result.md`'s verdict block and return the new verdict.

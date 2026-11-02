@@ -13,7 +13,7 @@
  *     unchanged here.
  *
  * `{org}` is `orgSegment(tenant)`: the org slug, or the tenant id for a tenant
- * that has not claimed one (OQ26, the graph's rule; the server's book and reader
+ * that has not claimed one (OQ26, the rule the retired graph set; the server's book and reader
  * routes resolve either). Deliberately NOT `server-only`: the reader's client
  * islands build these links too.
  */

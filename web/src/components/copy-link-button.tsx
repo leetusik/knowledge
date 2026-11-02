@@ -15,8 +15,8 @@ import { SHARE } from "@/content";
  * without permission) → "Copy failed".
  *
  * The absolute URL is built CLIENT-SIDE from `window.location.origin` + `path`, so
- * the same island serves the doc read view (`/documents/{id}`) and the member graph
- * header (`/graph/{org}`) without the server needing to know its own public origin.
+ * the same island serves the doc read view (`/documents/{id}`) and the dashboard's
+ * library URL (`/@{slug}`) without the server needing to know its own public origin.
  * The value is never logged (not even in the catch).
  */
 export function CopyLinkButton({ path }: { path: string }) {

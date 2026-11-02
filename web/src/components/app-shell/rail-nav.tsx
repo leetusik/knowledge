@@ -18,7 +18,7 @@ export const RAIL_ID = "kb-rail";
  * from `usePathname()`; the rest of the shell stays server-rendered.
  *
  * P30.S22 (`06-library` §1): two groups in the one `<nav>`, each a `.kb-rail__sec` with its
- * eyebrow — Reading (Library, Review) then Org (Dashboard, Documents, Graph). Review wears
+ * eyebrow — Reading (Library, Review) then Org (Dashboard, Documents; the Graph item retired in P37-1p). Review wears
  * the due count: a pill that is always laid out, so the link never changes width, and
  * hidden at 0; the link's name carries the count ("Review, 12 due").
  *

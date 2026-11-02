@@ -54,10 +54,6 @@ export type { PublicShellCopy, ShareCopy } from "./share";
 export { DELETE_DOCUMENT_ERRORS, DOCUMENTS } from "./documents";
 export type { DocumentsCopy } from "./documents";
 
-// Graph surface (P12.S6) — the in-app knowledge map (page frame + empty state).
-export { GRAPH } from "./graph";
-export type { GraphCopy } from "./graph";
-
 // System states (P28.S3 — round 03 §5) — the cross-surface editorial 500 block,
 // the `Not found · 404` eyebrow the six not-found pages share, and the loading
 // region's accessible name. Cross-surface by nature: `app/error.tsx` catches

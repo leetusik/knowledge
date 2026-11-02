@@ -1,5 +1,5 @@
 // Public-surface + share-link copy (P19) — the anonymous PublicShell chrome and the
-// copy-link affordance shared by the doc read view and the member graph header.
+// copy-link affordance shared by the doc read view and the dashboard's Public URL panel.
 // Copy-as-data per the S1 convention: no page hardcodes these strings inline.
 
 /**
@@ -16,7 +16,7 @@ export const PUBLIC_SHELL = {
 /**
  * The copy-link island's three-state label. The button copies an absolute URL built
  * client-side from `window.location.origin` + a path, so the same island serves the
- * doc read view (`/documents/{id}`) and the member graph header (`/graph/{org}`).
+ * doc read view (`/documents/{id}`) and the dashboard's library URL (`/@{slug}`).
  */
 export const SHARE = {
   copyLabel: "Copy link",

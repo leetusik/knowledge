@@ -22,6 +22,7 @@ import type {
   KbCredential,
   KbDashboardProject,
 } from "@/lib/knowledge/types";
+import { orgSegment } from "@/lib/reader-href";
 
 import { CreateProjectForm } from "./create-project-form";
 import { MintOrgKeyForm } from "./mint-org-key-form";
@@ -243,11 +244,13 @@ export default async function DashboardPage() {
   const tenantName = identity.tenant?.name ?? "—";
   // P25 — the org's public slug, straight off the session identity (`serialize_tenant`
   // carries it, so this costs no extra call). `null` until the operator claims one in
-  // the Public URL panel below; the pretty graph path is composed here because the
-  // dashboard fetches no graph payload to read a `canonical_path` from, and it is the
-  // ONLY place on the web plane that composes one (see phase.md P25.S5 notes).
+  // the Public URL panel below. P37-1p: that panel shows the org's library URL,
+  // `/@{slug}`, where the retired public graph line was; it is composed with the
+  // reader's `orgSegment` (the slug, once claimed) because the dashboard fetches no
+  // payload carrying a `canonical_path` for it.
   const orgSlug = identity.tenant?.slug ?? null;
-  const publicGraphPath = orgSlug ? `/@${orgSlug}/graph` : null;
+  const publicLibraryPath =
+    identity.tenant && orgSlug ? `/@${orgSegment(identity.tenant)}` : null;
 
   const [usage, dashboard, orgCredentials] = await Promise.all([
     getUsage(token),
@@ -381,7 +384,7 @@ export default async function DashboardPage() {
           head: it is always visible (not a disclosure), so it cannot sit beside the
           lead — it is a `.kb-fieldrow` row under the head at every width, with a
           VISIBLE label (on a phone the heading is two lines above the input and
-          cannot act as its label). Below the row, the resulting public graph URL
+          cannot act as its label). Below the row, the org's public library URL
           with a copy button once a slug exists. */}
       <section className="kb-panel" aria-labelledby="org-slug-head">
         <div className="kb-panel__head kb-panel__head--start">
@@ -395,13 +398,13 @@ export default async function DashboardPage() {
 
         <OrgSlugForm defaultValue={orgSlug ?? ""} />
 
-        {publicGraphPath ? (
+        {publicLibraryPath ? (
           <div className="kb-urlline">
             <span className="kb-urlline__label">
-              {DASHBOARD.orgSlug.graphUrlLabel}
+              {DASHBOARD.orgSlug.libraryUrlLabel}
             </span>
-            <code className="kb-urlline__url">{publicGraphPath}</code>
-            <CopyLinkButton path={publicGraphPath} />
+            <code className="kb-urlline__url">{publicLibraryPath}</code>
+            <CopyLinkButton path={publicLibraryPath} />
           </div>
         ) : (
           <p className="kb-panel__lead">{DASHBOARD.orgSlug.empty}</p>
