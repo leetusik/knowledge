@@ -167,8 +167,9 @@ writes nothing), substituting the pasted key:
 
 Connect mode is then done — suggest `/knowledge:explain <topic>` to file the first
 explainer to the hosted KB. It runs as an explain phase, so the repository it is run from
-needs a workflow workspace (v86 or later): it asks one confirmation, then researches,
-writes, checks and publishes privately.
+needs a workflow workspace (v86 or later): it explains that repository's code from the
+code and what its phases recorded, asks one confirmation, then writes, checks and
+publishes privately.
 
 ### Prefer the terminal? Use the standalone CLI instead
 
@@ -457,5 +458,5 @@ Never push for the user — they run the `git push` themselves.
 above.
 
 Close with: try `/knowledge:explain <topic>` to write your first explainer (from a
-repository with a workflow workspace v86 or later: it runs as an explain phase, one
-confirmation, then research, write, check and a private publish).
+repository with a workflow workspace v86 or later: it runs as an explain phase on that
+repository's code, one confirmation, then write, check and a private publish).

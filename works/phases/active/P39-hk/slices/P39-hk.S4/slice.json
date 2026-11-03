@@ -3,15 +3,15 @@
   "phase_id": "P39-hk",
   "name": "Retire the research agents and sync every copy, guard and promise",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 50,
   "depends_on": [
     "P39-hk.S3"
   ],
   "depends_declared": true,
   "created_at": "2026-11-02T16:09:33+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-03T09:02:27+09:00",
+  "completed_at": "2026-11-03T09:09:38+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -21,7 +21,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Research machinery retired: four research agents and Part B's research sections deleted, AGENT_ROLES critic-only, pagetext.py payload-only; frontmatter and every product copy say codebase-only, from the phases' records",
   "validation": {
     "required": [],
     "last_run": null,

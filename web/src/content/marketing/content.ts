@@ -248,7 +248,7 @@ export const FEATURE_SKILL = {
   id: MKT_SECTION_IDS.skill as MktSectionId,
   eyebrow: "THE EXPLAIN SKILL · PUBLISHED",
   title: "The skill your agent drives — in the open.",
-  lede: "Saving isn't a form. It's a 3,347-line skill: research the topic or the diff, write a native chapter with real diagrams and a quiz, cite sources, save over REST. The API works by hand; the recommended path is a coding agent following this file. Copy it straight into your agent — or download it.",
+  lede: "Saving isn't a form. It's a 3,347-line skill: read the code and what its phases recorded, write a native chapter with real diagrams and a quiz, cite every line to the code, save over REST. The API works by hand; the recommended path is a coding agent following this file. Copy it straight into your agent — or download it.",
   ticks: [
     "Runs as `/knowledge:explain` in Claude Code; the identical skill text ships for Codex under `.agents/`",
     "This page serves the canonical file — a byte-parity CI gate keeps it from ever forking",

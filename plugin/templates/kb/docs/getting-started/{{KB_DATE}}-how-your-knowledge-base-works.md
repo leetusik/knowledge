@@ -69,8 +69,9 @@ itself.
 
 You do not edit these files by hand. You ask the `/knowledge:explain` skill to
 explain something. From a repository with a workflow workspace (v86 or later), it
-confirms the plan with you once, then researches, writes and checks the
-explainer as an explain phase and sends it to the document API, which does three
+confirms the plan with you once, then writes the explainer from that
+repository's code and its phases' records, checks it as an explain phase and
+sends it to the document API, which does three
 things for you:
 
 1. Writes the explainer file with correct frontmatter under the right project.
