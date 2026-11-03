@@ -3,12 +3,12 @@
   "phase_id": "P39-hk",
   "name": "Cut the build from the signed canvas and R1's findings",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 70,
   "depends_on": [],
   "created_at": "2026-11-02T16:09:35+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-03T09:49:17+09:00",
+  "completed_at": "2026-11-03T10:07:17+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Build cut: S6 glossary grammar -> S7 math grammar -> S8 math in reader/print (+ S10 skill §4 text beside it) -> S9 terms in reader/print -> S11 release 0.10.0; none spends money",
   "validation": {
     "required": [],
     "last_run": null,

@@ -1723,3 +1723,12 @@
 {"ts": "2026-11-03T09:10:45+09:00", "type": "slice_status_changed", "slice": "P39-hk.S5", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-11-03T09:40:14+09:00", "type": "executor_dispatched", "slice": "P39-hk.S5", "phase": "P39-hk", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-03T09:40:14+09:00", "type": "slice_status_changed", "slice": "P39-hk.S5", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-03T09:49:17+09:00", "type": "slice_status_changed", "slice": "P39-hk.DECOMP2", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-03T10:00:03+09:00", "type": "slice_created", "phase": "P39-hk", "slice": "P39-hk.S6"}
+{"ts": "2026-11-03T10:00:08+09:00", "type": "slice_created", "phase": "P39-hk", "slice": "P39-hk.S7"}
+{"ts": "2026-11-03T10:00:08+09:00", "type": "slice_created", "phase": "P39-hk", "slice": "P39-hk.S8"}
+{"ts": "2026-11-03T10:00:09+09:00", "type": "slice_created", "phase": "P39-hk", "slice": "P39-hk.S9"}
+{"ts": "2026-11-03T10:00:14+09:00", "type": "slice_created", "phase": "P39-hk", "slice": "P39-hk.S10"}
+{"ts": "2026-11-03T10:00:14+09:00", "type": "slice_created", "phase": "P39-hk", "slice": "P39-hk.S11"}
+{"ts": "2026-11-03T10:07:17+09:00", "type": "executor_dispatched", "slice": "P39-hk.DECOMP2", "phase": "P39-hk", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-03T10:07:17+09:00", "type": "slice_status_changed", "slice": "P39-hk.DECOMP2", "old_status": "in_progress", "new_status": "done"}

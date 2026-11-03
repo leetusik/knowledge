@@ -1,176 +1,352 @@
 # P39-hk — breakdown
 
-`P39-hk.DECOMP` wrote this file on 2026-11-02. `intent.md` is the record; its *Scope Added at Execution* (A, B, C) wins over the earlier *Confirmed Intent* where they conflict. This file says how the work is cut and what each slice must not trip over. Line numbers below are for `plugin/skills/explain/SKILL.md` at `cac3ed32` (3,347 lines). They drift as the chain edits the file, so **each slice re-finds its passages by heading** (`grep -n '^#'`).
+`P39-hk.DECOMP` wrote this file on 2026-11-02; `P39-hk.DECOMP2` rewrote it in place on 2026-11-03. `intent.md` is the record; its *Scope Added at Execution* (A, B, C) wins over the earlier *Confirmed Intent* where they conflict. This file says how the work is cut and what each slice must not trip over. Skill line numbers drift as slices edit the file, so **each skill slice re-finds its passages by heading** (`grep -n '^#'`). Code line numbers below are at `d79891d0`.
 
 ## Passes
 
-- **DECOMP** (2026-11-02), style `build-after`, `Mockup: on request`: one design slice (D1, critique `critic`), one research slice (R1), five groundwork slices (S1–S5, a declared chain; R1 runs beside S1), then `DECOMP2`. **No build slice for the designed surfaces is cut now**: `DECOMP2` cuts them from D1's signed round and R1's findings.
-  - D1 comes first because the operator is engaged now; its PENDING #1 is the run's only stop before the acceptance gate.
-  - R1 was cut because the survey could not settle the formula approach into one (see *R1* below): no math engine exists on either side, the web re-parses chapters with a TypeScript twin of the parser, and annotations anchor on projection offsets.
-  - Not an explain phase (no `## Explain`). The gate is `--require` (the explain confirmation, the term window, the glossary and the formulas are operator-visible); the orchestrator declares it after `finish-slice`.
+- **DECOMP** (2026-11-02), style `build-after`, `Mockup: on request`: one design slice (D1, critique `critic`), one research slice (R1), five groundwork slices (S1–S5, a declared chain; R1 ran beside S1), then `DECOMP2`. No build slice was cut before the design was signed. Not an explain phase (no `## Explain`); the gate is `--require`.
+- **DECOMP2** (2026-11-03): six build slices from D1's signed round (`10-reading-aids/01-reading-aids`, canvas `1793661304-517d`), R1's findings (`topics/glossary-and-math.md`) and the code: **S6** glossary grammar → **S7** math grammar → **S8** math in the reader and on paper, with **S10** the skill's §4 grammar text beside it → **S9** terms in the reader and on paper → **S11** the 0.10.0 release → REVIEW. Every slice is declared; `parallel-plan`: `DECOMP2 -> S6 -> S7 -> S8 + S10 -> S9 -> S11 -> REVIEW`.
+  - **Refined from R1's cut** (R1 *Build cut impact*: a → b → c → d → skill §4 → release, no wave):
+    - S10 runs beside S8, because its set (the skill and its copies) is disjoint from every reader file;
+    - S9 is **high**, not mid: the phone sheet's placement is unpinned (see *P39-hk.S9*);
+    - S8 owns the √ correction's helper and its article pass, and S9 calls it on each window it opens (R1 had it all in the term controller);
+    - S7 gives inline math an interim render so the anchor invariant test stays green until S8;
+    - S8 also keeps a formula visible on a Review card (OQ9, built on its recommendation, like OQ7).
+  - **Label map** (the DECOMP2 plan's B1–B6): B1 = S6, B2 = S7, B3 = S8, B4 = S9, B5 = S10, B6 = S11.
 
 ## Estimate
 
-**Time** comes from `dispatch-summary`'s `means`. This worktree's metered means are thin (one span: high 2.7 min/span, this DECOMP in flight). The closest analog is **P38-e1** (metered from the main checkout's transcripts, `dispatch-summary --phase P38-e1`): high 21.4 min/span, mid 4.1 min/span; implementation 8.3 span-min/slice, decomposition 22.2, review 26.0. Design has no metered analog; the only evidence is the workspace's recorded (pre-v61, not metered) rows: design 33.3 min/span (n=31), critic 67.9 min/span (n=12).
+**Time** comes from `dispatch-summary`'s `means`, metered in this worktree on 2026-11-03: high 17.1 min/span (4 spans), mid 5.6 min/span (3), research 33.0; implementation 14.1 span-min/slice. Those spans were skill-text and package slices. These build slices write and twin code and verify live, so they are scaled up from the high spans S2 (24.8 min) and S5 (29.1 min).
 
 | Slice | Route | Span time |
 |---|---|---|
-| D1 | design + critic rows, inline | ≈ 6–9 h of span time (frame, 3–4 page passes at once, a page critic each, the join, the cross critic, the answers); ≈ 3–5 h wall clock, plus the operator's sitting |
-| R1 | research | ≈ 25–45 min (throwaway probes in the scratchpad) |
-| S1 | mid | ≈ 10–20 min |
-| S2 | high | ≈ 30–50 min (the biggest text change: §3 and §9) |
-| S3 | mid | ≈ 10–15 min |
-| S4 | mid | ≈ 15–25 min (deletions, guard edit, copy) |
-| S5 | high | ≈ 30–50 min (P31's package as the model) |
-| DECOMP2 | high | ≈ 20–25 min |
-| build (DECOMP2's, rough) | high/mid | ≈ 2–4 h: the grammar twin, the reader and print to the canvas, the skill's §4 grammar text, the release, a fidelity fix if any |
-| REVIEW | high, gated | ≈ 30–120 min (a real-browser walk of the reader) |
+| S6 | high | ≈ 25–40 min (the four places, three fixture pairs) |
+| S7 | high | ≈ 35–55 min (a new twinned module, the TSV, three fixture pairs, two 422s, the interim render) |
+| S8 | high | ≈ 50–90 min (a dependency, the MathML rebuild, CSS and a font, a scratch stack, a live sweep in dev and the standalone build, paper, the Review card) |
+| S10 | mid | ≈ 6–15 min (beside S8; S3 took 4.9 min) |
+| S9 | high | ≈ 50–90 min (the sheet placement decision, the controller, keyboard paths, the paper appendix, the live sweep) |
+| S11 | mid | ≈ 10–20 min (copy, counts and the whole-suite release gate) |
+| REVIEW | high, gated | ≈ 45–120 min (a real-browser walk of the reader) |
 
-- The phase, with this DECOMP and the main thread's planning (≈ 5 min a slice): about **12–18 h of span time**, about **7–10 h wall clock** plus the operator's two sittings (D1's canvas, the acceptance gate).
-- **Spend:** no slice spends money. Every span is the workspace's own dispatch. No vendor API, no paid service, no live explain run (a metered live trial of the new explain is a deferred-job candidate for the review, as `D84-8s` was for P38-e1).
+- The build and review: about **4–7 h of span time**. S10 overlaps S8, and the main thread adds about 5 min a slice for planning. That is about **3.5–6.5 h wall clock**, plus the operator's acceptance sitting. A fidelity `fix` slice after the review is not counted.
+- **Spend:** no slice spends money. `temml` (MIT) comes from the npm registry, and STIX Two Math (OFL) from fontsource or Google Fonts; both are free. Every span is the workspace's own dispatch. There is no vendor API, no paid service and no live explain run.
 
 ## Join-rebuilt artifact
 
-None. Every skill slice regenerates the two skill copies and the agent bodies inside its own set, and S1–S5 run one at a time. R1, the one slice that runs beside another, writes only its own topic file.
+None.
+- `web/pnpm-lock.yaml` regenerates in S8 only (the only new dependency).
+- `plugin/agents/explain-critic.md` regenerates in S10, inside its own set (`skills_parity.py --write-agents`). S11 regenerates it only if it changes Part B, which it should not.
+- S8 and S10, the one wave, share no file and no generated file. S10 runs only Python checks, and S8 holds the ports, `web/node_modules` and the agent's Chrome.
 
 ## Build inventory
 
-What `DECOMP2` builds, not how. The design may add to it or cut from it.
+What the build ships, not how. Updated from R1 and the code survey.
 
-- **Native grammar (backing work, first):**
-  - a glossary block, one per chapter: term id, term, optional aliases, a short definition (about 40 words), an optional longer one;
-  - term links `[text](term:<id>)`, written explicitly, refused at publish when the id names no glossary term;
-  - inline math and a display formula block carrying a plain-words reading and a "where" legend, validated at publish;
-  - the search projection indexes the glossary text (and whatever R1 settles for formulas);
-  - **it lands four places together:** `server/native/*` + `server/native_ingest.py`; their byte copies in `plugin/templates/kb/server/` (`plugin_parity.py`); the TypeScript twin `web/src/lib/native/*` (`parse.ts`, `refs.ts`, `schema.ts`, `tree.ts`, `project.ts`, `validate.ts`); and the shared fixtures `tests/fixtures/native/*` (+ their template copies), which `tests/test_native_format.py` and `web/tests/native-conformance.test.ts` both read.
-- **Reader and print, built to the signed canvas:**
-  - the term marker and its definition window (hover, tap, keyboard, Esc, short → longer definition, a link to the glossary section);
-  - the glossary section;
-  - inline formulas and the display formula block with its reading and legend;
-  - each one's print form (the glossary as an appendix; `.pp-only` blocks and the quiz's paper form are the precedent), phone and desktop, light and dark;
-  - the renderer is `web/src/lib/native/render.tsx` (server-only), the chapter view `web/src/components/reader/reader-article.tsx`, print `kb-print.css` + `print-*.tsx`, tokens `web/src/app/kb-tokens.css`.
-- **The skill's §4 grammar text** for the glossary and formulas (ids, `term:` links, math), the outline listing the reader's terms, every definition and formula tracing to code or records, translation keeping term ids and formulas verbatim, the critic flagging jargon unlinked on first use (and a bare symbol string, which S3 adds); the three copies and the critic's agent body synced.
-- **The plugin release:** `plugin.json` version **0.10.0** (no changelog file exists: the release notes live in `plugin/README.md` and the commit), `plugin/README.md`, `plugin/skills/setup/SKILL.md`'s `plugin_version`, the landing's hardcoded skill line count (`web/src/content/marketing/content.ts` L251, L261), `.claude-plugin/marketplace.json`'s description.
-- **D1's one job** (critique level **`critic`**): the reading aids inside the chapter view, one connected group: the term marker and its definition window; the glossary section the window links to; the inline formula; the display formula block with its plain-words reading and "where" legend. Each in its print form, phone and desktop, light and dark, extending the reader's `kb` system (`docs/reference/design/design.json`, jobs 01–09; this is job 10). Candidate pages for the handoff (the orchestrator decides): *reading a term* (marker → window → glossary section), *formulas* (inline, display, legend, a long formula on a phone), *print* (glossary appendix, formulas on paper).
+- **Native grammar, in four places together.** These are `server/native/*` + `server/native_ingest.py`; their byte copies in `plugin/templates/kb/`; the TS twin `web/src/lib/native/*`; and the shared fixtures `tests/fixtures/native/*` with their template copies.
+  - The glossary block (`` ```glossary #glossary ``) and `term:` links, with `ref-missing-term` and `ref-scheme`, and the search text (S6).
+  - Inline math `` $`…`$ `` and the `formula` block (`tex`, `alt`, `reading`, `where`), checked by `formula-legend`; the TeX allowlist validator twinned as `tex.py` / `tex.ts` with `tex-allowlist.tsv` (`math-syntax`, `math-command`, `limit`); the ingest 422s `translation-term-ids` and `translation-math` (S7).
+  - `syntax: 1` stays: the new forms are additive.
+- **Reader and print, built to the signed canvas.**
+  - Math (S8): the new web dependency **`temml` 0.14.0, pinned exactly** (web-only, server-only, about 480 KB of server bundle, 0 bytes of client JS). `mathml.ts` rebuilds Temml's output through a MathML allowlist into React elements. Then the inline, display and legend markup, `FormulaBox`, the screen and paper CSS, and the per-instance √ correction.
+  - The font (S8): **STIX Two Math 2.12** woff2, unmodified (OFL 1.1; its Reserved Font Name is "TM Math"), 403 KB, vendored in `web/public/fonts/reader/` with its line in `web/public/fonts/README.md`. It loads only on pages with math.
+  - Terms (S9): `planTerms`, the markers, the hidden windows, the desktop window and the phone sheet, the glossary section and its way back, `TermLayer`, the 3-line `annotations.tsx` touch, and the paper appendix.
+  - Every one in light and dark, phone and desktop, English and Korean.
+- **Undrawn surfaces the grammar reaches.**
+  - The Review card draws quiz text on the client (`web/src/components/review/inline.tsx`), where math would vanish. This is **OQ9**, and S8 builds on its recommendation.
+  - The old-version page (`web/src/app/(public)/documents/[id]/versions/[v]/page.tsx`) renders `NativeChapter` without the reader's layers: markers must land on their entries, and math must not degrade (S8, S9).
+- **The skill's §4 grammar text** (S10): the glossary, `term:` links, inline math and the formula block, R1's gotchas, the translation keep-list, the critic's unlinked-jargon check, the three copies and the critic's body.
+- **The plugin release** (S11): `plugin.json` **0.10.0**, the release notes in `plugin/README.md` and the commit, setup's `plugin_version`, `marketplace.json`, and the landing's line count. The front-door readiness test moves to workspace **v92** plus `**phases**` (S5's handshake). The release notes carry the checklist line **"before deploying, scan the stored native sources once for `` ```glossary ``, `` ```formula `` and `` $` ``; a hit means `syntax: 2`"**. That scan is a line, never a slice.
+- **After the build** (the orchestrator, not a slice): `design-canvas 10-reading-aids --implemented`. The `kb` Design System re-sync from code cannot run on this login (D1 published from the local cache), so it is a deferred-job candidate for REVIEW.
+- **D1's one job** (done, critique `critic`): the reading aids inside the chapter view: the term marker and window, the glossary section, the inline formula, and the display block with its reading and legend. Each comes in print, phone and desktop, light and dark, extending the `kb` system (job 10).
 
-## Pins for every skill slice (S1–S4)
+## Pins for every build slice (S6–S9)
+
+- **The four places (S6, S7).**
+  - Change `server/native/*` + `server/native_ingest.py`, their byte copies in `plugin/templates/kb/server/` (`scripts/plugin_parity.py`), the TS twin `web/src/lib/native/*`, and `tests/fixtures/native/*` with its copies in `plugin/templates/kb/tests/fixtures/native/`, together.
+  - **Every new file is registered in `plugin/templates/manifest.json`'s `identical` list**, or the parity guard's completeness check fails. That covers a fixture, `tex.py` and any new Python test.
+  - Four suites read the fixtures automatically: `tests/test_native_format.py`, `web/tests/native-conformance.test.ts`, `web/tests/native-render.test.ts` (every case renders, refused ones with the placeholder) and `web/tests/reader-anchor.test.ts`.
+- **The anchor invariant.** `reader-anchor.test.ts` slices the rendered page of **every accept fixture** against Python's projection `.txt`.
+  - Typed blocks (glossary, formula) contribute nothing to it.
+  - A `term:` link counts as its children's text. Until S9 it renders through the existing missing-link path, which keeps the text.
+  - Inline math counts as its TeX. So the render must stamp an atom (`data-an-len`) from the slice that adds the node (S7's interim), and S8's MathML keeps the count.
+  - `paint.ts` assumes static markup: no client island inside a stamped paragraph.
+- **RESPECT THE DESIGN (S8, S9).**
+  - Build from the signed round, never the live canvas: `docs/reference/design/jobs/10-reading-aids/rounds/01-reading-aids/result.md` `## Build`, `frame.md` F1–F36, and the snapshot `rounds/01-reading-aids/canvas/project/` (boards and `frame.css`).
+  - The `## Build`'s **canvas-only** list is never built. That includes the state bars, `Main.dc.html`, the phone boxes and sheet dock (F21), the print desk, and the fixed `.ra-m msqrt { margin-inline-end: -0.38em }`.
+  - Never drop, simplify, restyle or "improve" a signed element.
+  - A state the record never drew is a line on `## Operator Questions`, never an invention.
+  - Put this rule and `## Operator Runtime` in each plan and dispatch prompt (`design-cowork` `reference/build.md`).
+- **The stack (S8, S9, REVIEW).**
+  - `:3030` and `:8766` are the **main checkout's** servers, running `main`'s code (on 2026-11-03 their cwd was `/Users/sugang/projects/personal/knowledge`). Never restart them, and never publish this branch's grammar to them: a glossary is a `ref-scheme` 422 there.
+  - Run this worktree's own throwaway stack on free ports instead:
+    - an API with scratch `KB_ROOT` / `KB_DB_PATH` and the fixture book, using P30's recipe (`works/phases/active/P30/topics/notes-later.md` *Loading the fixture book*; `P30/slices/P30.REVIEW/result.md` *Stack and instruments*);
+    - `pnpm --dir web exec next dev -H 127.0.0.1 -p <port>` with `KB_API_BASE_URL` pointed at that API;
+    - the standalone production build in a scratch copy, as `## Operator Runtime` describes.
+  - Name the ports in `result.md`, and stop everything at the end.
+- **The verification chapter.** S8 adds a fixture chapter to the dev fixture book, published by `scripts/publish_fixture_book.py --base-url <scratch>`: `tests/fixtures/book/reading-aids.en.md` and its Korean translation `reading-aids.ko.md`.
+  - It carries the signed fixture's text (F12: the excerpt's three sections, F29), its four display blocks, its inline formulas, its 12-term glossary and the quiz item (F30).
+  - S9 and REVIEW reuse it. The fixture book is root-only (`manifest.json` `root_only`).
+- **The instrument.** Claude in Chrome on the agent profile: `list_connected_browsers`, then `select_browser` on the recorded `deviceId` before any other browser tool.
+  - DECOMP2 checked on 2026-11-03 that `## Operator Runtime` is filled, not `UNFILLED`, with deviceId `c14e5b18-f250-45f1-b92e-4a08a31197b5`.
+  - The window size is fixed: read `innerWidth`. For a true phone or tablet viewport, use the manifest's same-origin iframe harness against the standalone build.
+  - Paper goes by the manifest's P30 note: CDP `Page.printToPDF` on the same runtime, at A4 and letter.
+  - If the extension's site permissions refuse the scratch port, or Chrome or the id is missing, return `needs_operator`. Never borrow another browser.
+- **Signed out.** The agent profile holds no session, so the checks run anonymous. The *highlight meets term* states (F2) need a signed-in member: the plan either asks the operator to sign the profile in to the scratch stack, or leaves those states to the gate walkthrough, named.
+- **The sweep.** It runs at the manifest's viewports (phone 390×844, tablet 820×1180 and 1024×768, desktop 1440×900), light and dark, English and Korean, then paper. The functional sweep (`reference/build.md`) applies: every control does something, and focus, hover and keyboard work on every one.
+- **Merge risk.** P36-1s (Hermes) edits `annotations.tsx` and the reader page on its own branch, so keep those edits small and located.
+- **Tests.** Only the core ones R1 names (topic §1–§6 *Tests (core)*). Look and behaviour are verified live, never by a test.
+
+## Pins for every skill slice (S1–S4, S10, S11)
 
 - **The shipped set:**
   - `plugin/skills/explain/SKILL.md` (canonical);
   - `.agents/skills/explain/SKILL.md`: the canonical body byte-equal, frontmatter without `argument-hint:` / `allowed-tools:`;
-  - `web/public/SKILL.md`: a full-file copy (`cp`);
-  - `plugin/agents/*.md`, regenerated by `python3 scripts/skills_parity.py --write-agents` whenever Part B changes; never hand-edited;
-  - `works/phases/active/P39-hk/topics/skill-headings.md`: the heading crosswalk (below).
-- **Validation, every skill slice:** `python3 scripts/skills_parity.py` → PASS; `python3 scripts/plugin_parity.py` → PASS; `uv run pytest tests/test_explain_resolver.py -q` (or `python3 -m pytest …`) → passes; `git status --porcelain .claude/` shows nothing of the slice's.
-- **Headings may change in this phase** (the research sections go), unlike P38-e1. Keep a surviving section's number and heading where its job survives. Every heading a slice adds, renames, renumbers or deletes goes into `topics/skill-headings.md` (old → new, or → deleted), which S5 uses to re-cite every plugin section the workspace route names.
-  - P33-n3's citation check (`works/phases/active/P33-n3/topics/citations.md` L64–85) runs against the **vendored** route in `.claude/`, which this phase never edits. It is expected to regress from S1 on; record its count in `result.md` and do not chase it. The vendored route updates at the next `/update-workspace`, after the bootstrap applies S5's package.
-- **No `plugin.json` version bump in S1–S4.** `plugin/README.md` says any change under `plugin/**` ships only with a bump; it rides in `DECOMP2`'s release slice, and the branch never merges without it.
-- **Codebase-only binds the explain skill only.** The server, the CLI (`--subject`, `--book-kind subject`) and the reader keep subject books and subject-filed documents already published; no grammar or data change. `scripts/publish_fixture_book.py` and `tests/fixtures/book/*` stay.
-- **Tests:** none new. Prose rules are not tested; the resolver test must keep passing.
-- **Deferred overlap.** `D86-sd` (wording drifts after 0.9.0) triggers at this phase's start, and `D69` on the next §1 change. Where a slice rewrites a passage one of their items names, the rewrite settles it; the slice names which items in `result.md`, and the review lists the job for the orchestrator to close or drop. Never widen a slice to reach an item its rewrite does not touch.
+  - `web/public/SKILL.md`: a full-file copy;
+  - `plugin/agents/explain-critic.md`, regenerated by `python3 scripts/skills_parity.py --write-agents` whenever Part B changes, never hand-edited;
+  - the heading crosswalk `topics/skill-headings.md`. Every heading a slice adds, renames, renumbers or deletes lands there.
+- **Validation:**
+  - `python3 scripts/skills_parity.py` → PASS;
+  - `python3 scripts/plugin_parity.py` → PASS;
+  - `uv run pytest tests/test_explain_resolver.py -q` passes;
+  - `git status --porcelain .claude/` shows nothing of the slice's;
+  - after S5, `package/checks/cites.py plugin/skills/explain/SKILL.md <the five package texts> works/phases/active/P39-hk/handoff-explain.md` still reports missing=0 (S5's run: 113 citations, missing 0).
+- **Vendored route.** The vendored route in `.claude/` is never edited. P33-n3's citation check against it regresses: record the count, never chase it.
+- **Codebase-only binds the explain skill only.** The server, the CLI and the reader keep subject books, and `scripts/publish_fixture_book.py` and `tests/fixtures/book/*` stay.
+- **Deferred overlap.** `D86-sd`, `D69` and `D85-qk` (e) and (f): a rewrite that settles an item says so in `result.md`. Never widen a slice to reach one.
 
 ## P39-hk.D1
 
-- **Goal:** the operator signs, on one canvas, how the reading aids look and behave: the term marker and definition window, the glossary section, the inline formula and the display formula block (reading + "where" legend), each with its print form, phone and desktop, light and dark.
-- **Shape:** `co-work`, inline on the main thread per the `design-cowork` skill; drafting on the design row, page critics and the cross critic on the critic row. One round open at a time; the canvas waits for the operator's literal sign-off. No mockup unless the operator asks.
-- **Inputs for the handoff:** this file's *Build inventory*; the `kb` system (`web/src/app/kb-tokens.css`: light `default`, dark `slate`; `kb-print.css` for paper); the reader's precedents: `annotations.tsx`'s `an-pop` popover (role=dialog, Esc) and the reader's sheets (`reader-frame.tsx`), the quiz's print form; a realistic chapter (a codebase subject with real jargon and one or two formulas, e.g. a trading or caching chapter).
-- **Set:** `docs/reference/design/**` (the job's canvas and round folders, `design.json`). A barrier: runs alone.
-- **Risk:** `high` (kind co-work, never `low`). **Critique:** `critic`.
-- **spends money:** no.
-- **Depends on:** — (a barrier; undeclared).
+Done: `10-reading-aids/01-reading-aids` signed as drawn ("accept", canvas `1793661304-517d`); see `## Decisions` and `topics/decisions.md` § Decisions 5.
 
 ## P39-hk.R1
 
-- **Goal:** findings, no product code. Settle into one approach each, honoring D1's signed canvas:
-  1. **The glossary grammar:** the block's form (a typed fenced block in `TYPED_BLOCKS`, `schema.py` L39), the term id namespace (shared with `#id`s or its own), `term:` in `refs.py` / `refs.ts` and its refusal code, one per chapter, its relation to the `DEFINITION` callout, its search and annotation projection.
-  2. **The math grammar:** the inline delimiter (`$…$` with currency guards, e.g. `mdit_py_plugins`' dollarmath rules, or an explicit form; explain subjects carry prices), the display block (a typed block with tex / reading / where), and how inline math counts in the annotation projection (`data-an-skip` / `data-an-len`).
-  3. **The engine:** KaTeX or Temml (MathML) in the server-only renderer `render.tsx`: rendering quality against the signed canvas, print, dark, fonts and the CSP (`web/src/lib/csp.ts`: `style-src` open), weight.
-  4. **Validation at publish** with no Python math engine: e.g. a TeX allowlist validator twinned in Python and TypeScript, held by shared fixtures, with a test proving the renderer accepts every allowlisted command. Prefer no new Python dependency (`pyproject.toml` and `uv.lock` are template-identical files).
-  5. **The term window's wiring:** one chapter-level client controller with event delegation versus per-term islands, given `paint.ts`'s static-markup assumption (no client island inside a stamped paragraph), its Esc beside `annotations.tsx`'s document-level Esc, and `TAP_IGNORE` (`chrome.ts`).
-  6. **Translation:** what keeps term ids and formulas verbatim, and where a check enforces it.
-- **Output:** gist lines in `## Decisions` and `## Notes for later slices` (for `DECOMP2`), long detail in `topics/glossary-and-math.md`; `## Now` says whether DECOMP2's build cut changes from the inventory above. Throwaway probes live in the scratchpad (a scratch copy for any `pnpm add`), never in `web/` or `server/`.
-- **Set:** `works/phases/active/P39-hk/topics/glossary-and-math.md`. In a wave beside S1, it returns its notebook entries for the orchestrator to write.
-- **Risk:** research (kind routes to the research row); trigger: open design (an architecture choice: the engine and the validation twin).
-- **spends money:** no.
-- **Depends on:** `P39-hk.D1` (it reads the signed canvas).
+Done: glossary and math grammar, Temml + MathML allowlist, the TeX twin, `TermLayer`, translation 422s → `topics/glossary-and-math.md`.
 
 ## P39-hk.S1
 
-- **Goal (A, and C's front door):** the confirmation suggests the reader and the shape, the explain is codebase-only, and a subject no phase covers gets a research-phase offer.
-- **Pins:**
-  - **The reader line** is a concrete guess from the request and the operator's situation (who they are, what they know, what they are new to), never a stock "a novice" (L298, L571; also L316, L371).
-  - **The sections** follow the subject: the questions this reader asks, in the order they ask them, not Background → Intuition → Code → Best practices → Quiz. The confirmation also offers **one or two other shapes**, one line each; the operator picks or edits, still one confirmation. Sources and the short "In one paragraph" box stay; the Quiz is suggested only when the subject earns it; best practices go (S3 writes next steps).
-  - **Codebase-only:** general mode goes (§1 L146–164, `mode: general` L161–164, the loose document's subject slug L170–174, book kind `subject` L194–200, and the mentions the skill map lists); a non-code subject is declined plainly, writing nothing.
-  - **Coverage → research-phase offer:** the phases that cover the subject are found from the records: the commits that touched the subject's files (`git log --format=%s -- <paths>`, the Commit Convention's `(P<N>)` scope) and the phases whose `intent.md` / `phase.md` name it. None covers it → the confirmation says so and offers to create a research phase first (it reads the code and records findings); the explain runs afterwards on the operator's word, never automatically. The handoff to `create-phase` for that research phase is written so S5 can mirror it.
-  - **The cost line** becomes one writer plus one critic. The quick / full / no-research offer (card L65–78, flags L123–128, step 6 L294–296, L342, L360–361) and the price table (L401–411) go; `argument-hint` (L4) loses `[quick|no-research]`. The `## Explain` field set the hand-off writes changes (`run:` and general `mode:` go): S1 states the new field set in `## Decisions` for S5.
-- **Set:** the shipped set.
-- **Risk:** `low`, no trigger: the intent pins the confirmation's content, and the coverage lookup is pinned above.
-- **spends money:** no.
-- **Depends on:** none.
+Done: the front door suggests the reader and the shape, is codebase-only and offers a research phase.
 
 ## P39-hk.S2
 
-- **Goal (C):** the explain writes only from the code and the records of the phases that built the subject; no research of its own.
-- **Pins:**
-  - **The run card** (L40–109) and **§3** (L552–1323) are rewritten around one writer: read the covering phases' records (intent, decisions, slice results, research findings) and the code; every sentence traces to a code range or a record line. D0b's preflight, `run.md`, D1–D5 (plan, waves, merge, gap rounds, verification, the evidence gate), §3.9 and team sizing (L960–995) go. D6 (the reader's path) becomes the outline from the signed shape.
-  - **v2** = the prior plus the phases since (L590–740, the delta reshaped). **Translation** stays (L741–760).
-  - **No new things:** an idea the code relies on is explained only as far as the code and the records state it; nothing from outside.
-  - **§4's evidence rules** (L1427–1443), **§4.6 Sources** (sources are code ranges and phase records), **§8's report** (L1980–1997) follow.
-  - **§9 A book** becomes codebase books only, chapters drawn from phases (§9.2 / §9.3's research and top-up go).
-  - **The critic** (§4.10 L1746–1788, **B5** L2440–2768) checks the draft against the code and the records on a second model; its `with=` list and the shared extracts it keeps are re-scoped. Researcher briefs B1–B4 stay in the file for S4 to delete (their bodies may regenerate if a shared extract changes).
-  - `## 2` (the KB resolver, L427–551) stays; the resolver test must keep passing.
-- **Set:** the shipped set.
-- **Risk:** `high`. Trigger: **open design**: the evidence model (what the writer reads, how a sentence traces, how v2 and books draw from phases) is the phase's new abstraction, which the plan cannot pin.
-- **spends money:** no.
-- **Depends on:** `P39-hk.S1`.
+Done: the evidence model (the code at one commit plus the covering phases' records) → `topics/evidence-model.md`.
 
 ## P39-hk.S3
 
-- **Goal (B, and A's body):** easy reading and visuals first, in the writer's and the critic's rules.
-- **Pins:**
-  - **§4's prose rules** (L1382–1425): a diagram, chart or figure wherever a picture explains better than a paragraph; short paragraphs, no dense stretch; "novice-friendly by default" (L1388, L1504) goes for the signed reader.
-  - **§4.2's outline** (L1473–1505) loosens to the signed, subject-shaped sections; Sources and "In one paragraph" stay; the Quiz only when signed.
-  - **§4.5** (L1627–1678): best practices go; **next steps** come from the workspace (open deferred jobs, open operator questions, decisions not yet built), suggested only when something is open, each tracing to its record.
-  - **The critic** (B5) flags hard reading, a missing visual and a bare symbol string in prose (pointing at the formula grammar `DECOMP2`'s skill slice adds).
-- **Set:** the shipped set.
-- **Risk:** `low`, no trigger: the intent pins every rule.
-- **spends money:** no.
-- **Depends on:** `P39-hk.S2`.
+Done: the writing rules: visuals first, short paragraphs, typeset formulas, next steps from the workspace.
 
 ## P39-hk.S4
 
-- **Goal (C):** retire the research machinery and make every copy and promise true.
-- **Pins:**
-  - Delete Part B's researcher briefs (B1 web, B2 code, B3 gap, B4 verifier) and every shared extract no remaining brief includes (B7 ladder, B10 search, B11 pages, B12 `pagetext` if unused), and their markers.
-  - Delete `plugin/agents/{web-researcher,code-researcher,gap-reviewer,verifier}.md`; `explain-critic.md` stays, regenerated.
-  - `scripts/skills_parity.py`: `AGENT_ROLES` → `("explain-critic",)`; drop the `pagetext` compile check if the extract goes; its docstring.
-  - Frontmatter `allowed-tools` loses WebSearch, WebFetch, pdftotext and the `pagetext.py` path; the `description:` (L3) says codebase-only, from what was built, no research.
-  - **Copy:** `plugin/README.md` (L6–20, *Explain: modes and flags* L43–103, *research agents* L105–116, *permissions and the search cap* L118–152, L182); `plugin/skills/setup/SKILL.md` (L170–171, L460–461; not `plugin_version`); `plugin/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` descriptions (not the version); `web/src/content/marketing/content.ts` (L251's "research the topic … cite sources"; the line count stays for the release slice); `README.md` (L12–15); the template page `plugin/templates/kb/docs/getting-started/{{KB_DATE}}-how-your-knowledge-base-works.md` (L72; `template_only`).
-  - `.claude/skills/explain/` (the stale vendored copy) stays: `D79-we` owns it.
-- **Set:** the shipped set; the four deleted agent files; `scripts/skills_parity.py`; `plugin/README.md`; `plugin/skills/setup/SKILL.md`; `plugin/.claude-plugin/plugin.json`; `.claude-plugin/marketplace.json`; `web/src/content/marketing/content.ts`; `README.md`; `plugin/templates/kb/docs/getting-started/{{KB_DATE}}-how-your-knowledge-base-works.md`; `.github/workflows/plugin-ci.yml` (only if a guard's invocation changes).
-- **Validation:** the skill-slice checks, plus `cd web && pnpm typecheck` (content.ts), and `grep -rn "web-researcher\|code-researcher\|gap-reviewer\|knowledge:verifier" plugin web/public .agents README.md` → none.
-- **Risk:** `low`, no trigger: located deletions and copy; the guard edit is a one-tuple change.
-- **spends money:** no.
-- **Depends on:** `P39-hk.S3`.
+Done: the research agents are retired, and every copy says codebase-only.
 
 ## P39-hk.S5
 
-- **Goal (C, the workspace side):** the workspace's explain route rewritten for the new flow, plus the research-phase offer, written as a **handoff package in this phase folder**, as P31 did (`works/phases/active/P31/package/` + `handoff-explain.md`).
-- **Pins:**
-  - `package/` mirrors the bootstrap's `payload/` (`package/<path>` → `payload/<path>`), with `package/README.md` (the files and the order) and `package/PATCHES.md` (every edit to a file the bootstrap already has, found by quoted text); `handoff-explain.md` at the phase root is the index.
-  - **Files it covers:** `claude/skills/create-phase/` *The explain route* (the one confirmation, the `## Explain` field set S1 recorded, the cost line, the plugin minimum **0.10.0**, the research-phase route: how a research phase for an explain is created, cut and recorded so a later explain reads it); `claude/skills/do-whole-phase/reference/explain-{decomposition,chapter,review}.md` and the `do-next-slice` copies (a book's DECOMP and chapters draw from phases, no research run or top-up, the critic only); `claude/agents/slice-executor.md`'s explain carve-out (no research roles); any other payload line naming the research agents or `run: full|quick|no-research`.
-  - Every plugin section the route cites is re-cited by number **and** heading from `topics/skill-headings.md`.
-  - **The bootstrap boundary:** S5 reads the bootstrap repo at a pinned HEAD (named in the handoff) to quote text, and **never edits or commits there**. The operator's bootstrap session applies the package; `/update-workspace` later brings it here.
-  - `D85-qk`'s items (the critic-model pin, create-phase's confirmation layout, explain-review step 1) sit in the files S5 rewrites: settle them in the package and say which.
-- **Set:** `works/phases/active/P39-hk/package/**`, `works/phases/active/P39-hk/handoff-explain.md`.
-- **Risk:** `high`. Triggers: **open design** (the research-phase route for an explain is not pinned) and a **wide blast radius** (the plugin ↔ workspace interface every explain run passes through: four route files, their copies and the executor's carve-out).
-- **spends money:** no.
-- **Depends on:** `P39-hk.S1`, `P39-hk.S2`, `P39-hk.S3`, `P39-hk.S4`.
+Done: the bootstrap handoff package (`package/`, `handoff-explain.md`), with the v92-first handshake.
 
 ## P39-hk.DECOMP2
 
-- **Goal:** cut the build once D1 is signed, from the signed round's `## Build`, R1's findings and the *Build inventory*: the native grammar twin first (backing), then the reader and print built to the signed canvas, then the skill's §4 grammar text, then the plugin release (0.10.0); rewrite this file in place with a `Breakdown (DECOMP2): …` gist line.
-- **Set:** `works/phases/active/P39-hk/**` (this file, `phase.md`, the new slice folders).
-- **Risk:** `high` (kind decomposition). A barrier; undeclared.
+Cut S6–S11 from the signed round, R1 and the code; rewrote this file. Set: `works/phases/active/P39-hk/**`. A barrier.
+
+## P39-hk.S6
+
+- **Goal:** the glossary block and `term:` links in the native grammar, in all four places at once (R1 §1).
+  - `"glossary"` joins `TYPED_BLOCKS`. Its body is `terms` (1–100): `id`, `term`, `aliases` (1–8), `short` *(md)* and `long` *(md)*.
+  - It has its own term-id namespace, scoped to the block. A second block is refused with `limit`; the position is free.
+  - `parse_ref` / `parseRef` gain `term:<id>`. A link to no term is the new **`ref-missing-term`**; a `term:` image, or a `term:` link inside the glossary, is `ref-scheme`.
+  - `_search_block` indexes `term`, `aliases`, `short` and `long`. The annotation projection is unchanged.
+  - README: the tree node, the codes table, the ref kinds.
+  - No render change: the block renders nothing (`typed()` `default`) and a term link renders as a missing link with its text, until S9.
+  - Translation is S7's (the 422s).
+- **Fixtures (core tests):**
+  - `glossary.md/.json/.txt`: terms, aliases, term links in prose, a caption and quiz text, the glossary after the links, and the search text;
+  - `err-glossary.md/.err`: a second block, a duplicate term id, a malformed id, a missing `short`, a term link inside a definition;
+  - `err-terms.md/.err`: `ref-missing-term`, a `term:` image.
+  - Inline math in a definition, and a term in a legend, wait for S7.
+- **Set:**
+  - `server/native/{schema,parse,refs,project}.py`, `server/native/README.md`, `server/native/ids.py` (only if the namespace check needs it);
+  - their copies `plugin/templates/kb/server/native/{schema,parse,refs,project,ids}.py` and `README.md`;
+  - `web/src/lib/native/{schema,parse,refs,tree,project}.ts`; `web/src/lib/native/{ids,links,validate}.ts` (only if needed);
+  - `tests/fixtures/native/{glossary.md,glossary.json,glossary.txt,err-glossary.md,err-glossary.err,err-terms.md,err-terms.err}` and the same seven under `plugin/templates/kb/tests/fixtures/native/`;
+  - `plugin/templates/manifest.json` (the new fixtures in `identical`);
+  - `tests/test_native_format.py` + its template copy (only if a search-text assertion needs a line).
+- **Validation:**
+  - `uv run pytest tests/test_native_format.py tests/test_native_ingest.py -q`;
+  - `python3 scripts/plugin_parity.py`;
+  - `pnpm --dir web exec vitest run tests/native-conformance.test.ts tests/native-render.test.ts tests/reader-anchor.test.ts`;
+  - `pnpm --dir web typecheck`.
+- **Risk:** `high`. Trigger: **core invariant**, the stored chapter format (a new block, a new ref kind and a new refusal at publish), and the projection that stored annotations anchor on.
 - **spends money:** no.
-- **Depends on:** — (a barrier; ordered after S5).
+- **Depends on:** none (the first build slice; ordered after `DECOMP2`).
+
+## P39-hk.S7
+
+- **Goal:** math in the native grammar, in all four places (R1 §2, §4, §6).
+  - **Inline math** `` $`…`$ ``: a post-pass over the inline children both parsers produce, at every depth, native only, becoming `{type:"math", tex}`. `_plain` and `plainText` treat it like code, and the projection counts its TeX.
+  - **The `formula` block** (`tex`, `alt`, `reading` *(md)* with no math allowed in it, `where` 1–20 of `{sym, means}`), checked by **`formula-legend`**.
+  - **The TeX allowlist validator**, twinned as a new `server/native/tex.py` ↔ `web/src/lib/native/tex.ts`, with data in `tests/fixtures/native/tex-allowlist.tsv`: `math-syntax`, `math-command`, and `limit` (inline 300, display 2,000, depth 20).
+  - **`translation_check`** gains the 422s `translation-term-ids` and `translation-math`, Python only.
+  - **Search:** R1 left formulas open. The figure precedent (alt and caption indexed) suggests `alt`, `reading` and each `means`. S7 settles it as a `## Decisions` line.
+  - **The interim render:** `render.tsx` gets only an interim inline `math` case, the TeX counted as an atom (`data-an-len`), so `reader-anchor.test.ts` and `native-render.test.ts` stay green. S8 replaces it, and `formula` stays `default` null until S8.
+  - README: the tree, the codes, the no-escape rule for `$`.
+- **Fixtures (core tests):**
+  - `math.md/.json/.txt`: inline math in prose, a table cell and a YAML *(md)* field; a formula block; the TeX counted; `$5`, `$HOME/$USER` and `` $ `ls` `` staying text. It also covers a term in a legend's `means`, and math in a glossary definition (OQ4, F31).
+  - `err-formula.md/.err` and `err-math.md/.err` (R1 §2, §4).
+  - A Python and a TS test, each asserting its allowlist equals the TSV.
+  - `test_native_ingest.py`'s translation cases: term ids differ, display `tex` differs, a legend `sym` differs, inline TeX missing (each a 422), and the same set reordered (accepted).
+- **Set:**
+  - `server/native/{schema,parse,project}.py`, new `server/native/tex.py`, `server/native/README.md`, `server/native_ingest.py`;
+  - their copies under `plugin/templates/kb/server/` (`native/{schema,parse,project,tex}.py`, `native/README.md`, `native_ingest.py`);
+  - `plugin/templates/manifest.json`;
+  - `web/src/lib/native/{schema,parse,tree,project}.ts`, new `web/src/lib/native/tex.ts`, `web/src/lib/native/validate.ts` (only if needed);
+  - `web/src/lib/native/render.tsx` (the interim inline `math` case only);
+  - `tests/fixtures/native/{math.md,math.json,math.txt,err-formula.md,err-formula.err,err-math.md,err-math.err,tex-allowlist.tsv}` and the same under `plugin/templates/kb/tests/fixtures/native/`;
+  - `tests/test_native_ingest.py` + its template copy;
+  - the Python TSV test, in `tests/test_native_format.py` or a new `tests/test_native_tex.py`, + template copy + manifest;
+  - new `web/tests/native-tex.test.ts`.
+- **Validation:** S6's commands, with `web/tests/native-tex.test.ts` added to the vitest list.
+- **Risk:** `high`. Trigger: **core invariant**, as S6, plus the publish-time validator every stored chapter passes.
+- **spends money:** no.
+- **Depends on:** `P39-hk.S6` (both edit `schema.*`, `parse.*`, `tree.ts`, `project.*`, the README and the manifest).
+
+## P39-hk.S8
+
+- **Goal:** typeset math in the reader and on paper, to the signed canvas (R1 §3; `## Build` *Inline formula*, *Display formula block*, *Paper*; F7, F8, F24, F27, F36).
+  - **The engine.** `pnpm --dir web add --save-exact temml@0.14.0`. A new `web/src/lib/native/mathml.ts`: `temml.renderToString` with `throwOnError`, `trust: false` and no `annotate`, parsed by `saxes` and rebuilt through R1's element and attribute allowlists into React elements. It drops every `style`, applies F24's `lspace="0"` rule, and never inserts raw HTML.
+  - **The markup.** It replaces S7's interim inline case with `math.ra-m` + `data-an-len`. The inline `alttext` is derived linear text (R1's OQ7 recommendation). The `formula` block is `figure.ra-mb`; `aligned` becomes stepped rows on the relation; the caption carries the reading, "where" (ko 여기서) and `dl.ra-legend` (one symbol column per chapter, F27).
+  - **`FormulaBox`.** It reuses `scroll-box.tsx`'s measured overflow: `role="region"` "Formula, scrolls sideways" only when it scrolls, with the mask fade.
+  - **The √ correction.** A helper (e.g. `web/src/lib/reader/radicals.ts`) measures each `msqrt` / `mroot` after `document.fonts.ready` and sets a per-instance `marginInlineEnd`, run over the article by a small client mount. Hidden windows are skipped, because S9 calls it on open. Never the fixed −0.38em.
+  - **STIX Two Math** is vendored, with `--font-math` (`"STIX Two Math", "Cambria Math", math`), `local()` first, and the OFL line in the fonts README.
+  - **The CSS** covers screen and paper (`kb-print.css`).
+  - **The Review card** (OQ9, built on its recommendation unless the operator answers otherwise): a quiz card shows a formula as its linear text, made on the server where the queue is read. It never drops the formula.
+  - **The old-version page** must not break on math.
+- **Tests (core):** `web/tests/native-math.test.ts`.
+  - Every TSV row renders through Temml in its context.
+  - Every element and attribute Temml emits for them is in the rebuild allowlist.
+  - The F24 rule holds.
+- **Verification:** live, in this worktree's stack and its standalone build, per *Pins for every build slice*.
+  - The *Formulas* states of `## Build` *Pages and states*.
+  - The *Print* page's formulas, at A4 and letter.
+  - The √ in Chromium against WebKit's zero gap, where the harness allows.
+  - Dark `currentColor`, and the font loading only on pages with math.
+- **Set:**
+  - `web/package.json`, `web/pnpm-lock.yaml`;
+  - new `web/src/lib/native/mathml.ts`, `web/src/lib/native/render.tsx`;
+  - new `web/src/components/reader/formula-box.tsx`, `web/src/components/reader/scroll-box.tsx` (only if a prop is needed);
+  - new `web/src/lib/reader/radicals.ts`, a new client mount `web/src/components/reader/math-layer.tsx`, `web/src/components/reader/reader-article.tsx` (the mount line);
+  - `web/src/content/chapter.ts`;
+  - `web/src/app/reader.css` (or a new `web/src/app/reader-aids.css` imported beside it), `web/src/app/kb-print.css`, `web/src/app/reader-fonts.css`;
+  - new `web/public/fonts/reader/stix-two-math.woff2` (and its OFL text, if vendored beside it), `web/public/fonts/README.md`;
+  - `web/src/components/review/inline.tsx`, `web/src/app/review/page.tsx`, `web/src/lib/review/actions.ts`, `web/src/lib/review/types.ts` (the OQ9 card);
+  - `web/src/app/(public)/documents/[id]/versions/[v]/page.tsx` (only if math needs its CSS there);
+  - new `tests/fixtures/book/reading-aids.en.md` and `reading-aids.ko.md`, `scripts/publish_fixture_book.py`;
+  - new `web/tests/native-math.test.ts`.
+- **Validation:**
+  - `pnpm --dir web typecheck`;
+  - `pnpm --dir web lint`;
+  - `pnpm --dir web exec vitest run tests/native-math.test.ts tests/native-render.test.ts tests/reader-anchor.test.ts tests/native-conformance.test.ts tests/csp.test.ts`;
+  - the standalone build in a scratch copy;
+  - the live sweep, with the instrument named.
+  - In the wave beside S10, the whole web suite and the full pytest run are `deferred: whole-tree` to REVIEW.
+- **Risk:** `high`. Trigger: **core invariant**, the renderer's no-raw-HTML guarantee (`render.tsx` L1–19): the one place an engine's output enters the page.
+- **spends money:** no.
+- **Depends on:** `P39-hk.S7` (the math node and the formula block). It runs beside S10.
+
+## P39-hk.S9
+
+- **Goal:** terms in the reader and on paper, to the signed canvas (R1 §5; `## Build` *The term marker*, *The window*, *The phone sheet*, *Highlight meets term*, *The glossary section*, *Paper*; F2–F6, F17–F19, F22, F25, F32, F33).
+  - **`planTerms`** (new `web/src/lib/native/terms.ts`, after `planCitations`) numbers `tm-<id>-<n>` across the text and the legends, in render order.
+  - **The markers:** `a.ra-term`, `href="#gl-<id>"`, with `aria-*`.
+  - **The windows:** hidden `tw-<id>`, `role="dialog"`, `tabindex="-1"`, in one `.ra-float`, with Close, Read more / Show less in one box (F32), and In the glossary →.
+  - **The glossary section:** `<h2 id="glossary">Glossary</h2>`, A to Z by the chapter's collator, `gl-<id>` entries, the arrived mark, and ‹ Back to the text to the very occurrence (F33).
+  - **`TermLayer`** (new `web/src/components/reader/term-layer.tsx`) is mounted beside `AnnotationLayer` and delegates over static markup.
+    - It handles hover rest and leave, click, tap, Enter and Space, Tab out, and Esc.
+    - Capture-phase pointerdown and Esc compose with annotations: never two floating things open at once.
+    - It places each window and calls S8's √ helper on every window it opens.
+  - **The 3-line `annotations.tsx` `onKey` touch**, and nothing else there.
+  - **`.ra-term:has(> mark.an-m)`**, since paint puts the mark inside the `<a>`.
+  - **The paper appendix** (`.ra-pgl`, after the quiz, before the sources, with no Back link).
+  - **Mark-ups only where the author wrote a link.** A chapter with no terms has no section.
+- **The trigger, located.** The phone sheet is `position: fixed` to the viewport bottom (F4). R1 §5 keeps every window inside the chapter's static markup and never moves a React-rendered node. But the chapter renders inside `main.rd-page` (`reader-frame.tsx` L591), which is the `rd` size container (`reader.css` L352–356, `container: rd / inline-size`).
+  - The reader's own CSS records that `container-type` makes that box the **containing block of fixed descendants** (`reader.css` L20–26). The annotation layer therefore portals its fixed bottom slot outside `.rd-page` (`reader.css` L1488–1493; `annotations.tsx` `createPortal`).
+  - **First step:** confirm in the browser whether a fixed `.ra-sheet` inside `.rd-page` pins to the viewport.
+  - **If it does not,** choose the placement and record it in `## Decisions`. The candidates are: a client-held portal outside `.rd-page`, with no definitions shipped twice and no MathML on the client (R1 rejected both); a frame-level server slot outside `.rd-page`, which touches `reader-frame.tsx` / `reader-page.tsx`, the P36-1s merge risk; or `position: sticky` from the article's end.
+  - The window's form switch at 40rem can stay a container query on `rd`.
+- **Verification:** live, per *Pins for every build slice*.
+  - Every *Terms* state of `## Build` *Pages and states*, and a legend term on *Formulas*.
+  - The phone sheet at 390 and 320 through the harness, and the cross-page way back (F33).
+  - Dark, Korean (가나다 order), and paper.
+  - *Highlight meets term* needs a signed-in member (see *Signed out*).
+- **Tests (core):** new `web/tests/native-terms.test.ts`: `planTerms` numbering in render order across text and legends, and an unknown id left as plain text.
+- **Set:**
+  - `web/src/lib/native/render.tsx`, new `web/src/lib/native/terms.ts`, `web/src/lib/native/links.ts` (the `term` kind, if resolved there);
+  - new `web/src/components/reader/term-layer.tsx`, `web/src/components/reader/reader-article.tsx` (the mount);
+  - `web/src/components/reader/annotations.tsx` (the 3-line touch only);
+  - `web/src/components/reader/reader-frame.tsx` and `reader-page.tsx` (only if the chosen sheet placement needs a slot outside `.rd-page`);
+  - a new `web/src/components/reader/print-glossary.tsx` (only if the paper appendix is its own component, as `PrintQuiz` is);
+  - `web/src/app/reader.css` (or S8's `reader-aids.css`), `web/src/app/kb-print.css`;
+  - `web/src/content/chapter.ts`;
+  - `tests/fixtures/book/reading-aids.{en,ko}.md`, `scripts/publish_fixture_book.py` (only if the fixture must grow);
+  - new `web/tests/native-terms.test.ts`.
+- **Validation:**
+  - `pnpm --dir web typecheck`;
+  - `pnpm --dir web lint`;
+  - `pnpm --dir web exec vitest run tests/native-terms.test.ts tests/native-render.test.ts tests/reader-anchor.test.ts tests/reader-chrome.test.ts`;
+  - the standalone build in a scratch copy;
+  - the live sweep, with the instrument named.
+- **Risk:** `high`. The DECOMP2 plan said low, and this is refined from the code. Trigger: **open design**: the phone sheet's placement inside the `rd` container is not pinned (above). The rest of R1 §5 is pinned.
+- **spends money:** no.
+- **Depends on:** `P39-hk.S8`. Both edit `render.tsx`, the reader CSS and `chapter.ts`; the windows carry inline math; and S9 calls S8's √ helper.
+
+## P39-hk.S10
+
+- **Goal:** the skill's §4 grammar text for the new forms (R1 *Build cut impact* 4; Notes from R1 and S3).
+  - **§4.4** gains the glossary block, with the convention `` ```glossary #glossary ``, after the quiz and before `## Sources`, and the about-40-word `short`.
+  - **§4.4** also gains `term:` links: explicit, never auto-detected, and when to use a glossary entry versus a `DEFINITION` callout.
+  - **§4.4** also gains inline `` $`…`$ ``, with its no-escape rule (a space before a literal `$`), and the `formula` block (`tex`, `alt`, `reading`, `where`). The `formula-legend` rule goes beside it: every symbol, in order, in the critic's hands.
+  - **R1's gotchas:** TeX in YAML in a block scalar or single quotes; `\lvert` for `|` in a table cell.
+  - **The refusal codes:** §5's 422 bullet (*Common ones*) gains `ref-missing-term`, `math-syntax`, `math-command`, `formula-legend`, `translation-term-ids` and `translation-math`.
+  - **Two "until then" clauses** are replaced with the forms: S3's in §4 *Formulas that look good*, and B5's *A bare symbol string*.
+  - **§4.2's list** gains the glossary: In one paragraph, the signed sections, Next steps, Quiz (when kept), Glossary, Sources.
+  - **The outline** lists the reader's terms, and every definition and formula traces to evidence.
+  - **The translation step** keeps every term id, every `` $`…`$ `` and every `tex` and `sym` byte for byte. It translates terms, aliases, definitions, readings, legend meanings and `alt`. Formula words stay English.
+  - **The critic (B5)** flags jargon left unlinked on first use.
+  - The inline form carries no written alt, built on OQ7's recommendation.
+- **Set:**
+  - `plugin/skills/explain/SKILL.md`, `.agents/skills/explain/SKILL.md`, `web/public/SKILL.md`;
+  - `plugin/agents/explain-critic.md` (regenerated only);
+  - `works/phases/active/P39-hk/topics/skill-headings.md` (only on a heading change);
+  - `works/phases/active/P39-hk/package/**` and `handoff-explain.md` (only if `cites.py` finds a heading they cite moved).
+- **Validation:** the skill-slice checks (*Pins for every skill slice*), including `cites.py` missing=0. Nothing of `web/` beyond `web/public/SKILL.md`.
+- **Risk:** `low`, no trigger: R1 and the S3 note pin every rule, and the text documents a settled grammar.
+- **spends money:** no.
+- **Depends on:** `P39-hk.S6`, `P39-hk.S7` (the grammar it documents).
+- **Runs beside:** `P39-hk.S8` (declared). Its set is disjoint from S8's and S9's, it shares no generated file and no numbered sequence, and its checks are Python-only. S8 holds the ports, `web/node_modules` and Chrome.
+
+## P39-hk.S11
+
+- **Goal:** release plugin **0.10.0**, without pushing.
+  - **`plugin/.claude-plugin/plugin.json`**: version `0.10.0`; its description goes from v86 to v92.
+  - **`.claude-plugin/marketplace.json`**: the description.
+  - **`plugin/README.md`**: the 0.10.0 release notes (codebase-only from the phases' records, one writer plus one critic, the suggested reader and shape, the research-phase offer, the glossary, `term:` links, typeset formulas, the v92 handshake). They carry the stored-sources scan checklist line (*Build inventory*). L15 and L46 move to v92.
+  - **`plugin/skills/setup/SKILL.md`**: `plugin_version` 0.9.1 → 0.10.0 (L342, L356); L170 and L461 move to v92.
+  - **The front door** (`plugin/skills/explain/SKILL.md` L3, L25, step 2 L283–L294, with its copies): `workspace_version` **92 or later** and a create-phase `## The explain route` listing `**phases**`; the two refusal texts name v92.
+  - **Root `README.md` L37** and the KB template page `plugin/templates/kb/docs/getting-started/{{KB_DATE}}-how-your-knowledge-base-works.md` L71.
+  - **`web/src/content/marketing/content.ts` L251 and L261:** the skill's line count, recounted after S10's and this slice's own edits.
+  - **The commit message** carries the release notes; the orchestrator writes it.
+  - **No push** (OQ8: bootstrap v92 first).
+- **Set:**
+  - `plugin/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`;
+  - `plugin/README.md`, `plugin/skills/setup/SKILL.md`;
+  - `plugin/skills/explain/SKILL.md`, `.agents/skills/explain/SKILL.md`, `web/public/SKILL.md`;
+  - `plugin/agents/explain-critic.md` (regenerated, only if Part B changes);
+  - `README.md`;
+  - `plugin/templates/kb/docs/getting-started/{{KB_DATE}}-how-your-knowledge-base-works.md`;
+  - `web/src/content/marketing/content.ts`.
+- **Validation:**
+  - the skill-slice checks;
+  - `pnpm --dir web typecheck`;
+  - `wc -l plugin/skills/explain/SKILL.md` equals `content.ts`'s count;
+  - `grep -rn "v86" plugin README.md .claude-plugin web/public/SKILL.md` shows none left of the handshake;
+  - the release gate: `uv run pytest -q`, `pnpm --dir web lint`, `pnpm --dir web test`, and `pnpm --dir web build` (in the worktree's own `web/`, with no worktree dev server left running).
+- **Risk:** `low`, no trigger: located version strings, copy and a count, all named by the S4 and S5 notes.
+- **spends money:** no.
+- **Depends on:** `P39-hk.S6`, `P39-hk.S7`, `P39-hk.S8`, `P39-hk.S9`, `P39-hk.S10` (it ships them all).
