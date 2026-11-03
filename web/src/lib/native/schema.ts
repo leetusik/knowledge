@@ -21,6 +21,11 @@ const FIGURES_ITEMS = [2, 3] as const;
 const QUIZ_ITEMS = [1, 20] as const;
 const QUIZ_OPTIONS = [2, 6] as const;
 const CLOZE_BLANKS = [1, 5] as const;
+const GLOSSARY_TERMS = [1, 100] as const;
+/** When `aliases` is given; absent (or null) is none. */
+const GLOSSARY_ALIASES = [1, 8] as const;
+/** Per chapter; counted by the parser. */
+export const MAX_GLOSSARIES = 1;
 const MAX_NODES = 60;
 const MAX_EDGES = 100;
 const MAX_LANES = 12;
@@ -33,6 +38,7 @@ export const TYPED_BLOCKS = [
   "svg",
   "quiz",
   "sources",
+  "glossary",
 ] as const;
 export const CALLOUT_TYPES = [
   "NOTE",
@@ -1251,6 +1257,64 @@ function checkSources(data: YamlValue, cx: BlockContext): Out {
   return { items };
 }
 
+// --- glossary (P39-hk.R1) -----------------------------------------------------------------
+
+/**
+ * The terms a chapter explains. Term ids are their own namespace, scoped to the block
+ * (like a quiz item's option ids): they never join the document namespace, and
+ * `term:<id>` links resolve against them (the parser). The definitions are *(md)*; a
+ * `term:` link inside one is refused by the parser.
+ */
+function checkGlossary(data: YamlValue, cx: BlockContext): Out {
+  cx.mapping([], data, ["terms"]);
+  const seen = new Set<string>();
+  const terms = (
+    cx.seq(["terms"], get(data, "terms"), {
+      lo: GLOSSARY_TERMS[0],
+      hi: GLOSSARY_TERMS[1],
+      what: "terms",
+    }) ?? []
+  ).map((item, i): Out | null => {
+    const p = ["terms", i];
+    if (!isDict(item)) {
+      cx.err(p, "field-type", "must be a mapping");
+      return null;
+    }
+    cx.mapping(p, item, ["id", "term", "short"], ["aliases", "long"]);
+    const tid = cx.localId([...p, "id"], get(item, "id"));
+    if (tid !== null) {
+      if (seen.has(tid))
+        cx.err(
+          [...p, "id"],
+          "id-duplicate",
+          `duplicate term id ${pyRepr(tid)}`,
+        );
+      seen.add(tid);
+    }
+    let aliases: (string | null)[] | null = null;
+    const aliasesIn = opt(item, "aliases");
+    if (aliasesIn !== null) {
+      const list = cx.seq([...p, "aliases"], aliasesIn, {
+        lo: GLOSSARY_ALIASES[0],
+        hi: GLOSSARY_ALIASES[1],
+        what: "aliases",
+      });
+      aliases =
+        list === null
+          ? null
+          : list.map((a, j) => cx.text([...p, "aliases", j], a));
+    }
+    return {
+      id: tid,
+      term: cx.text([...p, "term"], get(item, "term")),
+      aliases,
+      short: cx.md([...p, "short"], get(item, "short")),
+      long: cx.md([...p, "long"], opt(item, "long"), false),
+    };
+  });
+  return { terms };
+}
+
 export const CHECKS: Record<
   string,
   (data: YamlValue, cx: BlockContext) => Out | null
@@ -1261,4 +1325,5 @@ export const CHECKS: Record<
   svg: checkSvg,
   quiz: checkQuiz,
   sources: checkSources,
+  glossary: checkGlossary,
 };

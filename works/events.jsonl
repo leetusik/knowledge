@@ -1732,3 +1732,6 @@
 {"ts": "2026-11-03T10:00:14+09:00", "type": "slice_created", "phase": "P39-hk", "slice": "P39-hk.S11"}
 {"ts": "2026-11-03T10:07:17+09:00", "type": "executor_dispatched", "slice": "P39-hk.DECOMP2", "phase": "P39-hk", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-03T10:07:17+09:00", "type": "slice_status_changed", "slice": "P39-hk.DECOMP2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-03T10:07:55+09:00", "type": "slice_status_changed", "slice": "P39-hk.S6", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-03T10:22:07+09:00", "type": "executor_dispatched", "slice": "P39-hk.S6", "phase": "P39-hk", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-03T10:22:07+09:00", "type": "slice_status_changed", "slice": "P39-hk.S6", "old_status": "in_progress", "new_status": "done"}

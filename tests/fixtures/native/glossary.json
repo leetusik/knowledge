@@ -1,0 +1,398 @@
+{
+  "blocks": [
+    {
+      "content": [
+        {
+          "text": "Rate limits",
+          "type": "text"
+        }
+      ],
+      "id": "rate-limit",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "content": [
+        {
+          "text": "A ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "token bucket",
+              "type": "text"
+            }
+          ],
+          "href": "term:token-bucket",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": " refills at a fixed rate, and each request takes a token.\nWhen it is empty, the ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "text": "rate limit",
+                  "type": "text"
+                }
+              ],
+              "type": "em"
+            }
+          ],
+          "href": "term:rate-limit",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": " answers ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "429",
+              "type": "text"
+            }
+          ],
+          "href": "term:http-429",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": ".\nThe ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "glossary",
+              "type": "text"
+            }
+          ],
+          "href": "#glossary",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": " lists every term; ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "this section",
+              "type": "text"
+            }
+          ],
+          "href": "#rate-limit",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": " is a heading id, not a term id.",
+          "type": "text"
+        }
+      ],
+      "id": null,
+      "type": "paragraph"
+    },
+    {
+      "id": null,
+      "items": [
+        {
+          "blocks": [
+            {
+              "content": [
+                {
+                  "text": "A ",
+                  "type": "text"
+                },
+                {
+                  "children": [
+                    {
+                      "text": "burst",
+                      "type": "text"
+                    }
+                  ],
+                  "href": "term:burst",
+                  "title": null,
+                  "type": "link"
+                },
+                {
+                  "text": " spends the tokens saved up while the client was idle.",
+                  "type": "text"
+                }
+              ],
+              "id": null,
+              "type": "paragraph"
+            }
+          ]
+        }
+      ],
+      "ordered": false,
+      "start": null,
+      "tight": true,
+      "type": "list"
+    },
+    {
+      "blocks": [
+        {
+          "content": [
+            {
+              "text": "It smooths traffic without a queue.",
+              "type": "text"
+            }
+          ],
+          "id": null,
+          "type": "paragraph"
+        }
+      ],
+      "collapsed": false,
+      "id": null,
+      "kind": "NOTE",
+      "title": [
+        {
+          "text": "Why a ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "bucket",
+              "type": "text"
+            }
+          ],
+          "href": "term:token-bucket",
+          "title": null,
+          "type": "link"
+        }
+      ],
+      "type": "callout"
+    },
+    {
+      "alt": "A bucket with tokens dripping in at the top and requests drawing them out at the bottom.",
+      "caption": [
+        {
+          "text": "A ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "token bucket",
+              "type": "text"
+            }
+          ],
+          "href": "term:token-bucket",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": " refilling while requests drain it.",
+          "type": "text"
+        }
+      ],
+      "credit": null,
+      "id": "bucket",
+      "src": "bucket.png",
+      "type": "figure",
+      "width": null
+    },
+    {
+      "id": "check",
+      "items": [
+        {
+          "answer": [
+            {
+              "text": "429, too many requests.",
+              "type": "text"
+            }
+          ],
+          "explain": [
+            {
+              "text": "The ",
+              "type": "text"
+            },
+            {
+              "children": [
+                {
+                  "text": "rate limit",
+                  "type": "text"
+                }
+              ],
+              "href": "term:rate-limit",
+              "title": null,
+              "type": "link"
+            },
+            {
+              "text": " holds until a token drips in.",
+              "type": "text"
+            }
+          ],
+          "id": "refill",
+          "prompt": [
+            {
+              "text": "What does an empty ",
+              "type": "text"
+            },
+            {
+              "children": [
+                {
+                  "text": "token bucket",
+                  "type": "text"
+                }
+              ],
+              "href": "term:token-bucket",
+              "title": null,
+              "type": "link"
+            },
+            {
+              "text": " answer?",
+              "type": "text"
+            }
+          ],
+          "type": "recall"
+        }
+      ],
+      "title": null,
+      "type": "quiz"
+    },
+    {
+      "id": "glossary",
+      "terms": [
+        {
+          "aliases": [
+            "bucket"
+          ],
+          "id": "token-bucket",
+          "long": [
+            {
+              "text": "The bucket holds at most its ",
+              "type": "text"
+            },
+            {
+              "children": [
+                {
+                  "text": "capacity",
+                  "type": "text"
+                }
+              ],
+              "type": "em"
+            },
+            {
+              "text": ", so a long idle spell saves up only that many requests.",
+              "type": "text"
+            }
+          ],
+          "short": [
+            {
+              "text": "A counter of tokens that refills at a fixed rate; each request takes one.",
+              "type": "text"
+            }
+          ],
+          "term": "Token bucket"
+        },
+        {
+          "aliases": null,
+          "id": "rate-limit",
+          "long": null,
+          "short": [
+            {
+              "text": "The most requests a client may send in a window of time.",
+              "type": "text"
+            }
+          ],
+          "term": "Rate limit"
+        },
+        {
+          "aliases": [
+            "Too Many Requests",
+            "HTTP 429"
+          ],
+          "id": "http-429",
+          "long": null,
+          "short": [
+            {
+              "text": "The status a server sends when a client is over its ",
+              "type": "text"
+            },
+            {
+              "text": "rate limit",
+              "type": "code"
+            },
+            {
+              "text": ".",
+              "type": "text"
+            }
+          ],
+          "term": "429"
+        },
+        {
+          "aliases": null,
+          "id": "burst",
+          "long": null,
+          "short": [
+            {
+              "text": "Several requests at once, paid for with saved tokens.",
+              "type": "text"
+            }
+          ],
+          "term": "Burst"
+        }
+      ],
+      "type": "glossary"
+    },
+    {
+      "content": [
+        {
+          "text": "Sources",
+          "type": "text"
+        }
+      ],
+      "id": "sources-list",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "id": null,
+      "items": [
+        {
+          "blocks": [
+            {
+              "content": [
+                {
+                  "children": [
+                    {
+                      "text": "RFC 6585",
+                      "type": "text"
+                    }
+                  ],
+                  "href": "https://www.rfc-editor.org/rfc/rfc6585",
+                  "title": null,
+                  "type": "link"
+                },
+                {
+                  "text": ", section 4.",
+                  "type": "text"
+                }
+              ],
+              "id": null,
+              "type": "paragraph"
+            }
+          ]
+        }
+      ],
+      "ordered": false,
+      "start": null,
+      "tight": true,
+      "type": "list"
+    }
+  ],
+  "summary": null,
+  "syntax": 1
+}

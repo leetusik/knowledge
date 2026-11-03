@@ -51,20 +51,28 @@ export type Block =
   | TypedBlock;
 
 /**
- * A typed block (`figure`, `figures`, `diagram`, `svg`, `quiz`, `sources`):
- * `type`, `id`, plus its schema's fields (README → "The tree"). The renderer
- * reads them defensively, because a refused field is `null`.
+ * A typed block (`figure`, `figures`, `diagram`, `svg`, `quiz`, `sources`,
+ * `glossary`): `type`, `id`, plus its schema's fields (README → "The tree").
+ * The renderer reads them defensively, because a refused field is `null`.
  */
 export interface TypedBlock {
   type:
-    | "figure"
-    | "figures"
-    | "diagram"
-    | "svg"
-    | "quiz"
-    | "sources";
+    "figure" | "figures" | "diagram" | "svg" | "quiz" | "sources" | "glossary";
   id: string | null;
   [field: string]: unknown;
+}
+
+/**
+ * One entry of a `glossary` block's `terms` (README → "The tree"). Its `id` is
+ * scoped to the block, never a document id: `[x](term:<id>)` links to it. Each
+ * field is `null` where it was refused (`aliases` and `long` also when absent).
+ */
+export interface GlossaryTerm {
+  id: string | null;
+  term: string | null;
+  aliases: (string | null)[] | null;
+  short: Inline[] | null;
+  long: Inline[] | null;
 }
 
 export interface Tree {

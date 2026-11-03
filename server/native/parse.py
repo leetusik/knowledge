@@ -7,8 +7,11 @@ stripped or repaired: what is outside the contract is rejected.
 
 The grammar is CommonMark + GFM (tables, strikethrough, autolinks) plus three
 extensions: GFM-alert callouts, typed fenced YAML blocks and trailing ``{#id}``
-heading ids. The tree shape is documented in ``server/native/README.md``; S12's
-TS parser reproduces it from the shared fixtures in ``tests/fixtures/native/``.
+heading ids. ``#id`` links resolve against the document namespace and
+``term:<id>`` links against the glossary's own term ids, both after the walk,
+so a glossary may follow its links. The tree shape is documented in
+``server/native/README.md``; S12's TS parser reproduces it from the shared
+fixtures in ``tests/fixtures/native/``.
 """
 from __future__ import annotations
 
@@ -105,6 +108,10 @@ class _Parser:
         self.ids = IdRegistry(reserved_ids)
         self.refs: list = []
         self.id_refs: list = []  # (id, line, block)
+        self.term_refs: list = []  # (term id, line, block): resolved after the walk
+        self.term_ids: set = set()  # the glossary's term ids, a namespace of their own
+        self.glossaries = 0
+        self.in_glossary = False  # while a glossary's definitions are parsed
         self.pending: list = []  # (block, kind, slug, body_line, token_map, is_setext)
         self.edits: dict = {}
         self.assigned: list = []
@@ -152,6 +159,10 @@ class _Parser:
         for target, line, block in self.id_refs:
             if target not in self.ids:
                 self.report(line, "ref-missing-id", f"#{target} names no id in this chapter",
+                            **({"block": block} if block else {}))
+        for target, line, block in self.term_refs:
+            if target not in self.term_ids:
+                self.report(line, "ref-missing-term", f"term:{target} names no term in this chapter's glossary",
                             **({"block": block} if block else {}))
         self.errors.raise_if_any()
         tree = {"syntax": SYNTAX_VERSION, "summary": summary, "blocks": blocks}
@@ -325,6 +336,11 @@ class _Parser:
             self.claim_authored(block, raw_id, line)
         else:
             self.pending.append((block, kind, None, node.map, False))
+        if kind == "glossary":
+            self.glossaries += 1
+            if self.glossaries > schema.MAX_GLOSSARIES:
+                self.report(line, "limit", "a chapter holds at most one glossary block",
+                            **({"block": raw_id} if raw_id else {}))
         try:
             data, ylines = load_yaml(node.content)
         except YamlError as exc:
@@ -340,7 +356,13 @@ class _Parser:
             self.report(line + 1, "field-type", f"a {kind} block's body must be a YAML mapping",
                         **({"block": raw_id} if raw_id else {}))
             return block
-        block.update(schema.CHECKS[kind](data, cx))
+        self.in_glossary = kind == "glossary"
+        try:
+            block.update(schema.CHECKS[kind](data, cx))
+        finally:
+            self.in_glossary = False
+        if kind == "glossary":
+            self.term_ids.update(t["id"] for t in block["terms"] if t and t["id"])
         return block
 
     def table(self, node) -> dict:
@@ -454,7 +476,14 @@ class _Parser:
         except RefError as exc:
             self.report(line, exc.code, exc.message, **extra)
             return
-        if ref["kind"] == "id":
+        if ref["kind"] == "term":
+            if self.in_glossary:
+                # A definition is runs of text (and, from S7, math): a term link there
+                # would open a term window inside a term window.
+                self.report(line, "ref-scheme", f"a glossary definition cannot link a term ({href!r})", **extra)
+                return
+            self.term_refs.append((ref["id"], line, block))
+        elif ref["kind"] == "id":
             self.id_refs.append((ref["id"], line, block))
         self.refs.append({**ref, "href": href, "line": line, "image": image})
 

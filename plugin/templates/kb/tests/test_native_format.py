@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from server.native import NativeFormatError, format_sections, parse_chapter, sections, validate_svg
+from server.native import NativeFormatError, format_sections, parse_chapter, search_text, sections, validate_svg
 from server.native.fixtures_util import format_errors
 
 FIXTURES = Path(__file__).parent / "fixtures" / "native"
@@ -44,6 +44,18 @@ def test_fixture_directory_is_complete():
         has_err = src.with_suffix(".err").exists()
         has_ok = src.with_suffix(".json").exists() and src.with_suffix(".txt").exists()
         assert has_err != has_ok, f"{src.name} needs either .err or both .json and .txt"
+
+
+def test_glossary_is_searchable():
+    # Search finds a chapter by its terms, aliases and both definitions (P39-hk R1 §1),
+    # though the annotation projection (`glossary.txt`) holds none of them.
+    text = search_text(parse_chapter((FIXTURES / "glossary.md").read_text(encoding="utf-8")).tree)
+    lines = text.split("\n")
+    for want in ("Token bucket", "bucket", "Too Many Requests", "HTTP 429",
+                 "A counter of tokens that refills at a fixed rate; each request takes one.",
+                 "The bucket holds at most its capacity, so a long idle spell saves up only that many requests.",
+                 "The status a server sends when a client is over its rate limit."):
+        assert want in lines
 
 
 def test_body_limit():

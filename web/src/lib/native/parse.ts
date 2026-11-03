@@ -16,6 +16,9 @@
  *    then parsed as inline Markdown;
  *  - a fence whose language is a typed-block name is a typed block with a YAML
  *    body, checked by `schema.ts`.
+ * `#id` links resolve against the document namespace and `term:<id>` links
+ * against the glossary's own term ids, both after the walk, so a glossary may
+ * follow its links.
  */
 import type {
   Blockquote,
@@ -45,6 +48,7 @@ import {
   CALLOUT_TYPES,
   CHECKS,
   MAX_BODY_BYTES,
+  MAX_GLOSSARIES,
   MAX_TYPED_BLOCKS,
   TYPED_BLOCKS,
 } from "./schema";
@@ -133,6 +137,12 @@ class Parser {
   readonly ids: IdRegistry;
   readonly refs: RefRecord[] = [];
   readonly idRefs: [string, number, string | null][] = [];
+  /** `term:` refs, resolved after the walk against the glossary's own term ids. */
+  readonly termRefs: [string, number, string | null][] = [];
+  readonly termIds = new Set<string>();
+  glossaries = 0;
+  /** True while a glossary's definitions are parsed. */
+  inGlossary = false;
   readonly pending: Pending[] = [];
   headerLines = 0;
   bodyLines: string[] = [];
@@ -248,6 +258,16 @@ class Parser {
             line,
             "ref-missing-id",
             `#${target} names no id in this chapter`,
+            { block },
+          );
+        }
+      }
+      for (const [target, line, block] of this.termRefs) {
+        if (!this.termIds.has(target)) {
+          this.report(
+            line,
+            "ref-missing-term",
+            `term:${target} names no term in this chapter's glossary`,
             { block },
           );
         }
@@ -749,6 +769,16 @@ class Parser {
     const block: TypedBlock = { type: kind as TypedBlock["type"], id: null };
     if (rawId !== null) this.claimAuthored(block, rawId, line);
     else this.pending.push({ block, kind, slug: null });
+    if (kind === "glossary") {
+      this.glossaries += 1;
+      if (this.glossaries > MAX_GLOSSARIES)
+        this.report(
+          line,
+          "limit",
+          "a chapter holds at most one glossary block",
+          { block: rawId },
+        );
+    }
     const yamlText = node.value === "" ? "" : `${node.value}\n`;
     let data;
     let ylines: Map<string, number>;
@@ -778,7 +808,16 @@ class Parser {
       );
       return block as Block;
     }
-    Object.assign(block, CHECKS[kind](data, cx));
+    this.inGlossary = kind === "glossary";
+    try {
+      Object.assign(block, CHECKS[kind](data, cx));
+    } finally {
+      this.inGlossary = false;
+    }
+    if (kind === "glossary" && Array.isArray(block.terms)) {
+      for (const term of block.terms as ({ id: string | null } | null)[])
+        if (term && term.id) this.termIds.add(term.id);
+    }
     return block as Block;
   }
 
@@ -1002,7 +1041,20 @@ class Parser {
       }
       throw exc;
     }
-    if (ref.kind === "id") this.idRefs.push([ref.id, line, block]);
+    if (ref.kind === "term") {
+      if (this.inGlossary) {
+        // A definition is runs of text (and, from S7, math): a term link there
+        // would open a term window inside a term window.
+        this.report(
+          line,
+          "ref-scheme",
+          `a glossary definition cannot link a term (${pyRepr(href)})`,
+          { block },
+        );
+        return;
+      }
+      this.termRefs.push([ref.id, line, block]);
+    } else if (ref.kind === "id") this.idRefs.push([ref.id, line, block]);
     this.refs.push({ ref, href, line, image });
   }
 }

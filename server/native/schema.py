@@ -1,5 +1,6 @@
 """Typed-block schemas and limits (P29 *Figure*, *Figure row*, *Diagram*, *Custom
-SVG*, *Quiz*, *Sources*, plus the signed rounds' additive details).
+SVG*, *Quiz*, *Sources*, plus the signed rounds' additive details, and P39-hk's
+*Glossary*).
 
 Each ``check_<type>`` takes the block's loaded YAML and a ``BlockContext`` and
 returns the normalized block fields (every schema field present, ``None`` when
@@ -25,6 +26,9 @@ FIGURES_ITEMS = (2, 3)
 QUIZ_ITEMS = (1, 20)
 QUIZ_OPTIONS = (2, 6)
 CLOZE_BLANKS = (1, 5)
+GLOSSARY_TERMS = (1, 100)
+GLOSSARY_ALIASES = (1, 8)  # when ``aliases`` is given; absent (or null) is none
+MAX_GLOSSARIES = 1  # per chapter; counted by the parser
 # Diagram limits (P29: 60 nodes, 100 edges, 12 lanes, 200 data points), counted as:
 #   nodes  - flow/state ``nodes``; the total of a stack's layer ``items``
 #   edges  - flow/state ``edges``; sequence ``steps``
@@ -36,7 +40,7 @@ MAX_EDGES = 100
 MAX_LANES = 12
 MAX_POINTS = 200
 
-TYPED_BLOCKS = ("figure", "figures", "diagram", "svg", "quiz", "sources")
+TYPED_BLOCKS = ("figure", "figures", "diagram", "svg", "quiz", "sources", "glossary")
 CALLOUT_TYPES = ("NOTE", "IMPORTANT", "WARNING", "CAUTION", "SKIP", "DEFINITION")
 DIAGRAM_KINDS = ("flow", "state", "sequence", "stack", "timeline", "chart")
 SHAPES = ("box", "pill", "store", "entity")
@@ -781,6 +785,46 @@ def check_sources(data, cx: BlockContext) -> dict:
     return {"items": items}
 
 
+# --- glossary (P39-hk.R1) ---------------------------------------------------------
+
+
+def check_glossary(data, cx: BlockContext) -> dict:
+    """The terms a chapter explains. Term ids are their own namespace, scoped to
+    the block (like a quiz item's option ids): they never join the document
+    namespace, and ``term:<id>`` links resolve against them (the parser). The
+    definitions are *(md)*; a ``term:`` link inside one is refused by the parser."""
+    cx.mapping((), data, required=("terms",))
+    seen: set[str] = set()
+    terms = []
+    for i, item in enumerate(cx.seq(("terms",), _get(data, "terms"), lo=GLOSSARY_TERMS[0],
+                                    hi=GLOSSARY_TERMS[1], what="terms") or []):
+        p = ("terms", i)
+        if not isinstance(item, dict):
+            cx.err(p, "field-type", "must be a mapping")
+            terms.append(None)
+            continue
+        cx.mapping(p, item, required=("id", "term", "short"), optional=("aliases", "long"))
+        tid = cx.local_id(p + ("id",), _get(item, "id"))
+        if tid is not None:
+            if tid in seen:
+                cx.err(p + ("id",), "id-duplicate", f"duplicate term id {tid!r}")
+            seen.add(tid)
+        aliases = _opt(item, "aliases")
+        if aliases is not None:
+            aliases = cx.seq(p + ("aliases",), aliases, lo=GLOSSARY_ALIASES[0], hi=GLOSSARY_ALIASES[1],
+                             what="aliases")
+            if aliases is not None:
+                aliases = [cx.text(p + ("aliases", j), a) for j, a in enumerate(aliases)]
+        terms.append({
+            "id": tid,
+            "term": cx.text(p + ("term",), _get(item, "term")),
+            "aliases": aliases,
+            "short": cx.md(p + ("short",), _get(item, "short")),
+            "long": cx.md(p + ("long",), _opt(item, "long"), required=False),
+        })
+    return {"terms": terms}
+
+
 CHECKS = {
     "figure": check_figure,
     "figures": check_figures,
@@ -788,4 +832,5 @@ CHECKS = {
     "svg": check_svg,
     "quiz": check_quiz,
     "sources": check_sources,
+    "glossary": check_glossary,
 }

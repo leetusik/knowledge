@@ -1,9 +1,12 @@
 """Reference syntax (P29 *References*). Syntax only: S5 resolves ``asset:``,
-``chapter:`` and ``doc:`` against storage; the parser itself resolves ``#id``.
+``chapter:`` and ``doc:`` against storage; the parser itself resolves ``#id``
+and ``term:``.
 
 Every link or image URL must be one of:
 
 * ``#<id>`` - in-chapter;
+* ``term:<id>`` - a term of the chapter's glossary (links only); the parser
+  resolves it against the glossary's own term ids, never the document ids;
 * ``http://`` / ``https://`` with a host - external (links only: an external
   image is rejected);
 * ``asset:<name>`` - an image only (a link to an asset is rejected);
@@ -59,6 +62,13 @@ def parse_ref(href: str, *, image: bool = False) -> dict:
         if not is_valid_id(target):
             raise RefError("ref-malformed", f"malformed in-chapter reference {href!r}")
         return {"kind": "id", "id": target}
+    if href.startswith("term:"):
+        if image:
+            raise RefError("ref-scheme", f"an image must be asset:<name>, not {href!r}")
+        target = href[len("term:"):]
+        if not is_valid_id(target):
+            raise RefError("ref-malformed", f"malformed term reference {href!r}")
+        return {"kind": "term", "id": target}
     if href.startswith("asset:"):
         name = href[len("asset:"):]
         if not is_asset_name(name):
@@ -115,4 +125,4 @@ def parse_ref(href: str, *, image: bool = False) -> dict:
         return {"kind": "external", "url": href}
     if image:
         raise RefError("ref-scheme", f"an image must be asset:<name>, not {href!r}")
-    raise RefError("ref-scheme", f"links must be #id, http(s):, chapter: or doc:, not {href!r}")
+    raise RefError("ref-scheme", f"links must be #id, term:, http(s):, chapter: or doc:, not {href!r}")

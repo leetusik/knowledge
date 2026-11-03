@@ -16,12 +16,13 @@ The passage containers, in document order, are:
   is an empty container);
 * a code block: its text verbatim (lines joined by ``"\\n"``, no final newline).
 
-Headings and every typed block's text (captions, titles, labels, quiz text) are
-``head``/``cap`` containers: they take a note or a bookmark, never a highlight,
+Headings and every typed block's text (captions, titles, labels, quiz text, a
+glossary's terms and definitions) are ``head``/``cap`` containers: they take a note or a bookmark, never a highlight,
 so they contribute nothing. A container's text is the concatenation of its
 inline nodes: ``text`` and ``code`` verbatim (a soft line break is already the
 ``"\\n"`` inside a text node), ``break`` as ``"\\n"``, an image as nothing, and
-emphasis, strong, strikethrough and links as their children's text. No
+emphasis, strong, strikethrough and links (``term:`` links too) as their
+children's text. No
 whitespace is collapsed and nothing is normalized. Offsets count Unicode code
 points of that text.
 """
@@ -98,7 +99,8 @@ def format_sections(secs: list[dict]) -> str:
 def search_text(tree: dict) -> str:
     """The FTS/embedding text: prose, plus figure captions and alt text, diagram
     titles, labels and captions, SVG labels, quiz prompts, options and
-    explanations (never the answer keys), and source titles."""
+    explanations (never the answer keys), source titles, and each glossary
+    term with its aliases and both definitions."""
     parts: list[str] = []
     if tree.get("summary"):
         parts.append(tree["summary"])
@@ -146,6 +148,11 @@ def _search_block(block: dict) -> list[str]:
         return out
     if t == "sources":
         return [item["title"] for item in block["items"]]
+    if t == "glossary":
+        out = []
+        for term in block["terms"]:
+            out += [term["term"]] + list(term["aliases"] or []) + [_md(term["short"]), _md(term["long"])]
+        return out
     return _containers(block)
 
 
