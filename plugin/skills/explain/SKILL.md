@@ -1092,27 +1092,50 @@ with the "In one paragraph" box (§4's prose rules), before the first `##` headi
 `body.md` and `trace.md` change only with Write (a new file) and Edit, never through a
 shell command or a script; the trace is appended to, never rewritten whole.
 
-**The prose rules**, few enough to check each paragraph against:
+**The prose rules**, few enough to check each paragraph against. The chapter is **easy
+reading** for the reader §1 *The reader* named (the brief's `reader`, never a stock one):
+nothing in it should take a second read to follow.
 
 - **"In one paragraph" first:** the body opens, before its first `##`, with
   `> [!IMPORTANT] In one paragraph`: at most 120 words, in plain words, on what the reader
   will be able to do afterwards and the one idea it rests on. It is §4.4's key-idea box,
   no new grammar, and its checkable sentences trace like any other (B9).
-- **Plain sentences for the stated reader:** everyday words over technical ones, and one
-  new idea a sentence.
+- **Visuals first:** wherever a picture explains better than a paragraph, draw it, and let
+  the prose say what to look at. A flow, a sequence of calls, a structure, a state
+  machine, a before and after, numbers to compare or numbers over time: a `diagram` (its
+  kinds, `chart` included), a `figures` row, a `figure` or an `svg` block (§4.4), or a
+  table. Plan them in D6 (each idea that needs one, §3.10) and draw every one planned. A
+  diagram's nodes, edges and numbers trace like sentences (B9); a picture that only
+  repeats the text is not worth its place.
+- **Short paragraphs, no dense stretch.** The bound, for the writer and the critic alike:
+  **a paragraph is at most 80 words, and at most 3 paragraphs run in a row without a
+  break**, a break being a visual, a list, a table, a code block, a callout or a display
+  formula. A longer paragraph holds two ideas or depth that belongs in a callout; a longer
+  run needs a picture, a list of its steps, or a cut.
+- **Plain sentences:** everyday words over technical ones, and one new idea a sentence.
 - **Each term defined in plain words at first use:** inline, in the sentence that first
   uses it, or, for a primer the reader may already have, a collapsed `DEFINITION` callout
   (§4.4) right there. No term is used before it is defined.
-- **One idea a paragraph**, about 100 words at most; a longer one holds two ideas, or depth
-  that belongs in a callout.
-- **Show, then tell:** the code, the commands or a short example first, then its meaning.
-  The same holds for a concept: a concrete example before the abstraction it illustrates.
+- **One idea a paragraph**, within the bound above.
+- **Formulas that look good:** a formula the reader needs is typeset, never a bare string
+  of symbols in a sentence ("s = mean ÷ sd and t = s × √n", typed inline, is the
+  anti-example). A display formula stands on its own line and carries, right under it, a
+  **reading** (one plain-words sentence: what it computes and what it means here) and a
+  **"where" legend** (each symbol, one line each, in plain words). Each traces like a
+  sentence: the formula to the code that computes it, each symbol to the entry that names
+  it (B9). The inline and display forms are in §4.4 once the reader supports them; until
+  then say the relation in words, or show the code line that computes it in a titled code
+  block, with its reading and its legend as a list under it.
+- **Show, then tell:** the code, the commands, a short example or the picture first, then
+  its meaning. The same holds for a concept: a concrete example, with toy data, before the
+  abstraction it illustrates.
 - **A finding opens with one bold sentence** saying what it means for the reader; the
   evidence follows.
 - **Teach, don't report:** a fact in your own voice ("the projection skips code blocks",
-  not "the notes say…"); a work record named in the sentence only where it is the
-  builders' account the code cannot show (B9's plain-words form) or it changes the
-  reader's trust; a code location once, in its block's title (§4.6).
+  not "the notes say…"), shown where it can be (a diagram, the code) rather than retold;
+  a work record named in the sentence only where it is the builders' account the code
+  cannot show (B9's plain-words form) or it changes the reader's trust; a code location
+  once, in its block's title (§4.6).
 - **The subject, not the records:** for a phase, a slice or a change, the reader wants what
   the system now does and why. The workspace's records (a phase's intent and notebook, a
   slice's `result.md`, a deferred job) are evidence, never the subject or the structure:
@@ -1127,7 +1150,8 @@ shell command or a script; the trace is appended to, never rewritten whole.
   worker found (P24)".
 - **Standalone:** the chapter reads complete on its own; no sentence depends on the reader
   opening a link, a source, a repo file, or another document or chapter. An idea the
-  reader needs is explained in place, briefly when another chapter teaches it at length: a
+  reader needs is explained in place (a picture included, never a link to one elsewhere),
+  briefly when another chapter teaches it at length: a
   short recap of an earlier chapter's idea, never "see chapter 2" (a `chapter:` link may
   follow, as an extra). The Sources section stays (§4.6), as evidence the reader may
   check, never as the explanation. A repo path is fine as a code block's title, never "see
@@ -1188,38 +1212,32 @@ at publish with a line-numbered list — never silently repaired — so write to
   lanes / 200 chart points, quiz 1–20 items, figure row 2–3 items, SVG 64 KB and 2,000
   elements, 2 MB per image, 20 images and 12 MB in all.
 
-### 4.2 Recommended outline
+### 4.2 The outline, from the signed shape
 
-A starting shape, not a form to fill. Use the sections the subject earns, in this order, as
-`##` headings with ids (the reader builds the table of contents from `##` and `###`;
-**never write one**). First, before any heading, comes **In one paragraph**: the
-`> [!IMPORTANT] In one paragraph` box (§4's prose rules), on every run. Then:
+The chapter's sections are **the ones signed at the confirmation** (§1 *The shape*), in
+their order and wording, as D6 laid them out (§3.10): the questions this reader asks, in
+the order they ask them, as `##` headings with ids (the reader builds the table of
+contents from `##` and `###`; **never write one**). There is no fixed outline to fill. The
+parts around them, in this order:
 
-1. **Background** — change mode: the system as it was before this change, plus context,
-   never the work's history slice by slice (§4, *The subject, not the records*); topic
-   mode: what this is and why it exists here; general mode: what the subject is and what
-   the reader needs to already know.
-   Offer a deeper beginner background in a `> [!SKIP] Skip this if you already know …`
-   callout, then the narrower relevant part.
-2. **Intuition** — the core idea in essence, with **concrete toy data** and a diagram;
-   change mode: why the change and what it buys; topic mode: the mental model; general
-   mode: the idea through a worked example.
-3. **Code** — change mode walks the diff, grouped and ordered logically (a phase or slice:
-   the system as it now works, by idea, never slice by slice; §4, *The subject, not the
-   records*); topic mode walks the real implementation here (fenced code with a
-   `title="path"`). In **general mode** this section is **Worked examples** instead: real
-   numbers, real cases, step by step. Its subsections, and any section a task needs
-   ("Should you use it today?"), follow the reader's path (§3.10), each task's section
-   ending in its deliverable.
-4. **Best practices & next steps** — on every run but `no-research` (§4.5), where it is
-   absent and the report says so.
-5. **Quiz** — a `quiz` block of about 5 items (§4.5). Always last before the sources.
-6. **Sources** — the `sources` block (§4.6): the pages you opened. Required in general
-   mode; in repo modes, whenever any section cites a page.
+1. **In one paragraph** — before any heading, on every run: the
+   `> [!IMPORTANT] In one paragraph` box (§4's prose rules).
+2. **The signed sections.** Each answers its question for this reader: in change mode, the
+   system as it now works and why the change was made, by idea, never slice by slice (§4,
+   *The subject, not the records*); in topic mode, what this part of the repo does and how,
+   through its real code (fenced, with `title="path"`). Background this reader may already
+   have goes in a `> [!SKIP] Skip this if you already know …` callout; the core idea comes
+   with concrete toy data and its picture (§4, *Visuals first*); a task's section ends in
+   its deliverable (§3.10).
+3. **Next steps** — only when the confirmation signed it and `evidence.md`'s `## Open`
+   holds something (§4.5).
+4. **Quiz** — only when the confirmation kept it (§4.5); last before the sources.
+5. **Sources** — `## Sources {#sources-list}` (§4.6), on every run.
 
 Tone: the clarity and flow of Martin Kleppmann — prose with smooth transitions, not a
 bullet dump (a deliverable's checklist or table excepted); jargon defined on first use;
-engaging and novice-friendly by default; §4's prose rules; §3.10's word budgets.
+written for the reader §1 named, never a stock one; §4's prose rules; §3.10's word
+budgets.
 
 ### 4.3 Ids
 
@@ -1342,24 +1360,30 @@ svg: |
 language is optional (`text` for ASCII output). A language outside the block names above
 (`mermaid` included) is just code.
 
-### 4.5 Best practices, and the quiz
+### 4.5 Next steps, and the quiz
 
-**Best practices & next steps (when present).** Cover three things: where the
-implementation **aligns** with prevailing practice, where it **deliberately diverges** (and
-why that can be a legitimate choice here), and **2–4 concrete next steps**. **Every claim
-carries a citation to a library source that supports it — no citation, no claim** — and a
-practice stated in your own voice meets B8's bar for evaluations. Cite with an
-ordinary link to the source's id, and keep the source visible in plain text, because the
-KB's search indexes the *text* and an `href` is not text:
+**Next steps** (only when signed, §1 *The shape*) come **from the workspace itself**, never
+from your own advice: what is still open on this subject, as `evidence.md`'s `## Open`
+holds it (§3.4 step 5): an open deferred job, an operator question not yet answered, a
+decision a covering phase recorded that no slice has built. The part is a
+`## Next steps {#next-steps}` section after the signed sections, and it holds:
 
-````markdown
-Request-scoped connection pooling is standard practice
-([PostgreSQL docs](#src-pg-pooling) — postgresql.org).
-````
+- **One item per `O` entry it maps** (§3.10), in plain words: what is open, and what it
+  changes for this reader's task (what to watch for, what to leave alone until it lands).
+  A deferred job's id never appears (§4, *The subject, not the records*); a phase id may
+  trail as its small mark.
+- **Each item traces to its `O` entry** in the trace, like any sentence (B9), and says only
+  what its record says: no step of your own, no "consider adding tests", no practice from
+  outside (§4, *No new things*).
+- **Nothing open, no part:** a signed Next steps whose `## Open` is empty at D1 is cut, to
+  `## Not used` with its reason (§3.10), and the report lists the cut (§8).
 
-**The quiz** — one `quiz` block with about **5 medium-difficulty items** that test
-substantive understanding (hard enough that you must understand the subject, not
-gotchas). Every item has a required `id` and a `type`; mix the types:
+There is no best-practices part, and no section weighs the code against how others do it.
+
+**The quiz**, only when the shape kept it (§1 *The shape*): one `quiz` block with about
+**5 medium-difficulty items** that test substantive understanding (hard enough that you
+must understand the subject, not gotchas). Every item has a required `id` and a `type`;
+mix the types:
 
 - `choice` — `prompt` *(md)*, `options` (2–6 of `{id, text}`), `answer: [option ids]` (more
   than one id = "select all that apply"), `explain` *(md, required)*;
@@ -1496,8 +1520,10 @@ A translation goes straight to §5; every other run gets the critic first.
    **The critic checks against the evidence itself,** on a second model: it re-opens the
    code range or record line behind every load-bearing sentence, number, quiz key and
    diagram of steps, and a sample of the rest. It flags anything from outside the code and
-   the records, a gap filled instead of stated, jargon used before its plain definition,
-   dense passages and a missing "In one paragraph" (B5 *How you check*).
+   the records, a gap filled instead of stated, jargon used before its plain definition, a
+   missing "In one paragraph", hard reading (a stretch past §4's bound), a missing visual
+   (a passage a picture would explain better) and a bare symbol string in prose (B5 *How
+   you check*).
 2. **Answer it** from its verdict block, then the findings by id, one line each in
    `<DOSSIER>/answers.md`: `C01 · fixed | disputed | declined · <how, or why>`. Fix every
    must-fix or remove its sentence, and the should-fixes you agree with. A fix may read the
@@ -2235,9 +2261,9 @@ and `Read` only their ranges.
    `~/.claude/plugins/installed_plugins.json`, plus `/skills/explain/SKILL.md`). It is the
    writer's contract and your yardstick: read §3.4 (what counts as evidence), §4's prose
    and evidence rules, §4.1 (hard rules), §4.2 (outline and tone), §4.4 (the block grammar,
-   for diagram and quiz shapes), §4.5 (the quiz) and §4.6 (sources). Cite its sections;
-   never restate or extend them. If you cannot find it, say so in the verdict and mark
-   every `rules` finding at most `medium` confidence.
+   for diagram and quiz shapes), §4.5 (next steps and the quiz) and §4.6 (sources). Cite
+   its sections; never restate or extend them. If you cannot find it, say so in the verdict
+   and mark every `rules` finding at most `medium` confidence.
 9. `CLAUDE.md`, when there is one: honor every repo-specific safety rule there.
 
 **Never read the writer's account of its own work:** a chapter slice's `result.md`, the
@@ -2330,18 +2356,37 @@ the subject of any clause; a lone "see X", or a file or doc named in place of wh
 says; and any passage its reader cannot follow
 without opening a link, a file, a source, or another chapter or document. So is a new title
 (`title:`, `book:` included) that names the work instead of what the text explains, even
-one the spec gives (the skill's §1 title rule). A paragraph holding two ideas or past about
-100 words, a step buried in prose, a caveat that interrupts the main line, a fact reported
-as who-said-what, a section past its budget: `should-fix`, saying where the reader trips
-(the skill's §4 prose rules).
+one the spec gives (the skill's §1 title rule). A paragraph holding two ideas, a step
+buried in prose, a caveat that interrupts the main line, a fact reported as who-said-what,
+a section past its budget: `should-fix`, saying where the reader trips (the skill's §4
+prose rules).
 
 **Clarity:** for the outline's stated reader, per the skill's §4.2 tone and §4's prose
 rules: jargon defined on first use, transitions that carry the argument, the core idea
 reachable without the code. An ambiguous sentence is a clarity finding. So is a term used
-before a plain definition at its first use, and a dense passage (a paragraph over about
-100 words, or a sentence stacking 3 or more new terms): each a `should-fix` (`clarity`).
-A body that does not open with `> [!IMPORTANT] In one paragraph` (§4's prose rules) is a
-`should-fix` (`reader`).
+before a plain definition at its first use, and a sentence stacking 3 or more new terms:
+each a `should-fix` (`clarity`). A body that does not open with
+`> [!IMPORTANT] In one paragraph` (§4's prose rules) is a `should-fix` (`reader`).
+
+**Hard reading** (`reading`): hold the draft to §4's bound, the one the writer wrote to: a
+paragraph over 80 words (count its words), or more than 3 paragraphs in a row with no
+visual, list, table, code block, callout or display formula between them. Each is a
+`should-fix`, naming the paragraph or the run (its first and last line) and where it could
+break: a picture, a list of its steps, a callout for its depth, or a cut.
+
+**A missing visual** (`visuals`): a passage that tells in prose what a picture would show
+better (a flow or a sequence of calls, a structure, states and their transitions, a before
+and after, numbers to compare or over time), or an idea the outline planned a diagram for
+that has none: a `should-fix`, naming the passage and the kind of block that would carry it
+(§4.4). A picture present but not worth its place stays a `diagrams` finding.
+
+**A bare symbol string** (`math`): a formula written as plain symbols in a sentence ("s =
+mean ÷ sd and t = s × √n" typed inline), where §4's prose rules ask for a typeset formula,
+or, until the skill's §4.4 carries the formula forms, for the relation in words or the code
+line that computes it: a `must-fix`, since it breaks a writer rule the reader pays for. A
+display formula without its plain-words reading or its "where" legend, or a legend that
+leaves a symbol unexplained: a `should-fix` (`math`). A symbol in a code block, or a single
+variable named in passing (`n`, the number of samples), is not a finding.
 
 **The hard rules:** check §4.1 by reading, as a second net under `knowledge check`, which
 cannot see everything: an id that resolves but points at the wrong section, a link to the
@@ -2355,20 +2400,23 @@ right id for the wrong point, an image without real alt text.
   `coverage` and `reader` must-fixes above; a diagram that is wrong or contradicts the
   text; a quiz key that is wrong or has two defensible answers, or an `explain` that
   teaches the wrong thing; a §4.1 hard-rule violation; an idea used before the chapter
-  introduces it; something the outline says this chapter covers or tests that is missing.
+  introduces it; something the outline says this chapter covers or tests that is missing; a
+  bare symbol string in prose (`math`).
 - **`should-fix`**: the chapter is right but weaker than it should be. An unlabelled
   diagram, or one not worth its place; a quiz item that tests recall, or a distractor
   nobody would pick; undefined jargon; a section order that makes the idea harder to
   follow; long re-teaching of an earlier chapter where a short recap would do; jargon used
-  before a plain definition at its first use, or a dense passage (`clarity`); a missing "In
-  one paragraph" (`reader`); the `trace`, `coverage` and `reader` should-fixes above.
+  before a plain definition at its first use (`clarity`); a missing "In one paragraph"
+  (`reader`); hard reading past §4's bound (`reading`); a missing visual (`visuals`); a
+  display formula missing its reading or legend (`math`); the `trace`, `coverage` and
+  `reader` should-fixes above.
 - **`note`**: advisory, never blocks: a matter of taste, or an improvement the outline did
   not ask for. Judge taste against the outline's reader and the skill's §4.2 tone, never
   your own preferences; when neither speaks, say what a choice trades off, not which way
   you would go.
 
 **Category:** `facts`, `outside`, `trace`, `coverage`, `diagrams`, `quiz`, `order`,
-`reader`, `clarity` or `rules`.
+`reader`, `clarity`, `reading`, `visuals`, `math` or `rules`.
 
 **Confidence:** `high`, `medium` or `low` on every finding and on the verdict. `high` only
 for a fact you checked in this pass against code or a record you opened; a clarity or
@@ -2400,7 +2448,7 @@ both, with the writer's answers.
     - draft: <path>
     - verdict: pass | revise
     - confidence: high | medium | low
-    - must_fix: <count> (facts N, outside N, trace N, coverage N, diagrams N, quiz N, order N, reader N, clarity N, rules N)
+    - must_fix: <count> (facts N, outside N, trace N, coverage N, diagrams N, quiz N, order N, reader N, clarity N, reading N, visuals N, math N, rules N)
     - should_fix: <count>
     - notes: <count>
     - critic_model: <the model you ran on> · writer_model: <the writer's>

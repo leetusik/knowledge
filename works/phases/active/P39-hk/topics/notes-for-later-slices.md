@@ -72,3 +72,15 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Notes for later slices 7
 
 - **(from DECOMP, for S1–S5 and REVIEW)** Deferred overlap: `D86-sd` triggers at this phase's start and `D69` on the next §1 change; `D85-qk`'s items sit in S5's files. A rewrite that settles an item says so in `result.md`; never widen a slice for one. `D67`, `D72`, `D73`, `D76` and `D84-8s` concern machinery S2/S4 retire: the review lists them as close/drop candidates.
+
+## Notes for later slices 15 (2)
+
+- **(from R1, for DECOMP2)** Build cut: the grammar splits into (a) the glossary and `term:` links and (b) math (the TeX twin, the formula block, the translation 422s). Both are high (core invariant: the stored format and the projection offsets). The reader splits into (c) math rendering, high (the no-raw-HTML rebuild), and (d) terms, mid. The chain runs a → b → c → d → skill §4 → release, with no wave → [topics/glossary-and-math.md](topics/glossary-and-math.md) `## Build cut impact`
+
+## Notes for later slices 4
+
+- **(from DECOMP, for S1–S5)** The vendored route (`.claude/skills/create-phase`, `do-whole-phase` / `do-next-slice` `reference/explain-*.md`, `.claude/agents/slice-executor.md`) is never edited in this phase: P33-n3's citation check against it regresses from S1 on (expected; record the count, never chase it), and S5 re-cites from `topics/skill-headings.md`.
+
+## Notes for later slices 1
+
+- **(from DECOMP, for DECOMP2 and the reader build slices)** Merge risk: P36-1s (Hermes) builds a reader side panel on its own branch and touches `web/src/components/reader/annotations.tsx` and the reader page, so DECOMP2's reader slices will meet it at merge; keep their edits there small and located.

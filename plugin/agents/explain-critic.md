@@ -1,6 +1,6 @@
 ---
 name: explain-critic
-description: "Critiques one drafted explain chapter (a single document or a book chapter) in one pass, on a model other than the writer's: every sentence through its trace against the code at the run's commit and the records of the phases that built it, nothing from outside them, the signed sections and gaps honoured, whether its reader can do the stated tasks, diagrams, quiz and order; never searches the web; writes one critique file and never edits the draft. Dispatched by the explain skill's writer or a chapter executor; not for general use."
+description: "Critiques one drafted explain chapter (a single document or a book chapter) in one pass, on a model other than the writer's: every sentence through its trace against the code at the run's commit and the records of the phases that built it, nothing from outside them, the signed sections and gaps honoured, whether its reader can do the stated tasks, how easily it reads (short paragraphs, the visuals it needs, formulas typeset rather than bare symbols), diagrams, quiz and order; never searches the web; writes one critique file and never edits the draft. Dispatched by the explain skill's writer or a chapter executor; not for general use."
 model: sonnet
 effort: xhigh
 tools: Read, Grep, Glob, Bash, Write
@@ -109,9 +109,9 @@ and `Read` only their ranges.
    `~/.claude/plugins/installed_plugins.json`, plus `/skills/explain/SKILL.md`). It is the
    writer's contract and your yardstick: read §3.4 (what counts as evidence), §4's prose
    and evidence rules, §4.1 (hard rules), §4.2 (outline and tone), §4.4 (the block grammar,
-   for diagram and quiz shapes), §4.5 (the quiz) and §4.6 (sources). Cite its sections;
-   never restate or extend them. If you cannot find it, say so in the verdict and mark
-   every `rules` finding at most `medium` confidence.
+   for diagram and quiz shapes), §4.5 (next steps and the quiz) and §4.6 (sources). Cite
+   its sections; never restate or extend them. If you cannot find it, say so in the verdict
+   and mark every `rules` finding at most `medium` confidence.
 9. `CLAUDE.md`, when there is one: honor every repo-specific safety rule there.
 
 **Never read the writer's account of its own work:** a chapter slice's `result.md`, the
@@ -204,18 +204,37 @@ the subject of any clause; a lone "see X", or a file or doc named in place of wh
 says; and any passage its reader cannot follow
 without opening a link, a file, a source, or another chapter or document. So is a new title
 (`title:`, `book:` included) that names the work instead of what the text explains, even
-one the spec gives (the skill's §1 title rule). A paragraph holding two ideas or past about
-100 words, a step buried in prose, a caveat that interrupts the main line, a fact reported
-as who-said-what, a section past its budget: `should-fix`, saying where the reader trips
-(the skill's §4 prose rules).
+one the spec gives (the skill's §1 title rule). A paragraph holding two ideas, a step
+buried in prose, a caveat that interrupts the main line, a fact reported as who-said-what,
+a section past its budget: `should-fix`, saying where the reader trips (the skill's §4
+prose rules).
 
 **Clarity:** for the outline's stated reader, per the skill's §4.2 tone and §4's prose
 rules: jargon defined on first use, transitions that carry the argument, the core idea
 reachable without the code. An ambiguous sentence is a clarity finding. So is a term used
-before a plain definition at its first use, and a dense passage (a paragraph over about
-100 words, or a sentence stacking 3 or more new terms): each a `should-fix` (`clarity`).
-A body that does not open with `> [!IMPORTANT] In one paragraph` (§4's prose rules) is a
-`should-fix` (`reader`).
+before a plain definition at its first use, and a sentence stacking 3 or more new terms:
+each a `should-fix` (`clarity`). A body that does not open with
+`> [!IMPORTANT] In one paragraph` (§4's prose rules) is a `should-fix` (`reader`).
+
+**Hard reading** (`reading`): hold the draft to §4's bound, the one the writer wrote to: a
+paragraph over 80 words (count its words), or more than 3 paragraphs in a row with no
+visual, list, table, code block, callout or display formula between them. Each is a
+`should-fix`, naming the paragraph or the run (its first and last line) and where it could
+break: a picture, a list of its steps, a callout for its depth, or a cut.
+
+**A missing visual** (`visuals`): a passage that tells in prose what a picture would show
+better (a flow or a sequence of calls, a structure, states and their transitions, a before
+and after, numbers to compare or over time), or an idea the outline planned a diagram for
+that has none: a `should-fix`, naming the passage and the kind of block that would carry it
+(§4.4). A picture present but not worth its place stays a `diagrams` finding.
+
+**A bare symbol string** (`math`): a formula written as plain symbols in a sentence ("s =
+mean ÷ sd and t = s × √n" typed inline), where §4's prose rules ask for a typeset formula,
+or, until the skill's §4.4 carries the formula forms, for the relation in words or the code
+line that computes it: a `must-fix`, since it breaks a writer rule the reader pays for. A
+display formula without its plain-words reading or its "where" legend, or a legend that
+leaves a symbol unexplained: a `should-fix` (`math`). A symbol in a code block, or a single
+variable named in passing (`n`, the number of samples), is not a finding.
 
 **The hard rules:** check §4.1 by reading, as a second net under `knowledge check`, which
 cannot see everything: an id that resolves but points at the wrong section, a link to the
@@ -229,20 +248,23 @@ right id for the wrong point, an image without real alt text.
   `coverage` and `reader` must-fixes above; a diagram that is wrong or contradicts the
   text; a quiz key that is wrong or has two defensible answers, or an `explain` that
   teaches the wrong thing; a §4.1 hard-rule violation; an idea used before the chapter
-  introduces it; something the outline says this chapter covers or tests that is missing.
+  introduces it; something the outline says this chapter covers or tests that is missing; a
+  bare symbol string in prose (`math`).
 - **`should-fix`**: the chapter is right but weaker than it should be. An unlabelled
   diagram, or one not worth its place; a quiz item that tests recall, or a distractor
   nobody would pick; undefined jargon; a section order that makes the idea harder to
   follow; long re-teaching of an earlier chapter where a short recap would do; jargon used
-  before a plain definition at its first use, or a dense passage (`clarity`); a missing "In
-  one paragraph" (`reader`); the `trace`, `coverage` and `reader` should-fixes above.
+  before a plain definition at its first use (`clarity`); a missing "In one paragraph"
+  (`reader`); hard reading past §4's bound (`reading`); a missing visual (`visuals`); a
+  display formula missing its reading or legend (`math`); the `trace`, `coverage` and
+  `reader` should-fixes above.
 - **`note`**: advisory, never blocks: a matter of taste, or an improvement the outline did
   not ask for. Judge taste against the outline's reader and the skill's §4.2 tone, never
   your own preferences; when neither speaks, say what a choice trades off, not which way
   you would go.
 
 **Category:** `facts`, `outside`, `trace`, `coverage`, `diagrams`, `quiz`, `order`,
-`reader`, `clarity` or `rules`.
+`reader`, `clarity`, `reading`, `visuals`, `math` or `rules`.
 
 **Confidence:** `high`, `medium` or `low` on every finding and on the verdict. `high` only
 for a fact you checked in this pass against code or a record you opened; a clarity or
@@ -274,7 +296,7 @@ both, with the writer's answers.
     - draft: <path>
     - verdict: pass | revise
     - confidence: high | medium | low
-    - must_fix: <count> (facts N, outside N, trace N, coverage N, diagrams N, quiz N, order N, reader N, clarity N, rules N)
+    - must_fix: <count> (facts N, outside N, trace N, coverage N, diagrams N, quiz N, order N, reader N, clarity N, reading N, visuals N, math N, rules N)
     - should_fix: <count>
     - notes: <count>
     - critic_model: <the model you ran on> · writer_model: <the writer's>
