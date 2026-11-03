@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P39-hk`
-- Current slice: `P39-hk.S5`
-- Next slice: `P39-hk.DECOMP2`
+- Current slice: `P39-hk.DECOMP2`
+- Next slice: `P39-hk.REVIEW`
 - Waiting on operator: `none`
 - Stream: `phase/P39-hk-explain_what_was_built` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `73`
@@ -17,7 +17,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 7/10 | `P39-hk.S5` | 7/10 | `.` | working tree |
+| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 8/10 | `P39-hk.DECOMP2` | 8/10 | `.` | working tree |
 | `default` | - | idle | - | - | - | branch main |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
@@ -45,7 +45,7 @@
 | [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.D1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [x] `P37-1p` | `done` | `pass` | Drop the knowledge graph | `none` | `works/phases/active/P37-1p` |
 | [x] `P38-e1` | `done` | `pass` | Right-size explain runs (plugin 0.9.0) | `none` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
-| [ ] `P39-hk` | `planned` | `pending` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `P39-hk.S5` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
+| [ ] `P39-hk` | `planned` | `pending` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `P39-hk.DECOMP2` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
 
 ## Phase P21: Web document deletion
 
@@ -340,6 +340,6 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | [x] `P39-hk.S2` | `done` | Explain writes from the phases' records and the code: the evidence model | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S2` |
 | [x] `P39-hk.S3` | `done` | Explain writing rules: visuals first, short paragraphs, subject-shaped outline, next steps | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S3` |
 | [x] `P39-hk.S4` | `done` | Retire the research agents and sync every copy, guard and promise | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S4` |
-| [ ] `P39-hk.S5` | `todo` | Workspace explain route: the handoff package for the bootstrap repo | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S5` |
+| [x] `P39-hk.S5` | `done` | Workspace explain route: the handoff package for the bootstrap repo | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S5` |
 | [ ] `P39-hk.DECOMP2` | `todo` | Cut the build from the signed canvas and R1's findings | `decomposition` | `works/phases/active/P39-hk/slices/P39-hk.DECOMP2` |
 | [ ] `P39-hk.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |

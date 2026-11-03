@@ -1720,3 +1720,6 @@
 {"ts": "2026-11-03T09:02:27+09:00", "type": "slice_status_changed", "slice": "P39-hk.S4", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-11-03T09:09:38+09:00", "type": "executor_dispatched", "slice": "P39-hk.S4", "phase": "P39-hk", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-03T09:09:38+09:00", "type": "slice_status_changed", "slice": "P39-hk.S4", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-03T09:10:45+09:00", "type": "slice_status_changed", "slice": "P39-hk.S5", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-03T09:40:14+09:00", "type": "executor_dispatched", "slice": "P39-hk.S5", "phase": "P39-hk", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-03T09:40:14+09:00", "type": "slice_status_changed", "slice": "P39-hk.S5", "old_status": "in_progress", "new_status": "done"}

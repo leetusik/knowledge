@@ -84,3 +84,7 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Notes for later slices 1
 
 - **(from DECOMP, for DECOMP2 and the reader build slices)** Merge risk: P36-1s (Hermes) builds a reader side panel on its own branch and touches `web/src/components/reader/annotations.tsx` and the reader page, so DECOMP2's reader slices will meet it at merge; keep their edits there small and located.
+
+## Notes for later slices 16 (2)
+
+- **(from S5, for DECOMP2's release slice)** The plugin side of the handshake (handoff-explain.md §4): front-door step 2 must test `workspace_version` **92 or later** and a create-phase `## The explain route` listing `**phases**` (today: 86 and `**unit**`), its two refusal texts naming v92. Every "v86 or later" moves to v92: SKILL.md L3, L25 and step 2 (L283–L294); plugin README L15, L46; setup SKILL L170, L461; plugin.json and marketplace.json descriptions; root README L37; the KB template page L71. The workspace floor is plugin 0.10.0. Release order: the bootstrap's v92 on GitHub first, then the P39-hk merge and push (OQ8). If the skill §4 slice moves a heading the package cites, re-run `package/checks/cites.py`.
