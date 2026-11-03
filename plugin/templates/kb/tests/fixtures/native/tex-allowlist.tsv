@@ -1,0 +1,148 @@
+command	context	arity	sample
+\alpha	inline	0	\alpha
+\beta	inline	0	\beta
+\gamma	inline	0	\gamma
+\delta	inline	0	\delta
+\epsilon	inline	0	\epsilon
+\varepsilon	inline	0	\varepsilon
+\zeta	inline	0	\zeta
+\eta	inline	0	\eta
+\theta	inline	0	\theta
+\vartheta	inline	0	\vartheta
+\iota	inline	0	\iota
+\kappa	inline	0	\kappa
+\lambda	inline	0	\lambda
+\mu	inline	0	\mu
+\nu	inline	0	\nu
+\xi	inline	0	\xi
+\pi	inline	0	\pi
+\rho	inline	0	\rho
+\sigma	inline	0	\sigma
+\tau	inline	0	\tau
+\upsilon	inline	0	\upsilon
+\phi	inline	0	\phi
+\varphi	inline	0	\varphi
+\chi	inline	0	\chi
+\psi	inline	0	\psi
+\omega	inline	0	\omega
+\Gamma	inline	0	\Gamma
+\Delta	inline	0	\Delta
+\Theta	inline	0	\Theta
+\Lambda	inline	0	\Lambda
+\Xi	inline	0	\Xi
+\Pi	inline	0	\Pi
+\Sigma	inline	0	\Sigma
+\Upsilon	inline	0	\Upsilon
+\Phi	inline	0	\Phi
+\Psi	inline	0	\Psi
+\Omega	inline	0	\Omega
+\times	inline	0	a \times b
+\div	inline	0	a \div b
+\cdot	inline	0	a \cdot b
+\pm	inline	0	a \pm b
+\mp	inline	0	a \mp b
+\approx	inline	0	a \approx b
+\neq	inline	0	a \neq b
+\ne	inline	0	a \ne b
+\le	inline	0	a \le b
+\leq	inline	0	a \leq b
+\ge	inline	0	a \ge b
+\geq	inline	0	a \geq b
+\ll	inline	0	a \ll b
+\gg	inline	0	a \gg b
+\sim	inline	0	a \sim b
+\simeq	inline	0	a \simeq b
+\equiv	inline	0	a \equiv b
+\propto	inline	0	a \propto b
+\to	inline	0	a \to b
+\rightarrow	inline	0	a \rightarrow b
+\leftarrow	inline	0	a \leftarrow b
+\Rightarrow	inline	0	a \Rightarrow b
+\Leftarrow	inline	0	a \Leftarrow b
+\leftrightarrow	inline	0	a \leftrightarrow b
+\Leftrightarrow	inline	0	a \Leftrightarrow b
+\mapsto	inline	0	a \mapsto b
+\infty	inline	0	n \to \infty
+\partial	inline	0	\partial f
+\nabla	inline	0	\nabla f
+\in	inline	0	a \in b
+\notin	inline	0	a \notin b
+\subset	inline	0	a \subset b
+\subseteq	inline	0	a \subseteq b
+\cup	inline	0	a \cup b
+\cap	inline	0	a \cap b
+\emptyset	inline	0	A = \emptyset
+\forall	inline	0	\forall x
+\exists	inline	0	\exists x
+\neg	inline	0	\neg p
+\land	inline	0	a \land b
+\lor	inline	0	a \lor b
+\ldots	inline	0	1, \ldots, n
+\cdots	inline	0	1 + \cdots + n
+\dots	inline	0	1, \dots, n
+\circ	inline	0	a \circ b
+\bullet	inline	0	a \bullet b
+\ast	inline	0	a \ast b
+\prime	inline	0	f^\prime
+\%	inline	0	50\%
+\$	inline	0	\$5
+\lvert	inline	delim	\lvert x \rvert
+\rvert	inline	delim	\lvert x \rvert
+\lVert	inline	delim	\lVert v \rVert
+\rVert	inline	delim	\lVert v \rVert
+\langle	inline	delim	\langle u, v \rangle
+\rangle	inline	delim	\langle u, v \rangle
+\lfloor	inline	delim	\lfloor x \rfloor
+\rfloor	inline	delim	\lfloor x \rfloor
+\lceil	inline	delim	\lceil x \rceil
+\rceil	inline	delim	\lceil x \rceil
+\{	inline	delim	\{ 1, 2 \}
+\}	inline	delim	\{ 1, 2 \}
+\|	inline	delim	\| v \|
+\sum	inline	op	\sum_{i=1}^{n} x_i
+\prod	inline	op	\prod_{i} x_i
+\int	inline	op	\int_0^1 f(x) \, dx
+\lim	inline	op	\lim_{n \to \infty} a_n
+\max	inline	op	\max_i x_i
+\min	inline	op	\min_i x_i
+\sup	inline	op	\sup_i x_i
+\inf	inline	op	\inf_i x_i
+\arg	inline	op	\arg z
+\log	inline	op	\log n
+\ln	inline	op	\ln x
+\exp	inline	op	\exp(x)
+\sin	inline	op	\sin x
+\cos	inline	op	\cos x
+\tan	inline	op	\tan x
+\det	inline	op	\det A
+\Pr	inline	op	\Pr(A)
+\limits	inline	limits	\sum\limits_{i} x_i
+\nolimits	inline	limits	\sum\nolimits_{i} x_i
+\sqrt	inline	opt1	\sqrt[3]{x} + \sqrt{y}
+\text	inline	text	P(\text{no event})
+\mathrm	inline	text	\mathrm{rate}
+\operatorname	inline	text	\operatorname{argmax} f
+\mathit	inline	1	\mathit{x}
+\mathbf	inline	1	\mathbf{v}
+\hat	inline	1	\hat{x}
+\bar	inline	1	\bar{x}
+\tilde	inline	1	\tilde{x}
+\vec	inline	1	\vec{v}
+\dot	inline	1	\dot{x}
+\ddot	inline	1	\ddot{x}
+\left	inline	fence	\left( x + y \right)
+\right	inline	fence	\left( x + y \right)
+\,	inline	0	a \, b
+\;	inline	0	a \; b
+\:	inline	0	a \: b
+\!	inline	0	a \! b
+\quad	inline	0	a \quad b
+\qquad	inline	0	a \qquad b
+\frac	display	2	\frac{a}{b}
+\tfrac	display	2	\tfrac{a}{b}
+\dfrac	display	2	\dfrac{a}{b}
+\binom	display	2	\binom{n}{k}
+\begin{aligned}	display	env	\begin{aligned} a &= b + c \\ &= d \end{aligned}
+\begin{cases}	display	env	\begin{cases} 1 & x > 0 \\ 0 & x \le 0 \end{cases}
+&	display	cell	\begin{aligned} a &= b \\ &= c \end{aligned}
+\\	display	cell	\begin{aligned} a &= b \\ &= c \end{aligned}

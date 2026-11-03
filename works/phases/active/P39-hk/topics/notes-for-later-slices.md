@@ -88,3 +88,23 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Notes for later slices 16 (2)
 
 - **(from S5, for DECOMP2's release slice)** The plugin side of the handshake (handoff-explain.md §4): front-door step 2 must test `workspace_version` **92 or later** and a create-phase `## The explain route` listing `**phases**` (today: 86 and `**unit**`), its two refusal texts naming v92. Every "v86 or later" moves to v92: SKILL.md L3, L25 and step 2 (L283–L294); plugin README L15, L46; setup SKILL L170, L461; plugin.json and marketplace.json descriptions; root README L37; the KB template page L71. The workspace floor is plugin 0.10.0. Release order: the bootstrap's v92 on GitHub first, then the P39-hk merge and push (OQ8). If the skill §4 slice moves a heading the package cites, re-run `package/checks/cites.py`.
+
+## Notes for later slices 10 (2)
+
+- **(from S3, for P39-hk.S10)** §4 *Formulas that look good* ends "The inline and display forms are in §4.4 once the reader supports them; until then …", and B5 *A bare symbol string* has the same "until" clause: replace both with the forms, add them to §4.4, and slot the glossary into §4.2's list (Quiz is item 4, before Sources).
+
+## Notes for later slices 11
+
+- **(from S4, for P39-hk.S11)** Still owed at 0.10.0: `web/src/content/marketing/content.ts` L251 and L261 say "3,347" lines (the skill is 2,368 at S4; recount after the skill §4 slice); `plugin_version` 0.9.1 in setup L342/L356; the version in `plugin.json`; the 0.10.0 release notes in `plugin/README.md`.
+
+## Notes for later slices 13 (2)
+
+- **(from S5, for REVIEW)** The bootstrap package is ready for the operator's bootstrap session: `package/` and `handoff-explain.md`, re-checkable with `package/checks/` (finds 18 of 18 once at `bb525b9`; the patched smoke explain block passes on a scratch copy; citations 218, missing 0). The merge must not be pushed before the bootstrap's v92 is on GitHub (OQ8). D85-qk (a)–(d) are settled in it, (e)–(f) stay open.
+
+## Notes for later slices 16 (3)
+
+- **(from DECOMP2, for REVIEW)** After S9, the orchestrator runs `design-canvas 10-reading-aids --implemented`. The `kb` Design System re-sync from code (design-cowork `reference/system.md`) cannot run on this login: list it as a deferred-job candidate. The gate listens to one formula with VoiceOver (R1 §3: `alttext` alone or plus `aria-label`; OQ7).
+
+## Notes for later slices 17
+
+- **(from S6, for P39-hk.S9)** A term link is a plain `link`, `href: "term:<id>"` (`parseRef` → `{kind:"term", id}`; `resolveLink` → missing today). The block is `{type:"glossary", id, terms:[GlossaryTerm]}` (`tree.ts`); `typed()` draws nothing, so `#glossary` has no target yet; `notes-load.ts` `nameOf` calls it an untitled "Section".

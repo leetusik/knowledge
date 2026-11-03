@@ -423,6 +423,17 @@ class Renderer {
         return <Fragment key={key}>{this.text(node.text)}</Fragment>;
       case "code":
         return <code key={key}>{node.text}</code>;
+      case "math":
+        // P39-hk.S7's interim: the TeX as code-like text, counted as its text,
+        // exactly the projection's characters. Not yet a `data-an-len` atom: the
+        // paint round trip in reader-anchor.test.ts allows only whitespace
+        // between a stored edge and the painted one. S8 replaces this with the
+        // typeset MathML (an atom) and answers that test.
+        return (
+          <code key={key} className="kb-ch-math">
+            {node.tex}
+          </code>
+        );
       case "em":
         return <em key={key}>{this.inline(node.children)}</em>;
       case "strong":

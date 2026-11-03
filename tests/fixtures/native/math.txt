@@ -1,0 +1,28 @@
+=== inline
+The rule t = s \times \sqrt{n} holds; it costs $5 and $10.
+Set $HOME/$USER first, and run $ ls to list them: dollars that are not math stay text.
+A step inside emphasis, \lambda = \mathrm{rate} \times \mathrm{time}, and a link to e^{-\lambda}.
+Two in a row: ab. A code span stays code: x^2, and so does $ y with a space.
+The t statistic of \sum_i e_i^2 counts \lvert x \rvert \le 2 in one atom each.
+Quantity
+Formula
+mean
+\bar{x}
+spread
+\sigma^2 = \text{variance}
+Inline math in a callout title: x^2
+And in its body, P(\text{no event}) = e^{-\lambda}.
+=== why-sqrt-n
+The standard error shrinks with \sqrt{n}, so four times the sample halves it.
+=== display
+
+=== tstat
+
+=== steps
+
+=== formula-1
+
+=== check
+
+=== glossary
+

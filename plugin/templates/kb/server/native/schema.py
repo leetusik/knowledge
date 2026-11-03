@@ -1,6 +1,6 @@
 """Typed-block schemas and limits (P29 *Figure*, *Figure row*, *Diagram*, *Custom
 SVG*, *Quiz*, *Sources*, plus the signed rounds' additive details, and P39-hk's
-*Glossary*).
+*Glossary* and *Formula*).
 
 Each ``check_<type>`` takes the block's loaded YAML and a ``BlockContext`` and
 returns the normalized block fields (every schema field present, ``None`` when
@@ -17,6 +17,7 @@ from typing import Any, Callable, Optional
 from .ids import is_valid_id
 from .refs import RefError, is_asset_name, parse_ref
 from .svg import TONES, validate_svg
+from .tex import occurs as tex_occurs, validate as validate_tex
 
 # --- limits (P29 *Ingest* and the per-block limits) -------------------------
 
@@ -29,6 +30,7 @@ CLOZE_BLANKS = (1, 5)
 GLOSSARY_TERMS = (1, 100)
 GLOSSARY_ALIASES = (1, 8)  # when ``aliases`` is given; absent (or null) is none
 MAX_GLOSSARIES = 1  # per chapter; counted by the parser
+FORMULA_WHERE = (1, 20)
 # Diagram limits (P29: 60 nodes, 100 edges, 12 lanes, 200 data points), counted as:
 #   nodes  - flow/state ``nodes``; the total of a stack's layer ``items``
 #   edges  - flow/state ``edges``; sequence ``steps``
@@ -40,7 +42,7 @@ MAX_EDGES = 100
 MAX_LANES = 12
 MAX_POINTS = 200
 
-TYPED_BLOCKS = ("figure", "figures", "diagram", "svg", "quiz", "sources", "glossary")
+TYPED_BLOCKS = ("figure", "figures", "diagram", "svg", "quiz", "sources", "glossary", "formula")
 CALLOUT_TYPES = ("NOTE", "IMPORTANT", "WARNING", "CAUTION", "SKIP", "DEFINITION")
 DIAGRAM_KINDS = ("flow", "state", "sequence", "stack", "timeline", "chart")
 SHAPES = ("box", "pill", "store", "entity")
@@ -825,6 +827,52 @@ def check_glossary(data, cx: BlockContext) -> dict:
     return {"terms": terms}
 
 
+# --- formula (P39-hk.R1) ----------------------------------------------------------
+
+
+def check_formula(data, cx: BlockContext) -> dict:
+    """A display formula: its TeX (checked in the display context), the spoken
+    ``alt``, a plain-words ``reading`` (inline math refused there) and the
+    ``where`` legend, whose every ``sym`` (TeX, inline context) must occur in
+    ``tex`` (``formula-legend``). A legend's ``means`` is *(md)* and may carry
+    inline math and ``term:`` links."""
+    cx.mapping((), data, required=("tex", "alt", "reading", "where"))
+    tex = cx.text(("tex",), _get(data, "tex"))
+    tex_ok = tex is not None and _tex(("tex",), tex, cx, display=True)
+    alt = cx.text(("alt",), _get(data, "alt"))
+    reading = cx.md(("reading",), _get(data, "reading"))
+    if reading is not None and _has_math(reading):
+        cx.err(("reading",), "field-value",
+               "must be plain words, with no math: the formula and its legend carry the symbols")
+    where = []
+    for i, item in enumerate(cx.seq(("where",), _get(data, "where"), lo=FORMULA_WHERE[0], hi=FORMULA_WHERE[1],
+                                    what="symbols") or []):
+        p = ("where", i)
+        if not isinstance(item, dict):
+            cx.err(p, "field-type", "must be a mapping")
+            where.append(None)
+            continue
+        cx.mapping(p, item, required=("sym", "means"))
+        sym = cx.text(p + ("sym",), _get(item, "sym"))
+        if sym is not None and _tex(p + ("sym",), sym, cx, display=False) and tex_ok and not tex_occurs(sym, tex):
+            cx.err(p + ("sym",), "formula-legend", f"{sym!r} does not occur in the formula's tex")
+        where.append({"sym": sym, "means": cx.md(p + ("means",), _get(item, "means"))})
+    return {"tex": tex, "alt": alt, "reading": reading, "where": where}
+
+
+def _tex(path, value: str, cx: BlockContext, *, display: bool) -> bool:
+    """Check TeX against the allowlist; True when it passes."""
+    problem = validate_tex(value, display=display)
+    if problem is not None:
+        cx.err(path, problem[0], problem[1])
+        return False
+    return True
+
+
+def _has_math(nodes: list) -> bool:
+    return any(n.get("type") == "math" or _has_math(n.get("children") or []) for n in nodes)
+
+
 CHECKS = {
     "figure": check_figure,
     "figures": check_figures,
@@ -833,4 +881,5 @@ CHECKS = {
     "quiz": check_quiz,
     "sources": check_sources,
     "glossary": check_glossary,
+    "formula": check_formula,
 }

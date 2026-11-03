@@ -6,7 +6,7 @@
  * plus the body) and returns the tree, every violation (never thrown), and
  * the line span of every top-level block so the renderer can refuse exactly
  * the blocks a violation falls in. With `format: "md"` the same pipeline runs
- * with the three native extensions and every native check turned off.
+ * with the four native extensions and every native check turned off.
  *
  * Remark builds the CommonMark/GFM tree; the extensions are lifted the way
  * `parse.py` lifts them from markdown-it's tokens, before inline parsing:
@@ -15,7 +15,9 @@
  *  - a heading's trailing `{#id}` is cut from the raw heading content, which is
  *    then parsed as inline Markdown;
  *  - a fence whose language is a typed-block name is a typed block with a YAML
- *    body, checked by `schema.ts`.
+ *    body, checked by `schema.ts`;
+ *  - inline math: a code span between two dollars (`` $`…`$ ``) becomes a
+ *    `math` node after the inline walk, its TeX checked by `tex.ts`.
  * `#id` links resolve against the document namespace and `term:<id>` links
  * against the glossary's own term ids, both after the walk, so a glossary may
  * follow its links.
@@ -52,6 +54,7 @@ import {
   MAX_TYPED_BLOCKS,
   TYPED_BLOCKS,
 } from "./schema";
+import { validateTex } from "./tex";
 import type { Block, Inline, Tree, TypedBlock } from "./tree";
 import { load as loadYaml, pathKey, YamlError } from "./yamlcore";
 
@@ -126,6 +129,7 @@ export function plainText(nodes: readonly Inline[]): string {
   let out = "";
   for (const node of nodes) {
     if (node.type === "text" || node.type === "code") out += node.text;
+    else if (node.type === "math") out += node.tex;
     else if (node.type === "break") out += "\n";
     else if ("children" in node) out += plainText(node.children);
   }
@@ -908,6 +912,7 @@ class Parser {
     startLine: number,
     block: string | null,
     depth: number,
+    math = true,
   ): Inline[] {
     if (depth > MAX_INLINE_DEPTH) {
       if (this.native)
@@ -921,6 +926,7 @@ class Parser {
     }
     const out: Inline[] = [];
     let line = startLine;
+    const codeLines = new Map<Inline, number>(); // each code node's line, for the math pass
     const addText = (value: string) => {
       if (!value) return;
       const last = out[out.length - 1];
@@ -938,9 +944,12 @@ class Parser {
           out.push({ type: "break" });
           line += 1;
           break;
-        case "inlineCode":
-          out.push({ type: "code", text: child.value });
+        case "inlineCode": {
+          const node: Inline = { type: "code", text: child.value };
+          codeLines.set(node, line);
+          out.push(node);
           break;
+        }
         case "emphasis":
         case "strong":
         case "delete": {
@@ -957,6 +966,7 @@ class Parser {
               line,
               block,
               depth + 1,
+              math,
             ),
           });
           break;
@@ -983,6 +993,7 @@ class Parser {
               line,
               block,
               depth + 1,
+              math,
             ),
           });
           break;
@@ -1020,6 +1031,56 @@ class Parser {
               `unsupported inline construct ${pyRepr(child.type)}`,
             );
       }
+    }
+    return this.native && math
+      ? this.mathPass(out, codeLines, startLine, block)
+      : out;
+  }
+
+  /**
+   * Inline math (parse.py `math_pass`): a code span whose text before ends in `$`
+   * and whose text after starts with `$` becomes `{type:"math", tex}`, the two
+   * dollars consumed. Left to right, so `` $`a`$$`b`$ `` is two formulas. The TeX
+   * is checked in the inline context, at the code span's line. (An image's alt is
+   * mdast's plain string, never walked here, so it keeps its dollars as Python's
+   * does.)
+   */
+  mathPass(
+    nodes: Inline[],
+    codeLines: Map<Inline, number>,
+    line: number,
+    block: string | null,
+  ): Inline[] {
+    const out: Inline[] = [];
+    let i = 0;
+    while (i < nodes.length) {
+      const node = nodes[i];
+      const prev = out.length ? out[out.length - 1] : null;
+      const next = i + 1 < nodes.length ? nodes[i + 1] : null;
+      if (
+        node.type === "code" &&
+        prev !== null &&
+        prev.type === "text" &&
+        prev.text.endsWith("$") &&
+        next !== null &&
+        next.type === "text" &&
+        next.text.startsWith("$")
+      ) {
+        prev.text = prev.text.slice(0, -1);
+        if (!prev.text) out.pop();
+        out.push({ type: "math", tex: node.text });
+        const problem = validateTex(node.text, false);
+        if (problem !== null)
+          this.report(codeLines.get(node) ?? line, problem[0], problem[1], {
+            block,
+          });
+        if (next.text.length > 1)
+          out.push({ type: "text", text: next.text.slice(1) });
+        i += 2;
+        continue;
+      }
+      out.push(node);
+      i += 1;
     }
     return out;
   }

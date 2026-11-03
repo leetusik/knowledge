@@ -5,11 +5,12 @@ YAML header plus the body) and returns a ``ParseResult``; on any violation it
 raises ONE ``NativeFormatError`` listing every violation. Nothing is ever
 stripped or repaired: what is outside the contract is rejected.
 
-The grammar is CommonMark + GFM (tables, strikethrough, autolinks) plus three
-extensions: GFM-alert callouts, typed fenced YAML blocks and trailing ``{#id}``
-heading ids. ``#id`` links resolve against the document namespace and
-``term:<id>`` links against the glossary's own term ids, both after the walk,
-so a glossary may follow its links. The tree shape is documented in
+The grammar is CommonMark + GFM (tables, strikethrough, autolinks) plus four
+extensions: GFM-alert callouts, typed fenced YAML blocks, trailing ``{#id}``
+heading ids and inline math (a code span between two dollars, ``$`…`$``, its
+TeX checked by ``tex.py``). ``#id`` links resolve against the document
+namespace and ``term:<id>`` links against the glossary's own term ids, both
+after the walk, so a glossary may follow its links. The tree shape is documented in
 ``server/native/README.md``; S12's TS parser reproduces it from the shared
 fixtures in ``tests/fixtures/native/``.
 """
@@ -27,6 +28,7 @@ from . import schema
 from .errors import Collector, NativeFormatError, Violation
 from .ids import IdRegistry, heading_slug, is_valid_id
 from .refs import RefError, parse_ref
+from .tex import validate as validate_tex
 from .yamlcore import YamlError, load as load_yaml
 
 SYNTAX_VERSION = 1
@@ -419,13 +421,15 @@ class _Parser:
         line = self.node_line(node)
         return self.inline_children(node.children, line, block)
 
-    def inline_children(self, children, line: int, block: Optional[str], depth: int = 0) -> list:
+    def inline_children(self, children, line: int, block: Optional[str], depth: int = 0,
+                        math: bool = True) -> list:
         if depth > MAX_INLINE_DEPTH:
             self.report(line, "limit", f"inline markup nests deeper than {MAX_INLINE_DEPTH} levels",
                         **({"block": block} if block else {}))
             return []
         out: list = []
         state = {"line": line}
+        code_lines: dict = {}  # id(code node) -> its line, for the math pass
 
         def add_text(value: str):
             if not value:
@@ -446,27 +450,62 @@ class _Parser:
                 out.append({"type": "break"})
                 state["line"] += 1
             elif t == "code_inline":
-                out.append({"type": "code", "text": child.content})
+                node = {"type": "code", "text": child.content}
+                code_lines[id(node)] = state["line"]
+                out.append(node)
             elif t in ("em", "strong", "s"):
                 name = {"em": "em", "strong": "strong", "s": "del"}[t]
-                out.append({"type": name, "children": self.inline_children(child.children, state["line"], block, depth + 1)})
+                out.append({"type": name, "children": self.inline_children(child.children, state["line"], block,
+                                                                           depth + 1, math)})
             elif t == "link":
                 href = child.attrs.get("href", "")
                 self.reference(str(href), state["line"], block, image=False)
                 title = child.attrs.get("title")
                 out.append({"type": "link", "href": str(href), "title": str(title) if title else None,
-                            "children": self.inline_children(child.children, state["line"], block, depth + 1)})
+                            "children": self.inline_children(child.children, state["line"], block, depth + 1,
+                                                             math)})
             elif t == "image":
                 src = child.attrs.get("src", "")
                 self.reference(str(src), state["line"], block, image=True)
                 title = child.attrs.get("title")
-                alt = _plain(self.inline_children(child.children, state["line"], block, depth + 1))
+                # The alt is plain text, kept as written: no math pass inside it.
+                alt = _plain(self.inline_children(child.children, state["line"], block, depth + 1, False))
                 out.append({"type": "image", "src": str(src), "alt": alt, "title": str(title) if title else None})
             elif t == "html_inline":
                 self.report(state["line"], "raw-html", f"raw HTML is not allowed ({child.content!r})",
                             **({"block": block} if block else {}))
             else:  # pragma: no cover - every enabled inline rule is handled above
                 self.report(state["line"], "unsupported", f"unsupported inline construct {t!r}")
+        return self.math_pass(out, code_lines, line, block) if math else out
+
+    def math_pass(self, nodes: list, code_lines: dict, line: int, block: Optional[str]) -> list:
+        """Inline math: a code span whose text before ends in ``$`` and whose text
+        after starts with ``$`` becomes ``{type:"math", tex}``, the two dollars
+        consumed. Left to right, so ``$`a`$$`b`$`` is two formulas. The TeX is
+        checked in the inline context, at the code span's line."""
+        out: list = []
+        i = 0
+        while i < len(nodes):
+            node = nodes[i]
+            prev = out[-1] if out else None
+            nxt = nodes[i + 1] if i + 1 < len(nodes) else None
+            if (node["type"] == "code" and prev is not None and prev["type"] == "text"
+                    and prev["text"].endswith("$") and nxt is not None and nxt["type"] == "text"
+                    and nxt["text"].startswith("$")):
+                prev["text"] = prev["text"][:-1]
+                if not prev["text"]:
+                    out.pop()
+                out.append({"type": "math", "tex": node["text"]})
+                problem = validate_tex(node["text"], display=False)
+                if problem is not None:
+                    self.report(code_lines.get(id(node), line), problem[0], problem[1],
+                                **({"block": block} if block else {}))
+                if len(nxt["text"]) > 1:
+                    out.append({"type": "text", "text": nxt["text"][1:]})
+                i += 2
+                continue
+            out.append(node)
+            i += 1
         return out
 
     def reference(self, href: str, line: int, block: Optional[str], *, image: bool) -> None:
@@ -513,6 +552,8 @@ def _plain(nodes: list) -> str:
         t = node["type"]
         if t in ("text", "code"):
             out.append(node["text"])
+        elif t == "math":
+            out.append(node["tex"])
         elif t == "break":
             out.append("\n")
         elif "children" in node:

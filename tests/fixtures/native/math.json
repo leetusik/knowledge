@@ -1,0 +1,498 @@
+{
+  "blocks": [
+    {
+      "content": [
+        {
+          "text": "Inline math",
+          "type": "text"
+        }
+      ],
+      "id": "inline",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "content": [
+        {
+          "text": "The rule ",
+          "type": "text"
+        },
+        {
+          "tex": "t = s \\times \\sqrt{n}",
+          "type": "math"
+        },
+        {
+          "text": " holds; it costs $5 and $10.\nSet $HOME/$USER first, and run $ ",
+          "type": "text"
+        },
+        {
+          "text": "ls",
+          "type": "code"
+        },
+        {
+          "text": " to list them: dollars that are not math stay text.\nA step ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "inside emphasis, ",
+              "type": "text"
+            },
+            {
+              "tex": "\\lambda = \\mathrm{rate} \\times \\mathrm{time}",
+              "type": "math"
+            }
+          ],
+          "type": "em"
+        },
+        {
+          "text": ", and a ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "link to ",
+              "type": "text"
+            },
+            {
+              "tex": "e^{-\\lambda}",
+              "type": "math"
+            }
+          ],
+          "href": "#display",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": ".\nTwo in a row: ",
+          "type": "text"
+        },
+        {
+          "tex": "a",
+          "type": "math"
+        },
+        {
+          "tex": "b",
+          "type": "math"
+        },
+        {
+          "text": ". A code span stays code: ",
+          "type": "text"
+        },
+        {
+          "text": "x^2",
+          "type": "code"
+        },
+        {
+          "text": ", and so does $ ",
+          "type": "text"
+        },
+        {
+          "text": "y",
+          "type": "code"
+        },
+        {
+          "text": " with a space.\nThe ",
+          "type": "text"
+        },
+        {
+          "children": [
+            {
+              "text": "t statistic",
+              "type": "text"
+            }
+          ],
+          "href": "term:tstat",
+          "title": null,
+          "type": "link"
+        },
+        {
+          "text": " of ",
+          "type": "text"
+        },
+        {
+          "tex": "\\sum_i e_i^2",
+          "type": "math"
+        },
+        {
+          "text": " counts ",
+          "type": "text"
+        },
+        {
+          "tex": "\\lvert x \\rvert \\le 2",
+          "type": "math"
+        },
+        {
+          "text": " in one atom each.",
+          "type": "text"
+        }
+      ],
+      "id": null,
+      "type": "paragraph"
+    },
+    {
+      "align": [
+        null,
+        null
+      ],
+      "head": [
+        [
+          {
+            "text": "Quantity",
+            "type": "text"
+          }
+        ],
+        [
+          {
+            "text": "Formula",
+            "type": "text"
+          }
+        ]
+      ],
+      "id": null,
+      "rows": [
+        [
+          [
+            {
+              "text": "mean",
+              "type": "text"
+            }
+          ],
+          [
+            {
+              "tex": "\\bar{x}",
+              "type": "math"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "spread",
+              "type": "text"
+            }
+          ],
+          [
+            {
+              "tex": "\\sigma^2 = \\text{variance}",
+              "type": "math"
+            }
+          ]
+        ]
+      ],
+      "type": "table"
+    },
+    {
+      "blocks": [
+        {
+          "content": [
+            {
+              "text": "And in its body, ",
+              "type": "text"
+            },
+            {
+              "tex": "P(\\text{no event}) = e^{-\\lambda}",
+              "type": "math"
+            },
+            {
+              "text": ".",
+              "type": "text"
+            }
+          ],
+          "id": null,
+          "type": "paragraph"
+        }
+      ],
+      "collapsed": false,
+      "id": null,
+      "kind": "NOTE",
+      "title": [
+        {
+          "text": "Inline math in a callout title: ",
+          "type": "text"
+        },
+        {
+          "tex": "x^2",
+          "type": "math"
+        }
+      ],
+      "type": "callout"
+    },
+    {
+      "content": [
+        {
+          "text": "Why ",
+          "type": "text"
+        },
+        {
+          "tex": "\\sqrt{n}",
+          "type": "math"
+        }
+      ],
+      "id": "why-sqrt-n",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "content": [
+        {
+          "text": "The standard error shrinks with ",
+          "type": "text"
+        },
+        {
+          "tex": "\\sqrt{n}",
+          "type": "math"
+        },
+        {
+          "text": ", so four times the sample halves it.",
+          "type": "text"
+        }
+      ],
+      "id": null,
+      "type": "paragraph"
+    },
+    {
+      "content": [
+        {
+          "text": "Display",
+          "type": "text"
+        }
+      ],
+      "id": "display",
+      "level": 2,
+      "type": "heading"
+    },
+    {
+      "alt": "t equals x bar minus mu, over s divided by the square root of n.",
+      "id": "tstat",
+      "reading": [
+        {
+          "text": "The t statistic counts how many standard errors the sample mean sits from the mean you assumed.",
+          "type": "text"
+        }
+      ],
+      "tex": "t = \\frac{\\bar{x} - \\mu}{s / \\sqrt{n}}\n",
+      "type": "formula",
+      "where": [
+        {
+          "means": [
+            {
+              "text": "the ",
+              "type": "text"
+            },
+            {
+              "children": [
+                {
+                  "text": "t statistic",
+                  "type": "text"
+                }
+              ],
+              "href": "term:tstat",
+              "title": null,
+              "type": "link"
+            }
+          ],
+          "sym": "t"
+        },
+        {
+          "means": [
+            {
+              "text": "the sample mean, ",
+              "type": "text"
+            },
+            {
+              "tex": "\\bar{x}",
+              "type": "math"
+            },
+            {
+              "text": " in the text",
+              "type": "text"
+            }
+          ],
+          "sym": "\\bar{x}"
+        },
+        {
+          "means": [
+            {
+              "text": "the mean under the null hypothesis",
+              "type": "text"
+            }
+          ],
+          "sym": "\\mu"
+        },
+        {
+          "means": [
+            {
+              "text": "the sample's standard deviation",
+              "type": "text"
+            }
+          ],
+          "sym": "s"
+        },
+        {
+          "means": [
+            {
+              "text": "the sample size; the error falls as ",
+              "type": "text"
+            },
+            {
+              "tex": "\\sqrt{n}",
+              "type": "math"
+            },
+            {
+              "text": " grows",
+              "type": "text"
+            }
+          ],
+          "sym": "n"
+        }
+      ]
+    },
+    {
+      "alt": "lambda equals rate times time, which is 3 times 2, which is 6.",
+      "id": "steps",
+      "reading": [
+        {
+          "text": "Multiply the rate by the time to get the number of events you expect.",
+          "type": "text"
+        }
+      ],
+      "tex": "\\begin{aligned}\n\\lambda &= \\mathrm{rate} \\times \\mathrm{time} \\\\\n&= 3 \\times 2 \\\\\n&= 6\n\\end{aligned}\n",
+      "type": "formula",
+      "where": [
+        {
+          "means": [
+            {
+              "text": "the expected number of events",
+              "type": "text"
+            }
+          ],
+          "sym": "\\lambda"
+        }
+      ]
+    },
+    {
+      "alt": "the square of the sum of e i, over N times the sum of e i squared.",
+      "id": "formula-1",
+      "reading": [
+        {
+          "text": "One when every person does the same amount, and smaller as a few do most of it.",
+          "type": "text"
+        }
+      ],
+      "tex": "\\frac{(\\sum_i e_i)^2}{N \\sum_i e_i^2}",
+      "type": "formula",
+      "where": [
+        {
+          "means": [
+            {
+              "text": "the number of people",
+              "type": "text"
+            }
+          ],
+          "sym": "N"
+        },
+        {
+          "means": [
+            {
+              "text": "what person ",
+              "type": "text"
+            },
+            {
+              "tex": "i",
+              "type": "math"
+            },
+            {
+              "text": " did",
+              "type": "text"
+            }
+          ],
+          "sym": "e_{i}"
+        }
+      ]
+    },
+    {
+      "id": "check",
+      "items": [
+        {
+          "answer": [
+            {
+              "text": "It doubles, so the standard error halves.",
+              "type": "text"
+            }
+          ],
+          "explain": null,
+          "id": "se",
+          "prompt": [
+            {
+              "text": "What happens to ",
+              "type": "text"
+            },
+            {
+              "tex": "\\sqrt{n}",
+              "type": "math"
+            },
+            {
+              "text": " when the sample grows four times?",
+              "type": "text"
+            }
+          ],
+          "type": "recall"
+        }
+      ],
+      "title": null,
+      "type": "quiz"
+    },
+    {
+      "id": "glossary",
+      "terms": [
+        {
+          "aliases": null,
+          "id": "tstat",
+          "long": [
+            {
+              "text": "It divides the gap by ",
+              "type": "text"
+            },
+            {
+              "tex": "s / \\sqrt{n}",
+              "type": "math"
+            },
+            {
+              "text": ", so a bigger sample makes the same gap count for more.",
+              "type": "text"
+            }
+          ],
+          "short": [
+            {
+              "text": "How far ",
+              "type": "text"
+            },
+            {
+              "tex": "\\bar{x}",
+              "type": "math"
+            },
+            {
+              "text": " sits from ",
+              "type": "text"
+            },
+            {
+              "tex": "\\mu",
+              "type": "math"
+            },
+            {
+              "text": ", counted in standard errors.",
+              "type": "text"
+            }
+          ],
+          "term": "t statistic"
+        }
+      ],
+      "type": "glossary"
+    }
+  ],
+  "summary": null,
+  "syntax": 1
+}

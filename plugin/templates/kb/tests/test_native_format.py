@@ -3,7 +3,9 @@
 Every ``tests/fixtures/native/<case>.md`` either parses to exactly
 ``<case>.json`` with the section projection ``<case>.txt``, or fails with
 exactly the violations in ``<case>.err``. S12 runs the same directory from TS.
-Plus direct tests for the SVG allowlist's rejection cases.
+Plus direct tests for the SVG allowlist's rejection cases, and the search text of
+the glossary and the formula block (the TeX allowlist's own test is
+``test_native_tex.py``).
 """
 from __future__ import annotations
 
@@ -56,6 +58,18 @@ def test_glossary_is_searchable():
                  "The bucket holds at most its capacity, so a long idle spell saves up only that many requests.",
                  "The status a server sends when a client is over its rate limit."):
         assert want in lines
+
+
+def test_formula_is_searchable():
+    # A display formula is found by its alt, its reading and its legend's meanings, the
+    # way a figure is found by its alt and caption; never by its TeX (P39-hk.S7).
+    text = search_text(parse_chapter((FIXTURES / "math.md").read_text(encoding="utf-8")).tree)
+    lines = text.split("\n")
+    for want in ("t equals x bar minus mu, over s divided by the square root of n.",
+                 "The t statistic counts how many standard errors the sample mean sits from the mean you assumed.",
+                 "the mean under the null hypothesis"):
+        assert want in lines
+    assert "\\frac{\\bar{x} - \\mu}" not in text
 
 
 def test_body_limit():

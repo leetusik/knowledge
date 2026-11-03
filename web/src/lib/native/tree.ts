@@ -7,6 +7,8 @@ import type { SvgElement } from "./svg";
 export type Inline =
   | { type: "text"; text: string }
   | { type: "code"; text: string }
+  /** Inline math, `` $`…`$ ``: its TeX verbatim (allowlisted at publish); an atom of that many code points. */
+  | { type: "math"; tex: string }
   | { type: "em" | "strong" | "del"; children: Inline[] }
   | { type: "link"; href: string; title: string | null; children: Inline[] }
   | { type: "image"; src: string; alt: string; title: string | null }
@@ -52,14 +54,33 @@ export type Block =
 
 /**
  * A typed block (`figure`, `figures`, `diagram`, `svg`, `quiz`, `sources`,
- * `glossary`): `type`, `id`, plus its schema's fields (README → "The tree").
- * The renderer reads them defensively, because a refused field is `null`.
+ * `glossary`, `formula`): `type`, `id`, plus its schema's fields (README → "The
+ * tree"). The renderer reads them defensively, because a refused field is `null`.
  */
 export interface TypedBlock {
   type:
-    "figure" | "figures" | "diagram" | "svg" | "quiz" | "sources" | "glossary";
+    | "figure"
+    | "figures"
+    | "diagram"
+    | "svg"
+    | "quiz"
+    | "sources"
+    | "glossary"
+    | "formula";
   id: string | null;
   [field: string]: unknown;
+}
+
+/**
+ * One entry of a `formula` block's `where` legend (README → "The tree"): `sym` is
+ * TeX that occurs in the block's `tex` (inline context), `means` its *(md)*
+ * meaning, which may hold inline math and `term:` links. A `formula` block is
+ * `{tex, alt, reading: Inline[], where: (LegendItem | null)[]}`; each field is
+ * `null` where it was refused.
+ */
+export interface LegendItem {
+  sym: string | null;
+  means: Inline[] | null;
 }
 
 /**

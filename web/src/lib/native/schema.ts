@@ -12,6 +12,7 @@ import { isValidId } from "./ids";
 import { pyRepr, pySplitlines, pyStrip } from "./pyutil";
 import { isAssetName, parseRef, RefError } from "./refs";
 import { TONES, validateSvg, type SvgElement } from "./svg";
+import { texOccurs, validateTex } from "./tex";
 import type { Inline } from "./tree";
 import { pathKey, type YamlPath, type YamlValue } from "./yamlcore";
 
@@ -26,6 +27,7 @@ const GLOSSARY_TERMS = [1, 100] as const;
 const GLOSSARY_ALIASES = [1, 8] as const;
 /** Per chapter; counted by the parser. */
 export const MAX_GLOSSARIES = 1;
+const FORMULA_WHERE = [1, 20] as const;
 const MAX_NODES = 60;
 const MAX_EDGES = 100;
 const MAX_LANES = 12;
@@ -39,6 +41,7 @@ export const TYPED_BLOCKS = [
   "quiz",
   "sources",
   "glossary",
+  "formula",
 ] as const;
 export const CALLOUT_TYPES = [
   "NOTE",
@@ -1315,6 +1318,78 @@ function checkGlossary(data: YamlValue, cx: BlockContext): Out {
   return { terms };
 }
 
+// --- formula (P39-hk.R1) ------------------------------------------------------------------
+
+/**
+ * A display formula: its TeX (checked in the display context), the spoken `alt`, a
+ * plain-words `reading` (inline math refused there) and the `where` legend, whose
+ * every `sym` (TeX, inline context) must occur in `tex` (`formula-legend`). A
+ * legend's `means` is *(md)* and may carry inline math and `term:` links.
+ */
+function checkFormula(data: YamlValue, cx: BlockContext): Out {
+  cx.mapping([], data, ["tex", "alt", "reading", "where"]);
+  const tex = cx.text(["tex"], get(data, "tex"));
+  const texOk = tex !== null && texChecked(["tex"], tex, cx, true);
+  const alt = cx.text(["alt"], get(data, "alt"));
+  const reading = cx.md(["reading"], get(data, "reading"));
+  if (reading !== null && hasMath(reading))
+    cx.err(
+      ["reading"],
+      "field-value",
+      "must be plain words, with no math: the formula and its legend carry the symbols",
+    );
+  const where = (
+    cx.seq(["where"], get(data, "where"), {
+      lo: FORMULA_WHERE[0],
+      hi: FORMULA_WHERE[1],
+      what: "symbols",
+    }) ?? []
+  ).map((item, i): Out | null => {
+    const p = ["where", i];
+    if (!isDict(item)) {
+      cx.err(p, "field-type", "must be a mapping");
+      return null;
+    }
+    cx.mapping(p, item, ["sym", "means"]);
+    const sym = cx.text([...p, "sym"], get(item, "sym"));
+    if (
+      sym !== null &&
+      texChecked([...p, "sym"], sym, cx, false) &&
+      texOk &&
+      tex !== null &&
+      !texOccurs(sym, tex)
+    )
+      cx.err(
+        [...p, "sym"],
+        "formula-legend",
+        `${pyRepr(sym)} does not occur in the formula's tex`,
+      );
+    return { sym, means: cx.md([...p, "means"], get(item, "means")) };
+  });
+  return { tex, alt, reading, where };
+}
+
+/** Check TeX against the allowlist; true when it passes. */
+function texChecked(
+  path: YamlPath,
+  value: string,
+  cx: BlockContext,
+  display: boolean,
+): boolean {
+  const problem = validateTex(value, display);
+  if (problem !== null) {
+    cx.err(path, problem[0], problem[1]);
+    return false;
+  }
+  return true;
+}
+
+function hasMath(nodes: readonly Inline[]): boolean {
+  return nodes.some(
+    (n) => n.type === "math" || ("children" in n && hasMath(n.children)),
+  );
+}
+
 export const CHECKS: Record<
   string,
   (data: YamlValue, cx: BlockContext) => Out | null
@@ -1326,4 +1401,5 @@ export const CHECKS: Record<
   quiz: checkQuiz,
   sources: checkSources,
   glossary: checkGlossary,
+  formula: checkFormula,
 };

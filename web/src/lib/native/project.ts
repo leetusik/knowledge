@@ -7,6 +7,7 @@
  * with an authored id) plus every block after it up to the next id'd block.
  * Its text is its passage containers' texts joined by "\n": paragraphs (any
  * depth), callout titles, table cells (head row first), code text verbatim.
+ * Inline math counts its TeX verbatim (an atom the reader never splits).
  * Headings and all typed-block text contribute nothing. No whitespace is
  * collapsed. Offsets count Unicode code points: use `codePoints()`, never
  * `.length` (UTF-16 units).
@@ -17,6 +18,7 @@ export function inlineText(nodes: readonly Inline[]): string {
   let out = "";
   for (const node of nodes) {
     if (node.type === "text" || node.type === "code") out += node.text;
+    else if (node.type === "math") out += node.tex;
     else if (node.type === "break") out += "\n";
     else if (
       node.type === "em" ||
