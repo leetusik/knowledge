@@ -3,14 +3,14 @@
   "phase_id": "P39-hk",
   "name": "Reader and print: typeset math to the signed canvas (Temml, STIX Two Math)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "pending",
   "order": 100,
   "depends_on": [
     "P39-hk.S7"
   ],
   "depends_declared": true,
   "created_at": "2026-11-03T10:00:08+09:00",
-  "started_at": null,
+  "started_at": "2026-11-03T10:53:03+09:00",
   "completed_at": null,
   "risk": "high",
   "source": {
@@ -31,5 +31,10 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "pending": {
+    "kind": "operator-action",
+    "on_words": "once the agent Chrome profile (deviceId c14e5b18-f250-45f1-b92e-4a08a31197b5) is connected to Claude in Chrome in this session, the operator's go re-dispatches S8 for the live sweep only (its result.md 'Left for the re-dispatch'; paper via CDP Page.printToPDF as P30 did), then S8 finishes and commits",
+    "since": "2026-11-03T11:37:39+09:00"
   }
 }

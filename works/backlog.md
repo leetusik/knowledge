@@ -8,7 +8,7 @@
 - Current phase: `P39-hk`
 - Current slice: `P39-hk.S8`
 - Next slice: `P39-hk.S9`
-- Waiting on operator: `none`
+- Waiting on operator: `P39-hk.S8`
 - Stream: `phase/P39-hk-explain_what_was_built` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `73`
 - Workspace version: `v89`
@@ -344,7 +344,7 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | [x] `P39-hk.DECOMP2` | `done` | Cut the build from the signed canvas and R1's findings | `decomposition` | `works/phases/active/P39-hk/slices/P39-hk.DECOMP2` |
 | [x] `P39-hk.S6` | `done` | Native grammar: the glossary block and term: links, in all four places | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S6` |
 | [x] `P39-hk.S7` | `done` | Native grammar: inline math, the formula block, the TeX allowlist twin, translation checks | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S7` |
-| [ ] `P39-hk.S8` | `in_progress` | Reader and print: typeset math to the signed canvas (Temml, STIX Two Math) | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S8` |
+| [~] `P39-hk.S8` | `pending` | Reader and print: typeset math to the signed canvas (Temml, STIX Two Math) | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S8` |
 | [ ] `P39-hk.S9` | `todo` | Reader and print: term marker, definition window, phone sheet, glossary section | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S9` |
 | [x] `P39-hk.S10` | `done` | Explain skill §4: the glossary, term links and formulas | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S10` |
 | [ ] `P39-hk.S11` | `todo` | Release plugin 0.10.0: versions, the v92 handshake, copy and counts | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S11` |
