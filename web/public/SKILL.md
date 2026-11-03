@@ -772,7 +772,12 @@ not a diff): keep what still holds, correct what changed, add what is new.
 **Translation** (the user asks for a chapter or a loose document in another language,
 `lang=<xx>`, and a published version of it is the source): fetch the source's `source`,
 translate the prose, and **keep every id verbatim** — heading ids, block ids, quiz item
-and option ids, source ids, asset names. Ids are never translated. Where it goes:
+and option ids, source ids, asset names, the glossary's term ids and every `term:` link's
+id. Ids are never translated. **Math is kept byte for byte** too: every inline
+`` $`…`$ ``, and every `formula` block's `tex` and each `sym` of its legend (§4.4).
+Translate the glossary's terms, their aliases and both definitions, and each formula's
+`reading`, its legend's `means` and its `alt`; the words inside the TeX stay English
+(`\text{no event}`, `\mathrm{rate}`). Where it goes:
 
 - **A chapter:** the `lang` variant of the same book and key, with `translated_from` =
   the source's language and version.
@@ -784,7 +789,10 @@ and option ids, source ids, asset names. Ids are never translated. Where it goes
   a loose source with a `translation-source-missing` warning; it is harmless.
 
 If the quiz item or option ids differ from the source version's, the server refuses it
-(422 `translation-quiz-ids`); heading and block id differences come back as warnings.
+(422 `translation-quiz-ids`), and so it does for the glossary's term ids
+(`translation-term-ids`) and for the math (`translation-math`: the display formulas in
+order, each `tex` and its `sym` list, and the inline TeX as a multiset, since a translated
+sentence may move a formula); heading and block id differences come back as warnings.
 
 A translation is **one write span**: it reads no evidence and has no critic. It skips D1
 and D6, keeps its draft in `<DOSSIER>`, goes from here to §4, then §4.8–§4.9 and §5
@@ -1014,7 +1022,10 @@ they were signed; the evidence supports it, never leads it.**
    cut section's (step 2); brevity never drops one.
 
 Under each heading: its question, its tasks, its entry ids, its gaps with their
-dispositions, its callouts, and the diagrams it plans with the entries each draws.
+dispositions, its callouts, the diagrams and display formulas it plans with the entries
+each draws, and the terms it introduces. **The reader's terms** are listed once more under
+`## Glossary`: each term this reader is new to, with its term id and the entry its
+definition rests on, since a definition and a formula trace like any sentence (B9).
 
     ## Reader's task
     - T1 trace a highlight from the click to the saved note → the step-by-step walk, each step's code
@@ -1024,6 +1035,8 @@ dispositions, its callouts, and the diagrams it plans with the entries each draw
     - diagram flow-1: E03, E05 (order) · callout (collapsed): E12
     ## Quiz
     - q1 tests <the understanding>: E03, E05
+    ## Glossary
+    - anchor (term id anchor): E03 · first used in what-is-saved
     ## Next steps
     - O1, O2
     ## Not used
@@ -1115,7 +1128,9 @@ nothing in it should take a second read to follow.
 - **Plain sentences:** everyday words over technical ones, and one new idea a sentence.
 - **Each term defined in plain words at first use:** inline, in the sentence that first
   uses it, or, for a primer the reader may already have, a collapsed `DEFINITION` callout
-  (§4.4) right there. No term is used before it is defined.
+  (§4.4) right there. No term is used before it is defined. A term this reader is new to
+  also gets a glossary entry, and its first use links to it (`[token bucket](term:token-bucket)`,
+  §4.4), so the reader can look it up again wherever it returns.
 - **One idea a paragraph**, within the bound above.
 - **Formulas that look good:** a formula the reader needs is typeset, never a bare string
   of symbols in a sentence ("s = mean ÷ sd and t = s × √n", typed inline, is the
@@ -1123,9 +1138,9 @@ nothing in it should take a second read to follow.
   **reading** (one plain-words sentence: what it computes and what it means here) and a
   **"where" legend** (each symbol, one line each, in plain words). Each traces like a
   sentence: the formula to the code that computes it, each symbol to the entry that names
-  it (B9). The inline and display forms are in §4.4 once the reader supports them; until
-  then say the relation in words, or show the code line that computes it in a titled code
-  block, with its reading and its legend as a list under it.
+  it (B9). A short relation inside a sentence is inline math, `` $`t = s \times \sqrt{n}`$ ``;
+  a formula the reader must study is a `formula` block, which carries the reading and
+  the legend as its fields (§4.4).
 - **Show, then tell:** the code, the commands, a short example or the picture first, then
   its meaning. The same holds for a concept: a concrete example, with toy data, before the
   abstraction it illustrates.
@@ -1198,9 +1213,10 @@ at publish with a line-numbered list — never silently repaired — so write to
   list, quote or callout). No `#` (the title is a field), no `#####`.
 - **Typed blocks are top-level only** (not inside a list, quote or callout). Their body is
   YAML (JSON is accepted). A fence's info string is only `` ```[lang] [title="…"] [#id] ``.
-- **Links** are `#id` (in this chapter), `http(s)://…`, `chapter:[<project>/]<book>/<key>[?lang=xx][#id]`
+- **Links** are `#id` (in this chapter), `term:<id>` (a term of this chapter's glossary,
+  §4.4), `http(s)://…`, `chapter:[<project>/]<book>/<key>[?lang=xx][#id]`
   and `doc:[<project>/]<slug>`. Nothing else: no `mailto:`, `javascript:`, `data:`,
-  relative paths or bare filenames. A `#id` that matches nothing is an error; a
+  relative paths or bare filenames. A `#id` or a `term:<id>` that matches nothing is an error; a
   `chapter:`/`doc:` target that does not exist yet is only a warning (a series may link
   forward). A link is an extra, never the explanation (§4, *Standalone*).
 - **Images** are `![alt](asset:NAME)` or a figure's `src` — never an `http(s)` URL (that is
@@ -1209,8 +1225,9 @@ at publish with a line-numbered list — never silently repaired — so write to
   `|`, `>`, `%`, `@` or a backtick; and quote a number-looking label (`label: "2024"`).
   No anchors, aliases, tags, merge keys or duplicate keys. Unknown keys are rejected.
 - **Limits:** 512 KB per chapter, 300 typed blocks, 60 diagram nodes / 100 edges / 12
-  lanes / 200 chart points, quiz 1–20 items, figure row 2–3 items, SVG 64 KB and 2,000
-  elements, 2 MB per image, 20 images and 12 MB in all.
+  lanes / 200 chart points, quiz 1–20 items, figure row 2–3 items, one glossary of 1–100
+  terms, a formula legend of 1–20 items, SVG 64 KB and 2,000 elements, 2 MB per image,
+  20 images and 12 MB in all.
 
 ### 4.2 The outline, from the signed shape
 
@@ -1231,8 +1248,10 @@ parts around them, in this order:
    its deliverable (§3.10).
 3. **Next steps** — only when the confirmation signed it and `evidence.md`'s `## Open`
    holds something (§4.5).
-4. **Quiz** — only when the confirmation kept it (§4.5); last before the sources.
-5. **Sources** — `## Sources {#sources-list}` (§4.6), on every run.
+4. **Quiz** — only when the confirmation kept it (§4.5).
+5. **Glossary** — the `` ```glossary #glossary `` block (§4.4), when the chapter has terms
+   this reader is new to; last before the sources.
+6. **Sources** — `## Sources {#sources-list}` (§4.6), on every run.
 
 Tone: the clarity and flow of Martin Kleppmann — prose with smooth transitions, not a
 bullet dump (a deliverable's checklist or table excepted); jargon defined on first use;
@@ -1250,7 +1269,9 @@ budgets.
   copies all of them. An id you omit is the server's choice (`assigned_ids`), not yours.
 - Callouts, paragraphs, lists, tables have no id; a link to one points at its section.
 - Scoped ids (a quiz option within its item, a diagram node within its diagram, an SVG
-  element within its SVG) need only be unique inside their parent.
+  element within its SVG, a glossary term within its glossary) need only be unique inside
+  their parent. Term ids never join the chapter's ids, so a term may share a heading's id:
+  `[x](#rate-limit)` jumps to the heading, `[x](term:rate-limit)` names the term.
 
 ### 4.4 The grammar, block by block
 
@@ -1359,6 +1380,97 @@ svg: |
 **Code** — a standard fence, with `title="path/or/label"` and an optional `#id`; the
 language is optional (`text` for ASCII output). A language outside the block names above
 (`mermaid` included) is just code.
+
+**Glossary** — the chapter's terms, for the reader to look up: at most **one** block a
+chapter, by the convention `` ```glossary #glossary ``, placed after the quiz and before
+`## Sources` (§4.2). Write no heading for it: the reader draws its title. Its body is
+`terms`, 1–100 items of:
+
+- `id` (required): the term id, in a namespace of its own (§4.3);
+- `term` (required): plain text, quoted when it looks like a number (`term: "429"`);
+- `aliases` (optional): 1–8 plain strings, other names the term goes by; with none, omit
+  the key (an empty list is a 422);
+- `short` (required) *(md)*: the definition, in plain words, **about 40 words**; inline
+  math is allowed;
+- `long` (optional) *(md)*: a second paragraph of depth.
+
+Each definition traces like a sentence (B9). A definition holds no `term:` link (a 422).
+
+````markdown
+```glossary #glossary
+terms:
+  - id: token-bucket
+    term: Token bucket
+    aliases: [bucket]
+    short: A counter of tokens that refills at a fixed rate; each request takes one.
+  - id: http-429
+    term: "429"
+    aliases: [Too Many Requests]
+    short: The status a server sends when a client is over its rate limit.
+```
+````
+
+**Term links** — `[the text](term:<id>)` links an occurrence to its glossary entry. Links
+are **written, never detected**: the reader links only what you link. Link a term's first
+use, and a later use where the reader may have lost it (a new section, a caption, a quiz
+prompt), never every occurrence. A `term:` link may sit anywhere a link may (prose,
+captions, quiz text, a formula's `reading` and its legend's `means`) except inside the
+glossary's own definitions. **A glossary entry or a `DEFINITION` callout:** the entry is
+the short lookup definition, reachable from every occurrence; a collapsed `DEFINITION`
+primer is the in-flow explanation that runs a paragraph or more, for a concept the reader
+may already know. A term may have both: the primer where the idea is taught, the entry
+for looking it up.
+
+**Inline math** — `` $`…`$ ``: a code span with a `$` touching each backtick,
+`` $`t = s \times \sqrt{n}`$ ``. It works inside emphasis, link text, table cells,
+callout titles, headings and *(md)* YAML fields. Anything else with a dollar stays text
+(`$5 and $10`, `$HOME`). **There is no escape** (`\$` is read as `$` first): to put a
+literal dollar beside a code span, leave a space between them (`` $ `ls` ``). Inline math is
+one line: no `\frac`, `\binom`, `aligned`, `cases`, `&` or `\\` (those are display only).
+It carries no written spoken text: the reader derives it from the TeX.
+
+**Formula** — one display formula, `` ```formula #id ``:
+
+- `tex` (required): the TeX, display context;
+- `alt` (required): plain text, the formula spoken in the chapter's language;
+- `reading` (required) *(md)*: one plain-words sentence, what it computes and what it
+  means here, **with no math in it** (a 422);
+- `where` (required): the legend, 1–20 items of `{sym, means}`: `sym` is TeX (inline
+  context), `means` *(md)* may hold inline math and `term:` links. List **every symbol
+  the formula uses, in the order it uses them**. Each `sym` must occur in the `tex`
+  (`formula-legend`; `e_{i}` matches `e_i`); whether the legend is complete and in order
+  is the critic's check (B5).
+
+A `tex` whose top level is one `\begin{aligned}…\end{aligned}` is drawn as steps.
+
+````markdown
+```formula #tstat
+tex: |
+  t = \frac{\bar{x} - \mu}{s / \sqrt{n}}
+alt: t equals x bar minus mu, over s divided by the square root of n.
+reading: The t statistic counts how many standard errors the sample mean sits from the mean you assumed.
+where:
+  - sym: 't'
+    means: the [t statistic](term:tstat)
+  - sym: '\bar{x}'
+    means: the sample mean
+  - sym: '\mu'
+    means: the mean under the null hypothesis
+  - sym: 's'
+    means: the sample's standard deviation
+  - sym: 'n'
+    means: the sample size
+```
+````
+
+**Writing TeX.** In YAML, put TeX in a block scalar (`|`) or single quotes, never double
+quotes (`"\frac"` holds a form feed). In a table cell, a `|` inside math still splits the
+cell: write `\lvert` / `\rvert`. Outside a text argument (`\text{…}`, `\mathrm{…}`,
+`\operatorname{…}`) TeX is ASCII only: write `\alpha`, `\times`, never the symbol; `%`,
+`#`, `~` and `$` are refused. The limits: inline 300 characters, display 2,000, nesting 20
+levels. The allowed commands are the knowledge server's TeX allowlist
+(`tests/fixtures/native/tex-allowlist.tsv`, its README *TeX*); `knowledge check` (§4.9)
+names any other (`math-command`).
 
 ### 4.5 Next steps, and the quiz
 
@@ -1475,9 +1587,11 @@ and the body refers to the **name**: `![alt](asset:arch)` or a figure's `src: ar
 ### 4.8 Before you publish
 
 Read the body once, against the rules: no `#`/`#####` headings, no raw HTML, every `#id` link
-resolves, every quiz `answer` names an option, every `asset:` name is attached, no
-number-like or colon-bearing YAML string left unquoted, no typed `sources` block, and a
-Sources section that lists only what the trace uses (§4.6).
+resolves, every `term:` link names a glossary term, every quiz `answer` names an option,
+every `asset:` name is attached, no number-like or colon-bearing YAML string left
+unquoted, TeX in YAML in a block scalar or single quotes, every legend `sym` in its
+`tex`, no typed `sources` block, and a Sources section that lists only what the trace
+uses (§4.6).
 
 ### 4.9 Check
 
@@ -1521,9 +1635,9 @@ A translation goes straight to §5; every other run gets the critic first.
    code range or record line behind every load-bearing sentence, number, quiz key and
    diagram of steps, and a sample of the rest. It flags anything from outside the code and
    the records, a gap filled instead of stated, jargon used before its plain definition, a
-   missing "In one paragraph", hard reading (a stretch past §4's bound), a missing visual
-   (a passage a picture would explain better) and a bare symbol string in prose (B5 *How
-   you check*).
+   term left unlinked to its glossary entry at its first use, a missing "In one
+   paragraph", hard reading (a stretch past §4's bound), a missing visual (a passage a
+   picture would explain better) and a bare symbol string in prose (B5 *How you check*).
 2. **Answer it** from its verdict block, then the findings by id, one line each in
    `<DOSSIER>/answers.md`: `C01 · fixed | disputed | declined · <how, or why>`. Fix every
    must-fix or remove its sentence, and the should-fixes you agree with. A fix may read the
@@ -1654,7 +1768,11 @@ an HTTP error:
   `<tmp>/body.md`, then publish once more. The same list again → `FAILED: publish`, with
   the codes; never loop. Common ones: `raw-html`, `heading-level`, `ref-unknown-asset`
   (attach the image, or drop the reference), `quiz-answer`, `ref-missing-id`, `field-type`
-  (an unquoted number or colon), `translation-quiz-ids` (keep the source's ids), and
+  (an unquoted number or colon), `ref-missing-term` (a `term:` link no glossary term
+  has), `math-syntax` and `math-command` (TeX the allowlist refuses, §4.4 *Writing TeX*),
+  `formula-legend` (a `sym` the `tex` does not use), `translation-quiz-ids`,
+  `translation-term-ids` and `translation-math` (keep the source's ids and its math byte
+  for byte, §3.1), and
   `asset-*` (a bad image: format, size, or not the type its bytes say). The `html` → native
   migration needs no flag.
 - **401** — the API requires a bearer token and yours is missing or wrong (`KB_API_TOKEN_SET=no`,
@@ -1943,7 +2061,7 @@ and `Read` only their ranges.
    `~/.claude/plugins/installed_plugins.json`, plus `/skills/explain/SKILL.md`). It is the
    writer's contract and your yardstick: read §3.4 (what counts as evidence), §4's prose
    and evidence rules, §4.1 (hard rules), §4.2 (outline and tone), §4.4 (the block grammar,
-   for diagram and quiz shapes), §4.5 (next steps and the quiz) and §4.6 (sources). Cite
+   for diagram, glossary and formula shapes), §4.5 (next steps and the quiz) and §4.6 (sources). Cite
    its sections; never restate or extend them. If you cannot find it, say so in the verdict
    and mark every `rules` finding at most `medium` confidence.
 9. `CLAUDE.md`, when there is one: honor every repo-specific safety rule there.
@@ -2047,7 +2165,10 @@ prose rules).
 rules: jargon defined on first use, transitions that carry the argument, the core idea
 reachable without the code. An ambiguous sentence is a clarity finding. So is a term used
 before a plain definition at its first use, and a sentence stacking 3 or more new terms:
-each a `should-fix` (`clarity`). A body that does not open with
+each a `should-fix` (`clarity`). So is **jargon left unlinked**: a term this reader is new
+to whose first use carries no `term:` link to a glossary entry (§4's prose rules, §4.4
+*Term links*), the glossary lacking the term included: a `should-fix` (`clarity`), naming
+the term and its first use. A term linked at every occurrence is a `note`. A body that does not open with
 `> [!IMPORTANT] In one paragraph` (§4's prose rules) is a `should-fix` (`reader`).
 
 **Hard reading** (`reading`): hold the draft to §4's bound, the one the writer wrote to: a
@@ -2064,10 +2185,10 @@ that has none: a `should-fix`, naming the passage and the kind of block that wou
 
 **A bare symbol string** (`math`): a formula written as plain symbols in a sentence ("s =
 mean ÷ sd and t = s × √n" typed inline), where §4's prose rules ask for a typeset formula,
-or, until the skill's §4.4 carries the formula forms, for the relation in words or the code
-line that computes it: a `must-fix`, since it breaks a writer rule the reader pays for. A
-display formula without its plain-words reading or its "where" legend, or a legend that
-leaves a symbol unexplained: a `should-fix` (`math`). A symbol in a code block, or a single
+inline `` $`…`$ `` or a `formula` block (§4.4): a `must-fix`, since it breaks a writer rule
+the reader pays for. A display formula without its plain-words reading or its "where"
+legend, or a legend that leaves a symbol of the `tex` unexplained or lists the symbols out
+of the formula's order: a `should-fix` (`math`). A symbol in a code block, or a single
 variable named in passing (`n`, the number of samples), is not a finding.
 
 **The hard rules:** check §4.1 by reading, as a second net under `knowledge check`, which
@@ -2090,7 +2211,8 @@ right id for the wrong point, an image without real alt text.
   follow; long re-teaching of an earlier chapter where a short recap would do; jargon used
   before a plain definition at its first use (`clarity`); a missing "In one paragraph"
   (`reader`); hard reading past §4's bound (`reading`); a missing visual (`visuals`); a
-  display formula missing its reading or legend (`math`); the `trace`, `coverage` and
+  display formula missing its reading or legend, or a legend incomplete or out of order
+  (`math`); jargon left unlinked at its first use (`clarity`); the `trace`, `coverage` and
   `reader` should-fixes above.
 - **`note`**: advisory, never blocks: a matter of taste, or an improvement the outline did
   not ask for. Judge taste against the outline's reader and the skill's §4.2 tone, never
@@ -2313,6 +2435,8 @@ put to the reader, routine arithmetic on an entry's numbers, and quiz distractor
     - ¶3 s1: gap G1
     - quiz q3 key: E05 · explain: E05, E07
     - diagram flow-1: E03, E04 (order)
+    - formula tstat: E06 · sym t: E06 · sym n: E08
+    - glossary token-bucket short: E04
     - ¶1 s2 (rev C03): E08
 
 The trace is **appended to, never rewritten whole**, and changes only with Edit (or

@@ -75,7 +75,7 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 
 ## Notes for later slices 15 (2)
 
-- **(from R1, for DECOMP2)** Build cut: the grammar splits into (a) the glossary and `term:` links and (b) math (the TeX twin, the formula block, the translation 422s). Both are high (core invariant: the stored format and the projection offsets). The reader splits into (c) math rendering, high (the no-raw-HTML rebuild), and (d) terms, mid. The chain runs a → b → c → d → skill §4 → release, with no wave → [topics/glossary-and-math.md](topics/glossary-and-math.md) `## Build cut impact`
+- **(from R1, for DECOMP2)** Build cut: the grammar splits into (a) the glossary and `term:` links and (b) math (the TeX twin, the formula block, the translation 422s). Both are high (core invariant: the stored format and the projection offsets). The reader splits into (c) math rendering, high (the no-raw-HTML rebuild), and (d) terms, mid. The chain runs a → b → c → d → skill §4 → release, with no wave → [topics/glossary-and-math.md](glossary-and-math.md) `## Build cut impact`
 
 ## Notes for later slices 4
 
@@ -108,3 +108,7 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Notes for later slices 17
 
 - **(from S6, for P39-hk.S9)** A term link is a plain `link`, `href: "term:<id>"` (`parseRef` → `{kind:"term", id}`; `resolveLink` → missing today). The block is `{type:"glossary", id, terms:[GlossaryTerm]}` (`tree.ts`); `typed()` draws nothing, so `#glossary` has no target yet; `notes-load.ts` `nameOf` calls it an untitled "Section".
+
+## Notes for later slices 18 (2)
+
+- **(from S6, for P39-hk.S10)** The exact grammar is `server/native/README.md` *The glossary*, *Limits*, *Ids*, *References*. Mind: `aliases` omitted or 1–8, never `[]`; a numeric term quoted (`"429"`); no `term:` link in a definition.

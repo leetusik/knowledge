@@ -109,7 +109,7 @@ and `Read` only their ranges.
    `~/.claude/plugins/installed_plugins.json`, plus `/skills/explain/SKILL.md`). It is the
    writer's contract and your yardstick: read §3.4 (what counts as evidence), §4's prose
    and evidence rules, §4.1 (hard rules), §4.2 (outline and tone), §4.4 (the block grammar,
-   for diagram and quiz shapes), §4.5 (next steps and the quiz) and §4.6 (sources). Cite
+   for diagram, glossary and formula shapes), §4.5 (next steps and the quiz) and §4.6 (sources). Cite
    its sections; never restate or extend them. If you cannot find it, say so in the verdict
    and mark every `rules` finding at most `medium` confidence.
 9. `CLAUDE.md`, when there is one: honor every repo-specific safety rule there.
@@ -213,7 +213,10 @@ prose rules).
 rules: jargon defined on first use, transitions that carry the argument, the core idea
 reachable without the code. An ambiguous sentence is a clarity finding. So is a term used
 before a plain definition at its first use, and a sentence stacking 3 or more new terms:
-each a `should-fix` (`clarity`). A body that does not open with
+each a `should-fix` (`clarity`). So is **jargon left unlinked**: a term this reader is new
+to whose first use carries no `term:` link to a glossary entry (§4's prose rules, §4.4
+*Term links*), the glossary lacking the term included: a `should-fix` (`clarity`), naming
+the term and its first use. A term linked at every occurrence is a `note`. A body that does not open with
 `> [!IMPORTANT] In one paragraph` (§4's prose rules) is a `should-fix` (`reader`).
 
 **Hard reading** (`reading`): hold the draft to §4's bound, the one the writer wrote to: a
@@ -230,10 +233,10 @@ that has none: a `should-fix`, naming the passage and the kind of block that wou
 
 **A bare symbol string** (`math`): a formula written as plain symbols in a sentence ("s =
 mean ÷ sd and t = s × √n" typed inline), where §4's prose rules ask for a typeset formula,
-or, until the skill's §4.4 carries the formula forms, for the relation in words or the code
-line that computes it: a `must-fix`, since it breaks a writer rule the reader pays for. A
-display formula without its plain-words reading or its "where" legend, or a legend that
-leaves a symbol unexplained: a `should-fix` (`math`). A symbol in a code block, or a single
+inline `` $`…`$ `` or a `formula` block (§4.4): a `must-fix`, since it breaks a writer rule
+the reader pays for. A display formula without its plain-words reading or its "where"
+legend, or a legend that leaves a symbol of the `tex` unexplained or lists the symbols out
+of the formula's order: a `should-fix` (`math`). A symbol in a code block, or a single
 variable named in passing (`n`, the number of samples), is not a finding.
 
 **The hard rules:** check §4.1 by reading, as a second net under `knowledge check`, which
@@ -256,7 +259,8 @@ right id for the wrong point, an image without real alt text.
   follow; long re-teaching of an earlier chapter where a short recap would do; jargon used
   before a plain definition at its first use (`clarity`); a missing "In one paragraph"
   (`reader`); hard reading past §4's bound (`reading`); a missing visual (`visuals`); a
-  display formula missing its reading or legend (`math`); the `trace`, `coverage` and
+  display formula missing its reading or legend, or a legend incomplete or out of order
+  (`math`); jargon left unlinked at its first use (`clarity`); the `trace`, `coverage` and
   `reader` should-fixes above.
 - **`note`**: advisory, never blocks: a matter of taste, or an improvement the outline did
   not ask for. Judge taste against the outline's reader and the skill's §4.2 tone, never
@@ -477,6 +481,8 @@ put to the reader, routine arithmetic on an entry's numbers, and quiz distractor
     - ¶3 s1: gap G1
     - quiz q3 key: E05 · explain: E05, E07
     - diagram flow-1: E03, E04 (order)
+    - formula tstat: E06 · sym t: E06 · sym n: E08
+    - glossary token-bucket short: E04
     - ¶1 s2 (rev C03): E08
 
 The trace is **appended to, never rewritten whole**, and changes only with Edit (or

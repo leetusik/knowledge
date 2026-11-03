@@ -17,7 +17,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 11/16 | `P39-hk.S8` | 11/16 | `.` | working tree |
+| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 12/16 | `P39-hk.S8` | 12/16 | `.` | working tree |
 | `default` | - | idle | - | - | - | branch main |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
@@ -344,8 +344,8 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | [x] `P39-hk.DECOMP2` | `done` | Cut the build from the signed canvas and R1's findings | `decomposition` | `works/phases/active/P39-hk/slices/P39-hk.DECOMP2` |
 | [x] `P39-hk.S6` | `done` | Native grammar: the glossary block and term: links, in all four places | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S6` |
 | [x] `P39-hk.S7` | `done` | Native grammar: inline math, the formula block, the TeX allowlist twin, translation checks | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S7` |
-| [ ] `P39-hk.S8` | `todo` | Reader and print: typeset math to the signed canvas (Temml, STIX Two Math) | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S8` |
+| [ ] `P39-hk.S8` | `in_progress` | Reader and print: typeset math to the signed canvas (Temml, STIX Two Math) | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S8` |
 | [ ] `P39-hk.S9` | `todo` | Reader and print: term marker, definition window, phone sheet, glossary section | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S9` |
-| [ ] `P39-hk.S10` | `todo` | Explain skill §4: the glossary, term links and formulas | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S10` |
+| [x] `P39-hk.S10` | `done` | Explain skill §4: the glossary, term links and formulas | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S10` |
 | [ ] `P39-hk.S11` | `todo` | Release plugin 0.10.0: versions, the v92 handshake, copy and counts | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S11` |
 | [ ] `P39-hk.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |
