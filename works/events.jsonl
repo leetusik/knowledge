@@ -1767,3 +1767,6 @@
 {"ts": "2026-11-05T14:05:31+09:00", "type": "slice_created", "phase": "P39-hk", "slice": "P39-hk.F4"}
 {"ts": "2026-11-05T14:31:22+09:00", "type": "executor_dispatched", "slice": "P39-hk.F1", "phase": "P39-hk", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": "round 2 (OQ19, OQ12)"}
 {"ts": "2026-11-05T14:31:22+09:00", "type": "slice_status_changed", "slice": "P39-hk.F1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-05T14:32:28+09:00", "type": "slice_status_changed", "slice": "P39-hk.F2", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-05T16:46:42+09:00", "type": "executor_dispatched", "slice": "P39-hk.F2", "phase": "P39-hk", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-05T16:46:42+09:00", "type": "slice_status_changed", "slice": "P39-hk.F2", "old_status": "in_progress", "new_status": "done"}

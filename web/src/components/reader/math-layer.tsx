@@ -23,7 +23,8 @@ import { lineOf, lineWidth } from "./formula-box";
  * - **Kept runs** (P39-hk.F1; F22, F36) — a hyphenated run kept whole (`.ra-keep`) that is
  *   wider than its whole line gets `is-wide`, so it breaks inside instead of running past the
  *   screen. Also when the window changes size, the chapter reflows (a root font size) or a
- *   definition window, its sheet or its longer definition shows.
+ *   definition window, its sheet or its longer definition shows. Since P39-hk.F2 these are every
+ *   hyphenated word of the prose and every inline formula held with its Korean particle.
  *
  * It also brings the reading aids' screen sheet (`reader-aids.css`).
  */
@@ -69,6 +70,10 @@ export function MathLayer({ chapter }: { chapter: string }) {
         : new MutationObserver(() => roots().forEach(fitKeeps));
     for (const r of roots()) {
       ro?.observe(r);
+      // P39-hk.F2: a formula held with its particle changes the pair's width when its own box
+      // turns on or off (`InlineFormula`'s `is-over`), with no other change to see: fit again.
+      for (const f of r.querySelectorAll<HTMLElement>(".ra-keep > .ra-mi"))
+        ro?.observe(f);
       shown?.observe(r, {
         subtree: true,
         attributes: true,
@@ -111,15 +116,84 @@ function fitLegends(root: HTMLElement): void {
  * run, exactly as signed (F22), because it never gets the class. Measured unbroken: the class
  * comes off every run, all of them are read in one layout, and it goes back on the ones wider
  * than their line's content box. A hidden run (a closed window) is left without it.
+ * P39-hk.F2 — the prose's runs too (every hyphenated word, a formula with its particle). One
+ * write, one read pass (each box's style and rect read once), one write: no layout between reads.
+ * While they are read unbroken the column clips sideways, so a run past the screen cannot widen
+ * the page: on a phone a wider page widens the layout viewport, and with it the sheet (fixed)
+ * whose runs are being read, which would then be read against a line the reader never sees.
  */
 function fitKeeps(root: HTMLElement): void {
   const keeps = Array.from(root.querySelectorAll<HTMLElement>(".ra-keep"));
+  if (keeps.length === 0) return;
+  const styled = root.hasAttribute("style");
+  const clip = root.style.overflowX;
+  root.style.overflowX = "clip";
   for (const k of keeps)
     if (k.classList.contains("is-wide")) k.classList.remove("is-wide");
-  const wide = keeps.filter(
-    (k) =>
-      k.getClientRects().length > 0 &&
-      k.getBoundingClientRect().width > lineWidth(lineOf(k)) + 0.5,
-  );
+  const boxes = new Map<HTMLElement, Room>();
+  const room = (el: HTMLElement): Room => {
+    let r = boxes.get(el);
+    if (!r) boxes.set(el, (r = roomOf(el)));
+    return r;
+  };
+  let wide: HTMLElement[] = [];
+  try {
+    wide = keeps.filter(
+      (k) => k.getClientRects().length > 0 && tooWide(k, root, room),
+    );
+  } finally {
+    root.style.overflowX = clip;
+    if (!styled) root.removeAttribute("style");
+  }
   for (const k of wide) k.classList.add("is-wide");
+}
+
+/** A box's content edges, and whether it bounds what is inside it. */
+interface Room {
+  left: number;
+  right: number;
+  /** An inline (or `contents`) box: no edges of its own. */
+  inline: boolean;
+  /** It scrolls or clips sideways: what is inside may be wider by design (a table's frame). */
+  frame: boolean;
+  /** Placed out of the flow (a definition window): its edges are its own, not the column's. */
+  placed: boolean;
+}
+
+function roomOf(el: HTMLElement): Room {
+  const cs = getComputedStyle(el);
+  const b = el.getBoundingClientRect();
+  return {
+    left: b.left + parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft),
+    right:
+      b.right - parseFloat(cs.borderRightWidth) - parseFloat(cs.paddingRight),
+    inline: cs.display === "inline" || cs.display === "contents",
+    frame: cs.overflowX !== "visible",
+    placed: cs.position === "absolute" || cs.position === "fixed",
+  };
+}
+
+/**
+ * Wider than the room it has: than its line's content box (F1), or, where that line grows with
+ * the run (a flex item's automatic minimum width, such as a callout's title), past the edge of
+ * any box it sits in, up to the chapter's column. Never past a box that scrolls: a table grows
+ * to its words and scrolls in its own frame, as the prose kit draws (§9). The column itself
+ * clips while it is read (`fitKeeps`), so it is a bound, never a frame.
+ */
+function tooWide(
+  k: HTMLElement,
+  root: HTMLElement,
+  room: (el: HTMLElement) => Room,
+): boolean {
+  const r = k.getBoundingClientRect();
+  const line = lineOf(k);
+  if (r.width > lineWidth(line) + 0.5) return true;
+  for (let a: HTMLElement | null = line; a; a = a.parentElement) {
+    const box = room(a);
+    if (a !== line && box.inline) continue;
+    if (a !== line && a !== root && box.frame) return false;
+    if (r.left < box.left - 0.5 || r.right > box.right + 0.5) return true;
+    if (a === root || box.placed) return false;
+  }
+  return false;
 }

@@ -169,11 +169,14 @@ math.ra-m {
    stay ink there (the reader's highlighted link steps to accent-strong). */
 .kb-ch a.ra-term:has(mark.an-m) { --ra-line: var(--kb-ink); }
 .kb-ch a.ra-term :is(mark.an-m, mark.an-pending) { color: var(--kb-ink); }
-/* One unbreakable run (F22): a hyphenated term never breaks at its hyphen; the line breaks before it */
+/* One unbreakable run (F22): a hyphenated term never breaks at its hyphen; the line breaks before it. P39-hk.F2: every
+   hyphenated word of a native chapter's prose, and an inline formula with the Hangul particle written after it. */
 .kb-ch .ra-keep { white-space: nowrap; }
 /* P39-hk.F1, F36's rule: a run wider than its whole line (measured: `MathLayer`'s `fitKeeps` sets `is-wide`) breaks
-   inside, at its hyphen first, rather than running past the screen. A run that fits never gets the class. */
-.kb-ch .ra-keep.is-wide { white-space: normal; overflow-wrap: break-word; }
+   inside, at its hyphen first, rather than running past the screen. A run that fits never gets the class.
+   P39-hk.F2: `anywhere`, not `break-word` (the same breaks in a line), so a run that breaks also lets a box that grows
+   with its words (a callout's title, a flex item) shrink back to its line, and the Korean prose's own `anywhere` stands. */
+.kb-ch .ra-keep.is-wide { white-space: normal; overflow-wrap: anywhere; }
 
 /* ---------- The definition window (F3, F5, F18, F19, F32) ---------- */
 /* Where the window floats: absolute in the article (the reader's positioned wrapper); the layer sets its left and its

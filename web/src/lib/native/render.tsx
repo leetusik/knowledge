@@ -17,6 +17,9 @@
  * - **Terms** (P39-hk.S9): a `term:` link to a glossary entry is the term marker
  *   (`terms.ts` numbers it); the glossary block draws the chapter's Glossary section and
  *   one hidden window per linked term (static markup the client `TermLayer` toggles).
+ * - **Kept runs** (F22; P39-hk.S9, F2): in a native chapter every hyphenated word of the prose,
+ *   and an inline formula with the Hangul particle written after it, is one `span.ra-keep`
+ *   that never breaks while it fits its line (`MathLayer` measures the ones that do not).
  * - **Plumbing, not look.** Minimal semantic markup with stable class and
  *   `data-*` hooks (`kb-ch-*`); S13 onwards style it under the signed rounds.
  *   The only `style` attributes are the figures' custom properties (`--fg-w`, `--fg-h`,
@@ -331,8 +334,13 @@ class Renderer {
   private stampAt = 0;
   /** P39-hk.S9: the chapter's glossary entries and each term link's occurrence (`terms.ts`); empty for `md`. */
   private readonly terms: TermPlan;
-  /** Set while a term's words or a definition render: a hyphenated word is kept whole (F22). */
-  private keep = false;
+  /**
+   * F22 (P39-hk.F2, OQ15): a native chapter keeps every hyphenated word of its prose whole, and a Hangul
+   * particle with the inline formula before it (OQ14): every inline run (`inline`), wherever it sits, plus a
+   * term's name and aliases. S9 kept only a term's words and its definitions. Never code, a link's target,
+   * an attribute, a diagram's label or a plain-string title; never an `md` body.
+   */
+  private readonly keep: boolean;
   /** Set while the term windows render: their second copy of a definition takes no ids. */
   private copy = false;
 
@@ -350,6 +358,7 @@ class Renderer {
     const own = links.format === "md" ? [] : blocks;
     this.plan = planCitations(own);
     this.terms = planTerms(own);
+    this.keep = links.format !== "md";
   }
 
   /** Render one top-level block with its anchor stamps (P30.S20). */
@@ -421,6 +430,7 @@ class Renderer {
    * and the line breaks before it. Only the text's own characters, so no offset moves.
    * P39-hk.F1: a run wider than its whole line is measured on the page (`MathLayer`'s
    * `fitKeeps`) and only then breaks inside, as F36 signs; the markup stays this one span.
+   * P39-hk.F2: a dash standing alone (` - `) has no break inside it to stop: no span.
    */
   keepText(value: string): ReactNode {
     if (!value.includes("-")) return this.text(value);
@@ -428,7 +438,7 @@ class Renderer {
       .split(/(\S*-\S*)/)
       .filter(Boolean)
       .map((part, i) =>
-        part.includes("-") ? (
+        part.includes("-") && /[^-]/.test(part) ? (
           <span key={i} className="ra-keep">
             {this.text(part)}
           </span>
@@ -436,6 +446,35 @@ class Renderer {
           <Fragment key={i}>{this.text(part)}</Fragment>
         ),
       );
+  }
+
+  /** A text node's words: hyphenated words kept whole in a native chapter (F22), as written in `md`. */
+  private prose(value: string): ReactNode {
+    return this.keep ? this.keepText(value) : this.text(value);
+  }
+
+  /**
+   * P39-hk.F2 (F22's Korean clause, OQ14): the Hangul written right after an inline formula, with no
+   * space between (a particle: `를`, `로,`, `입니다.`), up to the first space; null for anything else.
+   */
+  private particle(next: Inline | undefined): string | null {
+    if (!this.keep || next?.type !== "text") return null;
+    return /^\p{Script=Hangul}\S*/u.exec(next.text)?.[0] ?? null;
+  }
+
+  /**
+   * P39-hk.F2: an inline formula and its particle as one kept run, so the line breaks before the
+   * formula rather than between them. A pair wider than its whole line is measured `is-wide` like any
+   * keep (`fitKeeps`) and may break between them again, its formula scrolling in its own box (F1).
+   * Only the text's own characters, so no offset moves.
+   */
+  private boundMath(tex: string, tail: string, key: number): ReactNode {
+    return (
+      <span key={key} className="ra-keep">
+        {this.inlineMath(tex)}
+        {this.text(tail)}
+      </span>
+    );
   }
 
   /** A second drawing of content already on the page (paper's quiz, a term's window): no ids. */
@@ -449,23 +488,29 @@ class Renderer {
     }
   }
 
-  /** An inline run with its hyphenated words kept whole (a term's words, a definition). */
-  private kept(nodes: readonly Inline[] | null | undefined): ReactNode {
-    const was = this.keep;
-    this.keep = true;
-    try {
-      return this.inline(nodes);
-    } finally {
-      this.keep = was;
-    }
-  }
-
   // --- inline ------------------------------------------------------------------
 
   inline(nodes: readonly Inline[] | null | undefined): ReactNode {
     if (!nodes) return null;
     if (this.cloze) return this.clozeRun(nodes);
-    return nodes.map((node, i) => this.inlineNode(node, i));
+    // P39-hk.F2: a particle bound to the formula before it is taken off the text that follows.
+    let skip = 0;
+    return nodes.map((node, i) => {
+      const from = skip;
+      skip = 0;
+      if (from > 0 && node.type === "text") {
+        const rest = node.text.slice(from);
+        return rest ? <Fragment key={i}>{this.prose(rest)}</Fragment> : null;
+      }
+      if (node.type === "math") {
+        const tail = this.particle(nodes[i + 1]);
+        if (tail) {
+          skip = tail.length;
+          return this.boundMath(node.tex, tail, i);
+        }
+      }
+      return this.inlineNode(node, i);
+    });
   }
 
   /**
@@ -506,9 +551,16 @@ class Renderer {
       if (node.type === "text" && skip > 0) {
         const rest = node.text.slice(skip);
         skip = 0;
-        return rest ? <Fragment key={i}>{this.text(rest)}</Fragment> : null;
+        return rest ? <Fragment key={i}>{this.prose(rest)}</Fragment> : null;
       }
       skip = 0;
+      if (node.type === "math") {
+        const tail = this.particle(nodes[i + 1]);
+        if (tail) {
+          skip = tail.length;
+          return this.boundMath(node.tex, tail, i);
+        }
+      }
       return this.inlineNode(node, i);
     });
   }
@@ -516,11 +568,7 @@ class Renderer {
   inlineNode(node: Inline, key: number): ReactNode {
     switch (node.type) {
       case "text":
-        return (
-          <Fragment key={key}>
-            {this.keep ? this.keepText(node.text) : this.text(node.text)}
-          </Fragment>
-        );
+        return <Fragment key={key}>{this.prose(node.text)}</Fragment>;
       case "code":
         return <code key={key}>{node.text}</code>;
       case "math":
@@ -679,7 +727,7 @@ class Renderer {
         aria-expanded="false"
         aria-controls={`tw-${use.id}`}
       >
-        {this.kept(node.children)}
+        {this.inline(node.children)}
       </a>
     );
   }
@@ -1154,7 +1202,7 @@ class Renderer {
     return (
       <p className={className} lang="en">
         {CHAPTER.terms.alsoCalled}{" "}
-        <span lang={this.lang}>{this.text(t.aliases.join(", "))}</span>
+        <span lang={this.lang}>{this.keepText(t.aliases.join(", "))}</span>
       </p>
     );
   }
@@ -1188,8 +1236,8 @@ class Renderer {
               <li key={t.id} className="ra-gl__item" id={`gl-${t.id}`}>
                 <p className="ra-gl__term">{this.keepText(t.term)}</p>
                 {this.aliases(t, "ra-gl__alias")}
-                <p className="ra-gl__def">{this.kept(t.short)}</p>
-                {t.long ? <p className="ra-gl__def">{this.kept(t.long)}</p> : null}
+                <p className="ra-gl__def">{this.inline(t.short)}</p>
+                {t.long ? <p className="ra-gl__def">{this.inline(t.long)}</p> : null}
                 {uses ? (
                   <p className="ra-gl__back" lang="en" hidden>
                     <a className="fg-back" href={`#${uses[0].anchor}`}>
@@ -1253,10 +1301,10 @@ class Renderer {
                   </button>
                 </div>
                 <div className="ra-win__body">
-                  <p className="ra-def">{this.kept(t.short)}</p>
+                  <p className="ra-def">{this.inline(t.short)}</p>
                   {t.long ? (
                     <p className="ra-def ra-def--long" id={`${w}-l`} hidden>
-                      {this.kept(t.long)}
+                      {this.inline(t.long)}
                     </p>
                   ) : null}
                 </div>

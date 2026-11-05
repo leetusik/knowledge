@@ -69,3 +69,15 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Decisions 30
 
 - **Skill text for glossary and math (S10):** the Glossary is §4.2's item 5, used "when the chapter has terms this reader is new to" (not a signed part like Quiz). A short relation in a sentence is inline math; a formula the reader must study is a `formula` block. Jargon left unlinked at first use is a `clarity` should-fix, and a term linked at every occurrence is a `note`. An incomplete or out-of-order legend is a `math` should-fix. Trace keys are `formula <id> · sym <s>` and `glossary <term id> short` (B9).
+
+## Decisions 14
+
+- **Glossary grammar (R1):** a ```` ```glossary #glossary ```` typed block, one per chapter (`limit`), placed freely. The renderer titles it `Glossary`, with the block's id. Term ids are their own namespace, scoped to the block. `[x](term:<id>)` resolves against them (`ref-missing-term`; `ref-scheme` for a term image or a term link inside the glossary). Search indexes the block; the annotation projection is unchanged → [glossary-and-math.md](glossary-and-math.md) §1
+
+## Decisions 15
+
+- **Math grammar (R1):** inline math is `` $`…`$ ``, a code span between two dollars, which both parsers already split identically. `$…$` is rejected because `$HOME/$USER` misfires and the two parsers' math extensions disagree. Display math is a `formula` block (`tex`, `alt`, `reading`, `where`); `formula-legend` refuses a symbol the formula lacks. Inline math is a `data-an-len` atom counting its TeX, and `syntax: 1` stays → [glossary-and-math.md](glossary-and-math.md) §2
+
+## Decisions 16
+
+- **Engine (R1):** Temml 0.14.0 renders MathML, server-only, rebuilt by saxes through a MathML allowlist (no raw HTML). Its `aligned` stacks the relations in Chromium, WebKit and Firefox. STIX Two Math is vendored (OFL, 403 KB) and loaded only on pages with math. No CSP change. Chromium's √ gap is corrected per instance by measurement, never by a fixed margin → [glossary-and-math.md](glossary-and-math.md) §3

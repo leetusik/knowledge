@@ -121,6 +121,34 @@ terms:
   });
 });
 
+// P39-hk.F2 — F22 in the prose: a hyphenated word is one kept run wherever the chapter's prose
+// sits (never code, a link's target or an `md` body), and a Hangul particle written right after
+// an inline formula is kept with it (OQ14).
+describe("kept runs in the prose", () => {
+  const HEAD = "---\nformat: native\nsyntax: 1\n---\n## One {#one}\n\n";
+
+  it("keeps a hyphenated word whole, but not a lone dash, code or a link's target", () => {
+    const body =
+      "A walk-forward test - not `look-ahead` - ends at [the out-of-sample run](https://x.example/a-b).\n";
+    const html = render(HEAD + body);
+    expect(html).toContain('A <span class="ra-keep">walk-forward</span> test - not <code>look-ahead</code> - ends');
+    expect(html).toContain('href="https://x.example/a-b"');
+    expect(html).toContain('the <span class="ra-keep">out-of-sample</span> run');
+    const md = renderToStaticMarkup(
+      createElement(NativeChapter, { source: body, format: "md" }),
+    );
+    expect(md).not.toContain("ra-keep");
+  });
+
+  it("binds a Hangul particle to the inline formula before it, never one after a space", () => {
+    const html = render(`${HEAD}합 $\`x\`$를 계산하며, $\`y\`$ 다음.\n`, "ko");
+    expect(html).toMatch(
+      /<span class="ra-keep"><span class="ra-mi"><span class="ra-mi__s"><math[^>]*>(?:(?!<\/math>).)*<\/math><\/span><\/span>를<\/span> 계산하며, <span class="ra-mi">/,
+    );
+    expect(html.match(/class="ra-keep"/g)?.length).toBe(1);
+  });
+});
+
 describe("planTerms", () => {
   it("numbers no link to an id the glossary does not hold (it renders as plain text)", () => {
     const known = { type: "link", href: "term:rate", title: null, children: [] };
