@@ -7,6 +7,7 @@ import type { LoadedReader } from "@/lib/reader/load";
 import { AnnotationLayer } from "./annotations";
 import { ChapterEnd } from "./chapter-end";
 import { ChapterHead } from "./chapter-head";
+import { MathLayer } from "./math-layer";
 import { PrintPrep } from "./print-client";
 import { PrintColophon, PrintMasthead } from "./print-sheet";
 
@@ -70,6 +71,8 @@ export function ReaderArticle({ reader }: { reader: LoadedReader }) {
         total={view.book?.total}
       />
       <PrintColophon view={view} />
+      {/* P39-hk.S8: the math look and its measured corrections (the √ gap, one legend column). */}
+      <MathLayer chapter={`${reader.docId}:${view.version}:${view.lang}`} />
       {/* P30.S20/S21: highlights, notes and bookmarks, on a native chapter that renders and
           bookmarks on a plain Markdown one. A member with nowhere to save (OQ75) gets none;
           a signed-out reader gets Sign in to save. */}

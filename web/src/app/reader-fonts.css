@@ -1110,3 +1110,19 @@
   src: url("/fonts/reader/notoserifkr-normal-s123.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
+
+/*
+ * P39-hk.S8 — the math face (`10-reading-aids` round 01, frame F8; R1 §3 *Fonts*): STIX Two
+ * Math 2.12 (OFL 1.1, Reserved Font Name "TM Math"), the unmodified Google Fonts woff2 with its
+ * MATH table, vendored as `public/fonts/reader/stix-two-math.woff2` (`public/fonts/README.md`).
+ * Hand-written, not one of the generated subsets above. The system's own copy comes first (macOS
+ * and iOS ship it); a face is fetched only when text uses it, so only a page with math loads the
+ * file. The reader names it through `--font-math` ("STIX Two Math", "Cambria Math", math).
+ */
+@font-face {
+  font-family: "STIX Two Math";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("STIX Two Math"), local("STIXTwoMath-Regular"), url("/fonts/reader/stix-two-math.woff2") format("woff2");
+}

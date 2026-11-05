@@ -10,12 +10,14 @@ import {
   postCardReview,
 } from "@/lib/knowledge/reader";
 import { loadContinue } from "@/lib/library/continue";
+import { linearTex } from "@/lib/native/mathml";
 import { getSession } from "@/lib/session";
 
 import type {
   ActionResult,
   Profile,
   RateReply,
+  ReviewCard,
   ReviewQueue,
   StatusReply,
 } from "./types";
@@ -52,11 +54,43 @@ function failure(
   };
 }
 
+/**
+ * P39-hk.S8 (OQ9, built on its recommendation) — a quiz card shows a formula as its linear text
+ * (`t = s × √n`, the inline formula's spoken form, R1 §3), made here on the server where the
+ * queue is read, since the card draws on the client and the math engine is server-only. Every
+ * inline `math` node of a card's front and back becomes that text; never dropped. (A formula the
+ * engine refuses, which publish never lets through, stays as its TeX in code.)
+ */
+function linearMath(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(linearMath);
+  if (typeof value !== "object" || value === null) return value;
+  const node = value as Record<string, unknown>;
+  if (node.type === "math" && typeof node.tex === "string") {
+    const text = linearTex(node.tex);
+    return text === null
+      ? { type: "code", text: node.tex }
+      : { type: "text", text };
+  }
+  return Object.fromEntries(
+    Object.entries(node).map(([k, v]) => [k, linearMath(v)]),
+  );
+}
+
+function linearCard<C extends ReviewCard | null>(card: C): C {
+  if (!card || card.source !== "quiz") return card;
+  return {
+    ...card,
+    front: linearMath(card.front),
+    back: linearMath(card.back),
+  } as C;
+}
+
 export async function loadReviewQueue(): Promise<ActionResult<ReviewQueue>> {
   const token = await getSession();
   if (!token) return { ok: false, ref: reference() };
   try {
-    return { ok: true, data: await getReviewQueue(token, QUEUE_LIMIT) };
+    const queue = await getReviewQueue(token, QUEUE_LIMIT);
+    return { ok: true, data: { ...queue, cards: queue.cards.map(linearCard) } };
   } catch (error) {
     return failure(error, "queue");
   }
@@ -100,7 +134,7 @@ export async function rateReviewCard(
       review_id: reviewId,
       ...(response ? { response } : {}),
     });
-    return { ok: true, data };
+    return { ok: true, data: { ...data, next: linearCard(data.next) } };
   } catch (error) {
     return failure(error, "rating");
   }

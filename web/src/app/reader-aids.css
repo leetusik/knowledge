@@ -1,0 +1,108 @@
+/*
+ * The reading aids (`10-reading-aids` round 01, signed 2026-11-03), on screen. Transcribed from
+ * the signed snapshot's `frame.css` Part 3 and the `Formulas` page's rules, as the round's
+ * `## Build` names them; the canvas's `.rd-frame` is the product's `.rd-root`, its
+ * `.rd-flow.rd-prose` the chapter's `.kb-ch`. Paper is `kb-print.css`. Brought by the reader's
+ * `MathLayer` (`components/reader/math-layer.tsx`).
+ *
+ * P39-hk.S8: the inline formula (F7, F24) and the display formula block (F7, F27, F36), plus
+ * the few engine rules Temml's MathML needs (R1 §3): its array cells' alignment, the italic
+ * correction before a superscript, the prime's glyph, and the two spacings the rebuild turns
+ * from Temml's styles into classes (`mathml.ts`). Never built (the `## Build`'s canvas-only
+ * list): the state bars, the phone boxes, the steps grid of separate math cells and the fixed
+ * `.ra-m msqrt` margin (the √ gap is measured per instance, `radicals.ts`).
+ * S9 adds the terms (the marker, the window, the sheet, the glossary) to this file.
+ */
+
+/* ---------- Tokens (frame.md F8, F9) ---------- */
+.rd-root, .kb-ch {
+  --font-math: "STIX Two Math", "Cambria Math", math;
+  --ra-math-k: 1;            /* inline math at the text's size: STIX Two Math's caps match Literata's */
+  --ra-display-k: 1.5;       /* a display formula: 1.5 x the text */
+}
+
+/* ---------- Math, whatever the text around it (F7: words and numbers upright) ---------- */
+/* The text around a formula never leaks into it: italic, bold, tracking or a case change of the
+   sentence (an emphasis, a heading, a link) leave the formula as set. Temml's own resets. */
+.kb-ch math {
+  font-style: normal; font-weight: normal; letter-spacing: normal; text-transform: none;
+  text-indent: 0; direction: ltr; font-feature-settings: "dtls" off;
+}
+
+/* ---------- The inline formula (F7, F24) ---------- */
+math.ra-m {
+  font-family: var(--font-math); font-size: calc(1em * var(--ra-math-k));
+  math-style: compact; white-space: nowrap;
+}
+.ra-m mi, .ra-m mn, .ra-m mo { font-family: var(--font-math); }
+
+/* ---------- The display formula block (F7) ---------- */
+.ra-mb {
+  margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0;
+  padding-block: calc(var(--kb-space-md) * var(--rd-k));
+  border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border);
+  display: flex; flex-direction: column; gap: calc(var(--kb-space-sm) * var(--rd-k));
+}
+.ra-mb__eq { position: relative; overflow-x: auto; overflow-y: hidden; padding-block: var(--kb-space-xs); scrollbar-width: thin; }
+.ra-mb__eq:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+/* A row wider than the column scrolls inside its own box; the side with more takes a fade (the tables' cue) */
+.ra-mb__eq.is-more-end { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
+.ra-mb__eq.is-more-start { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); }
+.ra-mb__eq.is-more-start.is-more-end { -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); }
+/* `display: block` first for the engines that do not know `block math` (Temml's note). */
+.ra-mb__eq math { display: block; display: block math; margin: 0; font-family: var(--font-math); font-size: calc(var(--rd-fs) * var(--ra-display-k)); text-align: left; width: max-content; }
+/* Steps (one relation a row, `aligned`): the left side set to the right, the relation and the right side
+   set left, so the relations stack on one edge (Temml's two cell classes). The canvas sets each sign in a
+   grid cell of its own, 0.28em from either side (`.ra-steps__grid` column-gap), and the sign keeps its own
+   relation spacing (0.2778em) there too: so the sign, the first operator of Temml's right cell, takes the
+   0.28em on both sides (measured against the canvas's grid in Chromium by the S8 sweep: the relation sat
+   0.28em closer to each side without it). Its 0.2em row gap is the row's top padding. */
+.ra-mb mtable.tml-jot > mtr > mtd.tml-left > mrow > mo:first-child,
+.ra-mb mtable.tml-jot > mtr > mtd.tml-left > mo:first-child { margin-inline: 0.28em; }
+.ra-mb mtable.tml-jot > mtr + mtr > mtd { padding-top: 0.2em; }
+.ra-mb__cap { display: flex; flex-direction: column; gap: calc(var(--kb-space-sm) * var(--rd-k)); margin: 0; }
+.ra-mb__read { margin: 0; font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink); text-wrap: pretty; }
+.ra-mb__read:lang(ko) { word-break: keep-all; }
+.ra-mb__where { margin: 0; font-family: var(--font-reading); font-style: italic; font-size: var(--rd-fs-s); line-height: 1.5; color: var(--kb-secondary); }
+.ra-mb__where:lang(ko) { font-style: normal; }
+/* One symbol column per chapter (F27): the chapter's widest legend symbol plus room (`--ra-sym-k`, measured
+   by `MathLayer`; this chapter's 5.25 × the symbol size without script), so every legend's meanings start on
+   one edge; bounded so 200 % text keeps room for the meanings (the Formulas page's rule). */
+.ra-legend {
+  display: grid;
+  grid-template-columns: minmax(max-content, min(calc(var(--rd-fs) * var(--ra-sym-k, 5.25)), 28%)) minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: var(--kb-space-md); row-gap: calc(var(--kb-space-xs) * var(--rd-k)); margin: 0;
+}
+.ra-legend dt { margin: 0; font-family: var(--font-math); font-size: var(--rd-fs); line-height: 1.5; color: var(--kb-ink); white-space: nowrap; }
+.ra-legend dt math { font-family: var(--font-math); font-size: 1em; }
+/* F36: a meaning's word wider than its column (200 % text on a phone) breaks rather than runs past the screen */
+.ra-legend dd { margin: 0; font-family: var(--font-reading); font-size: var(--rd-fs-s); line-height: 1.5; color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; }
+.ra-legend dd:lang(ko) { word-break: keep-all; }
+
+/* ---------- Temml's MathML (R1 §3): the engine rules the look needs, nothing else ---------- */
+/* Array cells carry no padding of their own (Temml writes it inline; the rebuild drops every style). */
+.kb-ch mtd { padding-inline: 0; }
+/* Temml's fixed spacings, rebuilt as classes: `\!`, and the 1em before a `cases` condition or an
+   `aligned` column pair. */
+.kb-ch .ra-m-nthin { margin-inline-start: -0.1667em; }
+.kb-ch mtd.ra-m-col { padding-inline-start: 1em; }
+/* Cell alignment (Firefox and WebKit read `text-align`; Chromium its prefixed keyword). */
+.kb-ch .tml-right { text-align: right; }
+.kb-ch .tml-left { text-align: left; }
+@supports (not (-webkit-backdrop-filter: blur(1px))) and (not (-moz-appearance: none)) {
+  .kb-ch .tml-right { text-align: -webkit-right; }
+  .kb-ch .tml-left { text-align: -webkit-left; }
+}
+/* Rows of a plain array (`cases`) keep the 0.5ex Temml counts on from MathML's own sheet (the app's reset
+   zeroes it); `aligned` steps take the 0.2em above; a small array Temml's 0.35ex. */
+.kb-ch mtable:not(.tml-jot, .tml-small) > mtr > mtd { padding-block: 0.5ex; }
+.kb-ch mtable.tml-small mtd { padding-block: 0.35ex; }
+/* The italic correction before a superscript (Chromium and WebKit; Firefox sets its own). */
+@supports (not (-moz-appearance: none)) {
+  .kb-ch .tml-sml-pad { padding-left: 0.05em; }
+  .kb-ch .tml-med-pad { padding-left: 0.1em; }
+  .kb-ch .tml-lrg-pad { padding-left: 0.15em; }
+}
+/* The prime's own glyph, set low enough for a superscript (STIX Two Math's ss04). */
+.kb-ch mo.tml-prime { font-feature-settings: "ss04"; }

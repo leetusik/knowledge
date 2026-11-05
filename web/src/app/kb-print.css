@@ -328,6 +328,24 @@
   html .rd-root .pp-colo p { margin: 0; }
   html .rd-root .pp-colo p + p { margin-top: 3px; }
   html .rd-root .pp-colo .pp-colo__line { margin-bottom: 3px; font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  /* -------- Formulas (P39-hk.S8; `10-reading-aids` round 01, *Paper*; F10, F26, F27) -------------- */
+  /* The same DOM as the screen. Inline math at 1em of the 14px text. A display block is the band kept whole
+     with its reading and legend (never split), on the prose's 38em measure, 14px around it as a wide block
+     (24px still above an h2), its lead-in paragraph kept with it; no scroll box, no fade. The formula 21.33px
+     (16pt), the reading and the legend 14px, "where" 12px; the chapter's one symbol column in em of 14px
+     (5.25em for the record's chapter). */
+  html .rd-root .kb-ch math.ra-m { font-size: calc(1em * var(--ra-math-k)); }
+  html .rd-root .rd-prose .kb-ch > .ra-mb, html .rd-root .rd-prose .kb-ch > .ra-mb + :not(.kb-ch-h) { margin-top: 14px; }
+  html .rd-root .kb-ch .ra-mb { max-width: 38em; margin-bottom: 0; padding-block: 12px; border-color: var(--pp-border); gap: 8px; break-inside: avoid; }
+  html .rd-root .kb-ch > p:has(+ .ra-mb) { break-after: avoid; }
+  html .rd-root .kb-ch .ra-mb__eq { overflow: visible; padding-block: 2px; -webkit-mask-image: none; mask-image: none; }
+  html .rd-root .kb-ch .ra-mb__eq math { font-size: 21.33px; }
+  html .rd-root .kb-ch .ra-mb__read { font-size: 14px; line-height: 1.55; color: var(--pp-ink); }
+  html .rd-root .kb-ch .ra-mb__where { font-size: 12px; color: var(--pp-sec); }
+  html .rd-root .kb-ch .ra-legend { grid-template-columns: calc(var(--ra-sym-k, 5.25) * 1em) minmax(0, 1fr); row-gap: 2px; column-gap: 12px; }
+  html .rd-root .kb-ch .ra-legend dt { font-size: 14px; color: var(--pp-ink); }
+  html .rd-root .kb-ch .ra-legend dd { font-size: 14px; line-height: 1.5; color: var(--pp-ink); }
 }
 
 /* ==========================================================================

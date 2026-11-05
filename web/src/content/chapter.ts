@@ -82,7 +82,12 @@ export const CHAPTER = {
       laneMarks: (list: string): string => `. Marks: ${list}`,
       markAt: (label: string, at: string, unit: string): string =>
         `${label} at ${at}${unit ? ` ${unit}` : ""}`,
-      barSpan: (label: string, from: string, to: string, unit: string): string =>
+      barSpan: (
+        label: string,
+        from: string,
+        to: string,
+        unit: string,
+      ): string =>
         `${label ? `${label}, ` : ""}${from}–${to}${unit ? ` ${unit}` : ""}`,
       lane: (lane: string, bars: string, marks: string): string =>
         `${lane}: ${bars}${marks}.`,
@@ -110,6 +115,21 @@ export const CHAPTER = {
     /** A `wide` figure that scrolls sideways. */
     aria: "Image, scrolls sideways",
     hint: "Scroll sideways to see the whole image →",
+  },
+  /**
+   * P39-hk.S8 — the display formula's words (`10-reading-aids` round 01, frame F1 and the
+   * `MathBlock` board): in the chapter's language, as the record draws them, unlike the rest
+   * of the reader's chrome. `ko` is a Korean chapter.
+   */
+  formula: {
+    /** Over the legend: lowercase, as a mathematician writes it. */
+    where: (ko: boolean): string => (ko ? "여기서" : "where"),
+    /** The box's region name while the formula scrolls sideways. */
+    scrolls: (ko: boolean): string =>
+      ko ? "수식, 옆으로 스크롤됩니다" : "Formula, scrolls sideways",
+    /** The figure's name: the word, then the formula's spoken text. */
+    label: (alt: string, ko: boolean): string =>
+      `${ko ? "수식" : "Formula"}: ${alt}`,
   },
   sources: {
     label: "Sources",

@@ -9,6 +9,9 @@
  *   ingest and again here; `md`: dropped by the parser).
  * - **SVG** is rebuilt element by element from the validated tree through the
  *   allowlist a second time (`svg.ts`), with its ids scoped to the block.
+ * - **Math** (P39-hk.S8) is Temml's MathML rebuilt element by element through a MathML
+ *   allowlist (`mathml.ts`): never Temml's string. Temml refusing TeX that publish
+ *   accepted refuses the whole block with the placeholder; raw TeX is never shown.
  * - **Links** go through `links.ts`: a target the reader cannot open renders as
  *   a "missing link" that carries no href.
  * - **Plumbing, not look.** Minimal semantic markup with stable class and
@@ -35,6 +38,7 @@ import {
   type PrintKey,
 } from "@/components/reader/print-quiz";
 import { ClozeBlank, QuizBlock, type QuizItemProps } from "@/components/reader/quiz";
+import { FormulaBox } from "@/components/reader/formula-box";
 import { ArtBox, TableBox } from "@/components/reader/scroll-box";
 import { CHAPTER } from "@/content";
 import { hangulRuns, isKorean } from "@/lib/reader/hangul";
@@ -53,6 +57,13 @@ import {
   type AssetInfo,
   type LinkContext,
 } from "./links";
+import {
+  isSteps,
+  linearText,
+  MathError,
+  mathElement,
+  mathTree,
+} from "./mathml";
 import { plainText, type ChapterFormat } from "./parse";
 import { codePoints, containers, inlineText } from "./project";
 import { parseRef, RefError } from "./refs";
@@ -152,6 +163,7 @@ export function ChapterView({
     lang !== undefined && !isKorean(lang),
     checked.blocks.flatMap((e) => (e.block && !e.refused ? [e.block] : [])),
     quiz,
+    lang !== undefined && isKorean(lang),
   );
   // P30.S20: each passage container's place in its section's text (`project.ts`), so
   // the reader can capture and paint annotation offsets in the shared projection.
@@ -313,6 +325,8 @@ class Renderer {
     private readonly wrap: boolean = false,
     blocks: readonly Block[] = [],
     private readonly quizCtx?: QuizViewContext,
+    /** A Korean chapter: the formula's words are Korean (`CHAPTER.formula`). */
+    private readonly ko: boolean = false,
   ) {
     this.plan = planCitations(links.format === "md" ? [] : blocks);
   }
@@ -321,8 +335,24 @@ class Renderer {
   stamped(stamps: Stamp[] | null, block: Block): ReactNode {
     this.stamps = stamps;
     this.stampAt = 0;
+    const keys = this.printKeys.length;
     try {
       return this.block(block);
+    } catch (exc) {
+      // P39-hk.S8: Temml refused TeX that publish accepted (a parser drift). The block is
+      // refused as the validator would have refused it; its TeX is never shown.
+      if (!(exc instanceof MathError)) throw exc;
+      this.cloze = null;
+      this.printKeys.length = keys;
+      return (
+        <div
+          className="kb-ch-unshowable"
+          role="note"
+          data-block={block.id ?? undefined}
+        >
+          {CHAPTER.unshowableBlock}
+        </div>
+      );
     } finally {
       this.stamps = null;
     }
@@ -424,16 +454,7 @@ class Renderer {
       case "code":
         return <code key={key}>{node.text}</code>;
       case "math":
-        // P39-hk.S7's interim: the TeX as code-like text, counted as its text,
-        // exactly the projection's characters. Not yet a `data-an-len` atom: the
-        // paint round trip in reader-anchor.test.ts allows only whitespace
-        // between a stored edge and the painted one. S8 replaces this with the
-        // typeset MathML (an atom) and answers that test.
-        return (
-          <code key={key} className="kb-ch-math">
-            {node.tex}
-          </code>
-        );
+        return this.inlineMath(node.tex, key);
       case "em":
         return <em key={key}>{this.inline(node.children)}</em>;
       case "strong":
@@ -479,6 +500,25 @@ class Renderer {
       default:
         return null;
     }
+  }
+
+  /**
+   * P39-hk.S8 — inline math (`10-reading-aids` *Inline formula*; F7, F24): `math.ra-m` in
+   * the sentence, its `alttext` the formula written in a line (OQ7, R1's recommendation).
+   * It is an atom of the projection (`data-an-len`, its TeX's code points): a selection
+   * never splits it and a highlight leaves it unpainted, as a bare citation's number.
+   */
+  inlineMath(tex: string, key?: number): ReactNode {
+    const tree = mathTree(tex, false);
+    return mathElement(
+      tree,
+      {
+        className: "ra-m",
+        alttext: linearText(tree),
+        "data-an-len": String(codePoints(tex).length),
+      },
+      key,
+    );
   }
 
   /** A native image's asset name: `asset:<name>` only (null for anything else). */
@@ -985,9 +1025,67 @@ class Renderer {
         return this.quiz(block, id);
       case "sources":
         return this.sources(block, id);
+      case "formula":
+        return this.formula(block, id);
       default:
         return null;
     }
+  }
+
+  /**
+   * P39-hk.S8 — the display formula block (`10-reading-aids` *Display formula block*; F7,
+   * F27, F36; the `MathBlock` board): `figure.ra-mb`, a band between two hairlines on the
+   * column's left edge. The formula in its own measured box (`FormulaBox`), at 1.5 × the
+   * text; `aligned` steps are one relation a row, aligned on the relation (Temml's
+   * `mtable`). The caption: the reading, "where", then the legend, one symbol column per
+   * chapter. Spoken: the figure's name, the formula's `alttext`, then the caption.
+   */
+  formula(block: TypedBlock, id: string | undefined): ReactNode {
+    const raw = str(block.tex);
+    if (raw === null) return null;
+    // A block scalar keeps its final newline (S7): trimmed before the steps test.
+    const tex = raw.replace(/\s+$/, "");
+    const alt = str(block.alt) ?? "";
+    const reading = inl(block.reading);
+    const legend = arr(block.where).flatMap((item) => {
+      if (!isRec(item)) return [];
+      const sym = str(item.sym);
+      return sym === null ? [] : [{ sym, means: inl(item.means) }];
+    });
+    const steps = isSteps(tex);
+    return (
+      <figure
+        className={steps ? "ra-mb ra-mb--steps" : "ra-mb"}
+        id={id}
+        data-block={id}
+        aria-label={CHAPTER.formula.label(alt, this.ko)}
+      >
+        <FormulaBox label={CHAPTER.formula.scrolls(this.ko)}>
+          {mathElement(mathTree(tex, true), { alttext: alt })}
+        </FormulaBox>
+        <figcaption className="ra-mb__cap">
+          {reading && reading.length ? (
+            <p className="ra-mb__read">{this.inline(reading)}</p>
+          ) : null}
+          {legend.length ? (
+            <>
+              <p className="ra-mb__where">{CHAPTER.formula.where(this.ko)}</p>
+              <dl className="ra-legend">
+                {legend.map((row, i) => {
+                  const sym = mathTree(row.sym, false);
+                  return (
+                    <Fragment key={i}>
+                      <dt>{mathElement(sym, { alttext: linearText(sym) })}</dt>
+                      <dd>{this.inline(row.means)}</dd>
+                    </Fragment>
+                  );
+                })}
+              </dl>
+            </>
+          ) : null}
+        </figcaption>
+      </figure>
+    );
   }
 
   /** §2 the figure's caption, credit and (for an animated asset) the still-frame line. */

@@ -104,6 +104,10 @@ function nameOf(
       return { word: "Figure", title: words(b.caption) ?? "" };
     case "svg":
       return { word: "Figure", title: words(b.caption) ?? str(b.label) ?? "" };
+    case "formula":
+      // P39-hk.S8 (undrawn; built as a figure, `figure.ra-mb`): its spoken text names it,
+      // else its reading. Never its TeX.
+      return { word: "Figure", title: str(b.alt) ?? words(b.reading) ?? "" };
     case "sources":
       return { word: "Sources", title: heading ?? CHAPTER.sources.label };
     case "code":

@@ -53,3 +53,15 @@ The subset files are numbered in the order Google's CSS lists them; the `unicode
 `reader-fonts.css`. To refresh: fetch `https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..700&display=swap`
 and `…?family=Noto+Serif+KR:wght@200..900&display=swap` with a modern Chrome user agent, download each `woff2`, and
 regenerate the CSS. Do not hotlink.
+
+## The reader's math face (`public/fonts/reader/stix-two-math.woff2`, P39-hk.S8)
+
+| File | Face | Source | Role |
+|---|---|---|---|
+| `stix-two-math.woff2` (403,344 bytes) | STIX Two Math 2.12 (OFL 1.1; Reserved Font Name "TM Math"; "STIX Fonts" is an IEEE trademark) | `@fontsource/stix-two-math` 5.3.0, `files/stix-two-math-latin-400-normal.woff2`: Google Fonts' file, **unmodified**, the whole `cmap` and the `MATH` table | `--font-math`: every formula in the reader and on paper (`10-reading-aids` frame F8) |
+
+`stix-two-math-OFL.txt` beside it is the licence as that package ships it. `reader-fonts.css` declares one
+`@font-face` with `local("STIX Two Math")` first (macOS and iOS ship it), then the file, so a page fetches it only
+when it shows math. Never subset or rename it in place: a cut file is a Modified Version under the OFL and may not
+be called "TM Math" (R1 left a 157 KB `pyftsubset` cut, `MATH` kept, as a later option gated on a coverage check).
+To refresh: `npm pack @fontsource/stix-two-math`, copy that one `woff2` here and check it still carries `MATH`.

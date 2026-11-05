@@ -19,6 +19,7 @@ import {
   segments,
   slicesIn,
   snap,
+  units,
   verified,
   type ANode,
   type Segment,
@@ -247,6 +248,19 @@ describe("the captured anchor equals the shared projection (core)", () => {
         for (const [id, text] of py) {
           const mine = segs.filter((g) => g.sec === id);
           if (!mine.length || !text.length) continue;
+          // P39-hk.S8: a stand-in (`data-an-len`: inline math, a bare citation) is never
+          // painted, so its characters at a stored edge are unpainted like whitespace.
+          const atom = new Set<number>();
+          for (const g of mine)
+            for (const u of units(g.el))
+              if (u.kind === "atom")
+                for (let k = 0; k < u.len; k += 1) atom.add(g.base + u.at + k);
+          const unpainted = (a: number, b: number) =>
+            text
+              .slice(a, b)
+              .filter((_, k) => !atom.has(a + k))
+              .join("")
+              .trim();
           for (let n = 0; n < 25; n += 1) {
             let s = next(text.length);
             let e = next(text.length + 1);
@@ -273,13 +287,13 @@ describe("the captured anchor equals the shared projection (core)", () => {
               py,
             );
             // What the page paints is what was stored, minus only the characters the page
-            // does not show (line joins, a bare citation's stand-in).
+            // does not show (line joins, a stand-in: inline math, a bare citation's number).
             expect(back && back.mode === "passage" ? back.sec : null).toBe(id);
             if (back && back.mode === "passage") {
               expect(back.s).toBeGreaterThanOrEqual(sn.s);
               expect(back.e).toBeLessThanOrEqual(sn.e);
-              expect(text.slice(sn.s, back.s).join("").trim()).toBe("");
-              expect(text.slice(back.e, sn.e).join("").trim()).toBe("");
+              expect(unpainted(sn.s, back.s)).toBe("");
+              expect(unpainted(back.e, sn.e)).toBe("");
             }
           }
         }
