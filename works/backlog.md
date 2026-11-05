@@ -7,8 +7,8 @@
 
 - Current phase: `P39-hk`
 - Current slice: `P39-hk.F1`
-- Next slice: `P39-hk.REVIEW`
-- Waiting on operator: `P39-hk.F1`
+- Next slice: `P39-hk.F2`
+- Waiting on operator: `none`
 - Stream: `phase/P39-hk-explain_what_was_built` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `73`
 - Workspace version: `v89`
@@ -17,7 +17,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 15/17 | `P39-hk.F1` | 15/17 | `.` | working tree |
+| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 15/20 | `P39-hk.F1` | 15/20 | `.` | working tree |
 | `default` | - | idle | - | - | - | branch main |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
@@ -348,5 +348,8 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | [x] `P39-hk.S9` | `done` | Reader and print: term marker, definition window, phone sheet, glossary section | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S9` |
 | [x] `P39-hk.S10` | `done` | Explain skill §4: the glossary, term links and formulas | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S10` |
 | [x] `P39-hk.S11` | `done` | Release plugin 0.10.0: versions, the v92 handshake, copy and counts | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S11` |
-| [~] `P39-hk.F1` | `pending` | Bound the reading aids' no-wrap runs to their line | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F1` |
+| [ ] `P39-hk.F1` | `in_progress` | Bound the reading aids' no-wrap runs to their line | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F1` |
+| [ ] `P39-hk.F2` | `todo` | Keep hyphenated words and a Korean particle with their run, in prose and readings | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F2` |
+| [ ] `P39-hk.F3` | `todo` | Bound P30's no-wrap controls at large text: the chapter-end button, the Older translation tag, Show answer | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F3` |
+| [ ] `P39-hk.F4` | `todo` | List the Glossary in the contents, linear text for math on text-only surfaces, the template's file fallback line | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F4` |
 | [ ] `P39-hk.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |

@@ -115,3 +115,18 @@ The phase keeps the glossary above and adds three things. Where they conflict wi
 - Q: Subjects in no code? — A: Dropped; the explain is codebase-only.
 - Q: P38-e1's machinery? — A: The research sizing is removed, as listed in C.
 - Q: Name? — A: "Explain what was built: phase-grounded, suggested shape, glossary, formulas".
+
+### Added at review (2026-11-05)
+
+- The operator, answering F1's OQ19 (follow-up job, or fix now?): "fix everything now."
+- Read as: fix inside this phase, not as deferred jobs, every product defect and follow-up the review and F1 found:
+  - OQ19 (a legend symbol wider than the legend) and OQ12 (the scrolling formula box's hidden focus ring): F1 round 2;
+  - OQ15 (hyphenated words in prose and readings) and OQ14 (a Korean particle after an inline formula): F2;
+  - P30's controls that overflow at 200% text (the chapter-end "Back to the book →", the "Older translation" tag, the quiz's "Show answer"): F3;
+  - OQ16 (the Glossary in the contents), OQ10 (linear text for math on text-only surfaces) and D80-ch's stale "straight to a file" line in the KB template page: F4.
+- Not in it:
+  - OQ13 and OQ17, recommended "as is" and not defects;
+  - the workspace engine bugs, which belong to the bootstrap repo;
+  - the `kb` Design System re-sync, on another account;
+  - the v92 front-door re-run, which needs the v92 workspace.
+- Also on the operator's word (2026-11-05): "after review pass, make sure you delete the whole knowledge related claude artifacts."

@@ -92,6 +92,27 @@ Whatever you add that takes focus must show a visible focus ring. OQ12 (the disp
 - **Doc impact:** one line.
 - **Now:** F1's landing, then "Next: REVIEW round 2".
 
+## Round 2 (2026-11-05, after the operator's "fix everything now.")
+
+Round 1 landed the keeps and the inline box, still uncommitted, and its `result.md` stands. The operator answered OQ19 "fix everything now." (`intent.md` § *Added at review*). Round 2 closes two more cases of the same family, in the same files:
+
+1. **OQ19: a legend symbol wider than the whole legend.** Use the look round 1 recommended, by F7's precedent: the symbol scrolls inside its own box, with the region, the label "Formula, scrolls sideways" (ko 수식, 옆으로 스크롤됩니다), the fades and a visible ring. The box sits within the symbol column's signed maximum, `min(5.25em, 28%)`. Every legend that fits stays pixel-identical. The role, name and tabindex apply only while it scrolls.
+2. **OQ12: the display formula box's hidden focus ring.** Paint the display box's fade the way the tables do, with overlay spans (`scroll-box.tsx`'s `kb-ch-fade--l` / `--r`), instead of `mask-image` on the box, so the 2 px accent ring shows on focus.
+   - At rest the fade must look identical: same 2.5rem width, same side-with-more rule, light and dark. Prove it with before/after PNGs at 320 (`poisson`) and at 390/200%.
+   - The inline box from round 1 and the OQ19 symbol box follow the same pattern, so all three show their ring.
+3. **Resolved questions:** OQ19 and OQ12 are already resolved on disk, pointing here. Write no new OQ for them. Update OQ18's built-as-listed text only through a Decisions entry, since Operator Questions is append-only.
+
+**Round 2 set:** round 1's set, plus `web/src/lib/native/render.tsx`'s `formula()` / legend markup, and `web/src/components/reader/scroll-box.tsx` (only to share the fade spans, with no change to tables' look or behaviour). The servers, browser, instruments and rules are as above: the review's walk stack on `:8977` / `:3978` is still never stopped.
+
+**Round 2 sweep:**
+- round 1's whole matrix again, on the final build;
+- OQ19 at a DOM-probed 14.7em symbol, at 390/200% and 320/200%: the page equals the viewport, and the symbol scrolls in its box;
+- OQ12: Tab to `poisson` at 320 (and to the inline box and the symbol box), and the ring shows in light and dark, at rest unchanged;
+- tables' fades unchanged (a chapter with a wide table at 320);
+- paper unchanged.
+
+**Notebook:** a Decisions entry for the legend box and the fade-as-overlay, and an update of your F1 note and of `## Now` ("Next: F2"). Doc impact only if round 2 changes round 1's line.
+
 ## Dispatch
 
 route=high

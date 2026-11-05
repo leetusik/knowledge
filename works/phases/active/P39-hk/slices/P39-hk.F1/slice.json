@@ -3,7 +3,7 @@
   "phase_id": "P39-hk",
   "name": "Bound the reading aids' no-wrap runs to their line",
   "kind": "fix",
-  "status": "pending",
+  "status": "in_progress",
   "order": 140,
   "depends_on": [],
   "created_at": "2026-11-05T12:30:51+09:00",
@@ -28,10 +28,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "decision",
-    "on_words": "OQ19 — (a) follow-up job: the orchestrator files the legend-symbol job, resolves OQ19 to it, finishes and commits F1 as delivered, then runs REVIEW round 2; (b) fix now: F1 is re-dispatched on the high row with its set widened to render.tsx formula() and the legend grid in reader-aids.css, the symbol scrolling in its own box (F7) inside min(5.25em, 28%), then REVIEW round 2",
-    "since": "2026-11-05T14:01:25+09:00"
   }
 }
