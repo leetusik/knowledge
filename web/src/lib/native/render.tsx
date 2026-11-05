@@ -41,7 +41,11 @@ import {
   type PrintKey,
 } from "@/components/reader/print-quiz";
 import { ClozeBlank, QuizBlock, type QuizItemProps } from "@/components/reader/quiz";
-import { FormulaBox } from "@/components/reader/formula-box";
+import {
+  FormulaBox,
+  InlineFormula,
+  LegendSymbol,
+} from "@/components/reader/formula-box";
 import { ArtBox, TableBox } from "@/components/reader/scroll-box";
 import { CHAPTER } from "@/content";
 import { hangulRuns, isKorean } from "@/lib/reader/hangul";
@@ -415,6 +419,8 @@ class Renderer {
    * P39-hk.S9 (F22): text whose hyphenated words (`t-statistic`, `walk-forward`,
    * `CONDITIONAL-GO’s`) never break at the hyphen: each is one `white-space: nowrap` run,
    * and the line breaks before it. Only the text's own characters, so no offset moves.
+   * P39-hk.F1: a run wider than its whole line is measured on the page (`MathLayer`'s
+   * `fitKeeps`) and only then breaks inside, as F36 signs; the markup stays this one span.
    */
   keepText(value: string): ReactNode {
     if (!value.includes("-")) return this.text(value);
@@ -573,17 +579,20 @@ class Renderer {
    * the sentence, its `alttext` the formula written in a line (OQ7, R1's recommendation).
    * It is an atom of the projection (`data-an-len`, its TeX's code points): a selection
    * never splits it and a highlight leaves it unpainted, as a bare citation's number.
+   * P39-hk.F1: it sits in its own measured box (`InlineFormula`). Where it fits, the box is
+   * two plain inline spans and nothing changes; a formula wider than its whole line scrolls
+   * inside the box, as F7 signs for a display row, and never pushes the page sideways.
    */
   inlineMath(tex: string, key?: number): ReactNode {
     const tree = mathTree(tex, false);
-    return mathElement(
-      tree,
-      {
-        className: "ra-m",
-        alttext: linearText(tree),
-        "data-an-len": String(codePoints(tex).length),
-      },
-      key,
+    return (
+      <InlineFormula key={key} label={CHAPTER.formula.scrolls(this.ko)}>
+        {mathElement(tree, {
+          className: "ra-m",
+          alttext: linearText(tree),
+          "data-an-len": String(codePoints(tex).length),
+        })}
+      </InlineFormula>
     );
   }
 
@@ -1291,6 +1300,9 @@ class Renderer {
    * text; `aligned` steps are one relation a row, aligned on the relation (Temml's
    * `mtable`). The caption: the reading, "where", then the legend, one symbol column per
    * chapter. Spoken: the figure's name, the formula's `alttext`, then the caption.
+   * P39-hk.F1 round 2 (OQ19): each legend symbol in its own measured box (`LegendSymbol`);
+   * one wider than the legend's whole row scrolls inside the symbol column, as F7 signs for a
+   * display row. Where it fits, the box is two plain inline spans and nothing changes.
    */
   formula(block: TypedBlock, id: string | undefined): ReactNode {
     const raw = str(block.tex);
@@ -1327,7 +1339,11 @@ class Renderer {
                   const sym = mathTree(row.sym, false);
                   return (
                     <Fragment key={i}>
-                      <dt>{mathElement(sym, { alttext: linearText(sym) })}</dt>
+                      <dt>
+                        <LegendSymbol label={CHAPTER.formula.scrolls(this.ko)}>
+                          {mathElement(sym, { alttext: linearText(sym) })}
+                        </LegendSymbol>
+                      </dt>
                       <dd>{this.inline(row.means)}</dd>
                     </Fragment>
                   );

@@ -3,12 +3,12 @@
   "phase_id": "P39-hk",
   "name": "Bound the reading aids' no-wrap runs to their line",
   "kind": "fix",
-  "status": "in_progress",
+  "status": "done",
   "order": 140,
   "depends_on": [],
   "created_at": "2026-11-05T12:30:51+09:00",
   "started_at": "2026-11-05T12:31:54+09:00",
-  "completed_at": null,
+  "completed_at": "2026-11-05T14:31:22+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Bounded every no-wrap run: wide keeps break inside (F36), wide inline formulas and legend symbols scroll in their own box (F7); display fade as overlay so the focus ring shows (OQ12)",
   "validation": {
     "required": [],
     "last_run": null,

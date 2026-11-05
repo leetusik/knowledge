@@ -98,6 +98,20 @@ export function useBox(content: "self" | "table", watchLoad = false) {
   return { m, ref };
 }
 
+/**
+ * The two scroll fades (§9a): overlays on the box's ground, shown by the box's own rules (`.kb-ch-fade` in
+ * `reader.css`). Shared with the reading aids' formula boxes (P39-hk.F1 round 2, OQ12): painted over the
+ * box instead of masking it, so a focus ring outside the box is never clipped.
+ */
+export function Fades() {
+  return (
+    <>
+      <span className="kb-ch-fade kb-ch-fade--l" aria-hidden="true" />
+      <span className="kb-ch-fade kb-ch-fade--r" aria-hidden="true" />
+    </>
+  );
+}
+
 /** A table in its frame. `wide` (8+ columns) and `long` (more than 20 rows) are known from the data. */
 export function TableBox({
   wide,
@@ -144,12 +158,7 @@ export function TableBox({
         >
           {children}
         </div>
-        {box ? (
-          <>
-            <span className="kb-ch-fade kb-ch-fade--l" aria-hidden="true" />
-            <span className="kb-ch-fade kb-ch-fade--r" aria-hidden="true" />
-          </>
-        ) : null}
+        {box ? <Fades /> : null}
       </div>
       {box ? <p className="kb-ch-table__hint">{hint}</p> : null}
     </div>
@@ -207,8 +216,7 @@ export function ArtBox({
         >
           <code>{children}</code>
         </pre>
-        <span className="kb-ch-fade kb-ch-fade--l" aria-hidden="true" />
-        <span className="kb-ch-fade kb-ch-fade--r" aria-hidden="true" />
+        <Fades />
       </div>
       <p className="kb-ch-code__hint">{hint}</p>
     </figure>

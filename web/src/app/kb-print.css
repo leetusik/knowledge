@@ -336,6 +336,13 @@
      (16pt), the reading and the legend 14px, "where" 12px; the chapter's one symbol column in em of 14px
      (5.25em for the record's chapter). */
   html .rd-root .kb-ch math.ra-m { font-size: calc(1em * var(--ra-math-k)); }
+  /* P39-hk.F1: paper does not scroll. An inline formula's box (`.ra-mi`) and a legend symbol's (`.ra-ms`, round 2),
+     measured on screen, are the plain inline formula again, whatever the screen measured, as the display box drops its
+     scroll box here (the fades are hidden with every screen cue, above). */
+  html .rd-root .kb-ch :is(.ra-mi, .ra-ms), html .rd-root .kb-ch :is(.ra-mi > .ra-mi__s, .ra-ms > .ra-ms__s) {
+    display: inline; width: auto; min-width: 0; max-width: none; padding-block: 0; margin-block: 0; overflow: visible;
+    -webkit-mask-image: none; mask-image: none;
+  }
   html .rd-root .rd-prose .kb-ch > .ra-mb, html .rd-root .rd-prose .kb-ch > .ra-mb + :not(.kb-ch-h) { margin-top: 14px; }
   html .rd-root .kb-ch .ra-mb { max-width: 38em; margin-bottom: 0; padding-block: 12px; border-color: var(--pp-border); gap: 8px; break-inside: avoid; }
   html .rd-root .kb-ch > p:has(+ .ra-mb) { break-after: avoid; }
@@ -358,6 +365,10 @@
     text-decoration-skip-ink: none;
   }
   html .rd-root .kb-ch a.ra-term:lang(ko) { text-underline-offset: 0.22em; }
+  /* P39-hk.F1: a kept run the screen measured wider than its line (`is-wide`, a phone at a large text size) is kept
+     whole again on paper, where every run of the record fits the 552px column (the widest, "CONDITIONAL-GO's", is
+     about 150px at 14px); the screen's measure does not run for paper. */
+  html .rd-root .kb-ch .ra-keep.is-wide { white-space: nowrap; }
   html .rd-root :is(.ra-float, .ra-pad, .ra-gl__back) { display: none !important; }
   /* The glossary appendix: under the h2 "Glossary" (kept with its first entry), every entry A to Z, each whole, a
      hairline under each; the term Fraunces 600 14px, "Also called" 12px secondary, the definitions Literata 14px /

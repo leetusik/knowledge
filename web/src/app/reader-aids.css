@@ -15,6 +15,9 @@
  * Part 3 and the `Terms` page's rules (`.tm-article`): brought by both `MathLayer` and `TermLayer`.
  * Never built: the canvas's phone boxes and sticky sheet dock (F21; the product's sheet is fixed
  * to the viewport) and the boards' hrefless `role="button"` markers.
+ * P39-hk.F1: the no-wrap runs bounded to their line. A run that fits stays whole, as signed; a
+ * hyphenated run wider than its line breaks inside (F36's rule), and an inline formula wider than
+ * its line scrolls in its own box (F7's display rule). The page never scrolls sideways.
  */
 
 /* ---------- Tokens (frame.md F8, F9) ---------- */
@@ -41,6 +44,16 @@ math.ra-m {
   math-style: compact; white-space: nowrap;
 }
 .ra-m mi, .ra-m mn, .ra-m mo { font-family: var(--font-math); }
+/* P39-hk.F1: a formula wider than its whole line scrolls inside its own box (F7's display rule), never the page.
+   Where it fits, `.ra-mi` and `.ra-mi__s` are plain inline spans and nothing here applies; `InlineFormula` measures
+   and sets `is-over`. The outer box is as wide as the line and draws the focus ring; the inner one scrolls and takes
+   the display box's fade (below), so the fade never clips the ring. The scroller reaches 0.25em past the line above
+   and below (given back by its margins, so the line keeps its height): a radical's point and a superscript draw past
+   the formula's own box, and a scroller clips at its edge. */
+.kb-ch .ra-mi.is-over { display: inline-flex; max-width: 100%; vertical-align: baseline; }
+.kb-ch .ra-mi.is-over > .ra-mi__s { display: block; min-width: 0; padding-block: 0.25em; margin-block: -0.25em; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.kb-ch .ra-mi > .ra-mi__s:focus-visible { outline: none; }
+.kb-ch .ra-mi:has(> .ra-mi__s:focus-visible) { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
 
 /* ---------- The display formula block (F7) ---------- */
 .ra-mb {
@@ -51,10 +64,19 @@ math.ra-m {
 }
 .ra-mb__eq { position: relative; overflow-x: auto; overflow-y: hidden; padding-block: var(--kb-space-xs); scrollbar-width: thin; }
 .ra-mb__eq:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
-/* A row wider than the column scrolls inside its own box; the side with more takes a fade (the tables' cue) */
-.ra-mb__eq.is-more-end { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
-.ra-mb__eq.is-more-start { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); }
-.ra-mb__eq.is-more-start.is-more-end { -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); }
+/* A row wider than the column scrolls inside its own box; the side with more takes a fade (the tables' cue).
+   P39-hk.F1 round 2 (OQ12): the display box's fade is the tables' overlay (`.kb-ch-fade`, the page's ground), drawn
+   over the box from its frame (`.ra-mb__box`), no longer a mask on the box, which clipped the focus ring above. Its
+   width and its side-with-more rule are the mask's, so at rest it looks the same; a legend symbol's box takes it too.
+   An inline formula's scroller (`.ra-mi__s`, round 1) keeps the mask: it sits on any ground, and its ring is drawn
+   outside it (below). */
+.ra-mb__box { position: relative; }
+:is(.ra-mb__box, .kb-ch .ra-ms) > .kb-ch-fade { display: block; width: 2.5rem; border-radius: 0; }
+.ra-mb__eq.is-more-start ~ .kb-ch-fade--l, .ra-mb__eq.is-more-end ~ .kb-ch-fade--r,
+.ra-ms__s.is-more-start ~ .kb-ch-fade--l, .ra-ms__s.is-more-end ~ .kb-ch-fade--r { opacity: 1; }
+.ra-mi__s.is-more-end { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent); }
+.ra-mi__s.is-more-start { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent); }
+.ra-mi__s.is-more-start.is-more-end { -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent); }
 /* `display: block` first for the engines that do not know `block math` (Temml's note). */
 .ra-mb__eq math { display: block; display: block math; margin: 0; font-family: var(--font-math); font-size: calc(var(--rd-fs) * var(--ra-display-k)); text-align: left; width: max-content; }
 /* Steps (one relation a row, `aligned`): the left side set to the right, the relation and the right side
@@ -82,6 +104,17 @@ math.ra-m {
 }
 .ra-legend dt { margin: 0; font-family: var(--font-math); font-size: var(--rd-fs); line-height: 1.5; color: var(--kb-ink); white-space: nowrap; }
 .ra-legend dt math { font-family: var(--font-math); font-size: 1em; }
+/* P39-hk.F1 round 2 (OQ19), F7's display rule: a symbol wider than the legend's whole row (`LegendSymbol` measures and
+   sets `is-over`) gives up its claim on the column (its box has no width of its own), so the column is what the other
+   symbols and the signed maximum make it, and it scrolls inside a box that wide, with the display box's fades (above)
+   and a ring on focus. The scroller reaches 0.25em past the line above and below and gives it back, as the inline box
+   does. A symbol that fits gets none of this: two plain inline spans. */
+.kb-ch .ra-ms.is-over { display: block; position: relative; width: 0; min-width: 100%; }
+.kb-ch .ra-ms.is-over > .ra-ms__s { display: block; padding-block: 0.25em; margin-block: -0.25em; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+/* Its fades are the display box's 2.5rem, but never more than a third of the box: in the 28 % column of a phone at
+   200 % text (90 px) a 2.5rem fade (80 px) would hide the symbol it cues. */
+.kb-ch .ra-ms.is-over > .kb-ch-fade { width: min(2.5rem, 33%); }
+.kb-ch .ra-ms > .ra-ms__s:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
 /* F36: a meaning's word wider than its column (200 % text on a phone) breaks rather than runs past the screen */
 .ra-legend dd { margin: 0; font-family: var(--font-reading); font-size: var(--rd-fs-s); line-height: 1.5; color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; }
 .ra-legend dd:lang(ko) { word-break: keep-all; }
@@ -138,6 +171,9 @@ math.ra-m {
 .kb-ch a.ra-term :is(mark.an-m, mark.an-pending) { color: var(--kb-ink); }
 /* One unbreakable run (F22): a hyphenated term never breaks at its hyphen; the line breaks before it */
 .kb-ch .ra-keep { white-space: nowrap; }
+/* P39-hk.F1, F36's rule: a run wider than its whole line (measured: `MathLayer`'s `fitKeeps` sets `is-wide`) breaks
+   inside, at its hyphen first, rather than running past the screen. A run that fits never gets the class. */
+.kb-ch .ra-keep.is-wide { white-space: normal; overflow-wrap: break-word; }
 
 /* ---------- The definition window (F3, F5, F18, F19, F32) ---------- */
 /* Where the window floats: absolute in the article (the reader's positioned wrapper); the layer sets its left and its
