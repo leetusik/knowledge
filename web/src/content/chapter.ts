@@ -131,6 +131,21 @@ export const CHAPTER = {
     label: (alt: string, ko: boolean): string =>
       `${ko ? "수식" : "Formula"}: ${alt}`,
   },
+  /**
+   * P39-hk.S9 — the terms' words (`10-reading-aids` round 01, frame F1): interface copy, so
+   * English in every chapter (the term, its aliases and its definitions are the chapter's).
+   * The arrived entry's "‹ Back to the text" is `sources.back`, the sources list's label.
+   */
+  terms: {
+    /** The section's h2. */
+    glossary: "Glossary",
+    close: "Close",
+    more: "Read more",
+    less: "Show less",
+    toGlossary: "In the glossary →",
+    /** Before a term's aliases, comma-joined. */
+    alsoCalled: "Also called",
+  },
   sources: {
     label: "Sources",
     accessed: (date: string): string => `Accessed ${date}`,

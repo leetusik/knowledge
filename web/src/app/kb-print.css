@@ -346,6 +346,33 @@
   html .rd-root .kb-ch .ra-legend { grid-template-columns: calc(var(--ra-sym-k, 5.25) * 1em) minmax(0, 1fr); row-gap: 2px; column-gap: 12px; }
   html .rd-root .kb-ch .ra-legend dt { font-size: 14px; color: var(--pp-ink); }
   html .rd-root .kb-ch .ra-legend dd { font-size: 14px; line-height: 1.5; color: var(--pp-ink); }
+
+  /* -------- Terms (P39-hk.S9; `10-reading-aids` round 01, *Paper*; F10, F22) ----------------------- */
+  /* The marker: ink text, a quiet 1px dotted line in the paper's hint grey at 0.22em; plain prose, no control, and
+     nothing printed after it (an in-document link). A member's highlight does not print (above). The windows and the
+     sheet's spacer never print. */
+  html .rd-root .kb-ch a.ra-term, html .rd-root .kb-ch a.ra-term[aria-expanded="true"] {
+    --ra-line: var(--pp-hint);
+    color: inherit; cursor: auto;
+    text-decoration: underline dotted var(--ra-line); text-decoration-thickness: 1px; text-underline-offset: 0.22em;
+    text-decoration-skip-ink: none;
+  }
+  html .rd-root .kb-ch a.ra-term:lang(ko) { text-underline-offset: 0.22em; }
+  html .rd-root :is(.ra-float, .ra-pad, .ra-gl__back) { display: none !important; }
+  /* The glossary appendix: under the h2 "Glossary" (kept with its first entry), every entry A to Z, each whole, a
+     hairline under each; the term Fraunces 600 14px, "Also called" 12px secondary, the definitions Literata 14px /
+     1.55; on 552px. No ground and no way back: paper has no arrived entry. */
+  html .rd-root .rd-prose .kb-ch > .ra-gl { max-width: 552px; padding: 0; list-style: none; }
+  html .rd-root .kb-ch .ra-gl .ra-gl__item {
+    display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 8px 0;
+    border-bottom: 1px solid var(--pp-border); background: none; box-shadow: none; break-inside: avoid;
+  }
+  html .rd-root .kb-ch .ra-gl .ra-gl__item::after { content: none; }
+  html .rd-root .kb-ch .ra-gl .ra-gl__item > * { margin: 0; max-width: none; }
+  html .rd-root .kb-ch .ra-gl .ra-gl__term { font: 600 14px/1.35 var(--pp-disp); color: var(--pp-ink); }
+  html .rd-root .kb-ch .ra-gl .ra-gl__alias { font: 12px/1.45 var(--pp-body); color: var(--pp-sec); }
+  html .rd-root .kb-ch .ra-gl .ra-gl__def { font: 14px/1.55 var(--pp-read); color: var(--pp-ink); }
+  html .rd-root .kb-ch .ra-gl .ra-gl__item > .ra-gl__def + .ra-gl__def { margin-top: 4px; }
 }
 
 /* ==========================================================================

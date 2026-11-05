@@ -64,4 +64,8 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 
 ## Decisions 26
 
-- **D85-qk in the package (S5):** (a) the workspace names the critic's model per call on the other family, `sonnet` for an Opus writer, else `opus`, never `same-model: accepted` (replaces v75's opus pin); (b) create-phase's own confirmation takes the front door's step-7 shape by pointer; (c) the review allows a write slice's appended `evidence.md` entries; (d) B5 is cited by heading, then *Your dispatch*. (e) and (f) stay open → [package/README.md](package/README.md)
+- **D85-qk in the package (S5):** (a) the workspace names the critic's model per call on the other family, `sonnet` for an Opus writer, else `opus`, never `same-model: accepted` (replaces v75's opus pin); (b) create-phase's own confirmation takes the front door's step-7 shape by pointer; (c) the review allows a write slice's appended `evidence.md` entries; (d) B5 is cited by heading, then *Your dispatch*. (e) and (f) stay open → [package/README.md](../package/README.md)
+
+## Decisions 30
+
+- **Skill text for glossary and math (S10):** the Glossary is §4.2's item 5, used "when the chapter has terms this reader is new to" (not a signed part like Quiz). A short relation in a sentence is inline math; a formula the reader must study is a `formula` block. Jargon left unlinked at first use is a `clarity` should-fix, and a term linked at every occurrence is a `note`. An incomplete or out-of-order legend is a `math` should-fix. Trace keys are `formula <id> · sym <s>` and `glossary <term id> short` (B9).

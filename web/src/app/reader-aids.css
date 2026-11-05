@@ -11,7 +11,10 @@
  * from Temml's styles into classes (`mathml.ts`). Never built (the `## Build`'s canvas-only
  * list): the state bars, the phone boxes, the steps grid of separate math cells and the fixed
  * `.ra-m msqrt` margin (the √ gap is measured per instance, `radicals.ts`).
- * S9 adds the terms (the marker, the window, the sheet, the glossary) to this file.
+ * P39-hk.S9: the terms (the marker, the window and its phone sheet, the glossary), from the same
+ * Part 3 and the `Terms` page's rules (`.tm-article`): brought by both `MathLayer` and `TermLayer`.
+ * Never built: the canvas's phone boxes and sticky sheet dock (F21; the product's sheet is fixed
+ * to the viewport) and the boards' hrefless `role="button"` markers.
  */
 
 /* ---------- Tokens (frame.md F8, F9) ---------- */
@@ -19,6 +22,9 @@
   --font-math: "STIX Two Math", "Cambria Math", math;
   --ra-math-k: 1;            /* inline math at the text's size: STIX Two Math's caps match Literata's */
   --ra-display-k: 1.5;       /* a display formula: 1.5 x the text */
+  --ra-ctl: var(--kb-tap);   /* every control in a window, sheet, entry: 44 px */
+  --ra-win-w: 28rem;         /* the window's width on desktop and iPad */
+  --ra-line: var(--kb-secondary); /* the term marker's dotted line */
 }
 
 /* ---------- Math, whatever the text around it (F7: words and numbers upright) ---------- */
@@ -106,3 +112,119 @@ math.ra-m {
 }
 /* The prime's own glyph, set low enough for a superscript (STIX Two Math's ss04). */
 .kb-ch mo.tml-prime { font-feature-settings: "ss04"; }
+
+/* ======================= P39-hk.S9 · terms ======================= */
+
+/* ---------- The term marker (F2, F22) ---------- */
+/* Ink text with a dotted line under it: "has a definition". A link is accent text with a solid line; a highlight is a
+   painted ground. Hover turns the dots accent; open makes the line solid accent; focus is the system ring (the
+   reader's rule on every link). Written over the reader's link rule (`.kb-ch a`, `.kb-ch a:hover`). */
+.kb-ch a.ra-term {
+  color: inherit; cursor: help;
+  text-decoration-line: underline; text-decoration-style: dotted; text-decoration-color: var(--ra-line);
+  text-decoration-thickness: 0.09em; text-underline-offset: 0.24em; text-decoration-skip-ink: none;
+  border-radius: 2px;
+  transition: text-decoration-color var(--rd-ease, 0.15s ease);
+}
+.kb-ch a.ra-term:hover { color: inherit; text-decoration-color: var(--kb-accent); text-decoration-thickness: 0.09em; }
+.kb-ch a.ra-term[aria-expanded="true"], .kb-ch a.ra-term[aria-expanded="true"]:hover {
+  text-decoration-style: solid; text-decoration-color: var(--kb-accent); text-decoration-thickness: 2px;
+}
+.kb-ch a.ra-term:lang(ko) { text-underline-offset: 0.28em; }
+/* Inside a member's highlight the dots take the ink, so they hold on the paint (F2). The paint puts its mark inside
+   the term's link (`paint.ts`), so the canvas's `mark.an-m .ra-term` is written from the link's side; a term's words
+   stay ink there (the reader's highlighted link steps to accent-strong). */
+.kb-ch a.ra-term:has(mark.an-m) { --ra-line: var(--kb-ink); }
+.kb-ch a.ra-term :is(mark.an-m, mark.an-pending) { color: var(--kb-ink); }
+/* One unbreakable run (F22): a hyphenated term never breaks at its hyphen; the line breaks before it */
+.kb-ch .ra-keep { white-space: nowrap; }
+
+/* ---------- The definition window (F3, F5, F18, F19, F32) ---------- */
+/* Where the window floats: absolute in the article (the reader's positioned wrapper); the layer sets its left and its
+   top (or its bottom, above the term). Hidden until placed, so it never jumps. */
+.kb-ch .ra-float { position: absolute; z-index: 15; width: min(var(--ra-win-w), 100% - 2 * var(--rd-gut)); }
+.kb-ch .ra-float[data-placed="0"] { visibility: hidden; }
+.kb-ch .ra-win {
+  width: min(var(--ra-win-w), 100%);
+  display: flex; flex-direction: column; gap: var(--kb-space-sm);
+  max-height: min(32rem, 70vh); /* F5: the annotation popover's cap; past it the body scrolls */
+  padding: var(--kb-space-sm) var(--kb-space-sm) var(--kb-space-xs) var(--kb-space-md);
+  border: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius);
+  background: var(--kb-surface); color: var(--kb-ink); box-shadow: var(--kb-shadow-raise);
+  font-family: var(--font-body); font-size: 1rem; line-height: 1.4; text-align: left;
+}
+.kb-ch .ra-win:focus { outline: none; }
+.kb-ch .ra-win:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.kb-ch .ra-win__head { flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: var(--kb-space-sm); }
+.kb-ch .ra-win__names { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; padding-top: calc((var(--ra-ctl) - var(--rd-fs) * 1.3) / 2); }
+.kb-ch .ra-win__term { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--rd-fs); line-height: 1.3; color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word; }
+.kb-ch .ra-win__term:lang(ko) { word-break: keep-all; }
+.kb-ch .ra-win__alias { margin: 0; font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); }
+.kb-ch .ra-win__body { display: flex; flex-direction: column; gap: var(--kb-space-sm); padding-right: var(--kb-space-xs); min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.kb-ch .ra-def { margin: 0; font-family: var(--font-reading); font-size: var(--rd-fs); line-height: 1.55; color: var(--kb-ink); text-wrap: pretty; }
+.kb-ch .ra-def:lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.kb-ch .ra-def--long { padding-top: var(--kb-space-sm); border-top: 1px solid var(--kb-border); }
+.kb-ch .ra-win__foot { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--kb-space-sm); margin-left: calc(var(--kb-space-sm) * -1); }
+.kb-ch .ra-win__foot--end { justify-content: flex-end; }
+/* "Read more" and "Show less" share one box as wide as the longer label, so the toggle never moves the foot; both
+   labels start on the box's start edge (F32) */
+.kb-ch .ra-swap { display: inline-grid; }
+.kb-ch .ra-swap > * { grid-area: 1 / 1; text-align: start; }
+.kb-ch .ra-swap > [aria-hidden="true"] { visibility: hidden; }
+.kb-ch .ra-more { color: var(--kb-accent); padding-inline: calc(var(--kb-space-sm) - 1px); }
+.kb-ch .ra-more:hover { color: var(--kb-accent-strong); background: var(--kb-surface-sunken); }
+.kb-ch a.ra-go { display: inline-flex; align-items: center; min-height: var(--ra-ctl); padding-inline: var(--kb-space-sm); border-radius: var(--kb-radius-sm); font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.2; color: var(--kb-accent); text-decoration: none; white-space: nowrap; }
+.kb-ch a.ra-go:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.kb-ch .ra-win .ra-close { flex: none; }
+/* A 0.15 s fade in, the window only; none under reduced motion */
+@media (prefers-reduced-motion: no-preference) {
+  @container rd (min-width: 40rem) {
+    .kb-ch .ra-float[data-placed="1"] .ra-win { animation: ra-in 0.15s ease-out; }
+  }
+}
+@keyframes ra-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- The phone form: a sheet from the bottom, no scrim (F4) ---------- */
+/* The same element under the reader's 40rem: the reader's sheet anatomy, fixed to the viewport's bottom (the `rd`
+   container is no containing block for it: checked live, P39-hk.S9). The holder lifts it over the reader's bars. */
+@container rd (width < 40rem) {
+  .kb-ch .ra-float { z-index: 25; }
+  .kb-ch .ra-win {
+    position: fixed; left: 0; right: 0; bottom: 0; width: auto;
+    gap: 0; max-height: 60vh; padding: 0;
+    border: 0; border-top: 1px solid var(--kb-border-strong); border-radius: var(--kb-radius) var(--kb-radius) 0 0;
+    box-shadow: var(--kb-shadow-overlay);
+  }
+  .kb-ch .ra-win:has(.ra-def--long:not([hidden])) { max-height: 85vh; }
+  .kb-ch .ra-win:focus-visible { outline-offset: calc(var(--kb-focus-offset) * -1); }
+  .kb-ch .ra-win__head { padding: var(--kb-space-xs) calc(var(--rd-gut) - 0.6rem) 0 var(--rd-gut); }
+  .kb-ch .ra-win__body { padding: 0 var(--rd-gut) var(--kb-space-xs); }
+  .kb-ch .ra-win__foot { margin-left: 0; padding: var(--kb-space-xs) calc(var(--rd-gut) - 0.6rem) var(--kb-space-sm); border-top: 1px solid var(--kb-border); }
+}
+
+/* ---------- The glossary section (F6, F17, F25, F33) ---------- */
+/* Under the reader's h2 "Glossary", whose rule opens the list (F17): no opening hairline of its own. Written over the
+   reader's list rules (`.kb-ch ul`, `.kb-ch li`, `.kb-ch li > * + *`). */
+.kb-ch .ra-gl { list-style: none; margin: 0; padding: 0; }
+.kb-ch .ra-gl > .ra-gl__item {
+  position: relative;
+  display: flex; flex-direction: column; gap: calc(var(--kb-space-xs) * var(--rd-k));
+  margin: 0 calc(var(--kb-space-md) * -1); padding: calc(var(--kb-space-md) * var(--rd-k)) var(--kb-space-md);
+  scroll-margin-top: calc(var(--rd-line) + var(--rd-top-h) + var(--kb-space-md));
+}
+.kb-ch .ra-gl > .ra-gl__item > * { margin: 0; }
+/* The divider runs the column's width (the h2 rule's two edges); only the arrived entry's ground bleeds (F25) */
+.kb-ch .ra-gl__item::after { content: ""; position: absolute; left: var(--kb-space-md); right: var(--kb-space-md); bottom: 0; height: 1px; background: var(--kb-border); }
+/* The entry a window's link led to: the sources list's :target mark, a sunken ground and a hairline box */
+.kb-ch .ra-gl__item.is-target, .kb-ch .ra-gl__item:target { background: var(--kb-surface-sunken); box-shadow: inset 0 0 0 1px var(--kb-border-strong); }
+.kb-ch .ra-gl__term { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1em; line-height: 1.3; color: var(--kb-ink); text-wrap: balance; }
+.kb-ch .ra-gl__term:lang(ko) { word-break: keep-all; }
+.kb-ch .ra-gl__alias { font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); }
+.kb-ch .ra-gl__def { font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink); text-wrap: pretty; }
+.kb-ch .ra-gl__def:lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.kb-ch .ra-gl__item > .ra-gl__def + .ra-gl__def { margin-top: calc(var(--kb-space-xs) * var(--rd-k)); }
+.kb-ch .ra-gl__back { font-family: var(--font-body); font-size: 0.8125rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kb-ch a.ra-term { transition: none; }
+}

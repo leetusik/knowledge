@@ -10,6 +10,7 @@ import { ChapterHead } from "./chapter-head";
 import { MathLayer } from "./math-layer";
 import { PrintPrep } from "./print-client";
 import { PrintColophon, PrintMasthead } from "./print-sheet";
+import { TermLayer } from "./term-layer";
 
 /**
  * The reader's article (server): the chapter opening (§5) and the body, in the text
@@ -87,6 +88,8 @@ export function ReaderArticle({ reader }: { reader: LoadedReader }) {
           target={view.target}
         />
       ) : null}
+      {/* P39-hk.S9: the terms' windows, phone sheet and way back, over the static markup. */}
+      <TermLayer chapter={`${reader.docId}:${view.version}:${view.lang}`} />
     </div>
   );
 }
