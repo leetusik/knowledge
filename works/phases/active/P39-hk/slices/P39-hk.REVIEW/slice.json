@@ -3,11 +3,11 @@
   "phase_id": "P39-hk",
   "name": "phase review",
   "kind": "review",
-  "status": "todo",
+  "status": "changes_requested",
   "order": 9999,
   "depends_on": [],
   "created_at": "2026-10-30T23:45:53+09:00",
-  "started_at": null,
+  "started_at": "2026-11-05T11:53:37+09:00",
   "completed_at": null,
   "risk": "high",
   "source": {
