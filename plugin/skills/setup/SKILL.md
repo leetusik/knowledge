@@ -167,7 +167,7 @@ writes nothing), substituting the pasted key:
 
 Connect mode is then done — suggest `/knowledge:explain <topic>` to file the first
 explainer to the hosted KB. It runs as an explain phase, so the repository it is run from
-needs a workflow workspace (v86 or later): it explains that repository's code from the
+needs a workflow workspace (v92 or later): it explains that repository's code from the
 code and what its phases recorded, asks one confirmation, then writes, checks and
 publishes privately.
 
@@ -339,7 +339,7 @@ mutation) with exactly this shape, filling the **non-secret** params only:
 
     {
       "plugin": "knowledge",
-      "plugin_version": "0.9.1",
+      "plugin_version": "0.10.0",
       "rendered_at": "<YYYY-MM-DD>",
       "params": {
         "KB_SITE_NAME": "<site title>",
@@ -353,7 +353,7 @@ mutation) with exactly this shape, filling the **non-secret** params only:
       }
     }
 
-`plugin_version` is `0.9.1` — the current plugin version; it never contains a
+`plugin_version` is `0.10.0` — the current plugin version; it never contains a
 secret. (On re-render, overwrite the marker with the new params and today's
 `rendered_at`.)
 
@@ -458,5 +458,5 @@ Never push for the user — they run the `git push` themselves.
 above.
 
 Close with: try `/knowledge:explain <topic>` to write your first explainer (from a
-repository with a workflow workspace v86 or later: it runs as an explain phase on that
+repository with a workflow workspace v92 or later: it runs as an explain phase on that
 repository's code, one confirmation, then write, check and a private publish).

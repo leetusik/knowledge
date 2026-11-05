@@ -8,7 +8,7 @@
     {
       "name": "knowledge",
       "source": "./plugin",
-      "description": "Explain what code in your repo does, or a code change in it, as a native chapter — Markdown with typed blocks for diagrams, figures, callouts and a quiz — in your own knowledge base, written only from the code and what your workspace's phases recorded, with no research of its own. It runs as an explain phase in a workflow workspace (v86 or later): one confirmation, then one writer, one critic and a private publish. One setup skill connects the hosted KB or scaffolds your own."
+      "description": "Explain what code in your repo does, or a code change in it, as a native chapter — Markdown with typed blocks for diagrams, figures, callouts and a quiz — in your own knowledge base, written only from the code and what your workspace's phases recorded, with no research of its own. It runs as an explain phase in a workflow workspace (v92 or later): one confirmation, then one writer, one critic and a private publish. One setup skill connects the hosted KB or scaffolds your own."
     }
   ]
 }

@@ -1,6 +1,6 @@
 ---
 name: explain
-description: Explain what code in the current repo does, or a code change in it, as a document in your own knowledge base (the one /knowledge:setup configured), written only from the code and from what the workflow workspace's phases recorded while building it. Codebase-only, with no research of its own: no web search, no research agents, nothing from outside the code and the records; a subject with no code in this repo is declined, and one no phase covers is offered a research phase first. /knowledge:explain suggests the reader and the shape and asks one confirmation (a standalone document by default; a book or a chapter of a book only when asked) and, on your yes, hands it to the workspace's create-phase, which runs it as an explain phase in its own worktree: one writer drafts a native chapter traced sentence by sentence to the code and the records (visuals first, next steps from what is still open in the workspace, a quiz only when the subject earns one), one critic on a second model checks it, then a private publish. Needs a workflow workspace v86 or later; without one it refuses and runs nothing. Use ONLY when the user wants an explanation persisted as a document (explain and document, write this up, document what we just changed, teach me X and save it) — NOT for ordinary questions that deserve a normal chat answer.
+description: Explain what code in the current repo does, or a code change in it, as a document in your own knowledge base (the one /knowledge:setup configured), written only from the code and from what the workflow workspace's phases recorded while building it. Codebase-only, with no research of its own: no web search, no research agents, nothing from outside the code and the records; a subject with no code in this repo is declined, and one no phase covers is offered a research phase first. /knowledge:explain suggests the reader and the shape and asks one confirmation (a standalone document by default; a book or a chapter of a book only when asked) and, on your yes, hands it to the workspace's create-phase, which runs it as an explain phase in its own worktree: one writer drafts a native chapter traced sentence by sentence to the code and the records (visuals first, next steps from what is still open in the workspace, a quiz only when the subject earns one), one critic on a second model checks it, then a private publish. Needs a workflow workspace v92 or later; without one it refuses and runs nothing. Use ONLY when the user wants an explanation persisted as a document (explain and document, write this up, document what we just changed, teach me X and save it) — NOT for ordinary questions that deserve a normal chat answer.
 argument-hint: <topic or change-ref> [book=<slug>] [lang=<xx>]
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash(curl -sS --max-time 5:*), Bash(curl -sS --max-time 30:*), Bash(python3 -c:*), Bash(python3 -I *knowledge-kb/explain/tools/pagetext.py *), Bash(knowledge --base-url:*), Bash(knowledge --version:*), Bash(git diff:*), Bash(git log:*), Bash(git show:*), Bash(git grep:*), Bash(git blame:*), Bash(git status:*), Bash(shasum -a 256:*), Bash(sha256sum:*), Bash(mktemp -d:*)
 ---
@@ -22,7 +22,7 @@ knowledge base never runs your code. Everything interactive (the quiz, the colla
 callouts, the diagrams) is declared in the chapter's text and drawn by the reader.
 
 **Every explain is an explain phase.** It runs in the current repository's workflow
-workspace (v86 or later), one phase per publishable unit: a standalone document by
+workspace (v92 or later), one phase per publishable unit: a standalone document by
 default, a book or a chapter of a book only when asked. The workspace creates it, runs
 it in its own worktree, and its executors read the code and the phases' records, write,
 check and publish it private. This file is both the phase's front door and the method those executors
@@ -279,16 +279,16 @@ artifact.
    `workflow/works/phases/`. One **at the root** has `scripts/workflow.py` and `works/`,
    its version in `works/.workspace-version.json` and its phases under `works/phases/`.
    Both: ambiguous: say so, never guess, and stop. None: refuse (the next step).
-2. **Check that it is ready:** `workspace_version` in that version file is **86 or
+2. **Check that it is ready:** `workspace_version` in that version file is **92 or
    later**, **and** its create-phase skill (`.claude/skills/<create-phase>/SKILL.md`) has
-   a `## The explain route` section that lists the `**unit**` field (the literal `unit`
-   line that route always writes). Refuse, and run nothing:
-   - **No workspace:** "Explain runs as an explain phase in a workflow workspace (v86 or
+   a `## The explain route` section that lists the `**phases**` field (the literal
+   `phases` line only that route writes). Refuse, and run nothing:
+   - **No workspace:** "Explain runs as an explain phase in a workflow workspace (v92 or
      later), and this repository has none. Install one with the agentic workspace
      bootstrap (`bootstrap_agentic_workspace.sh`), then ask again."
-   - **Too old** (an older version, or no `unit` field): "This workspace (v<N>) cannot run
-     explain phases from the knowledge plugin: they need v86 or later, whose create-phase
-     explain route writes a `unit` line. Run `/update-workspace`, then ask again." Never
+   - **Too old** (an older version, or no `phases` field): "This workspace (v<N>) cannot run
+     explain phases from the knowledge plugin: they need v92 or later, whose create-phase
+     explain route writes a `phases` line. Run `/update-workspace`, then ask again." Never
      run it yourself.
 3. **Refuse early** what the route would refuse (create-phase's *The explain route*, its
    refusals before anything is written), so the operator never confirms what it then

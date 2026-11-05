@@ -12,12 +12,16 @@ two skills:
   research of its own (no web search, no research agents) and brings in nothing
   from outside. A subject with no code in the repo is declined; one no phase
   covers is offered a research phase first. It is the front door of an
-  **explain phase** in a workflow workspace (v86 or later): it suggests the
+  **explain phase** in a workflow workspace (v92 or later): it suggests the
   reader and the shape, asks you **once**, and on your yes hands it to the
   workspace's `create-phase`, which runs it to a private publish. One writer
   drafts the chapter, every sentence traced to a code range or a record line,
   visuals first; one critic on another model checks it; it is revised once and
-  published. The default is a standalone document; a chapter of a book, or a
+  published. The chapter can carry a **glossary** whose terms the text links
+  with `term:` links (each opens its definition in the reader), and **typeset
+  formulas**: inline `` $`…`$ `` math and a `formula` block with a plain reading
+  and a "where" legend, typeset in the reader and on paper. The default is a
+  standalone document; a chapter of a book, or a
   whole book, only when you ask for one. Skill text:
   [`skills/explain/SKILL.md`](skills/explain/SKILL.md).
 - `/knowledge:setup` — wires `/knowledge:explain` to a knowledge base, two ways.
@@ -43,9 +47,12 @@ whenever you want something explained and kept.
 
     /knowledge:explain <topic or change-ref> [book=<slug>] [lang=<xx>]
 
-**Requirements:** a workflow workspace v86 or later in the repository you run it
-from (without one it refuses and runs nothing; an older one is told to run
-`/update-workspace`), and `/knowledge:setup` run once.
+**Requirements:** a workflow workspace v92 or later in the repository you run it
+from (without one it refuses and runs nothing; an older one, or one whose
+create-phase explain route does not write the `phases` line, is told to run
+`/update-workspace`), and `/knowledge:setup` run once. Plugin 0.10.0 and workspace
+v92 need each other: v92's explain route refuses an older plugin's proposal and
+creates nothing, so update both.
 
 **The one confirmation.** `/knowledge:explain` reads, drafts and asks; it never
 researches or writes by itself. It finds the workspace and checks it is ready,
@@ -162,3 +169,7 @@ Release checklist — before pushing a release:
 4. Run the setup + explain E2E rehearsal (scaffold into a temp dir on throwaway
    ports; exercise the 201 / 409 / fallback paths, then `mkdocs build` +
    `site_smoke.py`) — never against your own live KB.
+5. Before deploying a server that accepts the new grammar, scan the stored native
+   sources once for `` ```glossary ``, `` ```formula ``, `` $` `` (a `$` beside a
+   code span, now inline math) and `term:` links; a hit means `syntax: 2` instead
+   of the additive `syntax: 1`.
