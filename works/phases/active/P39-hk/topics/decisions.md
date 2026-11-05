@@ -81,3 +81,11 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Decisions 16
 
 - **Engine (R1):** Temml 0.14.0 renders MathML, server-only, rebuilt by saxes through a MathML allowlist (no raw HTML). Its `aligned` stacks the relations in Chromium, WebKit and Firefox. STIX Two Math is vendored (OFL, 403 KB) and loaded only on pages with math. No CSP change. Chromium's √ gap is corrected per instance by measurement, never by a fixed margin → [glossary-and-math.md](glossary-and-math.md) §3
+
+## Decisions 17
+
+- **Validation (R1):** a TeX allowlist validator, twinned in `server/native/tex.py` and `web/src/lib/native/tex.ts` and held equal by `tests/fixtures/native/tex-allowlist.tsv` and a Temml render test. Codes: `math-syntax`, `math-command`, `limit`. No new Python dependency → [glossary-and-math.md](glossary-and-math.md) §4
+
+## Decisions 18
+
+- **Term window (R1):** one client `TermLayer` beside `AnnotationLayer`, delegating over static server markup (markers, hidden `tw-<id>` windows). Capture-phase pointerdown and Esc compose with `annotations.tsx`, which gets only one 3-line `onKey` touch. `TAP_IGNORE` is unchanged, and the phone sheet is `.ra-sheet`, not a frame panel → [glossary-and-math.md](glossary-and-math.md) §5

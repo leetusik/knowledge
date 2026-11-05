@@ -1770,3 +1770,6 @@
 {"ts": "2026-11-05T14:32:28+09:00", "type": "slice_status_changed", "slice": "P39-hk.F2", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-11-05T16:46:42+09:00", "type": "executor_dispatched", "slice": "P39-hk.F2", "phase": "P39-hk", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-05T16:46:42+09:00", "type": "slice_status_changed", "slice": "P39-hk.F2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-05T16:49:03+09:00", "type": "slice_status_changed", "slice": "P39-hk.F3", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-05T17:27:18+09:00", "type": "executor_dispatched", "slice": "P39-hk.F3", "phase": "P39-hk", "kind": "fix", "risk": "low", "attempt": 1, "verdict": "needs_operator", "note": "OQ20-OQ22: residues needing a look the record doesn't make; CSS for the decided cases in the tree"}
+{"ts": "2026-11-05T17:27:19+09:00", "type": "slice_status_changed", "slice": "P39-hk.F3", "old_status": "in_progress", "new_status": "pending", "stop_kind": "decision"}
