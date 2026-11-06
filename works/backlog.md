@@ -8,7 +8,7 @@
 - Current phase: `P39-hk`
 - Current slice: `P39-hk.F5`
 - Next slice: `P39-hk.REVIEW`
-- Waiting on operator: `none`
+- Waiting on operator: `P39-hk.F5`
 - Stream: `phase/P39-hk-explain_what_was_built` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `73`
 - Workspace version: `v89`
@@ -353,5 +353,5 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | [x] `P39-hk.F3` | `done` | Bound P30's no-wrap controls at large text: the chapter-end button, the Older translation tag, Show answer | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F3` |
 | [x] `P39-hk.F4` | `done` | List the Glossary in the contents, linear text for math on text-only surfaces, the template's file fallback line | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F4` |
 | [x] `P39-hk.F6` | `done` | Name the Glossary in the annotation layer, read the resume pill through linear math, tag the Glossary entry English | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F6` |
-| [ ] `P39-hk.F5` | `todo` | Re-pin the explain front door to the bootstrap release that carries S5's package | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F5` |
+| [~] `P39-hk.F5` | `pending` | Re-pin the explain front door to the bootstrap release that carries S5's package | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F5` |
 | [ ] `P39-hk.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |
