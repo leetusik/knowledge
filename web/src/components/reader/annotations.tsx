@@ -30,14 +30,24 @@ import {
   type AnnotationWrite,
   type BookmarkWrite,
 } from "@/lib/reader/actions";
-import { capture, cps, type ANode, type Captured } from "@/lib/reader/anchor";
+import {
+  capture,
+  cps,
+  segments,
+  units,
+  verified,
+  type ANode,
+  type Captured,
+} from "@/lib/reader/anchor";
 import { progressPercent, TAP_IGNORE } from "@/lib/reader/chrome";
 import {
   buildGroups,
   marksWord,
   positionNear,
+  shownQuote,
   snippetOf,
   type ListItem,
+  type QuoteAtom,
   type SectionIndex,
 } from "@/lib/reader/note-list";
 import {
@@ -123,6 +133,32 @@ type Item = ReaderNote & {
 };
 type OtherItem = ReaderOtherNote & { gone?: boolean };
 type Bk = ReaderBookmark & { gone?: boolean };
+
+/**
+ * P39-hk.F4 (OQ10) — each section's inline formulas as the page holds them: an atom
+ * (`math.ra-m`, `data-an-len` = its TeX's code points) in a container the self-check keeps,
+ * at its offset in the section's text, with its linear text (`alttext`). Read from the
+ * server markup; a chapter with no formula gives an empty map.
+ */
+function formulaAtoms(
+  root: HTMLElement,
+  sections: ReadonlyMap<string, readonly string[]>,
+): Map<string, QuoteAtom[]> {
+  const out = new Map<string, QuoteAtom[]>();
+  if (!root.querySelector("math.ra-m[data-an-len]")) return out;
+  for (const seg of verified(segments(root as unknown as ANode), sections)) {
+    for (const u of units(seg.el)) {
+      const el = u.node as unknown as Element;
+      if (u.kind !== "atom" || el.localName !== "math") continue;
+      const alt = el.getAttribute("alttext");
+      if (!alt) continue;
+      const list = out.get(seg.sec) ?? [];
+      list.push({ at: seg.base + u.at, len: u.len, alt });
+      out.set(seg.sec, list);
+    }
+  }
+  return out;
+}
 
 /** A selection in a plain Markdown document: nothing can be highlighted there. */
 type NoneSel = { mode: "none" };
@@ -291,6 +327,10 @@ export function AnnotationLayer({
   const [pct, setPct] = useState(0);
   const [endSeen, setEndSeen] = useState(false);
   const [codeIds, setCodeIds] = useState<ReadonlySet<string>>(new Set());
+  /** P39-hk.F4: the page's inline formulas, by section (empty until read; empty without math). */
+  const [atoms, setAtoms] = useState<ReadonlyMap<string, QuoteAtom[]>>(
+    () => new Map(),
+  );
   /** The margin items' tops, by key (from 64rem), and the nodes the rows mount in. */
   const [railTops, setRailTops] = useState<Record<string, number>>({});
   const [rowHosts, setRowHosts] = useState<Record<string, HTMLElement>>({});
@@ -334,6 +374,17 @@ export function AnnotationLayer({
     if (art && root && shell) setHost({ art, root, shell });
   }, []);
 
+  // P39-hk.F4: the formulas are server markup, read once the layer has its host (reported in a
+  // frame, as the code quotes are: the lists, not the page, read it).
+  useEffect(() => {
+    if (!host) return;
+    const frame = requestAnimationFrame(() => {
+      const found = formulaAtoms(host.root, sections);
+      if (found.size) setAtoms(found);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [host, sections]);
+
   // ---- what the layer holds, as the lists and the margin show it ---------------------------------
   const names = notes.langNames;
   const langName = useCallback(
@@ -353,6 +404,34 @@ export function AnnotationLayer({
       ),
     [notes.sections],
   );
+  /**
+   * P39-hk.F4 (OQ10): the quote a list shows for a highlight the page paints whose stored quote
+   * holds a formula: each formula as its linear text, mapped from the highlight's own offsets
+   * (`shownQuote`). Anything else (no formula, Text changed, another language, Unanchored)
+   * shows its stored quote.
+   */
+  const shown = useMemo(() => {
+    const out = new Map<string, string>();
+    if (!atoms.size) return out;
+    for (const x of items) {
+      const text = x.sec !== null ? sections.get(x.sec) : undefined;
+      const list = x.sec !== null ? atoms.get(x.sec) : undefined;
+      if (
+        x.kind !== "hl" ||
+        x.status !== "anchored" ||
+        x.method === "stored" ||
+        !x.quote ||
+        !text ||
+        !list ||
+        x.start === null ||
+        x.end === null
+      )
+        continue;
+      const q = shownQuote(text, x.start, x.end, x.quote.exact, list);
+      if (q !== null) out.set(x.id, q);
+    }
+    return out;
+  }, [items, sections, atoms]);
   const groups = useMemo(
     () =>
       buildGroups(
@@ -363,14 +442,14 @@ export function AnnotationLayer({
           other: others,
           otherBookmarks: obms,
         },
-        { sections: look, chapterTitle, code: codeIds },
+        { sections: look, chapterTitle, code: codeIds, shown },
         new Set(
           [...items, ...orph, ...others, ...bms, ...obms]
             .filter((x) => x.gone)
             .map((x) => x.id),
         ),
       ),
-    [items, orph, others, bms, obms, look, chapterTitle, codeIds],
+    [items, orph, others, bms, obms, look, chapterTitle, codeIds, shown],
   );
   const groupsRef = useRef(groups);
   useEffect(() => {
@@ -2339,7 +2418,9 @@ export function AnnotationLayer({
                   }}
                 >
                   <span className="an-pick__q" lang={x.lang}>
-                    <mark>{clip(x.quote?.exact ?? "", 90)}</mark>
+                    <mark>
+                      {clip(shown.get(x.id) ?? x.quote?.exact ?? "", 90)}
+                    </mark>
                   </span>
                   <span className="an-pick__m">
                     {x.note ? T.pop.kindHighlightNote : T.pop.kindHighlight}

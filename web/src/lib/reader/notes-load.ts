@@ -7,9 +7,9 @@ import type {
   KbVariantState,
 } from "@/lib/knowledge/reader";
 import type { CheckedChapter } from "@/lib/native";
-import { plainText } from "@/lib/native/parse";
+import { displayText } from "@/lib/native/display-text";
 import { sections } from "@/lib/native/project";
-import type { Block, Inline } from "@/lib/native/tree";
+import type { Block, Inline, Tree } from "@/lib/native/tree";
 
 import { languageName } from "./language";
 import type {
@@ -66,27 +66,32 @@ const inl = (v: unknown): Inline[] | null =>
   Array.isArray(v) ? (v as Inline[]) : null;
 const str = (v: unknown): string | null =>
   typeof v === "string" && v.trim() ? v : null;
-const words = (v: unknown): string | null => {
-  const nodes = inl(v);
-  const t = nodes ? plainText(nodes).replace(/\s+/g, " ").trim() : "";
-  return t || null;
-};
+
+/** How a name reads inline text: `displayText` on screen; `plainText` for the label a snapshot stored before P39-hk.F4. */
+export type Flatten = (nodes: readonly Inline[]) => string;
 
 /**
  * A section's name (`05-annotations` *Every string*: "Section · {title}", "Diagram ·
  * {title}", "Quiz · {question}", "Figure · {caption}", "Sources · {heading}"). Where a
  * block names nothing (undrawn; P30.S20 decided): a quiz takes its first question, a
  * figure its alt or label, the sources list the heading above it, and a code block with
- * its own id its title, else its first line.
+ * its own id its title, else its first line. P39-hk.F4 (OQ10): inline text is read through
+ * `flat`, on screen `displayText` (a formula as its linear text, never its TeX).
  */
 function nameOf(
   block: Block,
   heading: string | null,
+  flat: Flatten,
 ): { word: SectionWord; title: string } {
   const b = block as unknown as Record<string, unknown>;
+  const words = (v: unknown): string | null => {
+    const nodes = inl(v);
+    const t = nodes ? flat(nodes).replace(/\s+/g, " ").trim() : "";
+    return t || null;
+  };
   switch (block.type) {
     case "heading":
-      return { word: "Section", title: plainText(block.content).trim() };
+      return { word: "Section", title: flat(block.content).trim() };
     case "diagram":
       return { word: "Diagram", title: str(b.title) ?? words(b.caption) ?? "" };
     case "quiz": {
@@ -126,12 +131,33 @@ function noteSections(checked: CheckedChapter): NoteSection[] {
   let heading: string | null = null;
   for (const block of checked.tree.blocks) {
     if (block.type === "heading" && block.level === 2)
-      heading = plainText(block.content).trim();
+      heading = displayText(block.content).trim();
     if (!block.id || !text.has(block.id)) continue;
-    const name = nameOf(block, heading);
+    const name = nameOf(block, heading, displayText);
     out.push({ id: block.id, ...name, text: text.get(block.id) ?? "" });
   }
   return out;
+}
+
+/**
+ * P39-hk.F4 — one section's place name as the reader labels it, the label a highlight's
+ * snapshot stores (`annotations.tsx` `sectionLabel`): the title for a section, "{Word} ·
+ * {title}" for anything else; inline text through `flat`. Null for an id that names no block.
+ */
+export function sectionLabel(
+  tree: Tree,
+  id: string,
+  flat: Flatten,
+): string | null {
+  let heading: string | null = null;
+  for (const block of tree.blocks) {
+    if (block.type === "heading" && block.level === 2)
+      heading = flat(block.content).trim();
+    if (block.id !== id) continue;
+    const { word, title } = nameOf(block, heading, flat);
+    return word === "Section" ? title : `${word} · ${title}`;
+  }
+  return null;
 }
 
 export function noteOf(a: KbAnnotation): ReaderNote {

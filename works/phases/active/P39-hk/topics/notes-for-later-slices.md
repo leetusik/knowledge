@@ -112,3 +112,15 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Notes for later slices 18 (2)
 
 - **(from S6, for P39-hk.S10)** The exact grammar is `server/native/README.md` *The glossary*, *Limits*, *Ids*, *References*. Mind: `aliases` omitted or 1–8, never `[]`; a numeric term quoted (`"429"`); no `term:` link in a definition.
+
+## Notes for later slices 13 (3)
+
+- **(from F1–F3, for REVIEW)** Re-run the matrix from `scratchpad/f2/` (F2's result, *Stack as run*): `matrix3.sh`, with `oq.mjs`, `pix3.mjs` (identity net of noise) and `lay2.mjs`. F3's are in `scratchpad/f3/`: `wide.mjs` (page width), `ctl.mjs` (controls), `book2.mjs`, `past.mjs` and `pastpix.mjs` (round 2). One CDP session at a time. 320 at 200% is now 320 on reading-aids, write-lock, the loose note and the book page; 342 on all-blocks (top bar, OQ21). [F3 result](../slices/P39-hk.F3/result.md)
+
+## Notes for later slices 11 (2)
+
+- **(from S9, for REVIEW)** Left to the gate: a member's real highlight on a term (F2's ink line; S9 checked only an injected `mark.an-m`, signed out) and its note popover beside a window; the phone sheet on a real iPhone Safari (fixed inside the `rd` container; WebKit 284945 / 286237); VoiceOver on the window and sheet. No frame file changed, so no P36-1s merge note. Stack and states: [S9 result](../slices/P39-hk.S9/result.md) § Live sweep
+
+## Notes for later slices 9 (2)
+
+- **(from S8, for REVIEW)** Verification chapter `tests/fixtures/book/reading-aids.{en,ko}.md` (`reading-aids`, position 4; fresh-state ids 5/6, loose note 7). Stack and instruments as run (viewport harness on the standalone build; CDP for paper and AX): [S8 result](../slices/P39-hk.S8/result.md) § Stack as run. Re-publishing ko on a scratch API with history needs `translated_from` at en's current version.

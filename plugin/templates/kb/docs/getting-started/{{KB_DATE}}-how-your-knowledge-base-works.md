@@ -36,8 +36,9 @@ This one is built from three small, ordinary parts working together:
    linked to the topics it shares with its neighbours. Open the **Graph** tab to
    see it.
 
-None of these needs the others to be running to work. If the API is down, an
-explainer can still be written straight to a file. If you never publish the
+None of these needs the others to be running to work. If the API is down, the
+explainer is not published, but its draft is kept so you can publish it later,
+and nothing is written into your project. If you never publish the
 site, it still runs on your own machine.
 
 ## 2. The shape of an explainer

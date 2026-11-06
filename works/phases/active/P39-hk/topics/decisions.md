@@ -89,3 +89,55 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Decisions 18
 
 - **Term window (R1):** one client `TermLayer` beside `AnnotationLayer`, delegating over static server markup (markers, hidden `tw-<id>` windows). Capture-phase pointerdown and Esc compose with `annotations.tsx`, which gets only one 3-line `onKey` touch. `TAP_IGNORE` is unchanged, and the phone sheet is `.ra-sheet`, not a frame panel → [glossary-and-math.md](glossary-and-math.md) §5
+
+## Decisions 1
+
+- **Breakdown (DECOMP):** `build-after`: D1 designs the reading aids (critique `critic`), then R1 (research) beside S1 (front door), then S2 (evidence model, high) → S3 (writing rules) → S4 (retire research machinery) → S5 (workspace handoff package, high), then `DECOMP2` cuts the build from the signed canvas and R1. No build slices now; no slice spends money → [topics/breakdown.md](breakdown.md)
+
+## Decisions 2
+
+- **Codebase-only binds the explain skill only (DECOMP):** the server, the CLI (`--subject`, `--book-kind subject`) and the reader keep subject books and subject-filed documents already published; no grammar or data change, and `scripts/publish_fixture_book.py` and the book fixtures stay.
+
+## Decisions 3
+
+- **The release is plugin 0.10.0, in DECOMP2's last slice (DECOMP):** S1–S4 edit `plugin/**` without a version bump, so the branch never merges before the release slice; no changelog file exists, so the release notes live in `plugin/README.md` and the commit; S5's handoff names 0.10.0 as the plugin minimum.
+
+## Decisions 4
+
+- **Skill headings may change in this phase (DECOMP):** unlike P38-e1, research sections go; a surviving section keeps its number and heading, and every heading change lands in `topics/skill-headings.md` (old → new or deleted), from which S5 re-cites the workspace route.
+
+## Decisions 19
+
+- **Translation (R1):** ingest gains the 422s `translation-term-ids` and `translation-math` (display `tex` and `sym` in order; inline TeX as a multiset), beside `translation-quiz-ids`. The skill's translation step keeps both verbatim → [topics/glossary-and-math.md](glossary-and-math.md) §6
+
+## Decisions 27
+
+- **Breakdown (DECOMP2):** six build slices, a chain but for one wave: S6 glossary grammar (high) → S7 math grammar (high) → S8 math in the reader and on paper (high) beside S10 skill §4 text (mid) → S9 terms in the reader and on paper (high: the phone sheet's fixed placement inside the `rd` container is unpinned) → S11 release 0.10.0 (mid) → REVIEW. No slice spends money → [topics/breakdown.md](breakdown.md)
+
+## Decisions 28
+
+- **Glossary limits (S6):** R1's open points, settled: `aliases` absent or null is none, else 1–8 strings (`[]` is `limit`, so "none" has one spelling); no length cap on a term, an alias or a definition (no block caps a string); no `title` key; a non-mapping term is `field-type` with a null slot (quiz's rule); term ids are checked per block, and a refused second glossary's terms still resolve links (one `limit`, no cascade) → `server/native/README.md` *The glossary*
+
+## Decisions 29
+
+- **Math grammar settled (S7):** R1's open points. The TSV is command, context (`inline`|`display`), arity (`0 delim op limits fence 1 2 text opt1 env cell`) and a sample that must pass. One violation per formula, its first; a line break only in display TeX, never a tab; `\ `, `\_`, `\&` not allowlisted; `\limits` only after an `op`; a bare argument is one token or a symbol. Search takes a formula's `alt`, `reading` and each `means`, never its `tex` → `server/native/README.md` *TeX*
+
+## Decisions 31
+
+- **Math (S8):** Temml 0.14.0 output is rebuilt through R1's allowlists plus `mstyle` into React; every `style` is dropped, the meaningful ones mapped to `scriptlevel` or a class. F24's `lspace="0"` is inline only. A Temml refusal at render refuses the whole block (`kb-ch-unshowable`), never showing TeX → [S8 result](../slices/P39-hk.S8/result.md)
+
+## Decisions 32
+
+- **Math CSS (S8):** in the new `web/src/app/reader-aids.css`, imported by `MathLayer`. Stepped rows add the record's 0.28em gap on both sides of the relation. F27's `--ra-sym-k` is measured per chapter: widest legend symbol + 0.35em, rounded to the nearest ¼ (5.25 here, fallback 5.25), superseding OQ11's "rounded up". Review cards get linear text in `review/actions.ts`; the API is unchanged.
+
+## Decisions 33
+
+- **Term sheet placement (S9):** the phone sheet is the same `tw-<id>` window, restyled under `@container rd (width < 40rem)` to `position: fixed` at the viewport's bottom, in place in `.ra-float` (z-index 25: over the bars and annotation slots, under the frame's scrim and sheets). No portal, no frame slot; `reader-frame.tsx` and `reader-page.tsx` untouched. Checked live first (Chrome 156): a fixed box inside the `rd` container pins to the viewport → [S9 result](../slices/P39-hk.S9/result.md)
+
+## Decisions 34
+
+- **Terms wiring (S9):** `TermLayer` (client, beside `AnnotationLayer`) toggles the server's static markup. `annotations.tsx` is unchanged (R1's 3-line touch dropped): a term's click (Enter's, Space's) reaches that layer's own article click, which closes its popover or bar, and the term's click clears a native selection, which a press on a link keeps. Paper is the same DOM restyled (no `print-glossary.tsx`); the quiz's paper copies render without ids → [S9 result](../slices/P39-hk.S9/result.md)
+
+## Decisions 35
+
+- **Terms, what the record left (S9):** a window exists only for a term the chapter links; a hover opens only from the 40rem window form with a fine pointer; a window is placed once on open and re-placed only on resize (Read more grows it in place, as the canvas does); `.ra-keep` covers a marker's words, a term's name and its definitions, not other prose (OQ15) → [S9 result](../slices/P39-hk.S9/result.md)

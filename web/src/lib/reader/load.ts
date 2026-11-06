@@ -23,7 +23,7 @@ import "server-only";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 
-import { SITE } from "@/content";
+import { CHAPTER, SITE } from "@/content";
 import {
   getBook,
   getDocument,
@@ -56,7 +56,8 @@ import {
   type DocRef,
 } from "@/lib/native";
 import { lookOf } from "@/lib/legacy/messages";
-import { plainText } from "@/lib/native/parse";
+import { displayText } from "@/lib/native/display-text";
+import { planTerms } from "@/lib/native/terms";
 import { parseReaderCookie, type ReaderSettings } from "@/lib/reader-cookie";
 import { bookHref, readerHref, type ReaderTarget } from "@/lib/reader-href";
 
@@ -183,7 +184,20 @@ function staleSourceOf(
   };
 }
 
-function headingsOf(checked: CheckedChapter): ReaderHeading[] {
+/**
+ * The chapter's h2s and h3s, for "In this chapter" and the Contents sheet. A heading's text is its
+ * display text (P39-hk.F4, OQ10: an inline formula as its linear text; its id is unchanged, the
+ * slug of its plain text). OQ16: the Glossary h2 the renderer draws for the glossary block
+ * (`render.tsx` `glossary`: the block's id, `CHAPTER.terms.glossary`) is listed at the block's
+ * place, like any h2, wherever the renderer draws it: a native chapter not refused whose glossary
+ * block is not refused and holds an entry. It counts toward the Toc's two-h2 threshold like any h2.
+ */
+export function headingsOf(checked: CheckedChapter): ReaderHeading[] {
+  const shown =
+    checked.format === "md" || checked.refused
+      ? []
+      : checked.blocks.flatMap((e) => (e.block && !e.refused ? [e.block] : []));
+  const glossary = planTerms(shown).terms.size > 0 ? new Set(shown) : null;
   const out: ReaderHeading[] = [];
   for (const block of checked.tree.blocks) {
     if (
@@ -194,7 +208,13 @@ function headingsOf(checked: CheckedChapter): ReaderHeading[] {
       out.push({
         id: block.id,
         level: block.level,
-        text: plainText(block.content),
+        text: displayText(block.content),
+      });
+    } else if (block.type === "glossary" && glossary?.has(block)) {
+      out.push({
+        id: block.id ?? "glossary",
+        level: 2,
+        text: CHAPTER.terms.glossary,
       });
     }
   }

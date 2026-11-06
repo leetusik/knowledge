@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P39-hk`
-- Current slice: `P39-hk.F4`
-- Next slice: `P39-hk.REVIEW`
+- Current slice: `P39-hk.REVIEW`
+- Next slice: `none`
 - Waiting on operator: `none`
 - Stream: `phase/P39-hk-explain_what_was_built` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `73`
@@ -17,7 +17,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 18/20 | `P39-hk.F4` | 18/20 | `.` | working tree |
+| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 19/20 | `P39-hk.REVIEW` | 19/20 | `.` | working tree |
 | `default` | - | idle | - | - | - | branch main |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
@@ -45,7 +45,7 @@
 | [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.D1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [x] `P37-1p` | `done` | `pass` | Drop the knowledge graph | `none` | `works/phases/active/P37-1p` |
 | [x] `P38-e1` | `done` | `pass` | Right-size explain runs (plugin 0.9.0) | `none` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
-| [ ] `P39-hk` | `in_progress` | `changes_requested` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `P39-hk.F4` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
+| [ ] `P39-hk` | `in_progress` | `changes_requested` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `P39-hk.REVIEW` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
 
 ## Phase P21: Web document deletion
 
@@ -351,5 +351,5 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | [x] `P39-hk.F1` | `done` | Bound the reading aids' no-wrap runs to their line | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F1` |
 | [x] `P39-hk.F2` | `done` | Keep hyphenated words and a Korean particle with their run, in prose and readings | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F2` |
 | [x] `P39-hk.F3` | `done` | Bound P30's no-wrap controls at large text: the chapter-end button, the Older translation tag, Show answer | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F3` |
-| [ ] `P39-hk.F4` | `todo` | List the Glossary in the contents, linear text for math on text-only surfaces, the template's file fallback line | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F4` |
+| [x] `P39-hk.F4` | `done` | List the Glossary in the contents, linear text for math on text-only surfaces, the template's file fallback line | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F4` |
 | [ ] `P39-hk.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |
