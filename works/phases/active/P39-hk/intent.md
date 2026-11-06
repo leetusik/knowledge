@@ -130,3 +130,7 @@ The phase keeps the glossary above and adds three things. Where they conflict wi
   - the `kb` Design System re-sync, on another account;
   - the v92 front-door re-run, which needs the v92 workspace.
 - Also on the operator's word (2026-11-05): "after review pass, make sure you delete the whole knowledge related claude artifacts."
+- The operator, answering F3's OQ20–OQ22 with the recommendations as presented (2026-11-06): "accept". Read as:
+  - OQ20 (the book page's "Older translation" tag at 200% text): fix now in F3. The tag drops under its link when the two don't fit side by side; only a word still wider than the column breaks inside (F36's rule).
+  - OQ21 (a 320 px phone at 200% text: the quiz body, Show answer breaking mid-word, a top bar): accept for now; a deferred design job for the quiz and top bar at that size, with the narrow option column.
+  - OQ22 (the past-version page at 200% text): fix the display formula now in F3 (it scrolls in its own box, F7). The long source URL and the console's signed-out "Sign in" are one deferred job, "the console at 200% text".

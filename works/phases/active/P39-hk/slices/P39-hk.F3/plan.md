@@ -111,3 +111,40 @@ pass_effort=yes
 attribution=Claude Opus 5.5
 explore_model=haiku
 explore_effort=xhigh
+
+## Round 2 (2026-11-06, after the operator's "accept" on OQ20–OQ22)
+
+Round 1 stands: its CSS is in the tree, uncommitted, and its `result.md` is right. The operator answered OQ20–OQ22 "accept" to the recommendations as presented (`intent.md` § *Added at review*, last item; the three OQs are resolved on disk, pointing here). Round 2 does two things. Write no new OQ for either.
+
+1. **OQ20: the book page's "Older translation" tag at 200% text.**
+   - When the link ("한국어 · v1") and its tag don't fit side by side, the tag drops onto its own line under the link, and the link stays whole: no squeezing.
+   - Only when the tag's single word is still wider than the column (320/200%) does it break inside the word. That is F36's rule ("a word longer than it breaks inside rather than running past the screen").
+   - Wherever the two fit side by side, the render is pixel-identical to HEAD.
+   - The book page equals the viewport at 320, 390 and 820, at 150% and 200%.
+   - The mechanism is yours, in `book.css`: for example `flex-wrap` on `.bk-lang`, `flex: none` or `min-width: max-content` on the link, and `overflow-wrap: anywhere` on the tag. Revisit round 1's `.bk-lang .rd-tag` rule as needed.
+2. **OQ22, the display formula only: the past-version page `/documents/5/versions/1`.** A display formula wider than the column scrolls inside its own box, by F7's rule. Use the reader's region semantics (focusable `role="region"`, "Formula, scrolls sideways", only while it scrolls) where that page already mounts the same component. Otherwise give it a plain box that scrolls sideways.
+   - OQ13 stands: the page otherwise shows math as it does now, unstyled. Add no reader styling beyond the box.
+   - **Leave alone** the source URL and the console's signed-out "Sign in". They are a deferred job. The page will therefore still be wider than 390 at 200%. Report its new width and confirm that the formula is no longer among the causes.
+   - Find which stylesheet styles that page's native blocks (for example `kb-docview.css`) and bound it there, scoped to that page's native display math.
+
+**Round 2 set:** round 1's set, plus that page's stylesheet (`web/src/app/kb-docview.css` or the one that styles that page's native blocks). Any other file means `needs_operator`. No component change unless the formula box needs one to mount the region: then `needs_operator` naming it.
+
+**Round 2 sweep**, HEAD against yours, on the same instruments and stack rules as round 1:
+- the book page at 320, 390 and 820 × 100%, 150% and 200%: page width, the tag's box and the link's box. Identity wherever both fit. One Claude in Chrome look at 390/200% and 320/200%, light and dark;
+- the past version at 390 and 320 × 200%: page width before and after, and the formula box scrolling. At 100%, unchanged;
+- round 1's whole sweep again on the final build, with paper.
+
+**Notebook:** update round 1's Decisions entry (OQ20's look, the OQ22 formula box) and its Doc impact line (the book page passes; the past version is still wide from the URL and "Sign in", now a deferred job). Update `## Now` ("Next: F4").
+
+## Escalation: mid → high
+
+route=high
+reason=second attempt
+subagent_type=slice-executor
+model=opus
+pass_model=yes
+effort=xhigh
+pass_effort=yes
+attribution=Claude Opus 5.5
+explore_model=haiku
+explore_effort=xhigh

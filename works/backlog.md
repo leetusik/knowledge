@@ -8,7 +8,7 @@
 - Current phase: `P39-hk`
 - Current slice: `P39-hk.F3`
 - Next slice: `P39-hk.F4`
-- Waiting on operator: `P39-hk.F3`
+- Waiting on operator: `none`
 - Stream: `phase/P39-hk-explain_what_was_built` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `73`
 - Workspace version: `v89`
@@ -350,6 +350,6 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | [x] `P39-hk.S11` | `done` | Release plugin 0.10.0: versions, the v92 handshake, copy and counts | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S11` |
 | [x] `P39-hk.F1` | `done` | Bound the reading aids' no-wrap runs to their line | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F1` |
 | [x] `P39-hk.F2` | `done` | Keep hyphenated words and a Korean particle with their run, in prose and readings | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F2` |
-| [~] `P39-hk.F3` | `pending` | Bound P30's no-wrap controls at large text: the chapter-end button, the Older translation tag, Show answer | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F3` |
+| [ ] `P39-hk.F3` | `in_progress` | Bound P30's no-wrap controls at large text: the chapter-end button, the Older translation tag, Show answer | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F3` |
 | [ ] `P39-hk.F4` | `todo` | List the Glossary in the contents, linear text for math on text-only surfaces, the template's file fallback line | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F4` |
 | [ ] `P39-hk.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |

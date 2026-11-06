@@ -3,7 +3,7 @@
   "phase_id": "P39-hk",
   "name": "Bound P30's no-wrap controls at large text: the chapter-end button, the Older translation tag, Show answer",
   "kind": "fix",
-  "status": "pending",
+  "status": "in_progress",
   "order": 160,
   "depends_on": [
     "P39-hk.F2"
@@ -31,10 +31,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "decision",
-    "on_words": "The operator's answers to OQ20, OQ21 and OQ22 (fix now with a look, or accept and defer) clear F3 to in_progress; a fix-now answer re-dispatches F3 on the high row with that look, then F4 runs",
-    "since": "2026-11-05T17:27:19+09:00"
   }
 }
