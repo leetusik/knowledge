@@ -3,7 +3,7 @@
   "phase_id": "P39-hk",
   "name": "Re-pin the explain front door to the bootstrap release that carries S5's package",
   "kind": "fix",
-  "status": "pending",
+  "status": "todo",
   "order": 190,
   "depends_on": [],
   "created_at": "2026-11-06T12:05:38+09:00",
@@ -28,10 +28,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "decision",
-    "on_words": "OQ24: 'a' = your bootstrap session applies S5's package and releases vN first, then F5 re-pins every site to vN (an operator-action wait until that release lands); 'b' = F5 gates on the **phases** field alone and names no number. OQ23's stored quotes: 'defer' files one job, 'fix' cuts a fix slice with an approximate mapping. OQ25: 'fix' cuts a small fix slice for the place bar's lang on Glossary (the pre-F6 bookmark is review scratch data, dropped); 'defer' folds it into the OQ23 job.",
-    "since": "2026-11-06T12:22:05+09:00"
   }
 }
