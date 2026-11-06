@@ -1779,3 +1779,4 @@
 {"ts": "2026-11-06T10:10:19+09:00", "type": "slice_status_changed", "slice": "P39-hk.F4", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-11-06T10:57:27+09:00", "type": "executor_dispatched", "slice": "P39-hk.F4", "phase": "P39-hk", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-06T10:57:27+09:00", "type": "slice_status_changed", "slice": "P39-hk.F4", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-06T10:57:48+09:00", "type": "slice_status_changed", "slice": "P39-hk.REVIEW", "old_status": "changes_requested", "new_status": "in_progress"}

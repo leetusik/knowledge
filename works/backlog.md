@@ -352,4 +352,4 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | [x] `P39-hk.F2` | `done` | Keep hyphenated words and a Korean particle with their run, in prose and readings | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F2` |
 | [x] `P39-hk.F3` | `done` | Bound P30's no-wrap controls at large text: the chapter-end button, the Older translation tag, Show answer | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F3` |
 | [x] `P39-hk.F4` | `done` | List the Glossary in the contents, linear text for math on text-only surfaces, the template's file fallback line | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F4` |
-| [ ] `P39-hk.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |
+| [ ] `P39-hk.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |

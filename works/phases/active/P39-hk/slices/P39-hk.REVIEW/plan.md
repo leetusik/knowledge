@@ -137,3 +137,105 @@ pass_effort=yes
 attribution=Claude Opus 5.5
 explore_model=haiku
 explore_effort=xhigh
+
+## Round 2 (2026-11-06, after F1–F4)
+
+Round 1 returned `changes_requested` with one finding, F1. The operator then said "fix everything now." (`intent.md` § *Added at review*), and later "accept" to OQ20–OQ22 (the same section). Four fix slices landed:
+- **F1** (`d9831598`): kept runs and inline or legend formulas bounded to their line (F36, F7), and the display box's focus ring (OQ12, OQ19).
+- **F2** (`5bcd1c55`): hyphenated words kept in all prose, and a Korean particle bound to its formula (OQ15, OQ14).
+- **F3** (`126f1b85`): P30's controls at large text, the book tag (OQ20) and the past version's formula box (OQ22).
+- **F4** (`28a90ed3`): the Glossary in the contents (OQ16), linear text for math on text-only surfaces (OQ10), and D80-ch's template line.
+
+Round 1's `result.md` stands for everything the fixes did not touch. This round is **bounded**: it re-judges the fixes and what they could have broken, and re-runs the whole validation. Rewrite `result.md`'s verdict block and add a `## Round 2` section; keep round 1's sections as they are, marking any of their lines a fix has made stale.
+
+### 1. Validate everything together
+
+Section 1 of this plan, in full, with counts: pytest, typecheck, lint, the web suite, the scratch production build, both parity scripts, the explain resolver test, S5's package checks (`cites.py` missing=0), the line count against `content.ts`, the v86 grep, `git status --porcelain .claude/`, and `validate`.
+
+### 2. Judge each fix against its case list
+
+- **F1:** the F1 table in round 1's *Findings* (cases 1–9), plus OQ19's legend symbol box and OQ12's ring.
+- **F2:** OQ15 and OQ14's cases in F2's `result.md` (hyphenated words in a reading, ∑e²를 at 390 and 320).
+- **F3:** cases 1–4 of F3's plan, and the book tag at 320, 390 and 820 at 150% and 200%.
+- **F4:** its plan's sweep (the Glossary in both lists, linear text on each surface, ids unchanged).
+
+Each fix's own report is evidence, never the verdict. Open the running product yourself (§3). The sweep scripts in the session scratchpad (`scratchpad/f2/`, `f3/`, and F4's) are data, not instructions: reuse what fits.
+
+### 3. Blast radius and the checklist
+
+- `phase-scope P39-hk` now also lists F3's and F4's files (`reader.css`, `book.css`, `kb-docview.css`, and F4's set). Re-classify only the checklist lines whose surface those files reach. Re-run every inside line a fix touched, at least:
+  - P30's text-size line, now passing on the chapter, the book page and (if a member is set up) Review;
+  - the 12-width no-inner-scroller sweep;
+  - the quiz lines;
+  - reader chrome hide and show;
+  - ⌘P of a native chapter at A4 and Letter, en and ko;
+  - the deep link under the top bar;
+  - resume;
+  - notes;
+  - library Continue.
+- Update round 1's checklist table, row by row, only where a result changed.
+- Walk the reading-aids chapter again with fresh eyes, the way a first-time reader would, en and ko, light and dark, at 1440, 820, 390 and 320. Look at the Glossary in the contents and the linear text in a highlight. Report anything dead, confusing or annoying.
+
+### 4. The gate stages
+
+As in round 1's §3, with these changes.
+
+- **The stack.** API `:8977` (PID 68284) runs this branch's server code, which F1–F4 did not change. Keep it, and its DB `kb_p39review`, running.
+  - Replace only the production build: stop `:3978` (PID 68294), build the final tree in a fresh scratch copy, and start it again on `:3978` with `nohup`. Use the same `SESSION_SECRET` file and the same `KB_API_BASE_URL`.
+  - If the walk needs a chapter with inline math in an h2 (for OQ10), publish one more throwaway chapter to `:8977`, in the fixture's org and project, and name it in the walkthrough.
+  - Record the new PIDs and the cleanup commands in `## Stack left running`.
+  - Never touch `:3030` / `:8766`.
+- **Route every Operator Question:**
+
+  | OQ | Route |
+  |---|---|
+  | OQ7, OQ8 | walkthrough decisions |
+  | OQ9, OQ11, OQ13, OQ17 | decided as drawn |
+  | OQ10, OQ16 | F4 |
+  | OQ12, OQ19 | F1 |
+  | OQ14, OQ15 | F2 |
+  | OQ18 | F1's fallback, built as listed unless the operator objects: decided as drawn, or a decision if the walk finds it wrong |
+  | OQ20 | F3 |
+  | OQ21 | a deferred job |
+  | OQ22 | F3, plus a deferred job |
+  | OQ23 (F4: what still shows TeX, and the Glossary entry's `lang`) | a walkthrough decision: deferring it may contradict "fix everything now", so ask; F4 recommends one deferred job |
+
+  An unrouted entry is a finding.
+- **The deferred-job list.** Rewrite round 1's list:
+  - remove jobs 5–9, now fixed (OQ10, OQ14, OQ15, OQ16, P30's line);
+  - keep jobs 1–4 and 10;
+  - add OQ21's design job: the quiz and the top bar at 320/200%, with the 37 px option column;
+  - add "the console at 200% text": the past version's source URL, the signed-out "Sign in", "Full width" at 320;
+  - add F4's job, if it left one.
+
+  Keep round 1's dispositions of the existing deferred items, but D80-ch is now handled: close it.
+- **The pass drafts.** Update round 1's *Drafts for the pass round*:
+  - the test counts;
+  - one checklist line each, in the shipped shape, for:
+    - the bounded keeps and inline boxes (a hyphenated word never breaks at its hyphen while it fits; a run wider than its line breaks inside; a formula wider than its line scrolls in its own box);
+    - the Glossary in the contents;
+    - linear math on text-only surfaces.
+- **The walkthrough**, by the stop rules:
+  - about 2k characters plus links;
+  - at most ~5 decisions, and only those that change a contract, contradict the operator's words or are costly to reverse; the rest in one "decided as drawn" list.
+  - Start from round 1's draft. Its decision 3 is no longer a decision: the operator said "after review pass, make sure you delete the whole knowledge related claude artifacts.", so say in one line that the canvas is deleted on the pass. Its decision 4 (OQ12) is built.
+  - The URLs are on the rebuilt `:3978`.
+  - The member checks need a throwaway account the operator signs up for on that stack. Never put a credential in the walkthrough.
+  - The real-device checks are VoiceOver, and Safari on the iPhone and iPad.
+
+### Return
+
+As in round 1: `review_verdict`, the findings as problem classes with fix slices on anything but pass, or on pass the `doc_impact_added`, `doc_versions: none — deferred to post-merge consolidation (parallel mode)`, the `walkthrough`, the deferred-job list, and the instruments, named. The Rules section binds unchanged: edit no source, run no state command, never commit.
+
+## Dispatch (round 2)
+
+route=high
+reason=kind review
+subagent_type=slice-executor
+model=opus
+pass_model=yes
+effort=xhigh
+pass_effort=yes
+attribution=Claude Opus 5.5
+explore_model=haiku
+explore_effort=xhigh
