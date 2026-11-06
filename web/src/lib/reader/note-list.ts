@@ -41,6 +41,8 @@ export interface ListItem {
   sec: string | null;
   /** The section's label ("Background", "Diagram · The flow"), for the meta line. */
   secTitle: string;
+  /** P39-hk.F7: the label's own language, when it is not the mark's (the Glossary h2's). */
+  secLang?: string;
   quote: string;
   note: string;
   label: string;
@@ -65,6 +67,8 @@ export interface ListItem {
 export interface SectionLook {
   n: number;
   label: string;
+  /** P39-hk.F7: the label's own language, when it is not the chapter's (the Glossary). */
+  lang?: string;
 }
 
 export type SectionIndex = ReadonlyMap<string, SectionLook>;
@@ -158,6 +162,7 @@ export function noteItem(n: ReaderNote, o: BuildOptions): ListItem {
     version: n.version,
     sec,
     secTitle: where?.label ?? n.snapshot?.block ?? "",
+    ...(where?.lang ? { secLang: where.lang } : {}),
     quote: o.shown?.get(n.id) ?? n.quote?.exact ?? "",
     note: n.note,
     label: "",
@@ -204,6 +209,7 @@ export function bookmarkItem(
     version: b.version,
     sec: status === "orphan" ? null : b.at,
     secTitle: where?.label ?? b.snippet,
+    ...(where?.lang ? { secLang: where.lang } : {}),
     quote: "",
     note: "",
     label: b.label,
@@ -229,6 +235,7 @@ export function otherItem(n: ReaderOtherNote, o: BuildOptions): ListItem {
     status: "other",
     sec: n.at,
     secTitle: where?.label ?? n.snapshot?.block ?? "",
+    secLang: where?.lang,
     order: where ? where.n * SECTION_SCALE + (n.start ?? 0) : UNPLACED,
   };
 }
@@ -409,7 +416,13 @@ export function rowView(
     gone: goneText,
     hasGone: gone && !!goneText,
     title,
-    titleLang: isBm && it.label ? langOf(it.label, "en") : it.lang,
+    // P39-hk.F7: a section bookmark's title is its place name, in that name's own language.
+    titleLang:
+      isBm && it.label
+        ? langOf(it.label, "en")
+        : isBm && !it.approx && !it.pos && it.secLang
+          ? it.secLang
+          : it.lang,
     titleBold: isBm && !!it.label,
     hasTitle: !!title,
     note: it.note,

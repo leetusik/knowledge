@@ -399,6 +399,7 @@ export function AnnotationLayer({
           {
             n: i,
             label: x.word === "Section" ? x.title : `${x.word} · ${x.title}`,
+            ...(x.lang ? { lang: x.lang } : {}),
           },
         ]),
       ),
@@ -1102,6 +1103,12 @@ export function AnnotationLayer({
       return m.word === "Section" ? m.title : `${m.word} · ${m.title}`;
     },
     [meta],
+  );
+  /** P39-hk.F7 (OQ25): a place name's own language, the chapter's unless the section names another (the Glossary). */
+  const sectionLang = useCallback(
+    (sec: string | null): string =>
+      (sec ? meta.get(sec)?.lang : undefined) ?? lang,
+    [meta, lang],
   );
 
   const snapshotOf = useCallback(
@@ -2190,7 +2197,7 @@ export function AnnotationLayer({
           {s.clipped ? (
             <p className="an-box__msg">
               {T.bar.clippedLead}
-              <b lang={lang}>{m ? sectionLabel(s.sec) : ""}</b>
+              <b lang={sectionLang(s.sec)}>{m ? sectionLabel(s.sec) : ""}</b>
               {T.bar.clippedTail}
             </p>
           ) : null}
@@ -2222,7 +2229,7 @@ export function AnnotationLayer({
           onMouseDown={hold}
         >
           <p className="an-box__msg">
-            {m?.word ?? "Section"} · <b lang={lang}>{m?.title ?? ""}</b>
+            {m?.word ?? "Section"} · <b lang={m?.lang ?? lang}>{m?.title ?? ""}</b>
           </p>
           <button
             type="button"
@@ -2397,6 +2404,7 @@ export function AnnotationLayer({
     let kLang: { name: string; lang: string } | null = null;
     let dialog = "";
     let where = "";
+    let whereLang = lang;
     let content: ReactNode = null;
     if (p.t === "choose") {
       const picks = p.ids.map(byId).filter((x): x is Item => !!x);
@@ -2435,12 +2443,14 @@ export function AnnotationLayer({
       k = T.pop.kindNew;
       dialog = T.pop.dialogNew;
       where = sel && sel.mode === "passage" ? sectionLabel(sel.sec) : "";
+      if (sel && sel.mode === "passage") whereLang = sectionLang(sel.sec);
       content = editor(T.pop.fieldNew, false);
     } else if (p.t === "bnew") {
       const w = blockWord(p.sec);
       k = T.pop.kindBlock(w);
       dialog = k;
       where = sectionLabel(p.sec);
+      whereLang = sectionLang(p.sec);
       content = editor(k, false);
     } else if (p.t === "changed") {
       const list = items.filter(
@@ -2450,6 +2460,7 @@ export function AnnotationLayer({
       k = T.changed.kind;
       dialog = T.changed.kind;
       where = sectionLabel(p.sec);
+      whereLang = sectionLang(p.sec);
       // One block per version the marks were made on (usually one).
       const versions = [...new Set(list.map((x) => x.version))].sort(
         (a, b) => a - b,
@@ -2495,6 +2506,7 @@ export function AnnotationLayer({
       kLang = { name, lang: p.lang };
       dialog = `${marksWord(list)} in ${name}`;
       where = sectionLabel(p.sec);
+      whereLang = sectionLang(p.sec);
       content = (
         <>
           <p className="an-box__fine">
@@ -2524,6 +2536,7 @@ export function AnnotationLayer({
       k = T.bm.kind;
       dialog = T.bm.kind;
       where = b.at ? sectionLabel(b.at) : "";
+      whereLang = sectionLang(b.at);
       content = p.edit ? (
         <>
           <div className="an-ed">
@@ -2621,6 +2634,7 @@ export function AnnotationLayer({
       const isHl = p.t === "hl";
       const w = blockWord(it.sec ?? it.block);
       where = sectionLabel(it.sec ?? it.block);
+      whereLang = sectionLang(it.sec ?? it.block);
       if (isHl) {
         k = it.note ? T.pop.kindHighlightNote : T.pop.kindHighlight;
         dialog = T.pop.kindHighlight;
@@ -2734,7 +2748,7 @@ export function AnnotationLayer({
           </button>
         </div>
         {where ? (
-          <p className="an-box__where" lang={lang}>
+          <p className="an-box__where" lang={whereLang}>
             {where}
           </p>
         ) : null}
@@ -2885,7 +2899,7 @@ export function AnnotationLayer({
                 <PlaceBar
                   kind="block"
                   title={sectionLabel(placeSec)}
-                  titleLang={lang}
+                  titleLang={sectionLang(placeSec)}
                   on={bookmarked(placeSec)}
                   onNote={() => {
                     // The page first shows what the note is about: the section's heading.

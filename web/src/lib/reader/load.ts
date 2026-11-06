@@ -62,7 +62,7 @@ import { parseReaderCookie, type ReaderSettings } from "@/lib/reader-cookie";
 import { bookHref, readerHref, type ReaderTarget } from "@/lib/reader-href";
 
 import { languageName } from "./language";
-import { loadNotes } from "./notes-load";
+import { chromeLangOf, loadNotes } from "./notes-load";
 import { loadQuizSaved, type QuizSaved } from "./quiz-saved";
 import type {
   ChapterRow,
@@ -199,7 +199,7 @@ export function headingsOf(
   lang?: string,
 ): ReaderHeading[] {
   // `render.tsx` `chromeLang`: the words the reader writes around a term are English in every chapter.
-  const chrome = lang && !/^en\b/i.test(lang) ? "en" : undefined;
+  const chrome = chromeLangOf(lang);
   const shown =
     checked.format === "md" || checked.refused
       ? []

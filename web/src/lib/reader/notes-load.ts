@@ -23,6 +23,16 @@ import type {
 } from "./types";
 
 /**
+ * The language of the words the reader writes around a term, for a chapter in `lang`: the
+ * renderer's `chromeLang` (`render.tsx`), "en" in every chapter that is not English, none
+ * otherwise. The Glossary h2 carries it; so does its entry in the contents (P39-hk.F6) and its
+ * place name in the annotation layer (P39-hk.F7).
+ */
+export function chromeLangOf(lang?: string | null): string | undefined {
+  return lang && !/^en\b/i.test(lang) ? "en" : undefined;
+}
+
+/**
  * P30.S20/S21 — the annotation layer's data, read with the page: each section of a native
  * chapter (its name, and its text in the shared projection the offsets count), and the
  * member's own marks resolved for the version on screen (S9): highlights and notes, the
@@ -51,7 +61,7 @@ export function loadNotes(
     langs.add(a.lang);
   return {
     plain,
-    sections: plain ? [] : noteSections(checked),
+    sections: plain ? [] : noteSections(checked, lang),
     // A plain document has no highlights or section notes (the server refuses them).
     items: plain ? [] : (state?.annotations ?? []).map(noteOf),
     unanchored: plain ? [] : (state?.unanchored ?? []).map(noteOf),
@@ -128,7 +138,9 @@ function nameOf(
   }
 }
 
-function noteSections(checked: CheckedChapter): NoteSection[] {
+function noteSections(checked: CheckedChapter, lang: string): NoteSection[] {
+  // P39-hk.F7 (OQ25): the Glossary's place name carries the h2's own `lang`.
+  const chrome = chromeLangOf(lang);
   const text = new Map(sections(checked.tree).map((s) => [s.id, s.text]));
   const out: NoteSection[] = [];
   let heading: string | null = null;
@@ -137,7 +149,12 @@ function noteSections(checked: CheckedChapter): NoteSection[] {
       heading = displayText(block.content).trim();
     if (!block.id || !text.has(block.id)) continue;
     const name = nameOf(block, heading, displayText);
-    out.push({ id: block.id, ...name, text: text.get(block.id) ?? "" });
+    out.push({
+      id: block.id,
+      ...name,
+      text: text.get(block.id) ?? "",
+      ...(chrome && block.type === "glossary" ? { lang: chrome } : {}),
+    });
   }
   return out;
 }

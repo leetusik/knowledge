@@ -2,6 +2,7 @@ import "server-only";
 
 import { notFound } from "next/navigation";
 
+import { CHAPTER } from "@/content";
 import { getBook } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import { getReaderBookNotes } from "@/lib/knowledge/reader";
@@ -15,7 +16,7 @@ import {
   type BookEntry,
   type BuildOptions,
 } from "./note-list";
-import { bookmarkOf, noteOf } from "./notes-load";
+import { bookmarkOf, chromeLangOf, noteOf } from "./notes-load";
 
 /**
  * P30.S21 — the per-book list's data (`05-annotations` round 01 *The per-book list*,
@@ -157,6 +158,13 @@ export async function loadBookNotes(args: {
     item.chapterKey = key;
     langs.add(b.lang);
     const placed = b.place?.block_id ?? null;
+    // P39-hk.F7 (OQ25): this page holds no chapter's sections, so a section bookmark at the
+    // Glossary is known by the place name it stored; it reads in the Glossary h2's language.
+    const glossary =
+      placed && !item.label && item.secTitle === CHAPTER.terms.glossary
+        ? chromeLangOf(b.lang)
+        : undefined;
+    if (glossary) item.secLang = glossary;
     rows.push({
       entry: {
         item,

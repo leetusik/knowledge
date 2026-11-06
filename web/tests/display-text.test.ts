@@ -6,7 +6,7 @@ import { headingSlug } from "@/lib/native/ids";
 import { plainText } from "@/lib/native/parse";
 import { sections } from "@/lib/native/project";
 import { headingsOf } from "@/lib/reader/load";
-import { sectionLabel } from "@/lib/reader/notes-load";
+import { loadNotes, sectionLabel } from "@/lib/reader/notes-load";
 
 // P39-hk.F4 — the core the contents and the text-only surfaces owe the reader (OQ10, OQ16): a
 // heading with inline math keeps the id its plain text gives (the anchors and links hold it) and
@@ -79,6 +79,11 @@ describe("the headings list (Contents, In this chapter)", () => {
       undefined,
     ]);
     expect(headingsOf(checked, "en").some((h) => "lang" in h)).toBe(false);
+    // F7 (OQ25): its place name in the annotation layer carries the same lang.
+    const named = (lang: string) =>
+      loadNotes(checked, null, lang)!.sections.filter((s) => "lang" in s);
+    expect(named("ko").map((s) => `${s.id} ${s.lang}`)).toEqual(["glossary-1 en"]);
+    expect(named("en")).toEqual([]);
   });
 });
 

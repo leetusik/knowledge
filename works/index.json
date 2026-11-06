@@ -274,9 +274,9 @@
       "order": 21,
       "path": "works/phases/active/P39-hk",
       "review_status": "changes_requested",
-      "current_slice": "P39-hk.F7",
+      "current_slice": "P39-hk.F5",
       "slice_count": 23,
-      "done_slice_count": 20,
+      "done_slice_count": 21,
       "execution": {
         "mode": "parallel",
         "branch": "phase/P39-hk-explain_what_was_built",
@@ -290,5 +290,5 @@
   "deferred_open_count": 73,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-11-06T15:47:20+09:00"
+  "last_rebuilt_at": "2026-11-06T16:05:57+09:00"
 }
