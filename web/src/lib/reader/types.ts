@@ -42,6 +42,8 @@ export interface ReaderHeading {
   id: string;
   level: 2 | 3;
   text: string;
+  /** P39-hk.F6: the entry's own language, when it is not the chapter's (the Glossary h2's `chromeLang`). */
+  lang?: string;
 }
 
 export interface ReaderBook {

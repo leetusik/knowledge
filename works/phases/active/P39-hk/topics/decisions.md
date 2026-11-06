@@ -141,3 +141,23 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Decisions 35
 
 - **Terms, what the record left (S9):** a window exists only for a term the chapter links; a hover opens only from the 40rem window form with a fine pointer; a window is placed once on open and re-placed only on resize (Read more grows it in place, as the canvas does); `.ra-keep` covers a marker's words, a term's name and its definitions, not other prose (OQ15) → [S9 result](../slices/P39-hk.S9/result.md)
+
+## Decisions 36
+
+- **No-wrap runs bounded (F1):** a run that fits is untouched. A `.ra-keep` wider than its whole line gets `is-wide` from `MathLayer`'s `fitKeeps` and breaks inside, F36's rule (CSS alone failed: joint spans restart a term's dotted underline, an inline-block lets a ko particle wrap away). An inline formula sits in `InlineFormula`; wider than its line it scrolls in its own box, F7's rule (region, label, fades, the ring on the outer box). Paper resets both. [F1 result](../slices/P39-hk.F1/result.md)
+
+## Decisions 37
+
+- **Legend box and overlay fades (F1 round 2):** OQ19, F7's rule: a symbol wider than the legend's row gets `LegendSymbol`'s `is-over`, drops its claim on the column and scrolls in the column the other symbols and `min(k em, 28%)` leave; its fade is at most a third of the box. OQ12: the display box's fade is the tables' `Fades` overlay in `.ra-mb__box`, not a mask, so its ring shows (at rest within 2/255, in the fade strip only). The inline box keeps its mask (any ground), its ring outside.
+
+## Decisions 38
+
+- **Prose keeps and the particle (F2):** F22 covers every inline run of a native chapter and term aliases (`Renderer.keep`; not `md`, code or string titles). A Hangul run right after an inline formula is one `.ra-keep` with the formula's box (OQ14). `fitKeeps` also flags a run past any box up to the column (a callout title), never past a scroller; it reads with the column clipped and re-runs when a pair's box turns on. `is-wide` breaks `anywhere`. ≤1.7 ms a call. [F2](../slices/P39-hk.F2/result.md)
+
+## Decisions 39
+
+- **Large-text controls bounded (F3):** P30.F3's rule (`max-width: 100%; white-space: normal`, a button's lines centred) covers `.rd-next .rd-btn` and `.kb-ch:not(.rv-body)` `.qz-card`/`.qz-acts .rd-btn` (`.qz-swap` centred). OQ20: `.bk-lang` wraps, so a tag that won't fit beside its link drops under it, the link whole; it breaks inside a word only past the column. OQ22: `.kb-doc__body .ra-mb__eq` scrolls sideways (FormulaBox's region). Where it fits: unchanged. [F3 result](../slices/P39-hk.F3/result.md)
+
+## Decisions 40
+
+- **Contents and text-only math (F4):** OQ16: `headingsOf` lists the Glossary h2 where the renderer draws it (its id and word, the lists' markup), counting toward the two-h2 threshold. OQ10: server-only `displayText` (`linearTex`) feeds `headingsOf`, `sectionTitle`, `nameOf` (so new snapshots' `block_title`) and `planCitations`; `plainText` untouched. Quotes map from their own offsets (`shownQuote`): page atoms in the reader, one read per document in Review → [F4 result](../slices/P39-hk.F4/result.md)

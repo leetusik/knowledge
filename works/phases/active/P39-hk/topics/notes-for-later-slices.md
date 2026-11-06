@@ -124,3 +124,11 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Notes for later slices 9 (2)
 
 - **(from S8, for REVIEW)** Verification chapter `tests/fixtures/book/reading-aids.{en,ko}.md` (`reading-aids`, position 4; fresh-state ids 5/6, loose note 7). Stack and instruments as run (viewport harness on the standalone build; CDP for paper and AX): [S8 result](../slices/P39-hk.S8/result.md) § Stack as run. Re-publishing ko on a scratch API with history needs `translated_from` at en's current version.
+
+## Notes for later slices 14 (2)
+
+- **(from F4, for REVIEW)** Signed-in checks with no credential in the browser: `scratchpad/f4/member_proxy.py <listen> <target>` signs the member in by script and adds the session cookie per request (hydrates on a standalone build only). The math-heading chapter is `f4/make_chapter.py` + `publish_math.py`; highlights by HTTP in `seed.py`, `seed2.py`. Recipe: [F4 result](../slices/P39-hk.F4/result.md) § Stack as run.
+
+## Notes for later slices 12 (2)
+
+- **(from S11, for REVIEW and the integration)** Release gate at S11 green: pytest 183 passed/60 skipped, vitest 583/40 files, lint, typecheck, build all pass ([S11 result](../slices/P39-hk.S11/result.md)). Not pushed or tagged: OQ8 order stands (bootstrap v92 pushed first, then this merge and push, then `/update-workspace`).

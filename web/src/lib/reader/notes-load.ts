@@ -115,6 +115,9 @@ function nameOf(
       return { word: "Figure", title: str(b.alt) ?? words(b.reading) ?? "" };
     case "sources":
       return { word: "Sources", title: heading ?? CHAPTER.sources.label };
+    case "glossary":
+      // P39-hk.F6 (R2-F2): the Glossary h2's own label (`render.tsx` `glossary`).
+      return { word: "Section", title: CHAPTER.terms.glossary };
     case "code":
       return {
         word: "Section",

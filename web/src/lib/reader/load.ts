@@ -191,8 +191,15 @@ function staleSourceOf(
  * (`render.tsx` `glossary`: the block's id, `CHAPTER.terms.glossary`) is listed at the block's
  * place, like any h2, wherever the renderer draws it: a native chapter not refused whose glossary
  * block is not refused and holds an entry. It counts toward the Toc's two-h2 threshold like any h2.
+ * P39-hk.F6: the Glossary entry carries the h2's own `lang`, the renderer's `chromeLang` for the
+ * chapter's language `lang` (English in a chapter that is not English, none otherwise).
  */
-export function headingsOf(checked: CheckedChapter): ReaderHeading[] {
+export function headingsOf(
+  checked: CheckedChapter,
+  lang?: string,
+): ReaderHeading[] {
+  // `render.tsx` `chromeLang`: the words the reader writes around a term are English in every chapter.
+  const chrome = lang && !/^en\b/i.test(lang) ? "en" : undefined;
   const shown =
     checked.format === "md" || checked.refused
       ? []
@@ -215,6 +222,7 @@ export function headingsOf(checked: CheckedChapter): ReaderHeading[] {
         id: block.id ?? "glossary",
         level: 2,
         text: CHAPTER.terms.glossary,
+        ...(chrome ? { lang: chrome } : {}),
       });
     }
   }
@@ -712,7 +720,7 @@ export async function loadChapterReader(args: {
       chapters: rows,
       finished: state ? state.progress.finished : null,
     },
-    headings: checked ? headingsOf(checked) : [],
+    headings: checked ? headingsOf(checked, variant.lang) : [],
     settings,
   };
 
@@ -916,7 +924,7 @@ export async function loadLooseReader(args: {
         : null,
     versions,
     book: null,
-    headings: headingsOf(checked),
+    headings: headingsOf(checked, lang),
     settings,
   };
   return {

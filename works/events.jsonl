@@ -1785,3 +1785,6 @@
 {"ts": "2026-11-06T12:05:35+09:00", "type": "phase_reviewed", "phase": "P39-hk", "verdict": "changes_requested", "reviewer": "slice-executor"}
 {"ts": "2026-11-06T12:05:37+09:00", "type": "slice_created", "phase": "P39-hk", "slice": "P39-hk.F6"}
 {"ts": "2026-11-06T12:05:38+09:00", "type": "slice_created", "phase": "P39-hk", "slice": "P39-hk.F5"}
+{"ts": "2026-11-06T12:07:19+09:00", "type": "slice_status_changed", "slice": "P39-hk.F6", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-06T12:21:49+09:00", "type": "executor_dispatched", "slice": "P39-hk.F6", "phase": "P39-hk", "kind": "fix", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-06T12:21:49+09:00", "type": "slice_status_changed", "slice": "P39-hk.F6", "old_status": "in_progress", "new_status": "done"}
