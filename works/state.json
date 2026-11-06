@@ -1,9 +1,9 @@
 {
   "current_phase": "P39-hk",
-  "current_slice": "P39-hk.F3",
-  "next_slice": "P39-hk.F4",
+  "current_slice": "P39-hk.F4",
+  "next_slice": "P39-hk.REVIEW",
   "waiting_on_operator": null,
   "mode": "phase",
   "stream": "phase/P39-hk-explain_what_was_built",
-  "updated_at": "2026-11-06T09:29:17+09:00"
+  "updated_at": "2026-11-06T10:09:56+09:00"
 }

@@ -95,6 +95,11 @@
 }
 .bk-vars__langs { display: contents; }
 .bk-lang { display: inline-flex; align-items: center; gap: var(--kb-space-xs); min-height: var(--kb-tap); }
+/* A large root font (OQ20): when the link and its tag don't fit side by side, the tag drops onto its own line under the link,
+   which stays whole; only a word still wider than the column breaks inside (F36). Where the two fit, nothing changes (the
+   nowrap of .rd-tag holds everywhere else) */
+.bk-lang { flex-wrap: wrap; }
+.bk-lang .rd-tag { flex: 0 1 auto; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .bk-lang__link { display: inline-flex; align-items: center; min-height: var(--kb-tap); color: var(--kb-accent); font-weight: var(--kb-weight-semibold); text-decoration: none; }
 .bk-lang__link:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
 .bk-vars__one { display: inline-flex; align-items: center; min-height: var(--kb-tap); }
