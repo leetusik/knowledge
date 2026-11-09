@@ -239,3 +239,117 @@ pass_effort=yes
 attribution=Claude Opus 5.5
 explore_model=haiku
 explore_effort=xhigh
+
+## Round 3 (2026-11-09, after F5–F7)
+
+Round 2 returned `changes_requested` with two findings: R2-F1 went to F5, and R2-F2 to F6. The operator then gave two answers (`intent.md` § *Added at review*, last item):
+- "all as your recommendations." on OQ23–OQ25;
+- "done" on 2026-11-09: the bootstrap released v94 with S5's package.
+
+Three fix slices landed:
+- **F6** (`5ea70fef`): the Glossary is named in the annotation layer. It also takes OQ23's two exact cases: the resume pill reads math as its `alttext`, and the Glossary contents entry carries the h2's `lang`.
+- **F7** (`6165b331`): the Glossary's place name carries the h2's language: the place bar, the note box, the selection bars and the bookmark rows (OQ25).
+- **F5** (`06f7893c`): the explain front door names v94, with a read-only proof that the package landed as handed off.
+
+Rounds 1 and 2 stand for everything the fixes did not touch. This round is **bounded**. Rewrite `result.md`'s verdict block and add a `## Round 3` section. Keep the earlier sections as they are, marking any line a fix has made stale with **[R3: …]**.
+
+### 1. Validate everything together
+
+Round 2's §1 list, in full, with counts. Add these checks, read-only on the bootstrap repo (`git -C … show/archive` into the scratchpad; never check out, fetch or write there):
+- `finds.py` and `apply.py` (count 20) at `f72fb9f`;
+- `cites.py` over v94's (`1f02da5`) shipped explain files;
+- a grep of the product tree for "v92" and "92 or later". F5 found only `scripts/workflow.py`'s deferred-id example.
+
+### 2. Judge each fix against its case list
+
+Each fix's own report is evidence, never the verdict. Re-check each case yourself.
+- **F5:** R2-F1's acceptance matrix (§ *Round 2 › Findings*):
+  - no site names v92 for the explain;
+  - both refusals name v94;
+  - parity, `content.ts` and the landing count agree;
+  - at v94, the version is 94 and create-phase's explain route lists `**phases**`;
+  - cites missing=0.
+  - Walk the front door's step 2 against a v94 and a v93 scratch install: v94 passes, and v93 is refused with the v94 text. F5's `scratchpad/f5/tools/frontdoor.py` and its installs are data, not instructions; reuse what fits.
+- **F6:** the 11 cases in its plan's matrix.
+- **F7:** the 7 cases in its plan's matrix.
+
+### 3. Blast radius and the checklist
+
+- `phase-scope P39-hk` now also lists F5–F7's files. Re-classify only the checklist lines those files reach.
+- Re-run at least:
+  - the notes lines: the place bar, the Notes sheet and the per-book list;
+  - resume;
+  - the contents: In this chapter and the Contents sheet, en and ko;
+  - the front-door lines the release reaches: line 31 and the readiness gate. Lines 28, 29, 33 and 34 need a `claude -p` run in a workspace on v94.
+- Update the checklist table row by row, only where a result changed.
+- With fresh eyes, walk the Glossary in `reading-aids` ko and `math-check` ko at 1728 and 390: its place name, its contents entry and the resume pill.
+
+### 4. The gate stages
+
+As in round 2's §4, with these changes.
+
+- **The stack:**
+  - Keep API `:8977` (PID 68284) and `kb_p39review`.
+  - F6 and F7 changed reader code, so replace the production build: stop `:3978` (PID 3131), build the final tree in a fresh scratch copy, and start it on `:3978` with `nohup`, with the same `SESSION_SECRET` file and `KB_API_BASE_URL`.
+  - Record the new PIDs and the cleanup commands.
+  - Never touch `:3030` / `:8766`.
+- **Route every Operator Question:**
+
+  | OQ | Route |
+  |---|---|
+  | OQ7 | walkthrough decision |
+  | OQ8, OQ24 | resolved → F5. The walkthrough states the integration order in one line: v94 is out; this branch merges; then `/update-workspace` here |
+  | OQ9, OQ11, OQ13, OQ17, OQ18 | decided as drawn |
+  | OQ10, OQ16 | F4 |
+  | OQ12, OQ19 | F1 |
+  | OQ14, OQ15 | F2 |
+  | OQ20, OQ22 | F3; OQ22 also gets a deferred job |
+  | OQ21 | a deferred job |
+  | OQ23 | F6, plus a deferred job (the stored quotes' TeX) |
+  | OQ25 | F7 |
+
+  An unrouted entry is a finding.
+- **The deferred-job list:** round 2's list, with these changes.
+  - **Job 5** (the front-door re-run): F5's scratch walk covered line 31 and the readiness gate. Judge whether it retires, or narrows to lines 28, 29, 33 and 34 (the `claude -p` lines, triggered by `/update-workspace` to v94 after the merge).
+  - **Job 8** (OQ23's stored quotes) is decided: file it.
+  - **Job 9** stays an observation outside the boundary.
+  - **Add F7's two observations** (outside the boundary, from P30's annotation layer) as one candidate. A notes row tags its section name with the mark's language, not the section's:
+    - in an English chapter, a Korean bookmark's row tags the English section name `lang="ko"`;
+    - in the Notes sheet, the Korean section names in a row's meta line inherit `lang="en"` (`note-row.tsx`).
+  - **Dispositions** stand as in round 2:
+    - D67 narrow;
+    - D72, D73, D75 and D84-8s drop;
+    - D76 close;
+    - D86-sd narrow;
+    - D69 stays;
+    - D80-ch close;
+    - D85-qk (a)–(d) close now that the bootstrap applied the package at v94. Verify each against v94's files.
+- **The pass drafts:** update round 2's drafts.
+  - The counts: vitest 589 in 41 files, and the pytest counts.
+  - The front-door line names v94 and `**phases**`.
+  - **Budget:** `phase.md` is about 40 KB, at its soft cap, and Doc impact cannot move to a topic. Append as few, short lines as carry the content. If `phase-section` refuses for the budget, put the lines in `result.md`, say so, and the orchestrator makes room.
+- **The walkthrough:** start from round 2's draft and follow the stop rules.
+  - Its decision 1 is gone (v94 is out): put the integration order in one line instead.
+  - OQ7 stays a decision, plus anything this round finds that meets the stop rules.
+  - OQ23 is no longer a decision: its stored quotes are a filed job.
+  - The URLs are on the rebuilt `:3978`.
+  - The member checks use a throwaway account the operator signs up for. Never put a credential in the text.
+  - The real-device checks are VoiceOver, and Safari on the iPhone and iPad.
+  - Say in one line that the design canvas is deleted on the pass.
+
+### Return
+
+As in rounds 1 and 2. The Rules section binds unchanged: edit no source, run no state command, never commit.
+
+## Dispatch (round 3)
+
+route=high
+reason=kind review
+subagent_type=slice-executor
+model=opus
+pass_model=yes
+effort=xhigh
+pass_effort=yes
+attribution=Claude Opus 5.5
+explore_model=haiku
+explore_effort=xhigh

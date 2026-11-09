@@ -132,3 +132,15 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Notes for later slices 12 (2)
 
 - **(from S11, for REVIEW and the integration)** Release gate at S11 green: pytest 183 passed/60 skipped, vitest 583/40 files, lint, typecheck, build all pass ([S11 result](../slices/P39-hk.S11/result.md)). Not pushed or tagged: OQ8 order stands (bootstrap v92 pushed first, then this merge and push, then `/update-workspace`).
+
+## Notes for later slices 2 (2)
+
+- **(from DECOMP, for every slice)** `docs/current/` is stale for architecture, decisions, operations, product and qa (`workflow.py docs` flags them): read it as evidence to check against the code and the `## Doc impact` notes, never as current truth.
+
+## Notes for later slices 8 (2)
+
+- **(from S10, for REVIEW)** S10 changed no skill heading, only bold leads inside §4.4 (*Glossary*, *Term links*, *Inline math*, *Formula*, *Writing TeX*). `cites.py` stays at missing=0, and the P33-n3 vendored count stays at 85.
+
+## Notes for later slices 10 (3)
+
+- **(from S8, for REVIEW)** The gate's own checks: [S8 result](../slices/P39-hk.S8/result.md) § Left to the gate (the member Review card and a highlight across math, real VoiceOver, WebKit's √ and MathML on iPhone/iPad, the woff2 without a system STIX Two Math).

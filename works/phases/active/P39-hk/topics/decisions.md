@@ -161,3 +161,7 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Decisions 40
 
 - **Contents and text-only math (F4):** OQ16: `headingsOf` lists the Glossary h2 where the renderer draws it (its id and word, the lists' markup), counting toward the two-h2 threshold. OQ10: server-only `displayText` (`linearTex`) feeds `headingsOf`, `sectionTitle`, `nameOf` (so new snapshots' `block_title`) and `planCitations`; `plainText` untouched. Quotes map from their own offsets (`shownQuote`): page atoms in the reader, one read per document in Review → [F4 result](../slices/P39-hk.F4/result.md)
+
+## Decisions 41
+
+- **Glossary place name, pill math, entry lang (F6, F7):** R2-F2: `nameOf` names the glossary block "Glossary", so the place bar, the notes rows and new marks read it. OQ23 cases: the resume pill reads each `math` as its `alttext`; the Glossary contents entry carries the h2 `lang` (`chromeLang`: "en" in a non-English chapter). F7 (OQ25): so does its place name in the annotation layer (`chromeLangOf`, `NoteSection.lang`). [F6](../slices/P39-hk.F6/result.md), [F7](../slices/P39-hk.F7/result.md)
