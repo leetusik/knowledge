@@ -2,7 +2,7 @@
 then run the patched smoke suite's explain pins and the unchanged ones that read the same files.
 
 Usage: python3 apply.py <scratch copy>   (a copy of the bootstrap's payload/, installer/, README.en.md and
-tests/retrofit_smoke.sh at the pinned commit; it is edited in place, so use a fresh copy each run)
+tests/retrofit_smoke.sh at v93, `f72fb9f`, the commit the package landed on; it is edited in place, so use a fresh copy each run)
 """
 import re
 import shutil
@@ -91,7 +91,7 @@ for required in ("the agent when instructed", "Never on the agent's own initiati
                  "never ask for a worktree on a docs phase"):
     assert required in create_phase, required
 skills = {p.parent.name for p in (root / "payload/claude/skills").glob("*/SKILL.md")}
-assert len(skills) == 19, len(skills)
+assert len(skills) == 20, len(skills)  # v93 (f72fb9f), the tree the package was applied to; S5 pinned v91's 19
 assert not list((root / "payload/claude/skills/create-phase").glob("*route*")), "a route text was shipped as a file"
 print("other pins on these files: passed; skill count", len(skills))
 print("create-phase core bytes:", len(create_phase.encode()))

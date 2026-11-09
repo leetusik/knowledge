@@ -1,5 +1,7 @@
 # P39-hk package: explain from the phases, and the research route, for the bootstrap
 
+**Landed:** the bootstrap's `d6856a8` on v93 (`f72fb9f`), released as **v94** (`1f02da5`, 2026-11-06). v92 and v93 went to other work first; v92 added the `pr` skill, so the tree it applied to had 20 skills (`checks/apply.py` pins 20; P39-hk.F5).
+
 This is a ready-to-apply package for the bootstrap (workflow) repo, `bootstrap_agentic_workspace.sh`. It
 moves the workspace's explain route onto the knowledge plugin 0.10.0's flow: an explain is written only
 from the code at one commit and the records of the phases that built the subject, by one writer, checked
@@ -62,7 +64,7 @@ the report*, §9.1 *The book suggestion*.
 
 ## The order to apply it
 
-One release (the next after v91, expected **v92**):
+One release (the next after v91 that carries it: **v94**):
 
 1. **Copy the three whole files** over `payload/claude/skills/do-whole-phase/reference/` (rows 1–3 above).
    Never put a copy under `do-next-slice/reference/`: `SHARED_SKILL_FILES` in `installer/build.py` makes
@@ -74,7 +76,7 @@ One release (the next after v91, expected **v92**):
 3. **Write the release fragment**, `changelog.d/explain-from-the-phases.md` (`PATCHES.md` 9).
 4. **Build, test, commit, land** (`PATCHES.md` 10): `python3 installer/build.py` and `--check`; the smoke
    suite alone; one commit with the rebuilt artifact and no phase ids; then `--release` on `main`, which
-   stamps v92; **push `main`** before plugin 0.10.0 is published.
+   stamps v94; **push `main`** before plugin 0.10.0 is published.
 5. **Verify** (`PATCHES.md` 11).
 
 ## The minimums

@@ -1,5 +1,7 @@
 # P39-hk patch notes: every edit the bootstrap needs to its existing files
 
+**Landed:** the bootstrap's `d6856a8` on v93 (`f72fb9f`), released as **v94** (`1f02da5`, 2026-11-06). Every find below occurs exactly once at `f72fb9f` too, and the tree they produced there equals `d6856a8` but for one line of the bootstrap's own; v93 has 20 skills, since v92 added `pr` (P39-hk.F5's `result.md`).
+
 These notes are for the agent working in the bootstrap repo (`bootstrap_agentic_workspace.sh`). The
 package's **whole files** are listed in `README.md`. This file lists every edit to a file the bootstrap
 **already has**, file by file: what to find, what it becomes, and why.
@@ -416,8 +418,8 @@ numbered `CHANGELOG.md` section, and never touch `WORKSPACE_VERSION` by hand.
 5. Commit with the rebuilt `bootstrap_agentic_workspace.sh` in the same commit (the host convention:
    Conventional Commits, a component scope, **no phase or slice ids**).
 6. Land it on `main` as `changelog.d/README.md` says: `python3 installer/build.py --release` stamps the
-   next version (**v92** when nothing else lands first), folds the fragment into its `## v92` section and
-   sets `WORKSPACE_VERSION`; commit `build(release): workspace v92 — <the fragment's line 1>`.
+   next version (**v94**, after v92 and v93 landed other work first), folds the fragment into its `## v94` section and
+   sets `WORKSPACE_VERSION`; commit `build(release): workspace v94 — <the fragment's line 1>`.
 7. **Push `main`** before the knowledge plugin 0.10.0 is published: `/update-workspace` clones from GitHub,
    and plugin 0.10.0's front door refuses every workspace older than this release (`handoff-explain.md`,
    *The version handshake*).

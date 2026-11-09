@@ -1,5 +1,7 @@
 # Handoff to the bootstrap workspace: explain from the phases, and the research route
 
+**Landed:** the bootstrap's `d6856a8` on v93 (`f72fb9f`), released as **v94** (`1f02da5`, 2026-11-06). v92 and v93 went to other work first, and v92 added the `pr` skill (20 skills at v93); plugin 0.10.0's front door names v94 (P39-hk.F5).
+
 For the agent working in the bootstrap repo (`bootstrap_agentic_workspace.sh`). Written 2026-11-03 from the
 knowledge repo (`leetusik/knowledge`), phase P39-hk, slice S5. It is an **index**: the detail lives in the
 package, and this note says what to read, in what order, what to release, and what the knowledge repo does
@@ -51,22 +53,22 @@ Plugin 0.10.0 writes the new sixteen-line `## Explain` set and cites the renamed
 needs a workspace whose route accepts that set; a v91 workspace would ask for `run:` and `mode:` and cite 85
 plugin sections that no longer exist (measured: `missing=85` of 200).
 
-- **This package targets the next bootstrap release after v91**: **v92** when nothing else lands first.
+- **This package targets the next bootstrap release after v91**: it landed as **v94**, after v92 and v93.
   `python3 installer/build.py --release` stamps the number; if it stamps another, that number is the one
   the plugin's test below names.
 - **The plugin's front-door step 2** (its `SKILL.md` §1, *The front door, step by step*) must test for
-  `workspace_version` **92 or later**, **and** a `## The explain route` in create-phase that lists the
+  `workspace_version` **94 or later**, **and** a `## The explain route` in create-phase that lists the
   `**phases**` field (a field only this route writes), in place of today's "86 or later" and `**unit**`.
-  Its two refusal texts and every "v86 or later" in the plugin's copy name v92. The knowledge repo's
+  Its two refusal texts and every "v86 or later" in the plugin's copy name v94. The knowledge repo's
   P39-hk release slice (DECOMP2's) makes that change; this slice edits no plugin file.
 - **The workspace's floor** is plugin **0.10.0**: the route refuses an older plugin's proposal (a `run:`
   and `mode:` line and no `phases:`) with the update to make, creating nothing, and a `DECOMP` stops
   `pending operator-action` on an older registry entry.
-- **The order: the bootstrap first.** (1) Release v92 on the bootstrap's `main` and **push it**:
+- **The order: the bootstrap first.** (1) Release v94 on the bootstrap's `main` and **push it**:
   `/update-workspace` clones from GitHub. (2) Then the knowledge repo's P39-hk merges and is pushed, which
   publishes plugin 0.10.0 through the marketplace. (3) Then `/update-workspace` in the knowledge repo.
   The other way round, a 0.10.0 front door would tell every workspace to update to a release that does not
-  exist yet. In the bootstrap-first window, a v92 workspace with plugin 0.9.x gets a clean refusal from
+  exist yet. In the bootstrap-first window, a v94 workspace with plugin 0.9.x gets a clean refusal from
   create-phase ("update the plugin"), and nothing is created. The knowledge repo carries this as an
   operator question (OQ8) until the operator confirms the order.
 
@@ -75,7 +77,7 @@ plugin sections that no longer exist (measured: `missing=85` of 200).
 The bootstrap stamps versions only on `main`: write the fragment `changelog.d/explain-from-the-phases.md`
 exactly as `PATCHES.md` section 9 gives it (line 1 the summary, then the bullets and the **Migration
 notes** line), never a numbered `CHANGELOG.md` section, and never `WORKSPACE_VERSION` by hand. `--release`
-folds it into `## v92`. Its migration notes tell adopters to update the plugin to 0.10.0 and what happens
+folds it into `## v94`. Its migration notes tell adopters to update the plugin to 0.10.0 and what happens
 to an explain phase that started on an older plugin.
 
 ## 6. The smoke suite and the counts
@@ -93,10 +95,10 @@ to an explain phase that started on an older plugin.
 
 ## 7. What the operator does afterwards
 
-1. In the bootstrap session: apply, release v92, push (sections 3–5 above).
+1. In the bootstrap session: apply, release v94, push (sections 3–5 above).
 2. Confirm OQ8's order in the knowledge repo; then P39-hk's REVIEW and merge proceed, and its release
    slice ships plugin 0.10.0 with the front-door test of section 4.
-3. In the knowledge repo, after the merge: **`/update-workspace`**, which brings v92 into the vendored
+3. In the knowledge repo, after the merge: **`/update-workspace`**, which brings v94 into the vendored
    `.claude/` (the route, the references, the carve-out). Then P33-n3's citation check over this repo's
    `.claude/` (`works/phases/active/P33-n3/topics/citations.md`, or `package/checks/cites.py`) should print
    `missing=0`, where it prints `missing=85` today.

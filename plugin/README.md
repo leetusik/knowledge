@@ -12,7 +12,7 @@ two skills:
   research of its own (no web search, no research agents) and brings in nothing
   from outside. A subject with no code in the repo is declined; one no phase
   covers is offered a research phase first. It is the front door of an
-  **explain phase** in a workflow workspace (v92 or later): it suggests the
+  **explain phase** in a workflow workspace (v94 or later): it suggests the
   reader and the shape, asks you **once**, and on your yes hands it to the
   workspace's `create-phase`, which runs it to a private publish. One writer
   drafts the chapter, every sentence traced to a code range or a record line,
@@ -47,11 +47,11 @@ whenever you want something explained and kept.
 
     /knowledge:explain <topic or change-ref> [book=<slug>] [lang=<xx>]
 
-**Requirements:** a workflow workspace v92 or later in the repository you run it
+**Requirements:** a workflow workspace v94 or later in the repository you run it
 from (without one it refuses and runs nothing; an older one, or one whose
 create-phase explain route does not write the `phases` line, is told to run
 `/update-workspace`), and `/knowledge:setup` run once. Plugin 0.10.0 and workspace
-v92 need each other: v92's explain route refuses an older plugin's proposal and
+v94 need each other: v94's explain route refuses an older plugin's proposal and
 creates nothing, so update both.
 
 **The one confirmation.** `/knowledge:explain` reads, drafts and asks; it never

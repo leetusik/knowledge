@@ -3,12 +3,12 @@
   "phase_id": "P39-hk",
   "name": "Re-pin the explain front door to the bootstrap release that carries S5's package",
   "kind": "fix",
-  "status": "in_progress",
+  "status": "done",
   "order": 190,
   "depends_on": [],
   "created_at": "2026-11-06T12:05:38+09:00",
   "started_at": "2026-11-09T14:35:49+09:00",
-  "completed_at": null,
+  "completed_at": "2026-11-09T14:49:17+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "The explain front door needs workspace v94 or later plus **phases** (25 mentions, 9 files); the package record says it landed as bootstrap d6856a8, released v94; apply.py pins v93's 20 skills; read-only proof: applied tree equals d6856a8 bar one line, v94 cites missing=0, a v94 install passes and v93 is refused with the v94 text",
   "validation": {
     "required": [],
     "last_run": null,

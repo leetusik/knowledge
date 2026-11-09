@@ -69,7 +69,7 @@ itself.
 ## 3. How a new page arrives
 
 You do not edit these files by hand. You ask the `/knowledge:explain` skill to
-explain something. From a repository with a workflow workspace (v92 or later), it
+explain something. From a repository with a workflow workspace (v94 or later), it
 confirms the plan with you once, then writes the explainer from that
 repository's code and its phases' records, checks it as an explain phase and
 sends it to the document API, which does three
