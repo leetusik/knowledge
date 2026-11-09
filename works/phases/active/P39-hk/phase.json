@@ -33,7 +33,7 @@
   "execution": {
     "mode": "parallel",
     "branch": "phase/P39-hk-explain_what_was_built",
-    "worktree": "/Users/sugang/projects/personal/knowledge/.claude/worktrees/P39-hk-explain_what_was_built",
+    "worktree": null,
     "consolidation": "pending",
     "base_branch": "main"
   },

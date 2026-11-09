@@ -280,7 +280,7 @@
       "execution": {
         "mode": "parallel",
         "branch": "phase/P39-hk-explain_what_was_built",
-        "worktree": "/Users/sugang/projects/personal/knowledge/.claude/worktrees/P39-hk-explain_what_was_built",
+        "worktree": null,
         "consolidation": "pending",
         "base_branch": "main"
       },
@@ -290,5 +290,5 @@
   "deferred_open_count": 77,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 20,
-  "last_rebuilt_at": "2026-11-09T17:25:29+09:00"
+  "last_rebuilt_at": "2026-11-09T17:28:07+09:00"
 }

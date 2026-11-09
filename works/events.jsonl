@@ -1827,3 +1827,4 @@
 {"ts": "2026-11-09T17:25:29+09:00", "type": "phase_reviewed", "phase": "P39-hk", "verdict": "pass", "reviewer": "slice-executor"}
 {"ts": "2026-11-09T17:25:29+09:00", "type": "phase_consolidation_owed", "phase": "P39-hk", "notes": 33}
 {"ts": "2026-11-09T17:27:33+09:00", "type": "doc_version_created", "doc": "qa", "version": "v2611090827_p39-hk_gate_section_regression_checklist_adds_reader_math_terms_the_glossary_paper_text-only_math_keeps_publish_422s_and_the_v94_explain_front_door", "source": "P39-hk.REVIEW"}
+{"ts": "2026-11-09T17:28:07+09:00", "type": "phase_parallel_torndown", "phase": "P39-hk", "branch": "phase/P39-hk-explain_what_was_built"}

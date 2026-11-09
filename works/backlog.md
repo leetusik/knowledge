@@ -18,7 +18,6 @@
 |---|---|---|---|---|---|---|
 | `default` | - | idle | - | - | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
-| `phase/P39-hk-explain_what_was_built` | `P39-hk` | merged — awaiting consolidation | `none` | 23/23 | `.claude/worktrees/P39-hk-explain_what_was_built` | worktree |
 
 ## Active Phases
 
@@ -329,8 +328,6 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | [x] `P38-e1.REVIEW` | `done` | phase review | `review` | `works/phases/active/P38-e1/slices/P38-e1.REVIEW` |
 
 ## Phase P39-hk: Explain what was built: phase-grounded, suggested shape, glossary, formulas
-
-_Read live from its worktree `.claude/worktrees/P39-hk-explain_what_was_built`, where this phase advances._
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
