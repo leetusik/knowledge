@@ -1,0 +1,35 @@
+{
+  "id": "P39-hk.R1",
+  "phase_id": "P39-hk",
+  "name": "Settle the glossary and formula grammar, the math engine and the term window wiring",
+  "kind": "research",
+  "status": "done",
+  "order": 15,
+  "depends_on": [
+    "P39-hk.D1"
+  ],
+  "depends_declared": true,
+  "created_at": "2026-11-02T16:09:26+09:00",
+  "started_at": "2026-11-03T08:20:19+09:00",
+  "completed_at": "2026-11-03T08:53:58+09:00",
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "Glossary block + term: links, inline $`…`$ and a formula block, Temml MathML via an allowlist, a TeX allowlist twin, one TermLayer, translation 422s; build cut becomes a chain a→b→c→d",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

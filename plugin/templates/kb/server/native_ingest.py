@@ -15,10 +15,14 @@ storage or a policy:
   a 422 (``ref-unknown-asset``); a ``chapter:`` or ``doc:`` miss is a warning
   (``ref-unresolved``), because a series may link forward; ``#id`` is already
   resolved by the parser (``ref-missing-id``).
-* **Translations** (P29 *Ids*): a publish with ``translated_from`` must carry the
-  same quiz item and option id sets as that source version (else a 422,
-  ``translation-quiz-ids``); heading and block id differences are warnings
-  (``translation-ids``). A source that cannot be found, or is not native, is a
+* **Translations** (P29 *Ids*; P39-hk R1 §6): a publish with ``translated_from``
+  must carry the same quiz item and option id sets as that source version (else a
+  422, ``translation-quiz-ids``), the same glossary term ids (``term:`` links hang
+  on them: ``translation-term-ids``) and the same math (``translation-math``: the
+  display formulas in order, each ``tex`` and its legend's ``sym`` list byte for
+  byte, and the inline TeX as a multiset, since a translated sentence may move a
+  formula); heading and block id differences are warnings (``translation-ids``). A
+  source that cannot be found, or is not native, is a
   ``translation-source-missing`` warning.
 * **Retired ids**: every id of every earlier native version of the document, which
   the parser never mints again.
@@ -34,6 +38,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from collections import Counter
 from typing import Iterable, Optional
 
 from server import db
@@ -248,12 +253,54 @@ def block_ids(tree: dict) -> set[str]:
     return {b["id"] for b in tree.get("blocks", []) if b.get("id")}
 
 
+def term_ids(tree: dict) -> set[str]:
+    """The glossary's term ids (their own namespace; ``term:`` links resolve against them)."""
+    return {
+        term["id"]
+        for block in tree.get("blocks", []) if block.get("type") == "glossary"
+        for term in block.get("terms") or [] if term and term.get("id")
+    }
+
+
+def display_formulas(tree: dict) -> list[tuple[str, tuple]]:
+    """``(tex, (sym, ...))`` for every ``formula`` block, in order."""
+    return [
+        (block.get("tex"), tuple(w.get("sym") for w in block.get("where") or [] if w))
+        for block in tree.get("blocks", []) if block.get("type") == "formula"
+    ]
+
+
+def inline_tex(tree) -> Counter:
+    """The multiset of inline math TeX anywhere in the chapter (prose, cells,
+    captions, quiz text, glossary definitions, legend meanings)."""
+    found: Counter = Counter()
+
+    def walk(node):
+        if isinstance(node, dict):
+            if node.get("type") == "math" and isinstance(node.get("tex"), str):
+                found[node["tex"]] += 1
+                return
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    walk(tree.get("blocks", []))
+    return found
+
+
 def _listing(values) -> str:
     return ", ".join(sorted(values)) or "none"
 
 
+def _tex_listing(counts: Counter) -> str:
+    return ", ".join(f"$`{tex}`$" for tex in sorted(counts.elements())) or "none"
+
+
 def translation_check(tree: dict, source_tree: dict, *, source_label: str) -> tuple[list[dict], list[dict]]:
-    """Compare a translation's ids with its source version's (P29 *Ids*)."""
+    """Compare a translation's ids and math with its source version's (P29 *Ids*;
+    P39-hk R1 §6)."""
     errors: list[dict] = []
     warnings: list[dict] = []
     mine, theirs = quiz_id_sets(tree), quiz_id_sets(source_tree)
@@ -267,6 +314,19 @@ def translation_check(tree: dict, source_tree: dict, *, source_label: str) -> tu
             f"missing items {_listing(missing)}; extra items {_listing(extra)}; "
             f"items whose options differ {_listing(options)}",
         ))
+    t_mine, t_theirs = term_ids(tree), term_ids(source_tree)
+    if t_mine != t_theirs:
+        errors.append(_finding(
+            0, "translation-term-ids",
+            f"a translation keeps its source's glossary term ids ({source_label}): "
+            f"missing {_listing(t_theirs - t_mine)}; extra {_listing(t_mine - t_theirs)}",
+        ))
+    math = _math_differences(tree, source_tree)
+    if math:
+        errors.append(_finding(
+            0, "translation-math",
+            f"a translation keeps its source's math byte for byte ({source_label}): " + "; ".join(math),
+        ))
     b_mine, b_theirs = block_ids(tree), block_ids(source_tree)
     if b_mine != b_theirs:
         warnings.append(_finding(
@@ -275,6 +335,25 @@ def translation_check(tree: dict, source_tree: dict, *, source_label: str) -> tu
             f"missing {_listing(b_theirs - b_mine)}; extra {_listing(b_mine - b_theirs)}",
         ))
     return errors, warnings
+
+
+def _math_differences(tree: dict, source_tree: dict) -> list[str]:
+    """What differs between a translation's math and its source's, in words."""
+    out: list[str] = []
+    mine, theirs = display_formulas(tree), display_formulas(source_tree)
+    if len(mine) != len(theirs):
+        out.append(f"the source has {len(theirs)} display formulas, this has {len(mine)}")
+    else:
+        for k, ((tex, syms), (s_tex, s_syms)) in enumerate(zip(mine, theirs), start=1):
+            if tex != s_tex:
+                out.append(f"display formula {k}'s tex differs")
+            if syms != s_syms:
+                out.append(f"display formula {k}'s legend symbols differ")
+    i_mine, i_theirs = inline_tex(tree), inline_tex(source_tree)
+    if i_mine != i_theirs:
+        out.append(f"inline math missing {_tex_listing(i_theirs - i_mine)}; "
+                   f"extra {_tex_listing(i_mine - i_theirs)}")
+    return out
 
 
 def translation_source(

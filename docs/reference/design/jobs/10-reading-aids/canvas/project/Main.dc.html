@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reading aids: the chapter, connected</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.mn-root { display: flex; flex-direction: column; min-height: 100%; }
+.mn-stage { flex: 1 0 auto; }
+/* Mounted here, a page is as tall as its content (its own board fills the window) */
+.mn-stage .tm-root { min-height: 0; }
+/* The flow reserves the tallest page's bar at every width, so the product header never moves between the pages.
+   Terms' bar is the tallest at every width (measured 300 to 2000 px); these are its heights and the widths where it
+   wraps one more row */
+.mn-stage [data-proto="state-bar"] { box-sizing: border-box; min-height: 41px; }
+@media (max-width: 1771.98px) { .mn-stage [data-proto="state-bar"] { min-height: 59px; } }
+@media (max-width: 1578.98px) { .mn-stage [data-proto="state-bar"] { min-height: 89px; } }
+@media (max-width: 808.98px) { .mn-stage [data-proto="state-bar"] { min-height: 119px; } }
+@media (max-width: 612.98px) { .mn-stage [data-proto="state-bar"] { min-height: 149px; } }
+@media (max-width: 432.98px) { .mn-stage [data-proto="state-bar"] { min-height: 179px; } }
+@media (max-width: 402.98px) { .mn-stage [data-proto="state-bar"] { min-height: 209px; } }
+@media (max-width: 363.98px) { .mn-stage [data-proto="state-bar"] { min-height: 239px; } }
+@media (max-width: 309.98px) { .mn-stage [data-proto="state-bar"] { min-height: 269px; } }
+/* Canvas-only foot strip: the chapter's other parts and each page alone */
+[data-proto="screens"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0;padding:8px 16px;background:#eceef1;border-top:1px dashed #6b717a;color:#2f3338;font:12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+[data-proto="screens"] .mn-set{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+[data-proto="screens"] button{display:inline-flex;align-items:center;box-sizing:border-box;height:24px;margin:0;padding:0 10px;border:1px solid #6b717a;border-radius:4px;background:#f7f8fa;color:#2f3338;font:inherit;line-height:1;cursor:pointer}
+[data-proto="screens"] button[aria-pressed="true"]{background:#ffffff;border-color:#2f3338;font-weight:600}
+[data-proto="screens"] button:focus-visible,[data-proto="screens"] a:focus-visible{outline:2px solid #2f3338;outline-offset:2px}
+[data-proto="screens"] a{color:#2f3338;text-decoration:underline;text-underline-offset:2px}
+[data-proto="screens"] a:hover{text-decoration-thickness:2px}
+</style>
+</helmet>
+<div class="mn-root">
+<div class="mn-stage">
+<sc-if value="{{ isTerms }}" hint-placeholder-val="{{ false }}"><dc-import name="Terms" lang="{{ lang }}" theme="{{ theme }}" term="{{ term }}" from="{{ from }}" on-back="{{ onBack }}" on-state="{{ onState }}" hint-size="100%,5330px"></dc-import></sc-if>
+<sc-if value="{{ isFormulas }}" hint-placeholder-val="{{ true }}"><dc-import name="Formulas" lang="{{ lang }}" theme="{{ theme }}" from="{{ back }}" on-open-terms="{{ onOpenTerms }}" on-state="{{ onState }}" hint-size="100%,2705px"></dc-import></sc-if>
+<sc-if value="{{ isPrint }}" hint-placeholder-val="{{ false }}"><dc-import name="Print" lang="{{ lang }}" paper="a4" on-state="{{ onState }}" hint-size="100%,5996px"></dc-import></sc-if>
+</div>
+<div data-proto="screens">
+<span>Canvas only · the same chapter, its other parts:</span>
+<div class="mn-set">
+<button type="button" aria-pressed="{{ pressFormulas }}" onclick="{{ toFormulas }}">Formulas</button>
+<button type="button" aria-pressed="{{ pressTerms }}" onclick="{{ toTerms }}">Terms and the glossary</button>
+<button type="button" aria-pressed="{{ pressPrint }}" onclick="{{ toPrint }}">On paper (the browser’s print)</button>
+</div>
+<span>Each page alone:</span>
+<div class="mn-set"><a href="Terms.dc.html">Terms</a><a href="Formulas.dc.html">Formulas</a><a href="Print.dc.html">Print</a></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":6084}}'>
+// The entry Page (the join): one chapter of "Our bar: performance rule v1" through its three pages. The flow holds
+// what a click carries across pages: the glossary entry arrived at (term), the occurrence to go back to (from / back),
+// the chapter's language and the theme. Formulas' "In the glossary →" opens the glossary entry on the terms page; that
+// entry's "‹ Back to the text" returns to the very legend or text term on the formulas page. In the product the three
+// are one scrolling chapter and print is the browser's ⌘P, so the canvas-only foot strip moves between them.
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { page: 'formulas', lang: 'en', theme: 'light', term: null, from: null, back: null };
+    // The language and theme the page on screen reports (its Shell switch or its presets). Kept out of state, so the
+    // page is not handed back its own choice; the next part opens in them.
+    this.cur = { lang: 'en', theme: 'light' };
+  }
+  go(page, extra) {
+    const next = Object.assign({ page, term: null, from: null, back: null, lang: this.cur.lang, theme: this.cur.theme }, extra || {});
+    this.cur = { lang: next.lang, theme: next.theme };
+    this.setState(next, () => {
+      if (!extra || !extra.term) window.scrollTo(0, 0);
+    });
+  }
+  renderVals() {
+    const s = this.state;
+    return {
+      isTerms: s.page === 'terms',
+      isFormulas: s.page === 'formulas',
+      isPrint: s.page === 'print',
+      pressTerms: s.page === 'terms' ? 'true' : 'false',
+      pressFormulas: s.page === 'formulas' ? 'true' : 'false',
+      pressPrint: s.page === 'print' ? 'true' : 'false',
+      lang: s.lang, theme: s.theme, term: s.term, from: s.from, back: s.back,
+      onState: (e) => { const ev = e || {}; this.cur = { lang: ev.lang || this.cur.lang, theme: ev.theme || this.cur.theme }; },
+      onOpenTerms: (e) => {
+        const ev = e || {};
+        this.go('terms', { term: ev.term || null, from: ev.from || 'formulas', lang: ev.lang || this.cur.lang, theme: ev.theme || this.cur.theme });
+      },
+      onBack: (e) => {
+        const ev = e || {};
+        const from = String(ev.from || '');
+        if (from.indexOf('formulas') === 0) this.go('formulas', { back: from, lang: ev.lang || this.cur.lang, theme: ev.theme || this.cur.theme, term: null });
+      },
+      toTerms: () => this.go('terms'),
+      toFormulas: () => this.go('formulas'),
+      toPrint: () => this.go('print'),
+    };
+  }
+}
+</script>
+</body>
+</html>

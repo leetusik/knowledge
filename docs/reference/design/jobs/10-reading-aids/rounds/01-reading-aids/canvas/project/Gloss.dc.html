@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The glossary term: window, phone sheet, glossary, paper</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.ra-gloss-alone { padding: var(--kb-space-lg) 0; }
+.ra-gloss-alone.ra-paper { padding: 24px 32px; }
+.ra-gloss-pad { padding-inline: var(--kb-space-lg); }
+</style>
+</helmet>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}" id="{{ rootId }}"><div class="{{ innerCls }}">
+
+<sc-if value="{{ isWindow }}" hint-placeholder-val="{{ false }}">
+<div class="ra-win" role="dialog" aria-labelledby="{{ tid }}" id="{{ wid }}" tabindex="-1" lang="{{ lang }}" ref="{{ setBox }}" onkeydown="{{ onKey }}">
+<div class="ra-win__head">
+<div class="ra-win__names"><p class="ra-win__term" id="{{ tid }}"><sc-for list="{{ t.termRuns }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if></sc-for></p><sc-if value="{{ hasAlias }}" hint-placeholder-val="{{ true }}"><p class="ra-win__alias" lang="en">Also called <span lang="{{ lang }}">{{ aliasText }}</span></p></sc-if></div>
+<button type="button" class="rd-btn rd-btn--quiet ra-close" lang="en" onclick="{{ close }}">Close</button>
+</div>
+<div class="ra-win__body">
+<p class="ra-def"><sc-for list="{{ t.shortRuns }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if><sc-if value="{{ r.isSEn }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if><sc-if value="{{ r.isSKo }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s는 평균 나누기 sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if></sc-for></p>
+<sc-if value="{{ showLong }}" hint-placeholder-val="{{ false }}"><p class="ra-def ra-def--long" id="{{ lid }}"><sc-for list="{{ t.longRuns }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if><sc-if value="{{ r.isSEn }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if><sc-if value="{{ r.isSKo }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s는 평균 나누기 sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if></sc-for></p></sc-if>
+</div>
+<div class="{{ footCls }}" lang="en">
+<sc-if value="{{ hasLong }}" hint-placeholder-val="{{ true }}"><button type="button" class="rd-btn ra-more" aria-expanded="{{ expanded }}" aria-controls="{{ lid }}" onclick="{{ toggle }}"><span class="ra-swap"><span aria-hidden="{{ moreHidden }}">Read more</span><span aria-hidden="{{ lessHidden }}">Show less</span></span></button></sc-if>
+<a class="ra-go" href="{{ glossHref }}" onclick="{{ go }}">In the glossary →</a>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSheet }}" hint-placeholder-val="{{ false }}">
+<div class="{{ sheetCls }}" role="dialog" aria-modal="false" aria-labelledby="{{ tid }}" id="{{ wid }}" tabindex="-1" lang="{{ lang }}" ref="{{ setBox }}" onkeydown="{{ onKey }}">
+<div class="ra-sheet__head">
+<div class="ra-win__names"><p class="ra-win__term" id="{{ tid }}"><sc-for list="{{ t.termRuns }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if></sc-for></p><sc-if value="{{ hasAlias }}" hint-placeholder-val="{{ true }}"><p class="ra-win__alias" lang="en">Also called <span lang="{{ lang }}">{{ aliasText }}</span></p></sc-if></div>
+<button type="button" class="rd-btn rd-btn--quiet ra-close" lang="en" onclick="{{ close }}">Close</button>
+</div>
+<div class="ra-sheet__body">
+<p class="ra-def"><sc-for list="{{ t.shortRuns }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if><sc-if value="{{ r.isSEn }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if><sc-if value="{{ r.isSKo }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s는 평균 나누기 sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if></sc-for></p>
+<sc-if value="{{ showLong }}" hint-placeholder-val="{{ false }}"><p class="ra-def ra-def--long" id="{{ lid }}"><sc-for list="{{ t.longRuns }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if><sc-if value="{{ r.isSEn }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if><sc-if value="{{ r.isSKo }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s는 평균 나누기 sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if></sc-for></p></sc-if>
+</div>
+<div class="{{ sheetFootCls }}" lang="en">
+<sc-if value="{{ hasLong }}" hint-placeholder-val="{{ true }}"><button type="button" class="rd-btn ra-more" aria-expanded="{{ expanded }}" aria-controls="{{ lid }}" onclick="{{ toggle }}"><span class="ra-swap"><span aria-hidden="{{ moreHidden }}">Read more</span><span aria-hidden="{{ lessHidden }}">Show less</span></span></button></sc-if>
+<a class="ra-go" href="{{ glossHref }}" onclick="{{ go }}">In the glossary →</a>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}">
+<ul class="ra-gl" lang="{{ lang }}">
+<sc-for list="{{ entries }}" as="g" hint-placeholder-count="12">
+<li class="{{ g.cls }}" id="{{ g.anchor }}" tabindex="{{ g.tab }}">
+<p class="ra-gl__term"><sc-for list="{{ g.termRuns }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if></sc-for></p>
+<sc-if value="{{ g.hasAlias }}" hint-placeholder-val="{{ true }}"><p class="ra-gl__alias" lang="en">Also called <span lang="{{ lang }}">{{ g.alias }}</span></p></sc-if>
+<p class="ra-gl__def"><sc-for list="{{ g.shortRuns }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if><sc-if value="{{ r.isSEn }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if><sc-if value="{{ r.isSKo }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s는 평균 나누기 sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if></sc-for></p>
+<sc-if value="{{ g.hasLong }}" hint-placeholder-val="{{ true }}"><p class="ra-gl__def"><sc-for list="{{ g.longRuns }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if><sc-if value="{{ r.isSEn }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if><sc-if value="{{ r.isSKo }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s는 평균 나누기 sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if></sc-for></p></sc-if>
+<sc-if value="{{ g.showBack }}" hint-placeholder-val="{{ false }}"><p class="ra-gl__back" lang="en"><a class="fg-back" href="{{ backHref }}" onclick="{{ goBack }}"><span class="fg-back__chev" aria-hidden="true">‹</span><span>Back to the text</span></a></p></sc-if>
+</li>
+</sc-for>
+</ul>
+</sc-if>
+
+<sc-if value="{{ isPaper }}" hint-placeholder-val="{{ false }}">
+<div class="ra-pgl-list" lang="{{ lang }}">
+<sc-for list="{{ entries }}" as="g" hint-placeholder-count="12">
+<div class="ra-pgl">
+<p class="ra-pgl__term"><sc-for list="{{ g.termRuns }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if></sc-for></p>
+<sc-if value="{{ g.hasAlias }}" hint-placeholder-val="{{ true }}"><p class="ra-pgl__alias" lang="en">Also called <span lang="{{ lang }}">{{ g.alias }}</span></p></sc-if>
+<p class="ra-pgl__def"><sc-for list="{{ g.shortRuns }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if><sc-if value="{{ r.isSEn }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if><sc-if value="{{ r.isSKo }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s는 평균 나누기 sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if></sc-for></p>
+<sc-if value="{{ g.hasLong }}" hint-placeholder-val="{{ true }}"><p class="ra-pgl__def"><sc-for list="{{ g.longRuns }}" as="r" hint-placeholder-count="1"><sc-if value="{{ r.isText }}" hint-placeholder-val="{{ true }}">{{ r.v }}</sc-if><sc-if value="{{ r.isKeep }}" hint-placeholder-val="{{ false }}"><span class="ra-keep">{{ r.v }}</span></sc-if><sc-if value="{{ r.isSEn }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if><sc-if value="{{ r.isSKo }}" hint-placeholder-val="{{ false }}"><math class="ra-m" alttext="s는 평균 나누기 sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math></sc-if></sc-for></p></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"form":{"editor":"enum","options":["list","window","sheet","paper"],"default":"list"},"termId":{"editor":"enum","options":["sharpe","dsr","psr","participation","eigenvalue","walkforward","lookahead","oos","drawdown","haircut","k","tstat"],"default":"dsr"},"lang":{"editor":"enum","options":["en","ko"],"default":"en"},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"long":{"editor":"boolean","default":false},"target":{"editor":null},"back":{"editor":null},"backHref":{"editor":null},"glossHref":{"editor":null},"anchors":{"editor":null},"bare":{"editor":null},"onToggle":{"editor":null},"onClose":{"editor":null},"onGlossary":{"editor":null},"onBack":{"editor":null},"$preview":{"width":720,"height":3600}}'>
+// The shared fixture (frame.md F12): the chapter "Our bar: performance rule v1", its 12 terms in English and Korean.
+// Ids stay the same in every language; [BRACKETS] are facts the passages do not give.
+// short and long are runs (F31): plain text, {one unbreakable run} (F22 a hyphenated term or name, F23 a share with
+// its sign, unit and particle), and ⟨s⟩ the inline formula s = mean ÷ sd. A hyphenated term title is kept whole too.
+const RA_GLOSS = {
+  sharpe: {
+    en: { term: 'Sharpe ratio', alias: [],
+      short: 'The average return divided by how much returns vary. Here it is counted per event: the mean P&L of the events divided by their standard deviation (sd). A higher ratio means steadier gains for the risk taken.',
+      long: 'The scorer writes it as ⟨s⟩. On its own it says nothing about luck: a short record can show a high ratio by chance. That is why the rule turns it into a {t-statistic}, and why the deflated and probabilistic versions turn it into a probability.' },
+    ko: { term: '샤프 비율', alias: [],
+      short: '평균 수익을 수익이 흔들리는 정도로 나눈 값입니다. 여기서는 이벤트 단위로 셉니다. 이벤트 손익의 평균을 표준편차(sd)로 나눕니다. 값이 클수록 감수한 위험에 비해 수익이 꾸준하다는 뜻입니다.',
+      long: '스코어러는 이를 ⟨s⟩로 씁니다. 이 값만으로는 운을 가려낼 수 없습니다. 기록이 짧으면 우연히 높게 나올 수 있기 때문입니다. 그래서 규칙은 이를 {t-통계량으로} 바꾸고, 디플레이티드 샤프 비율과 확률적 샤프 비율은 확률로 바꿉니다.' },
+  },
+  dsr: {
+    en: { term: 'Deflated Sharpe ratio', alias: ['DSR'],
+      short: 'A probability: how likely it is that the strategy’s true Sharpe ratio beats a bar, with the bar raised for the number of trials you ran. The more variants you tried, the higher the bar, so a lucky best result counts for less.',
+      long: 'Testing many variants and keeping the best one inflates its Sharpe ratio by chance alone. The deflated Sharpe ratio corrects for that choice: it counts the trials as the participation ratio of their correlations, raises the bar to match, then asks how likely the true ratio is to clear it. The rule’s bar for it is [DSR BAR].' },
+    ko: { term: '디플레이티드 샤프 비율', alias: ['DSR'],
+      short: '확률입니다. 전략의 실제 샤프 비율이 기준선을 넘을 확률이며, 기준선은 시도한 횟수만큼 높아집니다. 변형을 많이 시험할수록 기준선이 올라가, 운 좋게 나온 최고 결과는 덜 인정받습니다.',
+      long: '여러 변형을 시험해 가장 좋은 것만 고르면 우연만으로도 샤프 비율이 부풀려집니다. 디플레이티드 샤프 비율은 이 선택을 바로잡습니다. 시도들의 상관관계로 실질 시도 횟수(참여 비율)를 세고, 그만큼 기준선을 올린 뒤, 실제 비율이 그 기준선을 넘을 확률을 묻습니다. 규칙의 기준은 [DSR 기준]입니다.' },
+  },
+  psr: {
+    en: { term: 'Probabilistic Sharpe ratio', alias: ['PSR'],
+      short: 'Turns a Sharpe ratio into a probability: that the true one exceeds a chosen threshold, allowing for returns that are not Normal. It rises with a longer record and positive skew, and falls with fatter tails.',
+      long: 'It answers “how sure can I be?” rather than “how high is it?”. Two strategies with the same Sharpe ratio get different PSRs when one has the longer record or the thinner tails. The deflated Sharpe ratio is a PSR whose threshold is raised for the number of trials.' },
+    ko: { term: '확률적 샤프 비율', alias: ['PSR'],
+      short: '샤프 비율을 확률로 바꾼 값입니다. 정규분포가 아닌 수익까지 감안해, 실제 샤프 비율이 정한 기준을 넘을 확률을 냅니다. 기록이 길고 왜도가 양수일수록 오르고, 꼬리가 두꺼울수록 내려갑니다.',
+      long: '“얼마나 높은가”가 아니라 “얼마나 확신할 수 있는가”에 답합니다. 샤프 비율이 같아도 기록이 더 길거나 꼬리가 더 얇은 쪽의 PSR이 더 높습니다. 디플레이티드 샤프 비율은 기준을 시도 횟수만큼 올린 PSR입니다.' },
+  },
+  participation: {
+    en: { term: 'Participation ratio', alias: ['effective number of trials'],
+      short: 'How many independent trials a set of correlated trials is worth. Ten perfectly correlated trials count as 1; ten independent ones count as 10. The scorer computes it from the eigenvalues of the trials’ correlation matrix.',
+      long: 'The scorer squares the sum of the eigenvalues and divides by the sum of their squares. When one eigenvalue carries everything, because all trials move together, the result is 1; when they are all equal, it is the number of trials. The deflated Sharpe ratio uses it as its count of trials.' },
+    ko: { term: '참여 비율', alias: ['실질 시도 횟수'],
+      short: '서로 상관된 시도들이 독립적인 시도 몇 개에 해당하는지를 나타냅니다. 완전히 같이 움직이는 시도 열 개는 1로, 서로 독립인 시도 열 개는 10으로 셉니다. 스코어러는 시도들의 상관행렬의 고유값으로 계산합니다.',
+      long: '고유값의 합을 제곱한 뒤 고유값 제곱의 합으로 나눕니다. 모든 시도가 같이 움직여 고유값 하나가 전부를 차지하면 1이 되고, 고유값이 모두 같으면 시도 횟수와 같아집니다. 디플레이티드 샤프 비율은 이 값을 시도 횟수로 씁니다.' },
+  },
+  eigenvalue: {
+    en: { term: 'Eigenvalue', alias: [],
+      short: 'A number that says how strongly a matrix stretches along one of its own directions. For the trials’ correlation matrix, each eigenvalue measures how much of their shared movement falls along one independent direction; together they add up to the number of trials.' },
+    ko: { term: '고유값', alias: [],
+      short: '행렬이 자기 고유한 방향 하나를 따라 얼마나 늘이는지를 나타내는 수입니다. 시도들의 상관행렬에서 고유값 하나는 공통된 움직임 가운데 독립적인 한 방향에 담긴 몫을 재며, 모두 더하면 시도 횟수가 됩니다.' },
+  },
+  walkforward: {
+    en: { term: 'Walk-forward backtest', alias: [],
+      short: 'A backtest that tunes the strategy on one stretch of history, tests it on the next stretch it has not seen, then steps forward and repeats. It imitates how the strategy would have been run live, one period at a time.',
+      long: 'Each test window is {out-of-sample} for the tuning before it, so the stitched-together results avoid {look-ahead} bias. The rule tunes on [TUNING WINDOW] and tests on [TEST WINDOW] at each step.' },
+    ko: { term: '워크포워드 백테스트', alias: [],
+      short: '과거의 한 구간으로 전략을 조정하고, 아직 보지 않은 다음 구간에서 시험한 뒤, 앞으로 한 걸음 옮겨 반복하는 백테스트입니다. 전략을 실제로 한 기간씩 운용했을 때를 흉내 냅니다.',
+      long: '각 시험 구간은 그 앞의 조정에 대해 표본 외 데이터이므로, 이어 붙인 결과에는 미래 참조 편향이 없습니다. 규칙은 매 단계 [조정 구간]으로 조정하고 [시험 구간]으로 시험합니다.' },
+  },
+  lookahead: {
+    en: { term: 'Look-ahead bias', alias: [],
+      short: 'An error in a backtest that uses information that was not available at the moment of the decision, such as trading at the open on that day’s closing price. It makes results look better than anything you could have traded.' },
+    ko: { term: '미래 참조 편향', alias: ['룩어헤드 편향'],
+      short: '결정하는 순간에는 알 수 없었던 정보를 백테스트가 쓰는 오류입니다. 그날 종가로 시가에 거래하는 것이 그 예입니다. 실제로는 낼 수 없었던 좋은 결과를 보여 줍니다.' },
+  },
+  oos: {
+    en: { term: 'Out-of-sample', alias: ['OOS'],
+      short: 'Data the strategy was not tuned on. A result measured {out-of-sample} is a fairer guess at live performance than one measured on the same data that was used to choose the strategy’s settings.' },
+    ko: { term: '표본 외', alias: ['아웃오브샘플', 'OOS'],
+      short: '전략을 조정하는 데 쓰지 않은 데이터입니다. 표본 외에서 잰 결과는 설정을 고르는 데 쓴 데이터로 잰 결과보다 실제 성과를 더 공정하게 짐작하게 해 줍니다.' },
+  },
+  drawdown: {
+    en: { term: 'Drawdown', alias: [],
+      short: 'The fall from the highest point the account has reached to a later low, in {% of K}. The largest drawdown in a record is the worst loss you would have sat through before the next new high.',
+      long: 'It is measured from the running peak, not from the start, so a strategy can be up overall and still sit in a deep drawdown. The rule’s limit is [DRAWDOWN {LIMIT] of K}.' },
+    ko: { term: '낙폭', alias: ['드로다운'],
+      short: '계좌가 도달한 최고점에서 이후 저점까지 떨어진 폭이며, {K 대비 %로} 잽니다. 기록 중 가장 큰 낙폭은 다음 최고점까지 견뎌야 했던 최악의 손실입니다.',
+      long: '시작점이 아니라 그때까지의 최고점에서 재므로, 전체로는 이익이어도 깊은 낙폭 속에 있을 수 있습니다. 규칙의 한도는 {K의 [낙폭} {한도]입니다.}' },
+  },
+  haircut: {
+    en: { term: 'Haircut', alias: [],
+      short: 'A deliberate cut to a backtested figure before you trust it, to allow for trading costs and for optimism the backtest cannot see. The rule cuts a result by [HAIRCUT] before comparing it with its bar.' },
+    ko: { term: '헤어컷', alias: [],
+      short: '백테스트 수치를 믿기 전에 일부러 깎는 것입니다. 거래 비용과 백테스트가 보지 못하는 낙관을 감안하기 위해서입니다. 규칙은 결과를 기준과 비교하기 전에 [헤어컷]만큼 깎습니다.' },
+  },
+  k: {
+    en: { term: 'K', alias: ['position size'],
+      short: 'The position size that every event’s P&L is measured against. Writing P&L in {% of K} makes events of different sizes comparable: {+0.10 % of K} is a gain of one tenth of a percent of the position.' },
+    ko: { term: 'K', alias: ['포지션 크기'],
+      short: '모든 이벤트의 손익을 재는 기준이 되는 포지션 크기입니다. 손익을 {K 대비 %로} 쓰면 크기가 다른 이벤트끼리 비교할 수 있습니다. {K 대비 +0.10 %는} 포지션의 {0.1 %만큼} 번 것입니다.' },
+  },
+  tstat: {
+    en: { term: 't-statistic', alias: ['t'],
+      short: 'How far an average sits from zero, counted in standard errors. The scorer computes it from the per-event Sharpe ratio and the number of events: thirty events averaging {+0.10 % of K} with an sd of {0.25 %} give 2.19, just over B6’s 2.0.',
+      long: 'A larger value means the average is less likely to be luck. It grows with the square root of the number of events, so the same per-event Sharpe ratio needs four times the events to double it: fifteen such events give only 1.55, enough for {CONDITIONAL-GO’s} 1.5 but not for B6.' },
+    ko: { term: 't-통계량', alias: ['t'],
+      short: '평균이 0에서 얼마나 떨어져 있는지를 표준오차 단위로 센 값입니다. 스코어러는 이벤트당 샤프 비율과 이벤트 수로 계산합니다. 평균 {K 대비 +0.10 %,} {sd 0.25 %인} 이벤트 서른 개면 2.19로, B6의 2.0을 조금 넘습니다.',
+      long: '값이 클수록 평균이 운일 가능성이 낮습니다. 이벤트 수의 제곱근에 따라 커지므로, 같은 이벤트당 샤프 비율로 값을 두 배로 만들려면 이벤트가 네 배 필요합니다. 그런 이벤트 열다섯 개는 1.55로, {CONDITIONAL-GO의} 1.5에는 충분하지만 B6에는 못 미칩니다.' },
+  },
+};
+
+// A definition's runs: text, a kept run, or the inline formula (rendered as literal MathML picked by a flag)
+const raRuns = (str, lang) => (str || '').split(/(\{[^}]*\}|⟨s⟩)/).filter(Boolean).map((x) => {
+  if (x === '⟨s⟩') return { isSEn: lang === 'en', isSKo: lang === 'ko' };
+  if (x[0] === '{') return { v: x.slice(1, -1), isKeep: true };
+  return { v: x, isText: true };
+});
+// A term title keeps a hyphenated word whole (F22)
+const raTermRuns = (str) => str.split(/(\S*-\S*)/).filter(Boolean).map((x) => (/-/.test(x) ? { v: x, isKeep: true } : { v: x, isText: true }));
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { long: !!p.long };
+    this.box = null;
+  }
+  componentDidUpdate(prev) {
+    if (prev.long !== this.props.long && !!this.props.long !== this.state.long) this.setState({ long: !!this.props.long });
+  }
+  setBox = (el) => { this.box = el; };
+  fire(name, arg) {
+    const f = this.props[name];
+    if (f) f(arg);
+  }
+  renderVals() {
+    const P = this.props;
+    const form = ['window', 'sheet', 'list', 'paper'].indexOf(P.form) >= 0 ? P.form : 'list';
+    const id = RA_GLOSS[P.termId] ? P.termId : 'dsr';
+    const lang = P.lang === 'ko' ? 'ko' : 'en';
+    const t = RA_GLOSS[id][lang];
+    const bare = !!P.bare;
+    const paper = form === 'paper';
+    const long = P.onToggle ? !!P.long : this.state.long;
+    const hasLong = !!t.long;
+    const showLong = hasLong && long;
+    const anchors = P.anchors === undefined ? true : !!P.anchors;
+    const collator = new Intl.Collator(lang, { sensitivity: 'base' });
+    const entries = Object.keys(RA_GLOSS)
+      .map((k) => Object.assign({ id: k }, RA_GLOSS[k][lang]))
+      .sort((a, b) => collator.compare(a.term, b.term))
+      .map((g) => {
+        const isTarget = !!P.target && P.target === g.id;
+        return {
+          term: g.term, termRuns: raTermRuns(g.term), shortRuns: raRuns(g.short, lang), longRuns: raRuns(g.long, lang), hasLong: !!g.long,
+          hasAlias: g.alias.length > 0, alias: g.alias.join(', '),
+          anchor: anchors ? 'gl-' + g.id : undefined,
+          cls: 'ra-gl__item' + (isTarget ? ' is-target' : ''),
+          tab: isTarget ? -1 : undefined,
+          showBack: isTarget && !!P.back,
+        };
+      });
+    const toggle = (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      if (P.onToggle) P.onToggle(!long);
+      else this.setState({ long: !long });
+    };
+    return {
+      t: { termRuns: raTermRuns(t.term), shortRuns: raRuns(t.short, lang), longRuns: raRuns(t.long, lang) },
+      lang,
+      tid: 'tw-' + id + '-t',
+      wid: 'tw-' + id,
+      lid: 'tw-' + id + '-l',
+      hasAlias: t.alias.length > 0,
+      aliasText: t.alias.join(', '),
+      hasLong, showLong,
+      expanded: showLong ? 'true' : 'false',
+      moreHidden: showLong ? 'true' : 'false',
+      lessHidden: showLong ? 'false' : 'true',
+      footCls: 'ra-win__foot' + (hasLong ? '' : ' ra-win__foot--end'),
+      sheetFootCls: 'ra-sheet__foot' + (hasLong ? '' : ' ra-sheet__foot--end'),
+      sheetCls: 'ra-sheet' + (showLong ? ' ra-sheet--long' : ''),
+      glossHref: P.glossHref || '#gl-' + id,
+      backHref: P.backHref || '#top',
+      toggle,
+      close: (e) => { if (e && e.preventDefault) e.preventDefault(); this.fire('onClose', id); },
+      go: (e) => { if (P.onGlossary) { if (e && e.preventDefault) e.preventDefault(); P.onGlossary(id); } },
+      goBack: (e) => { if (P.onBack) { if (e && e.preventDefault) e.preventDefault(); P.onBack(P.target); } },
+      onKey: (e) => { if (e && e.key === 'Escape') { e.preventDefault(); this.fire('onClose', id); } },
+      setBox: this.setBox,
+      entries,
+      isWindow: form === 'window', isSheet: form === 'sheet', isList: form === 'list', isPaper: paper,
+      wrapCls: bare ? 'rd-in' : (paper ? 'ra-paper ra-gloss-alone' : 'rd-frame rd-in'),
+      wrapTheme: bare || paper ? undefined : (P.theme === 'dark' ? 'dark' : 'light'),
+      innerCls: bare ? 'rd-in' : (paper ? 'ra-paper-in' : (form === 'list' ? 'rd-flow rd-prose ra-gloss-alone' : 'ra-gloss-alone ra-gloss-pad')),
+      rootId: bare ? undefined : 'top',
+    };
+  }
+}
+</script>
+</body>
+</html>

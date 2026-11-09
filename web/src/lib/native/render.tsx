@@ -9,8 +9,17 @@
  *   ingest and again here; `md`: dropped by the parser).
  * - **SVG** is rebuilt element by element from the validated tree through the
  *   allowlist a second time (`svg.ts`), with its ids scoped to the block.
+ * - **Math** (P39-hk.S8) is Temml's MathML rebuilt element by element through a MathML
+ *   allowlist (`mathml.ts`): never Temml's string. Temml refusing TeX that publish
+ *   accepted refuses the whole block with the placeholder; raw TeX is never shown.
  * - **Links** go through `links.ts`: a target the reader cannot open renders as
  *   a "missing link" that carries no href.
+ * - **Terms** (P39-hk.S9): a `term:` link to a glossary entry is the term marker
+ *   (`terms.ts` numbers it); the glossary block draws the chapter's Glossary section and
+ *   one hidden window per linked term (static markup the client `TermLayer` toggles).
+ * - **Kept runs** (F22; P39-hk.S9, F2): in a native chapter every hyphenated word of the prose,
+ *   and an inline formula with the Hangul particle written after it, is one `span.ra-keep`
+ *   that never breaks while it fits its line (`MathLayer` measures the ones that do not).
  * - **Plumbing, not look.** Minimal semantic markup with stable class and
  *   `data-*` hooks (`kb-ch-*`); S13 onwards style it under the signed rounds.
  *   The only `style` attributes are the figures' custom properties (`--fg-w`, `--fg-h`,
@@ -35,6 +44,11 @@ import {
   type PrintKey,
 } from "@/components/reader/print-quiz";
 import { ClozeBlank, QuizBlock, type QuizItemProps } from "@/components/reader/quiz";
+import {
+  FormulaBox,
+  InlineFormula,
+  LegendSymbol,
+} from "@/components/reader/formula-box";
 import { ArtBox, TableBox } from "@/components/reader/scroll-box";
 import { CHAPTER } from "@/content";
 import { hangulRuns, isKorean } from "@/lib/reader/hangul";
@@ -53,9 +67,17 @@ import {
   type AssetInfo,
   type LinkContext,
 } from "./links";
+import {
+  isSteps,
+  linearText,
+  MathError,
+  mathElement,
+  mathTree,
+} from "./mathml";
 import { plainText, type ChapterFormat } from "./parse";
 import { codePoints, containers, inlineText } from "./project";
 import { parseRef, RefError } from "./refs";
+import { planTerms, type TermEntry, type TermPlan, type TermUse } from "./terms";
 import {
   allowedSvgElement,
   svgAttrsToProps,
@@ -152,6 +174,8 @@ export function ChapterView({
     lang !== undefined && !isKorean(lang),
     checked.blocks.flatMap((e) => (e.block && !e.refused ? [e.block] : [])),
     quiz,
+    lang !== undefined && isKorean(lang),
+    lang,
   );
   // P30.S20: each passage container's place in its section's text (`project.ts`), so
   // the reader can capture and paint annotation offsets in the shared projection.
@@ -186,6 +210,8 @@ export function ChapterView({
       )}
       {/* P30.S26: the quizzes' answer key, printed after the whole body (print only). */}
       <PrintAnswers keys={r.printKeys} />
+      {/* P39-hk.S9: each linked term's window, hidden until the term layer opens it (screen only). */}
+      {r.termWindows()}
     </div>
   );
 }
@@ -306,6 +332,17 @@ class Renderer {
   /** The current top-level block's anchor stamps (P30.S20), taken in order; null = none. */
   private stamps: Stamp[] | null = null;
   private stampAt = 0;
+  /** P39-hk.S9: the chapter's glossary entries and each term link's occurrence (`terms.ts`); empty for `md`. */
+  private readonly terms: TermPlan;
+  /**
+   * F22 (P39-hk.F2, OQ15): a native chapter keeps every hyphenated word of its prose whole, and a Hangul
+   * particle with the inline formula before it (OQ14): every inline run (`inline`), wherever it sits, plus a
+   * term's name and aliases. S9 kept only a term's words and its definitions. Never code, a link's target,
+   * an attribute, a diagram's label or a plain-string title; never an `md` body.
+   */
+  private readonly keep: boolean;
+  /** Set while the term windows render: their second copy of a definition takes no ids. */
+  private copy = false;
 
   constructor(
     private readonly links: LinkContext,
@@ -313,16 +350,39 @@ class Renderer {
     private readonly wrap: boolean = false,
     blocks: readonly Block[] = [],
     private readonly quizCtx?: QuizViewContext,
+    /** A Korean chapter: the formula's words are Korean (`CHAPTER.formula`). */
+    private readonly ko: boolean = false,
+    /** The chapter's language: the glossary's collator and its terms' `lang`. */
+    private readonly lang?: string,
   ) {
-    this.plan = planCitations(links.format === "md" ? [] : blocks);
+    const own = links.format === "md" ? [] : blocks;
+    this.plan = planCitations(own);
+    this.terms = planTerms(own);
+    this.keep = links.format !== "md";
   }
 
   /** Render one top-level block with its anchor stamps (P30.S20). */
   stamped(stamps: Stamp[] | null, block: Block): ReactNode {
     this.stamps = stamps;
     this.stampAt = 0;
+    const keys = this.printKeys.length;
     try {
       return this.block(block);
+    } catch (exc) {
+      // P39-hk.S8: Temml refused TeX that publish accepted (a parser drift). The block is
+      // refused as the validator would have refused it; its TeX is never shown.
+      if (!(exc instanceof MathError)) throw exc;
+      this.cloze = null;
+      this.printKeys.length = keys;
+      return (
+        <div
+          className="kb-ch-unshowable"
+          role="note"
+          data-block={block.id ?? undefined}
+        >
+          {CHAPTER.unshowableBlock}
+        </div>
+      );
     } finally {
       this.stamps = null;
     }
@@ -364,12 +424,93 @@ class Renderer {
     return hangulRuns(value, this.wrap);
   }
 
+  /**
+   * P39-hk.S9 (F22): text whose hyphenated words (`t-statistic`, `walk-forward`,
+   * `CONDITIONAL-GO’s`) never break at the hyphen: each is one `white-space: nowrap` run,
+   * and the line breaks before it. Only the text's own characters, so no offset moves.
+   * P39-hk.F1: a run wider than its whole line is measured on the page (`MathLayer`'s
+   * `fitKeeps`) and only then breaks inside, as F36 signs; the markup stays this one span.
+   * P39-hk.F2: a dash standing alone (` - `) has no break inside it to stop: no span.
+   */
+  keepText(value: string): ReactNode {
+    if (!value.includes("-")) return this.text(value);
+    return value
+      .split(/(\S*-\S*)/)
+      .filter(Boolean)
+      .map((part, i) =>
+        part.includes("-") && /[^-]/.test(part) ? (
+          <span key={i} className="ra-keep">
+            {this.text(part)}
+          </span>
+        ) : (
+          <Fragment key={i}>{this.text(part)}</Fragment>
+        ),
+      );
+  }
+
+  /** A text node's words: hyphenated words kept whole in a native chapter (F22), as written in `md`. */
+  private prose(value: string): ReactNode {
+    return this.keep ? this.keepText(value) : this.text(value);
+  }
+
+  /**
+   * P39-hk.F2 (F22's Korean clause, OQ14): the Hangul written right after an inline formula, with no
+   * space between (a particle: `를`, `로,`, `입니다.`), up to the first space; null for anything else.
+   */
+  private particle(next: Inline | undefined): string | null {
+    if (!this.keep || next?.type !== "text") return null;
+    return /^\p{Script=Hangul}\S*/u.exec(next.text)?.[0] ?? null;
+  }
+
+  /**
+   * P39-hk.F2: an inline formula and its particle as one kept run, so the line breaks before the
+   * formula rather than between them. A pair wider than its whole line is measured `is-wide` like any
+   * keep (`fitKeeps`) and may break between them again, its formula scrolling in its own box (F1).
+   * Only the text's own characters, so no offset moves.
+   */
+  private boundMath(tex: string, tail: string, key: number): ReactNode {
+    return (
+      <span key={key} className="ra-keep">
+        {this.inlineMath(tex)}
+        {this.text(tail)}
+      </span>
+    );
+  }
+
+  /** A second drawing of content already on the page (paper's quiz, a term's window): no ids. */
+  private copied<T>(draw: () => T): T {
+    const was = this.copy;
+    this.copy = true;
+    try {
+      return draw();
+    } finally {
+      this.copy = was;
+    }
+  }
+
   // --- inline ------------------------------------------------------------------
 
   inline(nodes: readonly Inline[] | null | undefined): ReactNode {
     if (!nodes) return null;
     if (this.cloze) return this.clozeRun(nodes);
-    return nodes.map((node, i) => this.inlineNode(node, i));
+    // P39-hk.F2: a particle bound to the formula before it is taken off the text that follows.
+    let skip = 0;
+    return nodes.map((node, i) => {
+      const from = skip;
+      skip = 0;
+      if (from > 0 && node.type === "text") {
+        const rest = node.text.slice(from);
+        return rest ? <Fragment key={i}>{this.prose(rest)}</Fragment> : null;
+      }
+      if (node.type === "math") {
+        const tail = this.particle(nodes[i + 1]);
+        if (tail) {
+          skip = tail.length;
+          return this.boundMath(node.tex, tail, i);
+        }
+      }
+      return this.inlineNode(node, i);
+    });
   }
 
   /**
@@ -410,9 +551,16 @@ class Renderer {
       if (node.type === "text" && skip > 0) {
         const rest = node.text.slice(skip);
         skip = 0;
-        return rest ? <Fragment key={i}>{this.text(rest)}</Fragment> : null;
+        return rest ? <Fragment key={i}>{this.prose(rest)}</Fragment> : null;
       }
       skip = 0;
+      if (node.type === "math") {
+        const tail = this.particle(nodes[i + 1]);
+        if (tail) {
+          skip = tail.length;
+          return this.boundMath(node.tex, tail, i);
+        }
+      }
       return this.inlineNode(node, i);
     });
   }
@@ -420,9 +568,11 @@ class Renderer {
   inlineNode(node: Inline, key: number): ReactNode {
     switch (node.type) {
       case "text":
-        return <Fragment key={key}>{this.text(node.text)}</Fragment>;
+        return <Fragment key={key}>{this.prose(node.text)}</Fragment>;
       case "code":
         return <code key={key}>{node.text}</code>;
+      case "math":
+        return this.inlineMath(node.tex, key);
       case "em":
         return <em key={key}>{this.inline(node.children)}</em>;
       case "strong":
@@ -455,6 +605,8 @@ class Renderer {
           </Fragment>
         );
       case "link": {
+        const use = this.terms.byLink.get(node);
+        if (use) return this.term(node, use, key);
         const cite = this.plan.byLink.get(node);
         if (cite) return this.citation(node, cite, key);
         return this.link(
@@ -468,6 +620,28 @@ class Renderer {
       default:
         return null;
     }
+  }
+
+  /**
+   * P39-hk.S8 — inline math (`10-reading-aids` *Inline formula*; F7, F24): `math.ra-m` in
+   * the sentence, its `alttext` the formula written in a line (OQ7, R1's recommendation).
+   * It is an atom of the projection (`data-an-len`, its TeX's code points): a selection
+   * never splits it and a highlight leaves it unpainted, as a bare citation's number.
+   * P39-hk.F1: it sits in its own measured box (`InlineFormula`). Where it fits, the box is
+   * two plain inline spans and nothing changes; a formula wider than its whole line scrolls
+   * inside the box, as F7 signs for a display row, and never pushes the page sideways.
+   */
+  inlineMath(tex: string, key?: number): ReactNode {
+    const tree = mathTree(tex, false);
+    return (
+      <InlineFormula key={key} label={CHAPTER.formula.scrolls(this.ko)}>
+        {mathElement(tree, {
+          className: "ra-m",
+          alttext: linearText(tree),
+          "data-an-len": String(codePoints(tex).length),
+        })}
+      </InlineFormula>
+    );
   }
 
   /** A native image's asset name: `asset:<name>` only (null for anything else). */
@@ -531,6 +705,33 @@ class Renderer {
     );
   }
 
+  /**
+   * P39-hk.S9 — the term marker (`10-reading-aids` *The term marker*; F2, F22, F33): the
+   * author's words, in ink with a dotted line, marked up only where the author wrote a term
+   * link. A real link to the glossary entry, so without script it lands there; the term layer
+   * opens the term's window (`tw-<id>`) instead. Its id `tm-<id>-<n>` is the occurrence the
+   * glossary's way back returns to. The anchor projection counts its words, as any link's.
+   */
+  term(
+    node: Extract<Inline, { type: "link" }>,
+    use: TermUse,
+    key: number,
+  ): ReactNode {
+    return (
+      <a
+        key={key}
+        className="ra-term"
+        id={this.copy ? undefined : use.anchor}
+        href={`#gl-${use.id}`}
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-controls={`tw-${use.id}`}
+      >
+        {this.inline(node.children)}
+      </a>
+    );
+  }
+
   /** A citation (§8): the author's words, a no-break space and the source's `[n]`, in one link. */
   citation(
     node: Extract<Inline, { type: "link" }>,
@@ -547,7 +748,7 @@ class Renderer {
       <a
         key={key}
         className="fg-cite"
-        id={cite.citeId}
+        id={this.copy ? undefined : cite.citeId}
         href={`#${cite.sourceId}`}
         title={node.title ?? undefined}
         data-link="anchor"
@@ -974,9 +1175,233 @@ class Renderer {
         return this.quiz(block, id);
       case "sources":
         return this.sources(block, id);
+      case "formula":
+        return this.formula(block, id);
+      case "glossary":
+        return this.glossary(id);
       default:
         return null;
     }
+  }
+
+  /** P39-hk.S9: the chapter's terms in its language's order (F6: Korean 가나다, Latin after). */
+  private sortedTerms(only?: (t: TermEntry) => boolean): TermEntry[] {
+    const list = [...this.terms.terms.values()].filter((t) => !only || only(t));
+    const order = new Intl.Collator(this.lang, { sensitivity: "base" });
+    return list.sort((a, b) => order.compare(a.term, b.term));
+  }
+
+  /** The words the reader writes around a term, in English in every chapter (F1). */
+  private get chromeLang(): string | undefined {
+    return this.lang && !/^en\b/i.test(this.lang) ? "en" : undefined;
+  }
+
+  /** "Also called" and a term's aliases, comma-joined (F1): the label English, the aliases the chapter's. */
+  private aliases(t: TermEntry, className: string): ReactNode {
+    if (!t.aliases.length) return null;
+    return (
+      <p className={className} lang="en">
+        {CHAPTER.terms.alsoCalled}{" "}
+        <span lang={this.lang}>{this.keepText(t.aliases.join(", "))}</span>
+      </p>
+    );
+  }
+
+  /**
+   * P39-hk.S9 — the glossary section (`10-reading-aids` *The glossary section*; F6, F17, F25,
+   * F33): where the author placed the block (by convention after the quiz, before Sources),
+   * the reader's h2 "Glossary" with the block's id, then every entry A to Z in the chapter's
+   * language. Each entry `gl-<id>`: the term, "Also called …", the short definition, then the
+   * longer one in full. A linked term's entry holds its hidden "‹ Back to the text", which the
+   * term layer shows, aimed at the very occurrence, when a window's "In the glossary →" lands
+   * there. On paper it is the appendix (`kb-print.css`), with no way back.
+   */
+  glossary(id: string | undefined): ReactNode {
+    const list = this.sortedTerms();
+    if (!list.length) return null;
+    return (
+      <>
+        <h2
+          id={id ?? "glossary"}
+          className="kb-ch-h"
+          data-block={id}
+          lang={this.chromeLang}
+        >
+          {CHAPTER.terms.glossary}
+        </h2>
+        <ul className="ra-gl">
+          {list.map((t) => {
+            const uses = this.terms.uses.get(t.id);
+            return (
+              <li key={t.id} className="ra-gl__item" id={`gl-${t.id}`}>
+                <p className="ra-gl__term">{this.keepText(t.term)}</p>
+                {this.aliases(t, "ra-gl__alias")}
+                <p className="ra-gl__def">{this.inline(t.short)}</p>
+                {t.long ? <p className="ra-gl__def">{this.inline(t.long)}</p> : null}
+                {uses ? (
+                  <p className="ra-gl__back" lang="en" hidden>
+                    <a className="fg-back" href={`#${uses[0].anchor}`}>
+                      <span className="fg-back__chev" aria-hidden="true">
+                        ‹
+                      </span>
+                      <span>{CHAPTER.sources.back}</span>
+                    </a>
+                  </p>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      </>
+    );
+  }
+
+  /**
+   * P39-hk.S9 — the windows (`10-reading-aids` *The window*, *The phone sheet*; F3–F5, F18,
+   * F32): one hidden `tw-<id>` per linked term, in one `.ra-float` holder at the chapter's end.
+   * Static markup: the term layer only toggles `hidden`, `aria-expanded`, the classes and the
+   * holder's place, and the same element is the window from the reader's 40rem and the
+   * bottom sheet under it (a container query on `rd`). Head: the term and Close; "Also called
+   * …"; the short definition, the longer one hidden below a hairline; foot: Read more / Show
+   * less in one box, In the glossary →. The definitions' inline math is S8's.
+   */
+  termWindows(): ReactNode {
+    const list = this.sortedTerms((t) => this.terms.uses.has(t.id));
+    if (!list.length) return null;
+    this.copy = true;
+    try {
+      return (
+        <div className="ra-float" data-placed="0">
+          {list.map((t) => {
+            const w = `tw-${t.id}`;
+            return (
+              <div
+                key={t.id}
+                className="ra-win"
+                id={w}
+                role="dialog"
+                aria-modal="false"
+                aria-labelledby={`${w}-t`}
+                tabIndex={-1}
+                hidden
+              >
+                <div className="ra-win__head">
+                  <div className="ra-win__names">
+                    <p className="ra-win__term" id={`${w}-t`}>
+                      {this.keepText(t.term)}
+                    </p>
+                    {this.aliases(t, "ra-win__alias")}
+                  </div>
+                  <button
+                    type="button"
+                    className="rd-btn rd-btn--quiet ra-close"
+                    lang={this.chromeLang}
+                  >
+                    {CHAPTER.terms.close}
+                  </button>
+                </div>
+                <div className="ra-win__body">
+                  <p className="ra-def">{this.inline(t.short)}</p>
+                  {t.long ? (
+                    <p className="ra-def ra-def--long" id={`${w}-l`} hidden>
+                      {this.inline(t.long)}
+                    </p>
+                  ) : null}
+                </div>
+                <div
+                  className={
+                    t.long ? "ra-win__foot" : "ra-win__foot ra-win__foot--end"
+                  }
+                  lang={this.chromeLang}
+                >
+                  {t.long ? (
+                    <button
+                      type="button"
+                      className="rd-btn ra-more"
+                      aria-expanded="false"
+                      aria-controls={`${w}-l`}
+                    >
+                      <span className="ra-swap">
+                        <span aria-hidden="false">{CHAPTER.terms.more}</span>
+                        <span aria-hidden="true">{CHAPTER.terms.less}</span>
+                      </span>
+                    </button>
+                  ) : null}
+                  <a className="ra-go" href={`#gl-${t.id}`}>
+                    {CHAPTER.terms.toGlossary}
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    } finally {
+      this.copy = false;
+    }
+  }
+
+  /**
+   * P39-hk.S8 — the display formula block (`10-reading-aids` *Display formula block*; F7,
+   * F27, F36; the `MathBlock` board): `figure.ra-mb`, a band between two hairlines on the
+   * column's left edge. The formula in its own measured box (`FormulaBox`), at 1.5 × the
+   * text; `aligned` steps are one relation a row, aligned on the relation (Temml's
+   * `mtable`). The caption: the reading, "where", then the legend, one symbol column per
+   * chapter. Spoken: the figure's name, the formula's `alttext`, then the caption.
+   * P39-hk.F1 round 2 (OQ19): each legend symbol in its own measured box (`LegendSymbol`);
+   * one wider than the legend's whole row scrolls inside the symbol column, as F7 signs for a
+   * display row. Where it fits, the box is two plain inline spans and nothing changes.
+   */
+  formula(block: TypedBlock, id: string | undefined): ReactNode {
+    const raw = str(block.tex);
+    if (raw === null) return null;
+    // A block scalar keeps its final newline (S7): trimmed before the steps test.
+    const tex = raw.replace(/\s+$/, "");
+    const alt = str(block.alt) ?? "";
+    const reading = inl(block.reading);
+    const legend = arr(block.where).flatMap((item) => {
+      if (!isRec(item)) return [];
+      const sym = str(item.sym);
+      return sym === null ? [] : [{ sym, means: inl(item.means) }];
+    });
+    const steps = isSteps(tex);
+    return (
+      <figure
+        className={steps ? "ra-mb ra-mb--steps" : "ra-mb"}
+        id={id}
+        data-block={id}
+        aria-label={CHAPTER.formula.label(alt, this.ko)}
+      >
+        <FormulaBox label={CHAPTER.formula.scrolls(this.ko)}>
+          {mathElement(mathTree(tex, true), { alttext: alt })}
+        </FormulaBox>
+        <figcaption className="ra-mb__cap">
+          {reading && reading.length ? (
+            <p className="ra-mb__read">{this.inline(reading)}</p>
+          ) : null}
+          {legend.length ? (
+            <>
+              <p className="ra-mb__where">{CHAPTER.formula.where(this.ko)}</p>
+              <dl className="ra-legend">
+                {legend.map((row, i) => {
+                  const sym = mathTree(row.sym, false);
+                  return (
+                    <Fragment key={i}>
+                      <dt>
+                        <LegendSymbol label={CHAPTER.formula.scrolls(this.ko)}>
+                          {mathElement(sym, { alttext: linearText(sym) })}
+                        </LegendSymbol>
+                      </dt>
+                      <dd>{this.inline(row.means)}</dd>
+                    </Fragment>
+                  );
+                })}
+              </dl>
+            </>
+          ) : null}
+        </figcaption>
+      </figure>
+    );
   }
 
   /** §2 the figure's caption, credit and (for an animated asset) the still-frame line. */
@@ -1276,18 +1701,25 @@ class Renderer {
         }
       }
       items.push(props);
-      const sheet: PrintItem = {
+      // P39-hk.S9: paper's copy is drawn again, without ids (a term's `tm-<id>-<n>`, a
+      // citation's): the island holds them, and an id is the page's once.
+      const sheet: PrintItem = this.copied(() => ({
         spec,
-        prompt: props.prompt,
-        options: props.options,
-        answer: props.answer,
-        explain: props.explain,
-      };
+        prompt:
+          spec.type === "cloze" ? null : this.inline(inl(item.prompt)),
+        options:
+          spec.type === "choice"
+            ? recs(item.options).map((o) => this.inline(inl(o.text)))
+            : undefined,
+        answer:
+          spec.type === "recall" ? this.inline(inl(item.answer)) : undefined,
+        explain: explain && explain.length ? this.inline(explain) : undefined,
+      }));
       if (spec.type === "cloze") {
         // The sentence again, its blanks as numbered rules instead of the island's inputs.
         this.cloze = { n: 0, print: true };
         try {
-          sheet.prompt = this.inline(inl(item.text));
+          sheet.prompt = this.copied(() => this.inline(inl(item.text)));
         } finally {
           this.cloze = null;
         }

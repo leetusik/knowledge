@@ -202,6 +202,11 @@
    sides so the measure, not the chrome, decides where the text starts. */
 .kb-doc__body { padding: 1.35rem 1.4rem 1.5rem; }
 @container kbmain (width < 40rem) { .kb-doc__body { padding: 1.1rem var(--kb-app-gutter-phone) 1.25rem; } }
+/* P39-hk.F3 (OQ22, F7's rule): a past version's display formula wider than the column scrolls inside its own box, never
+   the page. `FormulaBox` measures it and, only while it scrolls, makes it a focusable region, "Formula, scrolls sideways".
+   A plain box: the reader's formula styling stays off this page (OQ13). Its 0.25em above and below, given back by its
+   margins, is room for the ink a radical or a fraction bar draws past the formula's own box, so nothing moves. */
+.kb-doc__body .ra-mb__eq { overflow-x: auto; overflow-y: hidden; padding-block: 0.25em; margin-block: -0.25em; }
 
 /* -------- The explainer frame (DECISION · question 10) -------------------- */
 /* A foreign page with its own type, colour and layout. We own the box and

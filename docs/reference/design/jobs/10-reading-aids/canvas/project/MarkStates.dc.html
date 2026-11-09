@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The term marker in running text, every state</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.mk-col { width: 640px; }
+.mk-320 { width: 320px; }
+.mk-paper { width: 680px; padding: 24px 32px; }
+.mk-paper p { margin: 0; }
+</style>
+</helmet>
+<div class="ra-board" data-theme="light" id="top">
+<div class="ra-board__cell"><p class="ra-board__cap">At rest, beside a link and a highlight</p><div class="rd-frame mk-col" data-theme="light"><div class="rd-flow rd-prose"><p class="rd-p">Picking the best of many backtests flatters it. The <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">deflated Sharpe ratio (DSR)</a> answers this. It is a probability, that the true <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">Sharpe ratio</a> beats a bar, <mark class="an-m">with the bar raised for the number of trials</mark>. The bars themselves are in <a class="rd-a" href="#top">section 2</a>.</p></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Open: its window is showing</p><div class="rd-frame mk-col" data-theme="light"><div class="rd-flow rd-prose"><p class="rd-p">Picking the best of many backtests flatters it. The <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="true">deflated Sharpe ratio (DSR)</a> answers this. It is a probability, that the true <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">Sharpe ratio</a> beats a bar, with the bar raised for the number of trials.</p></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Inside a member’s highlight</p><div class="rd-frame mk-col" data-theme="light"><div class="rd-flow rd-prose"><p class="rd-p"><mark class="an-m">The <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">probabilistic Sharpe ratio (PSR)</a> turns a Sharpe ratio into a probability:</mark> that the true one exceeds a chosen threshold, allowing for non-Normal returns.</p></div></div></div>
+<div class="ra-board__row"></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Dark: at rest, open, in a highlight</p><div class="rd-frame mk-col" data-theme="dark"><div class="rd-flow rd-prose"><p class="rd-p">The <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">deflated Sharpe ratio (DSR)</a> answers this. It is a probability, that the true <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="true">Sharpe ratio</a> beats a bar. <mark class="an-m">The scorer takes the <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">participation ratio</a> of the trials’ correlation matrix.</mark> The bars are in <a class="rd-a" href="#top">section 2</a>.</p></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Korean chapter</p><div class="rd-frame mk-col" data-theme="light"><div class="rd-flow rd-prose" lang="ko"><p class="rd-p">여러 백테스트 중 가장 좋은 것을 고르면 결과가 부풀려집니다. <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">디플레이티드 샤프 비율(DSR)</a>이 이 질문에 답합니다. 실제 <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="true">샤프 비율</a>이 기준선을 넘을 확률이며, 기준선은 시도 횟수만큼 높아집니다.</p></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">320 · a long term wraps with its line</p><div class="rd-frame mk-320" data-theme="light"><div class="rd-flow rd-prose"><p class="rd-p">The <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="false">probabilistic Sharpe ratio (PSR)</a> turns a Sharpe ratio into a probability.</p></div></div></div>
+<div class="ra-board__row"></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Paper: a quiet dotted line, no control</p><div class="ra-paper mk-paper"><p>Picking the best of many backtests flatters it. The <span class="ra-term">deflated Sharpe ratio (DSR)</span> answers this. It is a probability, that the true <span class="ra-term">Sharpe ratio</span> beats a bar, with the bar raised for the number of trials.</p></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2100,"height":780}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -2,9 +2,9 @@
  * Reference syntax (mirrors `server/native/refs.py`, P29 *References*).
  *
  * Every link or image URL in a native chapter must be one of:
- *   `#<id>` (in-chapter) · `http(s)://host…` (links only) · `asset:<name>`
- *   (images only) · `chapter:[<project>/]<book>/<key>[?lang=<xx>][#<id>]` ·
- *   `doc:[<project>/]<slug>`.
+ *   `#<id>` (in-chapter) · `term:<id>` (a term of the chapter's glossary; links
+ *   only) · `http(s)://host…` (links only) · `asset:<name>` (images only) ·
+ *   `chapter:[<project>/]<book>/<key>[?lang=<xx>][#<id>]` · `doc:[<project>/]<slug>`.
  * Anything else (`mailto:`, `javascript:`, `data:`, relative paths …) is refused.
  */
 import { isValidId } from "./ids";
@@ -21,6 +21,7 @@ const LANG_RE = /^[a-z]{2,3}$/;
 
 export type Ref =
   | { kind: "id"; id: string }
+  | { kind: "term"; id: string }
   | { kind: "asset"; name: string }
   | {
       kind: "chapter";
@@ -93,6 +94,16 @@ export function parseRef(href: string, image = false): Ref {
         `malformed in-chapter reference ${pyRepr(href)}`,
       );
     return { kind: "id", id: target };
+  }
+  if (href.startsWith("term:")) {
+    if (image) throw notImage();
+    const target = href.slice("term:".length);
+    if (!isValidId(target))
+      throw new RefError(
+        "ref-malformed",
+        `malformed term reference ${pyRepr(href)}`,
+      );
+    return { kind: "term", id: target };
   }
   if (href.startsWith("asset:")) {
     const name = href.slice("asset:".length);
@@ -172,6 +183,6 @@ export function parseRef(href: string, image = false): Ref {
   if (image) throw notImage();
   throw new RefError(
     "ref-scheme",
-    `links must be #id, http(s):, chapter: or doc:, not ${pyRepr(href)}`,
+    `links must be #id, term:, http(s):, chapter: or doc:, not ${pyRepr(href)}`,
   );
 }

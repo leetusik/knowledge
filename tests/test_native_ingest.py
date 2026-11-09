@@ -6,7 +6,8 @@
   re-publish of the fetched source keeps them, a retired id is never minted again,
   search reads the projection (never an answer key), and reindex derives `native`
   from the header.
-* A translation must keep its source's quiz item and option ids.
+* A translation must keep its source's quiz item and option ids, its glossary term ids
+  and its math (display formulas in order, inline TeX as a multiset).
 * `html -> native`: the old version stays readable, the old path still resolves, the
   new version is native, the book binding follows, and a DB rebuild agrees.
 * The body limit is enforced per format.
@@ -190,6 +191,75 @@ def test_translation_keeps_quiz_ids(client):
     assert bad.status_code == 422
     assert [v["code"] for v in bad.json()["detail"]] == ["translation-quiz-ids"]
     good = tc.post("/api/documents", json=_payload(markdown="## 소개 {#intro}\n\n한국어.\n\n" + quiz, **ko))
+    assert good.status_code == 201, good.text
+    assert good.json()["warnings"] == []
+
+
+_EN_MATH = r"""## Intro {#intro}
+
+A [rate](term:rate) of $`\lambda`$ gives $`e^{-\lambda}`$, and a [burst](term:burst) spends it.
+
+```formula #share
+tex: '\frac{(\sum_i e_i)^2}{N \sum_i e_i^2}'
+alt: the square of the sum, over N times the sum of squares.
+reading: One when everyone does the same amount.
+where:
+  - {sym: 'N', means: the number of people}
+  - {sym: 'e_i', means: what person $`i`$ did}
+```
+
+```glossary #glossary
+terms:
+  - {id: rate, term: Rate, short: How often it happens.}
+  - {id: burst, term: Burst, short: Several at once.}
+```
+"""
+
+# The same ids and math, translated: the inline formulas moved within the sentence
+# and the terms listed in another order.
+_KO_MATH = r"""## 소개 {#intro}
+
+$`e^{-\lambda}`$는 [버스트](term:burst)가 쓰는 값이며, [비율](term:rate) $`\lambda`$에서 나온다.
+
+```formula #share
+tex: '\frac{(\sum_i e_i)^2}{N \sum_i e_i^2}'
+alt: 합의 제곱을 N과 제곱의 합의 곱으로 나눈 값.
+reading: 모두가 같은 만큼 할 때 1이다.
+where:
+  - {sym: 'N', means: 사람 수}
+  - {sym: 'e_i', means: 사람 $`i`$가 한 양}
+```
+
+```glossary #glossary
+terms:
+  - {id: burst, term: 버스트, short: 한꺼번에 여러 번.}
+  - {id: rate, term: 비율, short: 얼마나 자주 일어나는지.}
+```
+"""
+
+
+def test_translation_keeps_term_ids_and_math(client):
+    # P39-hk R1 §6: term: links hang on the glossary's ids, and a dropped or changed
+    # formula must never publish silently.
+    tc, _ = client
+    chapter = {"key": "ch1", "position": 1}
+    en = tc.post("/api/documents", json=_payload(markdown=_EN_MATH, book=_BOOK, chapter=chapter, lang="en"))
+    assert en.status_code == 201, en.text
+    ko = dict(
+        slug="lanterns-ko", book=_BOOK, chapter=chapter, lang="ko",
+        translated_from={"lang": "en", "version": 1},
+    )
+    for bad, code in [
+        (_KO_MATH.replace("burst", "spurt"), "translation-term-ids"),         # a term id renamed
+        (_KO_MATH.replace("e_i^2}'", "e_i^{2}}'"), "translation-math"),       # the display tex
+        (_KO_MATH.replace("sym: 'e_i'", "sym: 'e_{i}'"), "translation-math"),  # a legend symbol
+        (_KO_MATH.replace(" $`\\lambda`$에서", "에서"), "translation-math"),    # an inline formula dropped
+    ]:
+        assert bad != _KO_MATH
+        r = tc.post("/api/documents", json=_payload(markdown=bad, **ko))
+        assert r.status_code == 422, r.text
+        assert [v["code"] for v in r.json()["detail"]] == [code], r.json()["detail"]
+    good = tc.post("/api/documents", json=_payload(markdown=_KO_MATH, **ko))
     assert good.status_code == 201, good.text
     assert good.json()["warnings"] == []
 

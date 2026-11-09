@@ -10,9 +10,9 @@ browse your own library, or jump straight to the public
 [library](https://knowledge.hi2vi.com/@leetusik) above.
 
 Technical explainers written from real project work. When I solve something
-non-trivial, a coding agent (Claude Code / Codex) researches the actual code
-and writes a beginner-friendly explainer here — grounded in the real repo, no
-invented claims. The library grows as I work.
+non-trivial, a coding agent (Claude Code / Codex) reads the actual code and
+what its phases recorded, and writes an explainer here — grounded in the real
+repo, no invented claims. The library grows as I work.
 
 What started as a personal knowledge base is now a small hosted product with
 four ways in: a free **web app** (sign up, browse/search/read, share), a
@@ -34,7 +34,7 @@ with just a browser (no infra), or **Scaffold** to self-host your own. Scaffold
 mode needs Python 3.12+, Docker (optional — runs the local viewer + API), and a
 GitHub repository (optional — only to publish via Pages). Then run
 `/knowledge:explain <topic>` whenever you want something explained and kept.
-Explain runs as an explain phase, so it needs a workflow workspace (v86 or later)
+Explain runs as an explain phase, so it needs a workflow workspace (v94 or later)
 in the repository you run it from.
 Full details in [`plugin/README.md`](plugin/README.md).
 

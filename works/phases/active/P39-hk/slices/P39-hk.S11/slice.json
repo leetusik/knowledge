@@ -1,0 +1,39 @@
+{
+  "id": "P39-hk.S11",
+  "phase_id": "P39-hk",
+  "name": "Release plugin 0.10.0: versions, the v92 handshake, copy and counts",
+  "kind": "implementation",
+  "status": "done",
+  "order": 130,
+  "depends_on": [
+    "P39-hk.S6",
+    "P39-hk.S7",
+    "P39-hk.S8",
+    "P39-hk.S9",
+    "P39-hk.S10"
+  ],
+  "depends_declared": true,
+  "created_at": "2026-11-03T10:00:14+09:00",
+  "started_at": "2026-11-05T11:47:32+09:00",
+  "completed_at": "2026-11-05T11:51:52+09:00",
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "Plugin 0.10.0 cut, unpushed: front door at workspace v92 with **phases**, reading aids in the README, the stored-sources scan on the checklist; release gate green",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

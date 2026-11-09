@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The display formula block, every state</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.ms-col { width: 640px; padding-block: var(--kb-space-sm) var(--kb-space-lg); }
+.ms-390 { width: 390px; padding-block: var(--kb-space-sm) var(--kb-space-lg); }
+.ms-320 { width: 320px; padding-block: var(--kb-space-sm) var(--kb-space-lg); }
+.ms-paper { width: 680px; padding: 24px 32px; }
+.ms-head { flex-basis: 100%; margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; color: var(--kb-ink); }
+</style>
+</helmet>
+<div class="ra-board" data-theme="light" id="top">
+<p class="ms-head">In the column · desktop (the column is 36rem; 44rem from a 1600 px window)</p>
+<div class="ra-board__cell"><p class="ra-board__cap">t = s × √n, with s = mean ÷ sd</p><div class="rd-frame ms-col" data-theme="light"><div class="rd-flow rd-prose"><dc-import name="MathBlock" formula="tstat" bare="{{ true }}" hint-size="100%,460px"></dc-import></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">The participation ratio: a fraction, sums, powers</p><div class="rd-frame ms-col" data-theme="light"><div class="rd-flow rd-prose"><dc-import name="MathBlock" formula="participation" bare="{{ true }}" hint-size="100%,420px"></dc-import></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Poisson: two relations aligned at “=”</p><div class="rd-frame ms-col" data-theme="light"><div class="rd-flow rd-prose"><dc-import name="MathBlock" formula="poisson" bare="{{ true }}" hint-size="100%,460px"></dc-import></div></div></div>
+<div class="ra-board__row"></div>
+<div class="ra-board__cell"><p class="ra-board__cap">A worked example, one step a row</p><div class="rd-frame ms-col" data-theme="light"><div class="rd-flow rd-prose"><dc-import name="MathBlock" formula="worked" bare="{{ true }}" hint-size="100%,520px"></dc-import></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Dark</p><div class="rd-frame ms-col" data-theme="dark"><div class="rd-flow rd-prose"><dc-import name="MathBlock" formula="participation" bare="{{ true }}" hint-size="100%,420px"></dc-import></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Korean chapter: the formula unchanged, the words Korean</p><div class="rd-frame ms-col" data-theme="light"><div class="rd-flow rd-prose" lang="ko"><dc-import name="MathBlock" formula="tstat" lang="ko" bare="{{ true }}" hint-size="100%,460px"></dc-import></div></div></div>
+<div class="ra-board__row"></div>
+<p class="ms-head">Phone</p>
+<div class="ra-board__cell"><p class="ra-board__cap">390 · t = s × √n</p><div class="rd-frame ms-390" data-theme="light"><div class="rd-flow rd-prose"><dc-import name="MathBlock" formula="tstat" bare="{{ true }}" hint-size="100%,560px"></dc-import></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">320 · the worked example fits, one step a row</p><div class="rd-frame ms-320" data-theme="light"><div class="rd-flow rd-prose"><dc-import name="MathBlock" formula="worked" bare="{{ true }}" hint-size="100%,640px"></dc-import></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">320 · the same written on one line: it scrolls in its own box, the page never does</p><div class="rd-frame ms-320" data-theme="light"><div class="rd-flow rd-prose"><dc-import name="MathBlock" formula="chain" bare="{{ true }}" hint-size="100%,560px"></dc-import></div></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">320 · dark, the participation ratio</p><div class="rd-frame ms-320" data-theme="dark"><div class="rd-flow rd-prose"><dc-import name="MathBlock" formula="participation" bare="{{ true }}" hint-size="100%,560px"></dc-import></div></div></div>
+<div class="ra-board__row"></div>
+<p class="ms-head">Paper · A4 and letter (the sheet's text width, kept whole with its legend)</p>
+<div class="ra-board__cell"><p class="ra-board__cap">t = s × √n on paper</p><div class="ra-paper ms-paper"><dc-import name="MathBlock" formula="tstat" paper="{{ true }}" bare="{{ true }}" hint-size="100%,360px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">The participation ratio on paper</p><div class="ra-paper ms-paper"><dc-import name="MathBlock" formula="participation" paper="{{ true }}" bare="{{ true }}" hint-size="100%,300px"></dc-import></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2100,"height":2900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

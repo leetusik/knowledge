@@ -1,0 +1,32 @@
+{
+  "id": "P39-hk.D1",
+  "phase_id": "P39-hk",
+  "name": "Design the reading aids: term window, glossary section, formulas",
+  "kind": "co-work",
+  "status": "done",
+  "order": 10,
+  "depends_on": [],
+  "created_at": "2026-11-02T16:09:25+09:00",
+  "started_at": "2026-11-02T16:13:33+09:00",
+  "completed_at": "2026-11-03T08:18:26+09:00",
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "10-reading-aids/01-reading-aids signed as drawn ('accept'): term marker + window/phone sheet, glossary A-Z, typeset formulas with reading and legend, print appendix",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

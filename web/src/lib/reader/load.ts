@@ -23,7 +23,7 @@ import "server-only";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 
-import { SITE } from "@/content";
+import { CHAPTER, SITE } from "@/content";
 import {
   getBook,
   getDocument,
@@ -56,12 +56,13 @@ import {
   type DocRef,
 } from "@/lib/native";
 import { lookOf } from "@/lib/legacy/messages";
-import { plainText } from "@/lib/native/parse";
+import { displayText } from "@/lib/native/display-text";
+import { planTerms } from "@/lib/native/terms";
 import { parseReaderCookie, type ReaderSettings } from "@/lib/reader-cookie";
 import { bookHref, readerHref, type ReaderTarget } from "@/lib/reader-href";
 
 import { languageName } from "./language";
-import { loadNotes } from "./notes-load";
+import { chromeLangOf, loadNotes } from "./notes-load";
 import { loadQuizSaved, type QuizSaved } from "./quiz-saved";
 import type {
   ChapterRow,
@@ -183,7 +184,27 @@ function staleSourceOf(
   };
 }
 
-function headingsOf(checked: CheckedChapter): ReaderHeading[] {
+/**
+ * The chapter's h2s and h3s, for "In this chapter" and the Contents sheet. A heading's text is its
+ * display text (P39-hk.F4, OQ10: an inline formula as its linear text; its id is unchanged, the
+ * slug of its plain text). OQ16: the Glossary h2 the renderer draws for the glossary block
+ * (`render.tsx` `glossary`: the block's id, `CHAPTER.terms.glossary`) is listed at the block's
+ * place, like any h2, wherever the renderer draws it: a native chapter not refused whose glossary
+ * block is not refused and holds an entry. It counts toward the Toc's two-h2 threshold like any h2.
+ * P39-hk.F6: the Glossary entry carries the h2's own `lang`, the renderer's `chromeLang` for the
+ * chapter's language `lang` (English in a chapter that is not English, none otherwise).
+ */
+export function headingsOf(
+  checked: CheckedChapter,
+  lang?: string,
+): ReaderHeading[] {
+  // `render.tsx` `chromeLang`: the words the reader writes around a term are English in every chapter.
+  const chrome = chromeLangOf(lang);
+  const shown =
+    checked.format === "md" || checked.refused
+      ? []
+      : checked.blocks.flatMap((e) => (e.block && !e.refused ? [e.block] : []));
+  const glossary = planTerms(shown).terms.size > 0 ? new Set(shown) : null;
   const out: ReaderHeading[] = [];
   for (const block of checked.tree.blocks) {
     if (
@@ -194,7 +215,14 @@ function headingsOf(checked: CheckedChapter): ReaderHeading[] {
       out.push({
         id: block.id,
         level: block.level,
-        text: plainText(block.content),
+        text: displayText(block.content),
+      });
+    } else if (block.type === "glossary" && glossary?.has(block)) {
+      out.push({
+        id: block.id ?? "glossary",
+        level: 2,
+        text: CHAPTER.terms.glossary,
+        ...(chrome ? { lang: chrome } : {}),
       });
     }
   }
@@ -692,7 +720,7 @@ export async function loadChapterReader(args: {
       chapters: rows,
       finished: state ? state.progress.finished : null,
     },
-    headings: checked ? headingsOf(checked) : [],
+    headings: checked ? headingsOf(checked, variant.lang) : [],
     settings,
   };
 
@@ -896,7 +924,7 @@ export async function loadLooseReader(args: {
         : null,
     versions,
     book: null,
-    headings: headingsOf(checked),
+    headings: headingsOf(checked, lang),
     settings,
   };
   return {

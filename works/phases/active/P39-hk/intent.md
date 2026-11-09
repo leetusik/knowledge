@@ -115,3 +115,32 @@ The phase keeps the glossary above and adds three things. Where they conflict wi
 - Q: Subjects in no code? — A: Dropped; the explain is codebase-only.
 - Q: P38-e1's machinery? — A: The research sizing is removed, as listed in C.
 - Q: Name? — A: "Explain what was built: phase-grounded, suggested shape, glossary, formulas".
+
+### Added at review (2026-11-05)
+
+- The operator, answering F1's OQ19 (follow-up job, or fix now?): "fix everything now."
+- Read as: fix inside this phase, not as deferred jobs, every product defect and follow-up the review and F1 found:
+  - OQ19 (a legend symbol wider than the legend) and OQ12 (the scrolling formula box's hidden focus ring): F1 round 2;
+  - OQ15 (hyphenated words in prose and readings) and OQ14 (a Korean particle after an inline formula): F2;
+  - P30's controls that overflow at 200% text (the chapter-end "Back to the book →", the "Older translation" tag, the quiz's "Show answer"): F3;
+  - OQ16 (the Glossary in the contents), OQ10 (linear text for math on text-only surfaces) and D80-ch's stale "straight to a file" line in the KB template page: F4.
+- Not in it:
+  - OQ13 and OQ17, recommended "as is" and not defects;
+  - the workspace engine bugs, which belong to the bootstrap repo;
+  - the `kb` Design System re-sync, on another account;
+  - the v92 front-door re-run, which needs the v92 workspace.
+- Also on the operator's word (2026-11-05): "after review pass, make sure you delete the whole knowledge related claude artifacts."
+- The operator, answering F3's OQ20–OQ22 with the recommendations as presented (2026-11-06): "accept". Read as:
+  - OQ20 (the book page's "Older translation" tag at 200% text): fix now in F3. The tag drops under its link when the two don't fit side by side; only a word still wider than the column breaks inside (F36's rule).
+  - OQ21 (a 320 px phone at 200% text: the quiz body, Show answer breaking mid-word, a top bar): accept for now; a deferred design job for the quiz and top bar at that size, with the narrow option column.
+  - OQ22 (the past-version page at 200% text): fix the display formula now in F3 (it scrolls in its own box, F7). The long source URL and the console's signed-out "Sign in" are one deferred job, "the console at 200% text".
+- The operator, answering review round 2's OQ23–OQ25 with the recommendations as presented (2026-11-06): "all as your recommendations." Read as:
+  - OQ24 (the bootstrap release the plugin's front door names; v92 and v93 shipped without S5's package): (a). The operator's bootstrap session applies S5's package and releases vN (v94 if nothing else lands first) and pushes it; F5 then names vN in every site; then this branch merges, then `/update-workspace` here. This is OQ8's order, with vN in place of v92.
+  - OQ23 (math still shown as TeX): F6 fixed its two exact cases (the resume pill, the Glossary entry's language). The stored quotes' TeX (the book's notes list, the other-language group, the Notes sheet's Unanchored rows) is one deferred job.
+  - OQ25 (in a Korean chapter the place bar and the note box tag "Glossary" as Korean): fix now, F7. The pre-F6 Glossary bookmark that stays blank on the per-book page is the review's scratch data (the Glossary has never shipped): dropped.
+- The operator, 2026-11-09, on the bootstrap release: "done". Read as: the bootstrap released and pushed S5's package as v94 (`1f02da5`), so F5 names v94.
+- The operator, 2026-11-09, at the acceptance gate: "accept". Read as: the walkthrough signs as presented.
+  - OQ7: accepted. An inline formula is spoken from its derived linear text; no written alt per formula.
+  - The Glossary's place names outside the notes (library Continue, the resume pill's language): deferred job D99-s9, not a fix now.
+  - The "decided as drawn" list stands: OQ9, OQ11, OQ13, OQ17 and OQ18 as built, and the rest as listed.
+  - The integration: this branch merges; the push waits for the operator's word; then `/update-workspace` here.

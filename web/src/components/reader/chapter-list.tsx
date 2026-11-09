@@ -92,13 +92,13 @@ export function ChapterList({
                     <a
                       className="rd-ch__sec"
                       href={`#${s.id}`}
-                      lang={lang}
+                      lang={s.lang ?? lang}
                       aria-current={
                         currentSection === s.id ? "location" : undefined
                       }
                       onClick={() => onSection?.(s.id)}
                     >
-                      {hangulRuns(s.text, !isKorean(lang))}
+                      {hangulRuns(s.text, !isKorean(s.lang ?? lang))}
                     </a>
                   </li>
                 ))}

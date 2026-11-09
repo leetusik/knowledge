@@ -1,0 +1,15 @@
+=== rate-limit
+A token bucket refills at a fixed rate, and each request takes a token.
+When it is empty, the rate limit answers 429.
+The glossary lists every term; this section is a heading id, not a term id.
+A burst spends the tokens saved up while the client was idle.
+Why a bucket
+It smooths traffic without a queue.
+=== bucket
+
+=== check
+
+=== glossary
+
+=== sources-list
+RFC 6585, section 4.

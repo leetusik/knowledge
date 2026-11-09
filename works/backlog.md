@@ -9,16 +9,17 @@
 - Current slice: `none`
 - Next slice: `none`
 - Waiting on operator: `none`
-- Open deferred jobs: `73`
+- Stream: `phase/P39-hk-explain_what_was_built` (parallel phase checkout; the pointer above is scoped to it)
+- Open deferred jobs: `77`
 - Workspace version: `v89`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | - | idle | - | - | - | working tree |
-| `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
-| `phase/P39-hk-explain_what_was_built` | `P39-hk` | ready to merge | `none` | 23/23 | `.claude/worktrees/P39-hk-explain_what_was_built` | worktree |
+| `phase/P39-hk-explain_what_was_built` | `P39-hk` | ready to merge | `none` | 23/23 | `.` | working tree |
+| `default` | - | idle | - | - | - | branch main |
+| `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
 
@@ -289,7 +290,7 @@
 
 ## Phase P36-1s: Hermes: a chat agent beside the reader
 
-_Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader`, where this phase advances._
+_Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader`, where this phase advances._
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
@@ -329,8 +330,6 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | [x] `P38-e1.REVIEW` | `done` | phase review | `review` | `works/phases/active/P38-e1/slices/P38-e1.REVIEW` |
 
 ## Phase P39-hk: Explain what was built: phase-grounded, suggested shape, glossary, formulas
-
-_Read live from its worktree `.claude/worktrees/P39-hk-explain_what_was_built`, where this phase advances._
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|

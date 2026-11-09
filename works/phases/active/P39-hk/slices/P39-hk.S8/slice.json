@@ -1,0 +1,35 @@
+{
+  "id": "P39-hk.S8",
+  "phase_id": "P39-hk",
+  "name": "Reader and print: typeset math to the signed canvas (Temml, STIX Two Math)",
+  "kind": "implementation",
+  "status": "done",
+  "order": 100,
+  "depends_on": [
+    "P39-hk.S7"
+  ],
+  "depends_declared": true,
+  "created_at": "2026-11-03T10:00:08+09:00",
+  "started_at": "2026-11-03T10:53:03+09:00",
+  "completed_at": "2026-11-05T10:51:06+09:00",
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "Reader math: Temml MathML allowlist rebuild, inline atoms, formula block, measured √, STIX Two Math, screen/print CSS, Review linear text; live sweep fixed 3 record departures",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

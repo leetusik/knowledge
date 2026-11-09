@@ -3,13 +3,13 @@
  * sources item>` in the same document. The reader numbers it from the sources list and gives
  * it an id `cite-<source id>-<k>`, `k` counting that source's citations in document order from
  * 1. The id is generated at render and never stored; the sources list reads the same plan to
- * draw each item's way back (with the nearest preceding h2's text).
+ * draw each item's way back (with the nearest preceding h2's display text, `display-text.ts`).
  *
  * A pure pre-pass over the block tree, so the list (which may sit anywhere in the chapter) knows
  * its citations before it renders. The plan is keyed by the link NODE, so the renderer asks
  * "is this link a citation?" of the very object it is drawing. `md` has no sources blocks.
  */
-import { plainText } from "./parse";
+import { displayText } from "./display-text";
 import type { Block } from "./tree";
 
 export interface Cite {
@@ -85,7 +85,8 @@ export function planCitations(blocks: readonly Block[]): CitationPlan {
   };
   for (const b of blocks) {
     if (b.type === "heading" && b.level === 2) {
-      section = plainText(b.content).trim() || null;
+      // P39-hk.F4 (OQ10): the way back's label shows a formula as its linear text.
+      section = displayText(b.content).trim() || null;
     } else if (b.type === "figure") {
       // Rendered caption first, then the credit, whatever order the author wrote them in.
       visit(b.caption);

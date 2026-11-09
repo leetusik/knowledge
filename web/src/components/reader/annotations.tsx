@@ -30,14 +30,24 @@ import {
   type AnnotationWrite,
   type BookmarkWrite,
 } from "@/lib/reader/actions";
-import { capture, cps, type ANode, type Captured } from "@/lib/reader/anchor";
+import {
+  capture,
+  cps,
+  segments,
+  units,
+  verified,
+  type ANode,
+  type Captured,
+} from "@/lib/reader/anchor";
 import { progressPercent, TAP_IGNORE } from "@/lib/reader/chrome";
 import {
   buildGroups,
   marksWord,
   positionNear,
+  shownQuote,
   snippetOf,
   type ListItem,
+  type QuoteAtom,
   type SectionIndex,
 } from "@/lib/reader/note-list";
 import {
@@ -123,6 +133,32 @@ type Item = ReaderNote & {
 };
 type OtherItem = ReaderOtherNote & { gone?: boolean };
 type Bk = ReaderBookmark & { gone?: boolean };
+
+/**
+ * P39-hk.F4 (OQ10) — each section's inline formulas as the page holds them: an atom
+ * (`math.ra-m`, `data-an-len` = its TeX's code points) in a container the self-check keeps,
+ * at its offset in the section's text, with its linear text (`alttext`). Read from the
+ * server markup; a chapter with no formula gives an empty map.
+ */
+function formulaAtoms(
+  root: HTMLElement,
+  sections: ReadonlyMap<string, readonly string[]>,
+): Map<string, QuoteAtom[]> {
+  const out = new Map<string, QuoteAtom[]>();
+  if (!root.querySelector("math.ra-m[data-an-len]")) return out;
+  for (const seg of verified(segments(root as unknown as ANode), sections)) {
+    for (const u of units(seg.el)) {
+      const el = u.node as unknown as Element;
+      if (u.kind !== "atom" || el.localName !== "math") continue;
+      const alt = el.getAttribute("alttext");
+      if (!alt) continue;
+      const list = out.get(seg.sec) ?? [];
+      list.push({ at: seg.base + u.at, len: u.len, alt });
+      out.set(seg.sec, list);
+    }
+  }
+  return out;
+}
 
 /** A selection in a plain Markdown document: nothing can be highlighted there. */
 type NoneSel = { mode: "none" };
@@ -291,6 +327,10 @@ export function AnnotationLayer({
   const [pct, setPct] = useState(0);
   const [endSeen, setEndSeen] = useState(false);
   const [codeIds, setCodeIds] = useState<ReadonlySet<string>>(new Set());
+  /** P39-hk.F4: the page's inline formulas, by section (empty until read; empty without math). */
+  const [atoms, setAtoms] = useState<ReadonlyMap<string, QuoteAtom[]>>(
+    () => new Map(),
+  );
   /** The margin items' tops, by key (from 64rem), and the nodes the rows mount in. */
   const [railTops, setRailTops] = useState<Record<string, number>>({});
   const [rowHosts, setRowHosts] = useState<Record<string, HTMLElement>>({});
@@ -334,6 +374,17 @@ export function AnnotationLayer({
     if (art && root && shell) setHost({ art, root, shell });
   }, []);
 
+  // P39-hk.F4: the formulas are server markup, read once the layer has its host (reported in a
+  // frame, as the code quotes are: the lists, not the page, read it).
+  useEffect(() => {
+    if (!host) return;
+    const frame = requestAnimationFrame(() => {
+      const found = formulaAtoms(host.root, sections);
+      if (found.size) setAtoms(found);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [host, sections]);
+
   // ---- what the layer holds, as the lists and the margin show it ---------------------------------
   const names = notes.langNames;
   const langName = useCallback(
@@ -348,11 +399,40 @@ export function AnnotationLayer({
           {
             n: i,
             label: x.word === "Section" ? x.title : `${x.word} · ${x.title}`,
+            ...(x.lang ? { lang: x.lang } : {}),
           },
         ]),
       ),
     [notes.sections],
   );
+  /**
+   * P39-hk.F4 (OQ10): the quote a list shows for a highlight the page paints whose stored quote
+   * holds a formula: each formula as its linear text, mapped from the highlight's own offsets
+   * (`shownQuote`). Anything else (no formula, Text changed, another language, Unanchored)
+   * shows its stored quote.
+   */
+  const shown = useMemo(() => {
+    const out = new Map<string, string>();
+    if (!atoms.size) return out;
+    for (const x of items) {
+      const text = x.sec !== null ? sections.get(x.sec) : undefined;
+      const list = x.sec !== null ? atoms.get(x.sec) : undefined;
+      if (
+        x.kind !== "hl" ||
+        x.status !== "anchored" ||
+        x.method === "stored" ||
+        !x.quote ||
+        !text ||
+        !list ||
+        x.start === null ||
+        x.end === null
+      )
+        continue;
+      const q = shownQuote(text, x.start, x.end, x.quote.exact, list);
+      if (q !== null) out.set(x.id, q);
+    }
+    return out;
+  }, [items, sections, atoms]);
   const groups = useMemo(
     () =>
       buildGroups(
@@ -363,14 +443,14 @@ export function AnnotationLayer({
           other: others,
           otherBookmarks: obms,
         },
-        { sections: look, chapterTitle, code: codeIds },
+        { sections: look, chapterTitle, code: codeIds, shown },
         new Set(
           [...items, ...orph, ...others, ...bms, ...obms]
             .filter((x) => x.gone)
             .map((x) => x.id),
         ),
       ),
-    [items, orph, others, bms, obms, look, chapterTitle, codeIds],
+    [items, orph, others, bms, obms, look, chapterTitle, codeIds, shown],
   );
   const groupsRef = useRef(groups);
   useEffect(() => {
@@ -1023,6 +1103,12 @@ export function AnnotationLayer({
       return m.word === "Section" ? m.title : `${m.word} · ${m.title}`;
     },
     [meta],
+  );
+  /** P39-hk.F7 (OQ25): a place name's own language, the chapter's unless the section names another (the Glossary). */
+  const sectionLang = useCallback(
+    (sec: string | null): string =>
+      (sec ? meta.get(sec)?.lang : undefined) ?? lang,
+    [meta, lang],
   );
 
   const snapshotOf = useCallback(
@@ -2111,7 +2197,7 @@ export function AnnotationLayer({
           {s.clipped ? (
             <p className="an-box__msg">
               {T.bar.clippedLead}
-              <b lang={lang}>{m ? sectionLabel(s.sec) : ""}</b>
+              <b lang={sectionLang(s.sec)}>{m ? sectionLabel(s.sec) : ""}</b>
               {T.bar.clippedTail}
             </p>
           ) : null}
@@ -2143,7 +2229,7 @@ export function AnnotationLayer({
           onMouseDown={hold}
         >
           <p className="an-box__msg">
-            {m?.word ?? "Section"} · <b lang={lang}>{m?.title ?? ""}</b>
+            {m?.word ?? "Section"} · <b lang={m?.lang ?? lang}>{m?.title ?? ""}</b>
           </p>
           <button
             type="button"
@@ -2318,6 +2404,7 @@ export function AnnotationLayer({
     let kLang: { name: string; lang: string } | null = null;
     let dialog = "";
     let where = "";
+    let whereLang = lang;
     let content: ReactNode = null;
     if (p.t === "choose") {
       const picks = p.ids.map(byId).filter((x): x is Item => !!x);
@@ -2339,7 +2426,9 @@ export function AnnotationLayer({
                   }}
                 >
                   <span className="an-pick__q" lang={x.lang}>
-                    <mark>{clip(x.quote?.exact ?? "", 90)}</mark>
+                    <mark>
+                      {clip(shown.get(x.id) ?? x.quote?.exact ?? "", 90)}
+                    </mark>
                   </span>
                   <span className="an-pick__m">
                     {x.note ? T.pop.kindHighlightNote : T.pop.kindHighlight}
@@ -2354,12 +2443,14 @@ export function AnnotationLayer({
       k = T.pop.kindNew;
       dialog = T.pop.dialogNew;
       where = sel && sel.mode === "passage" ? sectionLabel(sel.sec) : "";
+      if (sel && sel.mode === "passage") whereLang = sectionLang(sel.sec);
       content = editor(T.pop.fieldNew, false);
     } else if (p.t === "bnew") {
       const w = blockWord(p.sec);
       k = T.pop.kindBlock(w);
       dialog = k;
       where = sectionLabel(p.sec);
+      whereLang = sectionLang(p.sec);
       content = editor(k, false);
     } else if (p.t === "changed") {
       const list = items.filter(
@@ -2369,6 +2460,7 @@ export function AnnotationLayer({
       k = T.changed.kind;
       dialog = T.changed.kind;
       where = sectionLabel(p.sec);
+      whereLang = sectionLang(p.sec);
       // One block per version the marks were made on (usually one).
       const versions = [...new Set(list.map((x) => x.version))].sort(
         (a, b) => a - b,
@@ -2414,6 +2506,7 @@ export function AnnotationLayer({
       kLang = { name, lang: p.lang };
       dialog = `${marksWord(list)} in ${name}`;
       where = sectionLabel(p.sec);
+      whereLang = sectionLang(p.sec);
       content = (
         <>
           <p className="an-box__fine">
@@ -2443,6 +2536,7 @@ export function AnnotationLayer({
       k = T.bm.kind;
       dialog = T.bm.kind;
       where = b.at ? sectionLabel(b.at) : "";
+      whereLang = sectionLang(b.at);
       content = p.edit ? (
         <>
           <div className="an-ed">
@@ -2540,6 +2634,7 @@ export function AnnotationLayer({
       const isHl = p.t === "hl";
       const w = blockWord(it.sec ?? it.block);
       where = sectionLabel(it.sec ?? it.block);
+      whereLang = sectionLang(it.sec ?? it.block);
       if (isHl) {
         k = it.note ? T.pop.kindHighlightNote : T.pop.kindHighlight;
         dialog = T.pop.kindHighlight;
@@ -2653,7 +2748,7 @@ export function AnnotationLayer({
           </button>
         </div>
         {where ? (
-          <p className="an-box__where" lang={lang}>
+          <p className="an-box__where" lang={whereLang}>
             {where}
           </p>
         ) : null}
@@ -2804,7 +2899,7 @@ export function AnnotationLayer({
                 <PlaceBar
                   kind="block"
                   title={sectionLabel(placeSec)}
-                  titleLang={lang}
+                  titleLang={sectionLang(placeSec)}
                   on={bookmarked(placeSec)}
                   onNote={() => {
                     // The page first shows what the note is about: the section's heading.

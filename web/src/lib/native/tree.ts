@@ -7,6 +7,8 @@ import type { SvgElement } from "./svg";
 export type Inline =
   | { type: "text"; text: string }
   | { type: "code"; text: string }
+  /** Inline math, `` $`…`$ ``: its TeX verbatim (allowlisted at publish); an atom of that many code points. */
+  | { type: "math"; tex: string }
   | { type: "em" | "strong" | "del"; children: Inline[] }
   | { type: "link"; href: string; title: string | null; children: Inline[] }
   | { type: "image"; src: string; alt: string; title: string | null }
@@ -51,9 +53,9 @@ export type Block =
   | TypedBlock;
 
 /**
- * A typed block (`figure`, `figures`, `diagram`, `svg`, `quiz`, `sources`):
- * `type`, `id`, plus its schema's fields (README → "The tree"). The renderer
- * reads them defensively, because a refused field is `null`.
+ * A typed block (`figure`, `figures`, `diagram`, `svg`, `quiz`, `sources`,
+ * `glossary`, `formula`): `type`, `id`, plus its schema's fields (README → "The
+ * tree"). The renderer reads them defensively, because a refused field is `null`.
  */
 export interface TypedBlock {
   type:
@@ -62,9 +64,36 @@ export interface TypedBlock {
     | "diagram"
     | "svg"
     | "quiz"
-    | "sources";
+    | "sources"
+    | "glossary"
+    | "formula";
   id: string | null;
   [field: string]: unknown;
+}
+
+/**
+ * One entry of a `formula` block's `where` legend (README → "The tree"): `sym` is
+ * TeX that occurs in the block's `tex` (inline context), `means` its *(md)*
+ * meaning, which may hold inline math and `term:` links. A `formula` block is
+ * `{tex, alt, reading: Inline[], where: (LegendItem | null)[]}`; each field is
+ * `null` where it was refused.
+ */
+export interface LegendItem {
+  sym: string | null;
+  means: Inline[] | null;
+}
+
+/**
+ * One entry of a `glossary` block's `terms` (README → "The tree"). Its `id` is
+ * scoped to the block, never a document id: `[x](term:<id>)` links to it. Each
+ * field is `null` where it was refused (`aliases` and `long` also when absent).
+ */
+export interface GlossaryTerm {
+  id: string | null;
+  term: string | null;
+  aliases: (string | null)[] | null;
+  short: Inline[] | null;
+  long: Inline[] | null;
 }
 
 export interface Tree {

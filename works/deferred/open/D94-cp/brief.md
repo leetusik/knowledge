@@ -1,0 +1,14 @@
+# Deferred: D94-cp Re-run the explain front door under claude -p in a workspace on v94
+
+## Context
+
+## Why Deferred
+
+plugin 0.10.0 refuses this v91 workspace, so checklist lines 28, 29, 33 and 34 and the drafted front-door line (v94 plus phases:) were not run with a real claude -p --plugin-dir plugin session; line 31 and the readiness gate passed on fresh v93/v94 scratch installs (F5, REVIEW round 3)
+
+## Trigger to Promote
+
+/update-workspace to v94 here, after P39-hk merges
+
+## Notes
+

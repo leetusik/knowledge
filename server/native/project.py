@@ -16,14 +16,16 @@ The passage containers, in document order, are:
   is an empty container);
 * a code block: its text verbatim (lines joined by ``"\\n"``, no final newline).
 
-Headings and every typed block's text (captions, titles, labels, quiz text) are
+Headings and every typed block's text (captions, titles, labels, quiz text, a
+glossary's terms and definitions, a formula with its reading and legend) are
 ``head``/``cap`` containers: they take a note or a bookmark, never a highlight,
 so they contribute nothing. A container's text is the concatenation of its
 inline nodes: ``text`` and ``code`` verbatim (a soft line break is already the
-``"\\n"`` inside a text node), ``break`` as ``"\\n"``, an image as nothing, and
-emphasis, strong, strikethrough and links as their children's text. No
-whitespace is collapsed and nothing is normalized. Offsets count Unicode code
-points of that text.
+``"\\n"`` inside a text node), inline ``math`` as its TeX verbatim (one atom the
+reader never splits), ``break`` as ``"\\n"``, an image as nothing, and
+emphasis, strong, strikethrough and links (``term:`` links too) as their
+children's text. No whitespace is collapsed and nothing is normalized. Offsets
+count Unicode code points of that text.
 """
 from __future__ import annotations
 
@@ -36,6 +38,8 @@ def inline_text(nodes: Iterable[dict]) -> str:
         t = node["type"]
         if t in ("text", "code"):
             out.append(node["text"])
+        elif t == "math":
+            out.append(node["tex"])
         elif t == "break":
             out.append("\n")
         elif t in ("em", "strong", "del", "link"):
@@ -98,7 +102,10 @@ def format_sections(secs: list[dict]) -> str:
 def search_text(tree: dict) -> str:
     """The FTS/embedding text: prose, plus figure captions and alt text, diagram
     titles, labels and captions, SVG labels, quiz prompts, options and
-    explanations (never the answer keys), and source titles."""
+    explanations (never the answer keys), source titles, each glossary
+    term with its aliases and both definitions, and each formula's ``alt``,
+    ``reading`` and legend meanings (never its TeX, as a figure gives its alt
+    and caption, never its pixels)."""
     parts: list[str] = []
     if tree.get("summary"):
         parts.append(tree["summary"])
@@ -146,6 +153,13 @@ def _search_block(block: dict) -> list[str]:
         return out
     if t == "sources":
         return [item["title"] for item in block["items"]]
+    if t == "glossary":
+        out = []
+        for term in block["terms"]:
+            out += [term["term"]] + list(term["aliases"] or []) + [_md(term["short"]), _md(term["long"])]
+        return out
+    if t == "formula":
+        return [block["alt"], _md(block["reading"])] + [_md(w["means"]) for w in block["where"]]
     return _containers(block)
 
 

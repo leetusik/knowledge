@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The definition window and its phone sheet, every state</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.gs-cell { padding: var(--kb-space-md); border-radius: var(--kb-radius); }
+.gs-win { width: calc(28rem + 2 * var(--kb-space-md)); }
+.gs-390 { width: 390px; padding: var(--kb-space-xl) 0 0; border-radius: 0; }
+.gs-320 { width: 320px; padding: var(--kb-space-xl) 0 0; border-radius: 0; }
+.gs-head { flex-basis: 100%; margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; color: var(--kb-ink); }
+</style>
+</helmet>
+<div class="ra-board" data-theme="light" id="top">
+<p class="gs-head">Window · desktop and iPad (40rem and up)</p>
+<div class="ra-board__cell"><p class="ra-board__cap">Open, short definition</p><div class="rd-frame gs-cell gs-win" data-theme="light"><dc-import name="Gloss" form="window" term-id="dsr" bare="{{ true }}" gloss-href="#top" hint-size="448px,280px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Longer definition open</p><div class="rd-frame gs-cell gs-win" data-theme="light"><dc-import name="Gloss" form="window" term-id="dsr" long="{{ true }}" bare="{{ true }}" gloss-href="#top" hint-size="448px,460px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">No longer definition: no More control</p><div class="rd-frame gs-cell gs-win" data-theme="light"><dc-import name="Gloss" form="window" term-id="eigenvalue" bare="{{ true }}" gloss-href="#top" hint-size="448px,280px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">A long term with its abbreviation</p><div class="rd-frame gs-cell gs-win" data-theme="light"><dc-import name="Gloss" form="window" term-id="psr" bare="{{ true }}" gloss-href="#top" hint-size="448px,280px"></dc-import></div></div>
+<div class="ra-board__row"></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Korean chapter</p><div class="rd-frame gs-cell gs-win" data-theme="light"><dc-import name="Gloss" form="window" term-id="dsr" lang="ko" bare="{{ true }}" gloss-href="#top" hint-size="448px,280px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Korean chapter, longer open</p><div class="rd-frame gs-cell gs-win" data-theme="light"><dc-import name="Gloss" form="window" term-id="dsr" lang="ko" long="{{ true }}" bare="{{ true }}" gloss-href="#top" hint-size="448px,460px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Dark, short</p><div class="rd-frame gs-cell gs-win" data-theme="dark"><dc-import name="Gloss" form="window" term-id="dsr" bare="{{ true }}" gloss-href="#top" hint-size="448px,280px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">Dark, longer open</p><div class="rd-frame gs-cell gs-win" data-theme="dark"><dc-import name="Gloss" form="window" term-id="tstat" long="{{ true }}" bare="{{ true }}" gloss-href="#top" hint-size="448px,460px"></dc-import></div></div>
+<div class="ra-board__row"></div>
+<p class="gs-head">Sheet · phone (under 40rem), from the bottom, no scrim</p>
+<div class="ra-board__cell"><p class="ra-board__cap">390 · open, short</p><div class="rd-frame gs-cell gs-390" data-theme="light"><dc-import name="Gloss" form="sheet" term-id="dsr" bare="{{ true }}" gloss-href="#top" hint-size="390px,360px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">390 · longer open (the body scrolls in the sheet)</p><div class="rd-frame gs-cell gs-390" data-theme="light"><dc-import name="Gloss" form="sheet" term-id="dsr" long="{{ true }}" bare="{{ true }}" gloss-href="#top" hint-size="390px,560px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">390 · no longer definition</p><div class="rd-frame gs-cell gs-390" data-theme="light"><dc-import name="Gloss" form="sheet" term-id="eigenvalue" bare="{{ true }}" gloss-href="#top" hint-size="390px,360px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">320 · a long term</p><div class="rd-frame gs-cell gs-320" data-theme="light"><dc-import name="Gloss" form="sheet" term-id="psr" bare="{{ true }}" gloss-href="#top" hint-size="320px,420px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">390 · Korean</p><div class="rd-frame gs-cell gs-390" data-theme="light"><dc-import name="Gloss" form="sheet" term-id="participation" lang="ko" bare="{{ true }}" gloss-href="#top" hint-size="390px,380px"></dc-import></div></div>
+<div class="ra-board__cell"><p class="ra-board__cap">390 · dark</p><div class="rd-frame gs-cell gs-390" data-theme="dark"><dc-import name="Gloss" form="sheet" term-id="dsr" bare="{{ true }}" gloss-href="#top" hint-size="390px,360px"></dc-import></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2100,"height":3420}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

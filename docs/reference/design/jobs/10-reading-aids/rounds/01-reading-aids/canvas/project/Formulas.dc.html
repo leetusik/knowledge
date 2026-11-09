@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Formulas in a chapter: inline and display</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+[data-proto="state-bar"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0;padding:8px 16px;background:#eceef1;border-bottom:1px dashed #6b717a;color:#2f3338;font:12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+[data-proto="state-bar"] [role="group"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+[data-proto="state-bar"] button{display:inline-flex;align-items:center;box-sizing:border-box;height:24px;margin:0;padding:0 10px;border:1px solid #6b717a;border-radius:4px;background:#f7f8fa;color:#2f3338;font:inherit;line-height:1;cursor:pointer}
+[data-proto="state-bar"] button[aria-pressed="true"]{background:#ffffff;border-color:#2f3338;font-weight:600}
+[data-proto="state-bar"] button:focus-visible{outline:2px solid #2f3338;outline-offset:2px}
+
+/* The page: the reader frame fills the width; on a phone preset it sits in a viewport box (canvas only) */
+.fm-root { margin: 0; background: var(--kb-paper); min-width: 0; }
+.fm-stage--phone { padding: 0 var(--kb-space-md) var(--kb-space-lg); }
+.fm-box--phone { position: relative; margin-inline: auto; overflow: auto; border: 1px solid var(--kb-border-strong); background: var(--kb-surface); }
+.fm-box--390 { width: min(390px, 100%); height: 844px; --fm-vh: 8.44px; }
+.fm-box--320 { width: min(320px, 100%); height: 568px; --fm-vh: 5.68px; }
+.fm-box--phone .ra-sheet { max-height: calc(60 * var(--fm-vh)); }
+.fm-box--phone .ra-sheet--long { max-height: calc(85 * var(--fm-vh)); }
+.fm-block { min-width: 0; }
+/* The window floats in the frame, as wide as F3 says; the sheet docks at the bottom of the visible area */
+.fm-float { width: min(var(--ra-win-w), calc(100% - 2 * var(--rd-gut))); }
+.fm-dock { position: sticky; bottom: 0; height: 0; z-index: 20; }
+.fm-sheet { position: absolute; left: 0; right: 0; bottom: 0; }
+.fm-keep { white-space: nowrap; }
+/* F27 (join): one symbol column for every legend of the chapter, so all meanings start on one edge */
+.fm-block .ra-legend { grid-template-columns: minmax(max-content, min(calc(var(--rd-fs) * 5.25), 28%)) minmax(0, 1fr); }
+/* F36: a meaning's word wider than its column (200 % text on a phone) breaks rather than runs past the screen */
+.fm-block .ra-legend dd { overflow-wrap: break-word; }
+/* F32 (join): Read more and Show less start on the swap box's start edge */
+.fm-root .ra-swap > * { text-align: start; } /* a figure, its unit and its particle never part (F11) */
+</style>
+</helmet>
+<div class="fm-root" id="top" data-theme="{{ theme }}" ref="{{ setRoot }}">
+<div data-proto="state-bar"><span>Prototype only · jump to a state:</span><div role="group" aria-labelledby="fm-bar-name"><span id="fm-bar-name">Formulas</span><sc-for list="{{ presets }}" as="p" hint-placeholder-count="9"><button type="button" aria-pressed="{{ p.pressed }}" onclick="{{ p.go }}">{{ p.label }}</button></sc-for></div></div>
+<div class="{{ stageCls }}">
+<div class="{{ boxCls }}" ref="{{ setBox }}">
+<div class="rd-frame" data-theme="{{ theme }}" ref="{{ setFrame }}"><div class="rd-in">
+<dc-import name="Shell" bare="{{ true }}" lang="{{ lang }}" pct="{{ 42 }}" on-lang="{{ setLang }}" hint-size="100%,59px"></dc-import>
+<main>
+<sc-if value="{{ isEn }}" hint-placeholder-val="{{ true }}">
+<article class="rd-article rd-flow rd-prose" lang="en">
+<h2 class="rd-h rd-h2" id="fm-run">Scoring a run</h2>
+<p class="rd-p">The scorer takes each event’s P&amp;L in %&nbsp;of&nbsp;K and computes <math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math> and <math class="ra-m" alttext="t equals s times the square root of n"><mi>t</mi><mo>=</mo><mi>s</mi><mo>×</mo><msqrt><mi>n</mi></msqrt></math>. Thirty events averaging +0.10&nbsp;%&nbsp;of&nbsp;K with an sd of 0.25&nbsp;% give <math class="ra-m" alttext="t approximately 2.19"><mi>t</mi><mo>≈</mo><mn>2.19</mn></math>, just over B6’s 2.0; fifteen such events give 1.55, enough for <span class="fm-keep">CONDITIONAL-GO’s</span> 1.5 but not for B6.</p>
+<div class="fm-block" data-fm-block="tstat"><dc-import name="MathBlock" formula="tstat" lang="en" bare="{{ true }}" open="{{ openTstat }}" on-term="{{ onTerm }}" hint-size="100%,460px"></dc-import></div>
+<p class="rd-p">With the thirty events above:</p>
+<div class="fm-block" data-fm-block="worked"><dc-import name="MathBlock" formula="worked" lang="en" bare="{{ true }}" open="{{ openWorked }}" on-term="{{ onTerm }}" hint-size="100%,520px"></dc-import></div>
+<h2 class="rd-h rd-h2" id="fm-trials">Counting the trials</h2>
+<p class="rd-p" data-fm-block="text-trials">The scorer takes the <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="{{ proseOpen }}" aria-controls="tw-participation" data-term="participation" onclick="{{ proseClick }}" onkeydown="{{ proseKey }}">participation ratio</a> of the trials’ correlation matrix, <math class="ra-m" alttext="the square of the sum of e, divided by the sum of e squared"><mrow><mo stretchy="false">(</mo><mo lspace="0">∑</mo><mi>e</mi><msup><mo stretchy="false">)</mo><mn>2</mn></msup></mrow><mo>÷</mo><mo>∑</mo><msup><mi>e</mi><mn>2</mn></msup></math> over its eigenvalues <math class="ra-m" alttext="e"><mi>e</mi></math>: ten perfectly correlated trials count as 1, ten independent ones as 10.</p>
+<div class="fm-block" data-fm-block="participation"><dc-import name="MathBlock" formula="participation" lang="en" bare="{{ true }}" open="{{ openPart }}" on-term="{{ onTerm }}" hint-size="100%,420px"></dc-import></div>
+<h2 class="rd-h rd-h2" id="fm-none">When nothing happens</h2>
+<p class="rd-p">With independent arrivals at a steady rate, the count over a stretch is Poisson with mean <math class="ra-m" alttext="lambda equals rate times time"><mi>λ</mi><mo>=</mo><mi>rate</mi><mo>×</mo><mi>time</mi></math>, and no event at all has probability <math class="ra-m" alttext="e to the minus lambda"><msup><mi>e</mi><mrow><mo>−</mo><mi>λ</mi></mrow></msup></math>.</p>
+<div class="fm-block" data-fm-block="poisson"><dc-import name="MathBlock" formula="poisson" lang="en" bare="{{ true }}" open="{{ openPois }}" on-term="{{ onTerm }}" hint-size="100%,460px"></dc-import></div>
+</article>
+</sc-if>
+<sc-if value="{{ isKo }}" hint-placeholder-val="{{ false }}">
+<article class="rd-article rd-flow rd-prose" lang="ko">
+<h2 class="rd-h rd-h2" id="fm-run-ko">실행 채점하기</h2>
+<p class="rd-p">스코어러는 각 이벤트의 손익을 K&nbsp;대비&nbsp;%로 받아 <math class="ra-m" alttext="s는 평균 나누기 sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math>와 <math class="ra-m" alttext="t는 s 곱하기 n의 제곱근"><mi>t</mi><mo>=</mo><mi>s</mi><mo>×</mo><msqrt><mi>n</mi></msqrt></math>을 계산합니다. 평균 <span class="fm-keep">K&nbsp;대비&nbsp;+0.10&nbsp;%,</span> <span class="fm-keep">sd&nbsp;0.25&nbsp;%인</span> 이벤트 서른 개면 <math class="ra-m" alttext="t는 약 2.19"><mi>t</mi><mo>≈</mo><mn>2.19</mn></math>로, B6의 2.0을 조금 넘습니다. 같은 이벤트 열다섯 개면 1.55로, <span class="fm-keep">CONDITIONAL-GO의</span> 1.5에는 충분하지만 B6에는 못 미칩니다.</p>
+<div class="fm-block" data-fm-block="tstat"><dc-import name="MathBlock" formula="tstat" lang="ko" bare="{{ true }}" open="{{ openTstat }}" on-term="{{ onTerm }}" hint-size="100%,460px"></dc-import></div>
+<p class="rd-p">위의 이벤트 서른 개로 계산하면:</p>
+<div class="fm-block" data-fm-block="worked"><dc-import name="MathBlock" formula="worked" lang="ko" bare="{{ true }}" open="{{ openWorked }}" on-term="{{ onTerm }}" hint-size="100%,520px"></dc-import></div>
+<h2 class="rd-h rd-h2" id="fm-trials-ko">시도 횟수 세기</h2>
+<p class="rd-p" data-fm-block="text-trials">스코어러는 시도들의 상관행렬에서 <a class="ra-term" role="button" tabindex="0" aria-haspopup="dialog" aria-expanded="{{ proseOpen }}" aria-controls="tw-participation" data-term="participation" onclick="{{ proseClick }}" onkeydown="{{ proseKey }}">참여 비율</a>을 구합니다. 고유값 <math class="ra-m" alttext="e"><mi>e</mi></math>에 대해 <math class="ra-m" alttext="e의 합의 제곱 나누기 e 제곱의 합"><mrow><mo stretchy="false">(</mo><mo lspace="0">∑</mo><mi>e</mi><msup><mo stretchy="false">)</mo><mn>2</mn></msup></mrow><mo>÷</mo><mo>∑</mo><msup><mi>e</mi><mn>2</mn></msup></math>이며, 완전히 같이 움직이는 시도 열 개는 1로, 독립인 시도 열 개는 10으로 셉니다.</p>
+<div class="fm-block" data-fm-block="participation"><dc-import name="MathBlock" formula="participation" lang="ko" bare="{{ true }}" open="{{ openPart }}" on-term="{{ onTerm }}" hint-size="100%,420px"></dc-import></div>
+<h2 class="rd-h rd-h2" id="fm-none-ko">아무 일도 없을 때</h2>
+<p class="rd-p">서로 독립인 이벤트가 일정한 비율로 일어나면, 한 구간의 이벤트 수는 평균 <math class="ra-m" alttext="람다는 비율 곱하기 시간"><mi>λ</mi><mo>=</mo><mi>rate</mi><mo>×</mo><mi>time</mi></math>인 포아송 분포를 따르고, 이벤트가 하나도 없을 확률은 <math class="ra-m" alttext="e의 마이너스 람다 제곱"><msup><mi>e</mi><mrow><mo>−</mo><mi>λ</mi></mrow></msup></math>입니다.</p>
+<div class="fm-block" data-fm-block="poisson"><dc-import name="MathBlock" formula="poisson" lang="ko" bare="{{ true }}" open="{{ openPois }}" on-term="{{ onTerm }}" hint-size="100%,460px"></dc-import></div>
+</article>
+</sc-if>
+</main>
+<sc-if value="{{ isWindow }}" hint-placeholder-val="{{ false }}">
+<div class="ra-float fm-float" data-placed="{{ placedFlag }}" style="{{ floatStyle }}" ref="{{ setFloat }}"><dc-import name="Gloss" form="window" term-id="{{ openTerm }}" lang="{{ lang }}" bare="{{ true }}" long="{{ long }}" on-toggle="{{ onToggle }}" on-close="{{ onClose }}" on-glossary="{{ onGlossary }}" gloss-href="Terms.dc.html" hint-size="448px,280px"></dc-import></div>
+</sc-if>
+<div class="fm-dock">
+<sc-if value="{{ isSheet }}" hint-placeholder-val="{{ false }}">
+<div class="fm-sheet" ref="{{ setFloat }}"><dc-import name="Gloss" form="sheet" term-id="{{ openTerm }}" lang="{{ lang }}" bare="{{ true }}" long="{{ long }}" on-toggle="{{ onToggle }}" on-close="{{ onClose }}" on-glossary="{{ onGlossary }}" gloss-href="Terms.dc.html" hint-size="100%,320px"></dc-import></div>
+</sc-if>
+</div>
+</div></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"lang":{"editor":"enum","options":["en","ko"],"default":"en"},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"onOpenTerms":{"editor":null},"onState":{"editor":null},"from":{"editor":null},"$preview":{"width":1440,"height":2705}}'>
+// The formulas page (frame.md F7, F15): a chapter excerpt with inline and display formulas. A legend term (or a marked
+// term in the text) opens the frame's window on desktop and its sheet under 40rem; "In the glossary →" emits
+// on-open-terms { term } (the glossary lives on the terms page). Everything outside the state bar is the product.
+const FM_BASE = { width: 'full', theme: 'light', lang: 'en', at: null, long: false, scroll: null };
+const FM_PRESETS = [
+  { key: 'rest', label: 'Rest', s: {} },
+  { key: 'legend', label: 'Legend term open', s: { at: { b: 'participation', t: 'eigenvalue' } } },
+  { key: 'more', label: 'Read more open', s: { at: { b: 'tstat', t: 'tstat' }, long: true } },
+  { key: 'ko', label: 'Korean', s: { lang: 'ko' } },
+  { key: 'dark', label: 'Dark', s: { theme: 'dark' } },
+  { key: 'darkopen', label: 'Dark · term open', s: { theme: 'dark', at: { b: 'participation', t: 'participation' } } },
+  { key: 'p390', label: 'Phone 390', s: { width: '390' } },
+  { key: 'p390open', label: 'Phone 390 · term open', s: { width: '390', at: { b: 'tstat', t: 'sharpe' } } },
+  { key: 'p320', label: 'Phone 320 · long formula', s: { width: '320', scroll: 'worked' } },
+];
+const FM_GAP = 5.6; // kb-space-xs (0.35rem) between a term and its window
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = Object.assign({}, FM_BASE, {
+      lang: p.lang === 'ko' ? 'ko' : 'en',
+      theme: p.theme === 'dark' ? 'dark' : 'light',
+      via: null, placed: false, pos: null, form: 'window',
+    });
+    this.seq = 0;
+    this.lastLang = p.lang; this.lastTheme = p.theme;
+    this.root = null; this.box = null; this.frame = null; this.float = null;
+    this.repLang = this.state.lang; this.repTheme = this.state.theme;
+  }
+  // The flow (join, C02): report the chapter's language and theme, however they changed (the Shell's switch, a preset),
+  // so the next part opens in them
+  report() {
+    const s = this.state;
+    if (!this.props.onState || (s.lang === this.repLang && s.theme === this.repTheme)) return;
+    this.repLang = s.lang; this.repTheme = s.theme;
+    this.props.onState({ lang: s.lang, theme: s.theme });
+  }
+  componentDidMount() {
+    this.onDocDown = (e) => {
+      if (!this.state.at) return;
+      const t = e.target;
+      if (this.float && this.float.contains(t)) return;
+      if (t && t.closest && (t.closest('.ra-term') || t.closest('[data-proto]'))) return;
+      this.close(false);
+    };
+    this.onDocKey = (e) => {
+      if (e.key === 'Escape' && this.state.at) { e.preventDefault(); this.close(true); }
+    };
+    document.addEventListener('pointerdown', this.onDocDown, true);
+    document.addEventListener('keydown', this.onDocKey);
+    // The way back from the glossary (join wiring, F6): from = 'formulas:<block>:<term>' scrolls that term to the
+    // centre and focuses it, the occurrence the reader left from
+    const back = String(this.props.from || '').split(':');
+    if (back[0] === 'formulas' && back[2]) {
+      setTimeout(() => {
+        const el = this.root && this.root.querySelector('[data-fm-block="' + back[1] + '"] .ra-term[data-term="' + back[2] + '"]');
+        if (el) { el.scrollIntoView({ block: 'center' }); el.focus({ preventScroll: true }); }
+      }, 120);
+    }
+  }
+  componentWillUnmount() {
+    document.removeEventListener('pointerdown', this.onDocDown, true);
+    document.removeEventListener('keydown', this.onDocKey);
+    clearTimeout(this.inT); clearTimeout(this.outT);
+    if (this.root) { this.root.removeEventListener('mouseover', this.onOver); this.root.removeEventListener('mouseout', this.onOut); }
+  }
+  componentDidUpdate() {
+    this.report();
+    const P = this.props;
+    if (P.lang && P.lang !== this.lastLang) { this.lastLang = P.lang; if ((P.lang === 'ko' ? 'ko' : 'en') !== this.state.lang) this.setState({ lang: P.lang === 'ko' ? 'ko' : 'en', at: null, placed: false }); }
+    if (P.theme && P.theme !== this.lastTheme) { this.lastTheme = P.theme; if ((P.theme === 'dark' ? 'dark' : 'light') !== this.state.theme) this.setState({ theme: P.theme === 'dark' ? 'dark' : 'light' }); }
+    const S = this.state;
+    if (S.at && !S.placed && !this.placing) {
+      this.placing = true;
+      const seq = this.seq;
+      setTimeout(() => { this.placing = false; if (seq === this.seq && this.state.at && !this.state.placed) this.place(); }, 0);
+    }
+    if (this.pendingScroll) {
+      const b = this.pendingScroll;
+      this.pendingScroll = null;
+      if (b === 'top') { if (this.box) this.box.scrollTop = 0; } else this.scrollToBlock(b);
+    }
+  }
+  setRoot = (el) => {
+    if (this.root === el) return;
+    if (this.root) { this.root.removeEventListener('mouseover', this.onOver); this.root.removeEventListener('mouseout', this.onOut); }
+    this.root = el;
+    if (el) { el.addEventListener('mouseover', this.onOver); el.addEventListener('mouseout', this.onOut); }
+  };
+  setBox = (el) => { this.box = el; };
+  setFrame = (el) => { this.frame = el; };
+  setFloat = (el) => {
+    if (this.float === el) return;
+    if (this.float) this.float.removeEventListener('keydown', this.onFloatKey);
+    this.float = el;
+    if (el) el.addEventListener('keydown', this.onFloatKey);
+  };
+  formNow() {
+    const w = this.frame ? this.frame.clientWidth : 1440;
+    return w < 640 ? 'sheet' : 'window';
+  }
+  anchorEl(at) {
+    const a = at || this.state.at;
+    if (!a || !this.frame) return null;
+    return this.frame.querySelector('[data-fm-block="' + a.b + '"] [data-term="' + a.t + '"]');
+  }
+  scroller() { return this.state.width === 'full' ? null : this.box; }
+  viewRect() {
+    const sc = this.scroller();
+    if (sc) { const r = sc.getBoundingClientRect(); return { top: r.top, bottom: r.bottom }; }
+    return { top: 0, bottom: window.innerHeight };
+  }
+  scrollToBlock(b) {
+    setTimeout(() => {
+      const sc = this.scroller();
+      const el = this.frame && this.frame.querySelector('[data-fm-block="' + b + '"]');
+      if (!el) return;
+      if (sc) sc.scrollTop += el.getBoundingClientRect().top - sc.getBoundingClientRect().top - 96;
+    }, 60);
+  }
+  // Open a term's window (or sheet). via: 'click' | 'key' | 'hover' | 'preset'
+  openFrom(el, via) {
+    if (!el) return;
+    const blk = el.closest('[data-fm-block]');
+    const at = { b: blk ? blk.getAttribute('data-fm-block') : '', t: el.getAttribute('data-term') };
+    const S = this.state;
+    const same = S.at && S.at.b === at.b && S.at.t === at.t;
+    if (same && via !== 'hover') {
+      if (S.via === 'hover') { this.setState({ via }); this.focusBox(); return; }
+      this.close(true); return;
+    }
+    if (same) return;
+    clearTimeout(this.outT);
+    this.seq += 1;
+    this.setState({ at, long: false, via, placed: false, pos: null, form: this.formNow() });
+  }
+  close(returnFocus) {
+    const el = this.anchorEl();
+    clearTimeout(this.inT); clearTimeout(this.outT);
+    this.setState({ at: null, long: false, via: null, placed: false, pos: null });
+    if (returnFocus && el) el.focus();
+  }
+  focusBox() {
+    setTimeout(() => {
+      const d = this.float && this.float.querySelector('[role="dialog"]');
+      if (d) d.focus();
+    }, 0);
+  }
+  place() {
+    const S = this.state;
+    const term = this.anchorEl();
+    if (!this.frame || !term) return;
+    const form = this.formNow();
+    if (form !== S.form) { this.setState({ form }); return; }
+    if (!this.float) return;
+    if (S.form === 'sheet') {
+      this.setState({ placed: true });
+      this.keepTermAbove(S.via === 'click' || S.via === 'key');
+      return;
+    }
+    const F = this.frame.getBoundingClientRect();
+    const rects = term.getClientRects();
+    const first = rects[0] || term.getBoundingClientRect();
+    const last = rects[rects.length - 1] || first;
+    const col = this.frame.querySelector('.rd-article > .rd-p');
+    const C = col ? col.getBoundingClientRect() : F;
+    const W = this.float.offsetWidth;
+    const H = this.float.offsetHeight;
+    let left = first.left - F.left;
+    if (left + W > C.right - F.left) left = C.right - F.left - W;
+    left = Math.max(left, 8);
+    const view = this.viewRect();
+    const bar = this.frame.querySelector('.rd-top');
+    const topEdge = Math.max(view.top, bar ? bar.getBoundingClientRect().bottom : view.top);
+    const roomBelow = view.bottom - (last.bottom + FM_GAP);
+    const roomAbove = first.top - FM_GAP - topEdge;
+    const above = roomBelow < H && roomAbove >= H;
+    const pos = above
+      ? { left: left, bottom: F.bottom - (first.top - FM_GAP) }
+      : { left: left, top: last.bottom + FM_GAP - F.top };
+    this.setState({ placed: true, pos });
+    if (S.via === 'click' || S.via === 'key') this.focusBox();
+  }
+  // F4/F5: the term sits kb-space-md (16px) above the sheet's top; run on open and again when the longer
+  // definition grows the sheet, so Read more never covers the term it explains.
+  keepTermAbove(focus) {
+    const seq = this.seq;
+    setTimeout(() => {
+      if (seq !== this.seq || !this.state.at) return;
+      const term = this.anchorEl();
+      const sh = this.float && this.float.getBoundingClientRect();
+      if (!sh || !term) return;
+      const r = term.getBoundingClientRect();
+      const want = sh.top - 16;
+      const sc = this.scroller();
+      const view = this.viewRect();
+      const bar = this.frame && this.frame.querySelector('.rd-top');
+      const topEdge = Math.max(view.top, bar ? bar.getBoundingClientRect().bottom : view.top);
+      let d = 0;
+      if (r.bottom > want) d = r.bottom - want;
+      else if (r.top < topEdge + 16) d = r.top - topEdge - 16;
+      if (d) { if (sc) sc.scrollTop += d; else window.scrollBy(0, d); }
+      if (focus) this.focusBox();
+    }, 30);
+  }
+  onTerm = (tid, el) => { this.openFrom(el, 'click'); };
+  onOver = (e) => {
+    const t = e.target && e.target.closest ? e.target.closest('.ra-term') : null;
+    const inFloat = this.float && this.float.contains(e.target);
+    if (t || inFloat) clearTimeout(this.outT);
+    if (!t || !this.hoverOK()) return;
+    if (this.state.at && t === this.anchorEl()) return;
+    clearTimeout(this.inT);
+    const seq = this.seq;
+    this.inT = setTimeout(() => { if (seq === this.seq && (!this.state.at || this.state.via === 'hover')) this.openFrom(t, 'hover'); }, 250);
+  };
+  onOut = (e) => {
+    const t = e.target && e.target.closest ? e.target.closest('.ra-term') : null;
+    const to = e.relatedTarget;
+    if (t && !(to && t.contains(to))) clearTimeout(this.inT);
+    if (!this.state.at || this.state.via !== 'hover') return;
+    const anchor = this.anchorEl();
+    const fromHere = (t && t === anchor) || (this.float && this.float.contains(e.target));
+    if (!fromHere) return;
+    if (to && ((this.float && this.float.contains(to)) || (anchor && anchor.contains(to)))) return;
+    clearTimeout(this.outT);
+    const seq = this.seq;
+    this.outT = setTimeout(() => { if (seq === this.seq && this.state.via === 'hover') this.close(false); }, 200);
+  };
+  hoverOK() {
+    const fine = typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    return fine && this.formNow() === 'window';
+  }
+  onFloatKey = (e) => {
+    if (e.key !== 'Tab' || !this.float) return;
+    const f = Array.prototype.filter.call(this.float.querySelectorAll('button, a[href]'), (x) => x.offsetParent !== null);
+    if (!f.length) return;
+    const a = document.activeElement;
+    const el = this.anchorEl();
+    if (!e.shiftKey && a === f[f.length - 1]) { this.close(false); if (el) el.focus(); }
+    else if (e.shiftKey && (a === f[0] || (a && a.getAttribute('role') === 'dialog'))) { e.preventDefault(); this.close(false); if (el) el.focus(); }
+  };
+  renderVals() {
+    const S = this.state;
+    const P = this.props;
+    const match = (s) => {
+      const x = Object.assign({}, FM_BASE, s);
+      const atEq = (!x.at && !S.at) || (x.at && S.at && x.at.b === S.at.b && x.at.t === S.at.t);
+      return x.width === S.width && x.theme === S.theme && x.lang === S.lang && atEq && !!x.long === !!S.long;
+    };
+    const presets = FM_PRESETS.map((p) => ({
+      label: p.label,
+      pressed: match(p.s) ? 'true' : 'false',
+      go: () => {
+        this.seq += 1;
+        clearTimeout(this.inT); clearTimeout(this.outT);
+        const x = Object.assign({}, FM_BASE, p.s);
+        const form = x.width === 'full' ? (this.root && this.root.clientWidth < 640 ? 'sheet' : 'window') : 'sheet';
+        this.pendingScroll = x.scroll || 'top';
+        this.setState(Object.assign(x, { via: x.at ? 'preset' : null, placed: false, pos: null, form }));
+      },
+    }));
+    const openFor = (b) => (S.at && S.at.b === b ? S.at.t : null);
+    const pos = S.pos || {};
+    let floatStyle = 'left: ' + (pos.left || 0) + 'px;';
+    floatStyle += pos.bottom !== undefined ? ' bottom: ' + pos.bottom + 'px;' : ' top: ' + (pos.top || 0) + 'px;';
+    const phone = S.width !== 'full';
+    return {
+      presets,
+      theme: S.theme,
+      lang: S.lang,
+      isEn: S.lang !== 'ko',
+      isKo: S.lang === 'ko',
+      stageCls: phone ? 'fm-stage fm-stage--phone' : 'fm-stage',
+      boxCls: phone ? 'fm-box fm-box--phone fm-box--' + S.width : 'fm-box',
+      openTstat: openFor('tstat'),
+      openWorked: openFor('worked'),
+      openPart: openFor('participation'),
+      openPois: openFor('poisson'),
+      proseOpen: S.at && S.at.b === 'text-trials' ? 'true' : 'false',
+      proseClick: (e) => { if (e && e.preventDefault) e.preventDefault(); this.openFrom(e.currentTarget, 'click'); },
+      proseKey: (e) => {
+        if (!e) return;
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); this.openFrom(e.currentTarget, 'key'); }
+      },
+      onTerm: this.onTerm,
+      isWindow: !!S.at && S.form === 'window',
+      isSheet: !!S.at && S.form === 'sheet',
+      openTerm: S.at ? S.at.t : 'dsr',
+      long: !!S.long,
+      onToggle: (v) => {
+        this.setState({ long: !!v });
+        if (v && this.state.at && this.state.form === 'sheet') this.keepTermAbove(false);
+      },
+      onClose: () => this.close(true),
+      onGlossary: P.onOpenTerms ? (id) => P.onOpenTerms({ term: id, from: S.at ? 'formulas:' + S.at.b + ':' + S.at.t : 'formulas', lang: S.lang, theme: S.theme }) : undefined,
+      placedFlag: S.placed ? '1' : '0',
+      floatStyle,
+      setLang: (code) => this.setState({ lang: code === 'ko' ? 'ko' : 'en', at: null, placed: false, pos: null }),
+      setRoot: this.setRoot, setBox: this.setBox, setFrame: this.setFrame, setFloat: this.setFloat,
+    };
+  }
+}
+</script>
+</body>
+</html>

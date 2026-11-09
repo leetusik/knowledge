@@ -1,0 +1,32 @@
+{
+  "id": "P39-hk.F6",
+  "phase_id": "P39-hk",
+  "name": "Name the Glossary in the annotation layer, read the resume pill through linear math, tag the Glossary entry English",
+  "kind": "fix",
+  "status": "done",
+  "order": 180,
+  "depends_on": [],
+  "created_at": "2026-11-06T12:05:37+09:00",
+  "started_at": "2026-11-06T12:07:19+09:00",
+  "completed_at": "2026-11-06T12:21:49+09:00",
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "The Glossary is named in the place bar, the Notes and per-book rows and new marks; the resume pill reads inline math as its linear text; a Korean chapter lists the Glossary entry lang=en; every other name and entry unchanged",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

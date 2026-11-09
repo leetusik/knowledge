@@ -42,6 +42,8 @@ export interface ReaderHeading {
   id: string;
   level: 2 | 3;
   text: string;
+  /** P39-hk.F6: the entry's own language, when it is not the chapter's (the Glossary h2's `chromeLang`). */
+  lang?: string;
 }
 
 export interface ReaderBook {
@@ -162,6 +164,8 @@ export interface NoteSection {
   title: string;
   /** The section's text in the shared projection (`project.ts`): what offsets count. */
   text: string;
+  /** P39-hk.F7: the name's own language, when it is not the chapter's (the Glossary h2's `chromeLang`). */
+  lang?: string;
 }
 
 /** A highlight's review card: `active` (Review this on), `suspended` (paused) or none (P30.S21, OQ102). */

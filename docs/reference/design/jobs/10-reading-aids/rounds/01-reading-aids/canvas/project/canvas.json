@@ -1,0 +1,138 @@
+{
+ "v": 3,
+ "title": "Reading aids: terms, glossary, formulas",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 6084,
+   "title": "01 · Page — The chapter, connected (the flow: terms, formulas, print)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Terms.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 5330,
+   "title": "02 · Page — Terms: marked terms, their window and the glossary",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Formulas.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 2705,
+   "title": "03 · Page — Formulas in a chapter",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Print.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 5996,
+   "title": "04 · Page — Print: the chapter on paper, with its glossary appendix",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "MarkStates.dc.html": {
+   "x": 0,
+   "y": 6204,
+   "w": 2100,
+   "h": 780,
+   "title": "05 · Component — Term marker in running text"
+  },
+  "GlossStates.dc.html": {
+   "x": 2180,
+   "y": 6204,
+   "w": 2100,
+   "h": 3420,
+   "title": "06 · Component — Definition window and phone sheet"
+  },
+  "GlossListStates.dc.html": {
+   "x": 4360,
+   "y": 6204,
+   "w": 2100,
+   "h": 5800,
+   "title": "07 · Component — Glossary and paper appendix"
+  },
+  "MathInlineStates.dc.html": {
+   "x": 6540,
+   "y": 6204,
+   "w": 2100,
+   "h": 620,
+   "title": "08 · Component — Inline formula"
+  },
+  "MathBlockStates.dc.html": {
+   "x": 8720,
+   "y": 6204,
+   "w": 2100,
+   "h": 2900,
+   "title": "09 · Component — Display formula block"
+  },
+  "ShellStates.dc.html": {
+   "x": 10900,
+   "y": 6204,
+   "w": 1300,
+   "h": 460,
+   "title": "10 · Component — Reader top bar (Shell)"
+  },
+  "Gloss.dc.html": {
+   "x": 12280,
+   "y": 6204,
+   "w": 720,
+   "h": 3600,
+   "title": "11 · Component — Glossary term (alone, the glossary form)"
+  },
+  "MathBlock.dc.html": {
+   "x": 13080,
+   "y": 6204,
+   "w": 720,
+   "h": 560,
+   "title": "12 · Component — Display formula block (alone)"
+  },
+  "Shell.dc.html": {
+   "x": 13880,
+   "y": 6204,
+   "w": 1200,
+   "h": 59,
+   "title": "13 · Component — Shell (alone)"
+  }
+ },
+ "order": [
+  "Shell.dc.html",
+  "MathBlock.dc.html",
+  "Gloss.dc.html",
+  "ShellStates.dc.html",
+  "MathBlockStates.dc.html",
+  "MathInlineStates.dc.html",
+  "GlossListStates.dc.html",
+  "GlossStates.dc.html",
+  "MarkStates.dc.html",
+  "Print.dc.html",
+  "Formulas.dc.html",
+  "Terms.dc.html",
+  "Main.dc.html"
+ ],
+ "notes": {},
+ "designSystems": [
+  {
+   "title": "knowledge",
+   "namespace": "kb",
+   "artifact": "https://claude.ai/artifact/7qemgwHNsoPNf5kYHEJ4md",
+   "version": "1792321604-e214",
+   "copiedAt": "2026-11-02T07:13:34Z"
+  }
+ ],
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-02T07:13:34Z"
+ }
+}

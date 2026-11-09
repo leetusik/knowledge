@@ -115,7 +115,7 @@ export function ChapterHead({ view }: { view: ReaderView }) {
   );
 }
 
-/** The generated contents: every h2 with its h3s under it, from the chapter's heading ids. */
+/** The generated contents: every h2 with its h3s under it, from the chapter's heading ids (an entry's own `lang` wins, F6). */
 function Toc({
   noun,
   headings,
@@ -139,15 +139,23 @@ function Toc({
       <ol className="rd-toc__list" aria-label={label}>
         {groups.map(({ h2, subs }) => (
           <li key={h2.id} className="rd-toc__group">
-            <a className="rd-toc__a" href={`#${h2.id}`} lang={lang}>
-              {hangulRuns(h2.text, wrap)}
+            <a
+              className="rd-toc__a"
+              href={`#${h2.id}`}
+              lang={h2.lang ?? lang}
+            >
+              {hangulRuns(h2.text, h2.lang ? !isKorean(h2.lang) : wrap)}
             </a>
             {subs.length ? (
               <ol className="rd-toc__sub">
                 {subs.map((s) => (
                   <li key={s.id}>
-                    <a className="rd-toc__a" href={`#${s.id}`} lang={lang}>
-                      {hangulRuns(s.text, wrap)}
+                    <a
+                      className="rd-toc__a"
+                      href={`#${s.id}`}
+                      lang={s.lang ?? lang}
+                    >
+                      {hangulRuns(s.text, s.lang ? !isKorean(s.lang) : wrap)}
                     </a>
                   </li>
                 ))}

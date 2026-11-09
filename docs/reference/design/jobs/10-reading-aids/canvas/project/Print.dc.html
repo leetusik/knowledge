@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Print: the chapter on paper, with its glossary appendix</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+[data-proto="state-bar"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0;padding:8px 16px;background:#eceef1;border-bottom:1px dashed #6b717a;color:#2f3338;font:12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+[data-proto="state-bar"] [role="group"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+[data-proto="state-bar"] button{display:inline-flex;align-items:center;box-sizing:border-box;height:24px;margin:0;padding:0 10px;border:1px solid #6b717a;border-radius:4px;background:#f7f8fa;color:#2f3338;font:inherit;line-height:1;cursor:pointer}
+[data-proto="state-bar"] button[aria-pressed="true"]{background:#ffffff;border-color:#2f3338;font-weight:600}
+[data-proto="state-bar"] button:focus-visible{outline:2px solid #2f3338;outline-offset:2px}
+
+/* The desk the sheets lie on (canvas only: the print engine cuts the pages in the product) */
+.pr-root { background: var(--kb-paper); color: var(--kb-ink); font-family: var(--font-body); }
+.pr-desk { --f-max: 88rem; --f-pad: var(--kb-app-gutter); padding-block: var(--kb-space-lg) var(--kb-space-xl); }
+@media (max-width: 40rem) { .pr-desk { --f-pad: var(--kb-app-gutter-phone); padding-block: var(--kb-space-md) var(--kb-space-lg); } }
+/* Sheets at their real size (96 px/in), one a row, centred; narrower than a sheet, the column scrolls in its own box */
+.pr-sheets { --f-gap: var(--kb-space-xl); align-items: safe center; overflow-x: auto; padding-block: 2px; }
+.pr-sheets:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.pr-slot { margin: 0; display: flex; flex-direction: column; gap: var(--kb-space-xs); flex: none; }
+/* Narrower than a sheet (a phone): the sheets lie in one row and the row scrolls sideways, one sheet a stop */
+@media (max-width: 56rem) {
+  .pr-sheets { flex-direction: row; align-items: flex-start; scroll-snap-type: x mandatory; }
+  .pr-slot { scroll-snap-align: start; }
+}
+.pr-slot__cap { margin: 0; font: 0.8125rem/1.4 var(--font-body); color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.pr-box { overflow: hidden; outline: 1px solid var(--kb-border-strong); }
+.pr-sheet { padding: 60px 57px 68px; }
+.pr-win { overflow: hidden; }
+/* One flow, cut into columns the size of a sheet's text area: each sheet shows one column */
+.pr-mc { position: relative; column-count: 1; column-fill: auto; --pp-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+
+/* ---- The paper sheet: copied value for value from 09-legacy-and-print's paper.css (signed, kb-print.css) ---- */
+.pr-mc :where(p, h1, h2, ol, ul, figure, dl) { margin: 0; }
+.pr-mc > * + * { margin-top: 10px; }
+.pr-mc > .pp-h2 { margin-top: 24px; }
+.pr-mc > .pp-b--wide, .pr-mc > .pp-b--wide + * { margin-top: 14px; }
+.pr-mc > .pp-qi { margin-top: 14px; }
+.pr-mc > .pp-quiz__note { margin-top: 14px; }
+.pr-mc > .pp-colo { margin-top: 28px; }
+.pp-head { padding-bottom: 2px; }
+.pp-head__label { font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pp-sec); }
+.pr-mc .pp-head__addr { margin-top: 2px; font: 12px/1.45 var(--pp-mono); color: var(--pp-sec); overflow-wrap: anywhere; padding-bottom: 8px; border-bottom: 1px solid var(--pp-border); }
+.pr-mc .pp-head__title { margin-top: 18px; font-family: var(--pp-disp); font-size: 26.67px; line-height: 1.2; font-weight: 600; text-wrap: balance; break-after: avoid; }
+.pp-h2 { font: 600 18.67px/1.3 var(--pp-disp); text-wrap: balance; break-after: avoid; }
+.pp-p { max-width: 38em; text-wrap: pretty; orphans: 2; widows: 2; }
+.pp-p:has(+ .pp-b--wide) { break-after: avoid; }
+.pp-s { font-weight: 700; }
+.pp-quiz__head { break-inside: avoid; break-after: avoid; }
+.pp-quiz__label { font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--pp-sec); }
+.pr-mc .pp-quiz__title { margin-top: 2px; font: 600 16px/1.35 var(--pp-disp); }
+.pp-qi { display: grid; grid-template-columns: 1.9em minmax(0, 1fr); column-gap: 4px; break-inside: avoid; max-width: 40em; }
+.pp-qi__n, .pp-ai__n { font: 600 14px/1.55 var(--pp-disp); font-variant-numeric: lining-nums tabular-nums; color: var(--pp-ink); }
+.pr-mc .pp-qi__hint { margin-top: 1px; font: 12px/1.45 var(--pp-body); color: var(--pp-sec); }
+.pr-mc .pp-opts { list-style: none; padding: 0; margin-top: 6px; display: flex; flex-direction: column; gap: 5px; }
+.pp-opt { display: grid; grid-template-columns: 20px minmax(0, 1fr); column-gap: 8px; align-items: start; }
+.pp-qk { box-sizing: border-box; width: 20px; height: 20px; margin-top: 1px; border: 1.25px solid var(--pp-ink); border-radius: 50%; display: grid; place-items: center; font: 700 12px/1 var(--pp-mono); color: var(--pp-ink); }
+.pp-quiz__note { font: italic 12px/1.45 var(--pp-body); color: var(--pp-sec); }
+.pr-mc .pp-ans__lead { margin-top: 3px; font: 12px/1.45 var(--pp-body); color: var(--pp-sec); break-after: avoid; }
+.pp-ai { display: grid; grid-template-columns: 1.9em minmax(0, 1fr); column-gap: 4px; break-inside: avoid; max-width: 40em; }
+.pp-ai__a { line-height: 1.5; }
+.pp-ai__key { font-family: var(--pp-mono); font-size: 12px; font-weight: 700; margin-right: 2px; }
+.pr-mc .pp-ai__x { margin-top: 2px; font-size: 12px; line-height: 1.5; color: var(--pp-sec); }
+.pr-mc .pp-src__list { list-style: none; padding: 0; margin-top: 8px; display: flex; flex-direction: column; gap: 8px; max-width: 42em; }
+.pp-src__i { display: grid; grid-template-columns: 2.4em minmax(0, 1fr); column-gap: 4px; break-inside: avoid; }
+.pp-src__num { font: 12px/1.6 var(--pp-mono); color: var(--pp-sec); }
+.pp-src__title { font-weight: 600; }
+.pp-src__meta { font: 12px/1.45 var(--pp-body); color: var(--pp-sec); }
+.pp-colo { padding-top: 8px; border-top: 1px solid var(--pp-border); font: 12px/1.5 var(--pp-body); color: var(--pp-sec); break-inside: avoid; max-width: 46em; overflow-wrap: anywhere; }
+.pr-mc .pp-colo__line { font: 700 12px/1.4 var(--pp-mono); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 3px; }
+
+/* ---- This job on paper (print-FG1, print-FG5) ---- */
+/* The formula band keeps the prose's 38em measure; the glossary's hairlines end where the colophon's rule does (46em of its 12 px) */
+.pr-mc > .pp-b--wide { max-width: 38em; }
+.pr-mc > .pr-gl { max-width: 552px; }
+/* Every legend's meanings start on one edge: the symbol column is the widest symbol's, P(no event) */
+.pr-nobr { white-space: nowrap; } /* F22, F23 (join): a hyphenated name and a share never break inside */
+.pr-mc .ra-legend { grid-template-columns: 5.25em minmax(0, 1fr); }
+</style>
+</helmet>
+<div class="pr-root" id="top" data-theme="light">
+<div data-proto="state-bar"><span>Prototype only · jump to a state:</span><div role="group" aria-label="Print"><span>Print</span><sc-for list="{{ presets }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for></div></div>
+<main class="pr-desk f-center">
+<div class="pr-sheets f-stack" ref="{{ setHost }}" tabindex="{{ hostTab }}" role="{{ hostRole }}" aria-label="{{ hostAria }}">
+<sc-for list="{{ pages }}" as="pg" hint-placeholder-count="4">
+<figure class="pr-slot">
+<figcaption class="pr-slot__cap">{{ pg.cap }}</figcaption>
+<div class="pr-box">
+<div class="pr-sheet ra-paper" style="{{ pg.sheetStyle }}" lang="{{ pg.lang }}">
+<div class="pr-win" style="{{ pg.winStyle }}" inert="inert">
+<div class="pr-mc" style="{{ pg.mcStyle }}">
+
+<sc-if value="{{ pg.isEn }}" hint-placeholder-val="{{ true }}">
+<div class="pp-head"><p class="pp-head__label">knowledge · [PROJECT]</p><p class="pp-head__addr">[ADDRESS] · v[N], [DATE] · Printed [DATE]</p><h1 class="pp-head__title">Our bar: performance rule v1</h1></div>
+<h2 class="pp-h2">Scoring a run</h2>
+<p class="pp-p">The scorer takes each event’s P&amp;L in %&nbsp;of&nbsp;<span class="ra-term">K</span> and computes <math class="ra-m" alttext="s equals mean divided by sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math> and <math class="ra-m" alttext="t equals s times the square root of n"><mi>t</mi><mo>=</mo><mi>s</mi><mo>×</mo><msqrt><mi>n</mi></msqrt></math>. Thirty events averaging +0.10&nbsp;%&nbsp;of&nbsp;K with an sd of 0.25&nbsp;% give <math class="ra-m" alttext="t approximately 2.19"><mi>t</mi><mo>≈</mo><mn>2.19</mn></math>, just over B6’s 2.0; fifteen such events give 1.55, enough for <span class="pr-nobr">CONDITIONAL-GO’s</span> 1.5 but not for B6.</p>
+<div class="pp-b--wide"><dc-import name="MathBlock" formula="tstat" lang="en" paper="{{ true }}" bare="{{ true }}" hint-size="100%,300px"></dc-import></div>
+<h2 class="pp-h2">Counting the trials</h2>
+<p class="pp-p">Picking the best of many backtests flatters it. The <strong class="pp-s"><span class="ra-term">deflated Sharpe ratio (DSR)</span></strong> answers this. It is a probability, that the true <span class="ra-term">Sharpe ratio</span> beats a bar, with the bar raised for the number of trials.</p>
+<p class="pp-p">The scorer takes the <span class="ra-term">participation ratio</span> of the trials’ correlation matrix, <math class="ra-m" alttext="the square of the sum of e, divided by the sum of e squared"><mrow><mo stretchy="false">(</mo><mo lspace="0">∑</mo><mi>e</mi><msup><mo stretchy="false">)</mo><mn>2</mn></msup></mrow><mo>÷</mo><mo>∑</mo><msup><mi>e</mi><mn>2</mn></msup></math> over its <span class="ra-term">eigenvalues</span> <math class="ra-m" alttext="e"><mi>e</mi></math>: ten perfectly correlated trials count as 1, ten independent ones as 10.</p>
+<div class="pp-b--wide"><dc-import name="MathBlock" formula="participation" lang="en" paper="{{ true }}" bare="{{ true }}" hint-size="100%,320px"></dc-import></div>
+<p class="pp-p"><strong class="pp-s">The <span class="ra-term">probabilistic Sharpe ratio (PSR)</span> turns a Sharpe ratio into a probability:</strong> that the true one exceeds a chosen threshold, allowing for non-Normal returns; it rises with a longer record and positive skew and falls with fatter tails.</p>
+<h2 class="pp-h2">When nothing happens</h2>
+<p class="pp-p">With independent arrivals at a steady rate, the count over a stretch is Poisson with mean <math class="ra-m" alttext="lambda equals rate times time"><mi>λ</mi><mo>=</mo><mi>rate</mi><mo>×</mo><mi>time</mi></math>, and no event at all has probability <math class="ra-m" alttext="e to the minus lambda"><msup><mi>e</mi><mrow><mo>−</mo><mi>λ</mi></mrow></msup></math>.</p>
+<div class="pp-b--wide"><dc-import name="MathBlock" formula="poisson" lang="en" paper="{{ true }}" bare="{{ true }}" hint-size="100%,300px"></dc-import></div>
+<div class="pp-quiz__head"><p class="pp-quiz__label">Quiz · 1 question</p><p class="pp-quiz__title">Check the bar</p></div>
+<div class="pp-qi"><span class="pp-qi__n">1</span><div><p>Fifteen events average +0.10&nbsp;%&nbsp;of&nbsp;K with an sd of 0.25&nbsp;%. Which bar does their t clear?</p><p class="pp-qi__hint">Choose one answer.</p><ol class="pp-opts"><li class="pp-opt"><span class="pp-qk">A</span><span>B6’s 2.0</span></li><li class="pp-opt"><span class="pp-qk">B</span><span>CONDITIONAL-GO’s 1.5</span></li><li class="pp-opt"><span class="pp-qk">C</span><span>Both</span></li><li class="pp-opt"><span class="pp-qk">D</span><span>Neither</span></li></ol></div></div>
+<p class="pp-quiz__note">Answers are at the end of this chapter.</p>
+<h2 class="pp-h2">Glossary</h2>
+<div class="pr-gl"><dc-import name="Gloss" form="paper" lang="en" bare="{{ true }}" hint-size="100%,1600px"></dc-import></div>
+<h2 class="pp-h2">Sources</h2>
+<ol class="pp-src__list"><li class="pp-src__i"><span class="pp-src__num">[1]</span><div><p class="pp-src__title">[SOURCE TITLE]</p><p class="pp-src__meta">[AUTHOR] · [YEAR]</p></div></li></ol>
+<h2 class="pp-h2">Answers</h2>
+<p class="pp-ans__lead">1 answer to “Check the bar”, with why.</p>
+<div class="pp-ai"><span class="pp-ai__n">1</span><div><p class="pp-ai__a"><span class="pp-ai__key">B</span> · CONDITIONAL-GO’s 1.5</p><p class="pp-ai__x">Fifteen such events give a t of about 1.55: over 1.5, under 2.0.</p></div></div>
+<div class="pp-colo pr-end"><p class="pp-colo__line">knowledge · [PROJECT] · English · v[N]</p><p>Printed [DATE] from [ADDRESS]. This is v[N], the current version on that date; the address always opens the newest.</p></div>
+</sc-if>
+
+<sc-if value="{{ pg.isKo }}" hint-placeholder-val="{{ false }}">
+<div class="pp-head" lang="en"><p class="pp-head__label">knowledge · [PROJECT]</p><p class="pp-head__addr">[ADDRESS] · v[N], [DATE] · Printed [DATE]</p><h1 class="pp-head__title" lang="ko">우리의 기준: 성과 규칙 v1</h1></div>
+<h2 class="pp-h2">실행 채점하기</h2>
+<p class="pp-p">스코어러는 각 이벤트의 손익을 <span class="pr-nobr"><span class="ra-term">K</span>&nbsp;대비&nbsp;%로</span> 받아 <math class="ra-m" alttext="s는 평균 나누기 sd"><mi>s</mi><mo>=</mo><mi>mean</mi><mo>÷</mo><mi>sd</mi></math>와 <math class="ra-m" alttext="t는 s 곱하기 n의 제곱근"><mi>t</mi><mo>=</mo><mi>s</mi><mo>×</mo><msqrt><mi>n</mi></msqrt></math>을 계산합니다. 이벤트 서른 개가 평균 <span class="pr-nobr">K&nbsp;대비&nbsp;+0.10&nbsp;%,</span> <span class="pr-nobr">sd&nbsp;0.25&nbsp;%이면</span> <math class="ra-m" alttext="t는 약 2.19"><mi>t</mi><mo>≈</mo><mn>2.19</mn></math>로, B6의 2.0을 조금 넘습니다. 같은 이벤트 열다섯 개면 1.55로, <span class="pr-nobr">CONDITIONAL-GO의</span> 1.5에는 충분하지만 B6에는 못 미칩니다.</p>
+<div class="pp-b--wide"><dc-import name="MathBlock" formula="tstat" lang="ko" paper="{{ true }}" bare="{{ true }}" hint-size="100%,300px"></dc-import></div>
+<h2 class="pp-h2">시도 횟수 세기</h2>
+<p class="pp-p">여러 백테스트 중 가장 좋은 것을 고르면 결과가 부풀려집니다. <strong class="pp-s"><span class="ra-term">디플레이티드 샤프 비율(DSR)</span></strong>이 이 질문에 답합니다. 실제 <span class="ra-term">샤프 비율</span>이 기준선을 넘을 확률이며, 기준선은 시도 횟수만큼 높아집니다.</p>
+<p class="pp-p">스코어러는 시도들의 상관 행렬에서 <span class="ra-term">참여 비율</span>을 구합니다. 행렬의 <span class="ra-term">고유값</span> <math class="ra-m" alttext="e"><mi>e</mi></math>에 대해 <math class="ra-m" alttext="e의 합의 제곱 나누기 e 제곱의 합"><mrow><mo stretchy="false">(</mo><mo lspace="0">∑</mo><mi>e</mi><msup><mo stretchy="false">)</mo><mn>2</mn></msup></mrow><mo>÷</mo><mo>∑</mo><msup><mi>e</mi><mn>2</mn></msup></math>입니다. 완전히 상관된 시도 열 개는 1로, 서로 독립인 시도 열 개는 10으로 셉니다.</p>
+<div class="pp-b--wide"><dc-import name="MathBlock" formula="participation" lang="ko" paper="{{ true }}" bare="{{ true }}" hint-size="100%,320px"></dc-import></div>
+<p class="pp-p"><strong class="pp-s"><span class="ra-term">확률적 샤프 비율(PSR)</span>은 샤프 비율을 확률로 바꿉니다.</strong> 실제 샤프 비율이 정해 둔 기준을 넘을 확률이며, 정규분포를 따르지 않는 수익률도 감안합니다. 기록이 길고 왜도가 양수일수록 높아지고, 꼬리가 두꺼울수록 낮아집니다.</p>
+<h2 class="pp-h2">아무 일도 없을 때</h2>
+<p class="pp-p">이벤트가 일정한 비율로 서로 독립적으로 일어나면, 한 구간의 이벤트 수는 평균이 <math class="ra-m" alttext="람다는 비율 곱하기 시간"><mi>λ</mi><mo>=</mo><mi>rate</mi><mo>×</mo><mi>time</mi></math>인 푸아송 분포를 따르고, 이벤트가 하나도 없을 확률은 <math class="ra-m" alttext="e의 마이너스 람다 제곱"><msup><mi>e</mi><mrow><mo>−</mo><mi>λ</mi></mrow></msup></math>입니다.</p>
+<div class="pp-b--wide"><dc-import name="MathBlock" formula="poisson" lang="ko" paper="{{ true }}" bare="{{ true }}" hint-size="100%,300px"></dc-import></div>
+<div class="pp-quiz__head"><p class="pp-quiz__label" lang="en">Quiz · 1 question</p><p class="pp-quiz__title">기준 확인</p></div>
+<div class="pp-qi"><span class="pp-qi__n">1</span><div><p>이벤트 열다섯 개가 평균 <span class="pr-nobr">K&nbsp;대비&nbsp;+0.10&nbsp;%,</span> <span class="pr-nobr">sd&nbsp;0.25&nbsp;%입니다.</span> 이 이벤트들의 t는 어느 기준을 넘습니까?</p><p class="pp-qi__hint" lang="en">Choose one answer.</p><ol class="pp-opts"><li class="pp-opt"><span class="pp-qk">A</span><span>B6의 2.0</span></li><li class="pp-opt"><span class="pp-qk">B</span><span>CONDITIONAL-GO의 1.5</span></li><li class="pp-opt"><span class="pp-qk">C</span><span>둘 다</span></li><li class="pp-opt"><span class="pp-qk">D</span><span>둘 다 아님</span></li></ol></div></div>
+<p class="pp-quiz__note" lang="en">Answers are at the end of this chapter.</p>
+<h2 class="pp-h2" lang="en">Glossary</h2>
+<div class="pr-gl"><dc-import name="Gloss" form="paper" lang="ko" bare="{{ true }}" hint-size="100%,1600px"></dc-import></div>
+<h2 class="pp-h2" lang="en">Sources</h2>
+<ol class="pp-src__list"><li class="pp-src__i"><span class="pp-src__num">[1]</span><div><p class="pp-src__title">[출처 제목]</p><p class="pp-src__meta">[저자] · [연도]</p></div></li></ol>
+<h2 class="pp-h2" lang="en">Answers</h2>
+<p class="pp-ans__lead" lang="en">1 answer to “<span lang="ko">기준 확인</span>”, with why.</p>
+<div class="pp-ai"><span class="pp-ai__n">1</span><div><p class="pp-ai__a"><span class="pp-ai__key">B</span> · CONDITIONAL-GO의 1.5</p><p class="pp-ai__x">같은 이벤트 열다섯 개면 t는 약 1.55로, 1.5는 넘고 2.0에는 못 미칩니다.</p></div></div>
+<div class="pp-colo pr-end" lang="en"><p class="pp-colo__line">knowledge · [PROJECT] · 한국어 · v[N]</p><p>Printed [DATE] from [ADDRESS]. This is v[N], the current version on that date; the address always opens the newest.</p></div>
+</sc-if>
+
+</div>
+</div>
+</div>
+</div>
+</figure>
+</sc-for>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"lang":{"editor":"enum","options":["en","ko"],"default":"en"},"paper":{"editor":"enum","options":["a4","letter"],"default":"a4"},"onState":{"editor":null},"$preview":{"width":1440,"height":5996}}'>
+const PR_PAPERS = { a4: { name: 'A4', w: 794, h: 1123 }, letter: { name: 'US Letter', w: 816, h: 1056 } };
+const PR_MARGIN = { top: 60, x: 57, bottom: 68 };   /* the signed sheet's margins (16 mm / 15 mm / 18 mm) */
+const PR_GAP = 120;                                  /* the gap between the flow's columns, never seen */
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    const P = p || this.props || {};
+    this.state = {
+      lang: P.lang === 'ko' ? 'ko' : 'en',
+      paper: P.paper === 'letter' ? 'letter' : 'a4',
+      over: false,
+      count: 5,
+    };
+    this.repLang = this.state.lang;
+    this.setHost = (el) => { this.host = el; };
+    this.measure = this.measure.bind(this);
+  }
+  componentDidMount() {
+    if (window.ResizeObserver && this.host) {
+      this.ro = new ResizeObserver(() => this.measure());
+      this.ro.observe(this.host);
+    }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.measure());
+    this.sig = this.state.lang + '|' + this.state.paper;
+    this.burst();
+  }
+  componentDidUpdate() {
+    // The flow (join, C02): report the chapter's language, so the next part opens in it (paper has no theme)
+    if (this.props.onState && this.state.lang !== this.repLang) { this.repLang = this.state.lang; this.props.onState({ lang: this.state.lang }); }
+    const sig = this.state.lang + '|' + this.state.paper;
+    if (sig !== this.sig) { this.sig = sig; this.burst(); }
+  }
+  componentWillUnmount() {
+    if (this.ro) this.ro.disconnect();
+    clearInterval(this.tick);
+  }
+  /* The mounted formulas and glossary arrive a moment after the sheet: count the pages again for a few seconds */
+  burst() {
+    clearInterval(this.tick);
+    let n = 0;
+    this.measure();
+    this.tick = setInterval(() => { this.measure(); n += 1; if (n >= 15) clearInterval(this.tick); }, 200);
+  }
+  /* The page count is where the flow's last block (the colophon) lands: its column is its sheet */
+  measure() {
+    const host = this.host;
+    if (!host) return;
+    const over = host.scrollWidth > host.clientWidth + 1;
+    const d = PR_PAPERS[this.state.paper];
+    const step = d.w - 2 * PR_MARGIN.x + PR_GAP;
+    const end = host.querySelector('.pr-end');
+    const count = end ? Math.floor((end.offsetLeft + 2) / step) + 1 : this.state.count;
+    if (over !== this.state.over || count !== this.state.count) this.setState({ over: over, count: count });
+  }
+  renderVals() {
+    const s = this.state;
+    const d = PR_PAPERS[s.paper];
+    const cw = d.w - 2 * PR_MARGIN.x;
+    const ch = d.h - PR_MARGIN.top - PR_MARGIN.bottom;
+    const pages = [];
+    for (let k = 0; k < s.count; k += 1) {
+      pages.push({
+        cap: 'Page ' + (k + 1) + ' of ' + s.count + (k === 0 ? ' · ' + d.name + ', at print size' : ''),
+        sheetStyle: 'width: ' + d.w + 'px; height: ' + d.h + 'px',
+        winStyle: 'width: ' + cw + 'px; height: ' + ch + 'px',
+        mcStyle: 'width: ' + cw + 'px; height: ' + ch + 'px; column-gap: ' + PR_GAP + 'px; transform: translateX(-' + (k * (cw + PR_GAP)) + 'px)',
+        lang: s.lang, isEn: s.lang === 'en', isKo: s.lang === 'ko',
+      });
+    }
+    const PRESETS = [['en', 'a4', 'English · A4'], ['en', 'letter', 'English · US Letter'], ['ko', 'a4', '한국어 · A4'], ['ko', 'letter', '한국어 · US Letter']];
+    return {
+      setHost: this.setHost,
+      hostTab: s.over ? 0 : undefined,
+      hostRole: s.over ? 'region' : undefined,
+      hostAria: s.over ? 'Sheets, scroll sideways' : undefined,
+      pages: pages,
+      presets: PRESETS.map(([lang, paper, label]) => ({
+        label: label,
+        pressed: s.lang === lang && s.paper === paper ? 'true' : 'false',
+        pick: () => this.setState({ lang: lang, paper: paper }),
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

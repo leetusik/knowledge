@@ -270,13 +270,13 @@
       "id": "P39-hk",
       "name": "Explain what was built: phase-grounded, suggested shape, glossary, formulas",
       "objective": "Explain documents come from what was built: the explain writes only from the code and the phases' records (no research of its own, codebase-only, a research phase offered first when no phase covers the subject), suggests the reader and the shape at its one confirmation, reads easily with visuals first, and carries a glossary (term links shown as a definition window on hover or tap, plus a glossary section) and typeset formulas with a plain-words legend, kept across translation and print. The glossary and formula surfaces are designed on a signed canvas first (build-after), then built in the server, reader, plugin and the workspace's explain route.",
-      "status": "planned",
+      "status": "done",
       "order": 21,
       "path": "works/phases/active/P39-hk",
-      "review_status": "pending",
-      "current_slice": "P39-hk.DECOMP",
-      "slice_count": 2,
-      "done_slice_count": 0,
+      "review_status": "pass",
+      "current_slice": null,
+      "slice_count": 23,
+      "done_slice_count": 23,
       "execution": {
         "mode": "parallel",
         "branch": "phase/P39-hk-explain_what_was_built",
@@ -287,8 +287,8 @@
       "consolidation": "pending"
     }
   ],
-  "deferred_open_count": 73,
+  "deferred_open_count": 77,
   "deferred_promoted_count": 6,
-  "deferred_dropped_count": 14,
-  "last_rebuilt_at": "2026-11-02T15:56:17+09:00"
+  "deferred_dropped_count": 20,
+  "last_rebuilt_at": "2026-11-09T17:25:29+09:00"
 }

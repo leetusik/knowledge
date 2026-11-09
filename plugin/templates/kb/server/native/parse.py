@@ -5,10 +5,14 @@ YAML header plus the body) and returns a ``ParseResult``; on any violation it
 raises ONE ``NativeFormatError`` listing every violation. Nothing is ever
 stripped or repaired: what is outside the contract is rejected.
 
-The grammar is CommonMark + GFM (tables, strikethrough, autolinks) plus three
-extensions: GFM-alert callouts, typed fenced YAML blocks and trailing ``{#id}``
-heading ids. The tree shape is documented in ``server/native/README.md``; S12's
-TS parser reproduces it from the shared fixtures in ``tests/fixtures/native/``.
+The grammar is CommonMark + GFM (tables, strikethrough, autolinks) plus four
+extensions: GFM-alert callouts, typed fenced YAML blocks, trailing ``{#id}``
+heading ids and inline math (a code span between two dollars, ``$`…`$``, its
+TeX checked by ``tex.py``). ``#id`` links resolve against the document
+namespace and ``term:<id>`` links against the glossary's own term ids, both
+after the walk, so a glossary may follow its links. The tree shape is documented in
+``server/native/README.md``; S12's TS parser reproduces it from the shared
+fixtures in ``tests/fixtures/native/``.
 """
 from __future__ import annotations
 
@@ -24,6 +28,7 @@ from . import schema
 from .errors import Collector, NativeFormatError, Violation
 from .ids import IdRegistry, heading_slug, is_valid_id
 from .refs import RefError, parse_ref
+from .tex import validate as validate_tex
 from .yamlcore import YamlError, load as load_yaml
 
 SYNTAX_VERSION = 1
@@ -105,6 +110,10 @@ class _Parser:
         self.ids = IdRegistry(reserved_ids)
         self.refs: list = []
         self.id_refs: list = []  # (id, line, block)
+        self.term_refs: list = []  # (term id, line, block): resolved after the walk
+        self.term_ids: set = set()  # the glossary's term ids, a namespace of their own
+        self.glossaries = 0
+        self.in_glossary = False  # while a glossary's definitions are parsed
         self.pending: list = []  # (block, kind, slug, body_line, token_map, is_setext)
         self.edits: dict = {}
         self.assigned: list = []
@@ -152,6 +161,10 @@ class _Parser:
         for target, line, block in self.id_refs:
             if target not in self.ids:
                 self.report(line, "ref-missing-id", f"#{target} names no id in this chapter",
+                            **({"block": block} if block else {}))
+        for target, line, block in self.term_refs:
+            if target not in self.term_ids:
+                self.report(line, "ref-missing-term", f"term:{target} names no term in this chapter's glossary",
                             **({"block": block} if block else {}))
         self.errors.raise_if_any()
         tree = {"syntax": SYNTAX_VERSION, "summary": summary, "blocks": blocks}
@@ -325,6 +338,11 @@ class _Parser:
             self.claim_authored(block, raw_id, line)
         else:
             self.pending.append((block, kind, None, node.map, False))
+        if kind == "glossary":
+            self.glossaries += 1
+            if self.glossaries > schema.MAX_GLOSSARIES:
+                self.report(line, "limit", "a chapter holds at most one glossary block",
+                            **({"block": raw_id} if raw_id else {}))
         try:
             data, ylines = load_yaml(node.content)
         except YamlError as exc:
@@ -340,7 +358,13 @@ class _Parser:
             self.report(line + 1, "field-type", f"a {kind} block's body must be a YAML mapping",
                         **({"block": raw_id} if raw_id else {}))
             return block
-        block.update(schema.CHECKS[kind](data, cx))
+        self.in_glossary = kind == "glossary"
+        try:
+            block.update(schema.CHECKS[kind](data, cx))
+        finally:
+            self.in_glossary = False
+        if kind == "glossary":
+            self.term_ids.update(t["id"] for t in block["terms"] if t and t["id"])
         return block
 
     def table(self, node) -> dict:
@@ -397,13 +421,15 @@ class _Parser:
         line = self.node_line(node)
         return self.inline_children(node.children, line, block)
 
-    def inline_children(self, children, line: int, block: Optional[str], depth: int = 0) -> list:
+    def inline_children(self, children, line: int, block: Optional[str], depth: int = 0,
+                        math: bool = True) -> list:
         if depth > MAX_INLINE_DEPTH:
             self.report(line, "limit", f"inline markup nests deeper than {MAX_INLINE_DEPTH} levels",
                         **({"block": block} if block else {}))
             return []
         out: list = []
         state = {"line": line}
+        code_lines: dict = {}  # id(code node) -> its line, for the math pass
 
         def add_text(value: str):
             if not value:
@@ -424,27 +450,62 @@ class _Parser:
                 out.append({"type": "break"})
                 state["line"] += 1
             elif t == "code_inline":
-                out.append({"type": "code", "text": child.content})
+                node = {"type": "code", "text": child.content}
+                code_lines[id(node)] = state["line"]
+                out.append(node)
             elif t in ("em", "strong", "s"):
                 name = {"em": "em", "strong": "strong", "s": "del"}[t]
-                out.append({"type": name, "children": self.inline_children(child.children, state["line"], block, depth + 1)})
+                out.append({"type": name, "children": self.inline_children(child.children, state["line"], block,
+                                                                           depth + 1, math)})
             elif t == "link":
                 href = child.attrs.get("href", "")
                 self.reference(str(href), state["line"], block, image=False)
                 title = child.attrs.get("title")
                 out.append({"type": "link", "href": str(href), "title": str(title) if title else None,
-                            "children": self.inline_children(child.children, state["line"], block, depth + 1)})
+                            "children": self.inline_children(child.children, state["line"], block, depth + 1,
+                                                             math)})
             elif t == "image":
                 src = child.attrs.get("src", "")
                 self.reference(str(src), state["line"], block, image=True)
                 title = child.attrs.get("title")
-                alt = _plain(self.inline_children(child.children, state["line"], block, depth + 1))
+                # The alt is plain text, kept as written: no math pass inside it.
+                alt = _plain(self.inline_children(child.children, state["line"], block, depth + 1, False))
                 out.append({"type": "image", "src": str(src), "alt": alt, "title": str(title) if title else None})
             elif t == "html_inline":
                 self.report(state["line"], "raw-html", f"raw HTML is not allowed ({child.content!r})",
                             **({"block": block} if block else {}))
             else:  # pragma: no cover - every enabled inline rule is handled above
                 self.report(state["line"], "unsupported", f"unsupported inline construct {t!r}")
+        return self.math_pass(out, code_lines, line, block) if math else out
+
+    def math_pass(self, nodes: list, code_lines: dict, line: int, block: Optional[str]) -> list:
+        """Inline math: a code span whose text before ends in ``$`` and whose text
+        after starts with ``$`` becomes ``{type:"math", tex}``, the two dollars
+        consumed. Left to right, so ``$`a`$$`b`$`` is two formulas. The TeX is
+        checked in the inline context, at the code span's line."""
+        out: list = []
+        i = 0
+        while i < len(nodes):
+            node = nodes[i]
+            prev = out[-1] if out else None
+            nxt = nodes[i + 1] if i + 1 < len(nodes) else None
+            if (node["type"] == "code" and prev is not None and prev["type"] == "text"
+                    and prev["text"].endswith("$") and nxt is not None and nxt["type"] == "text"
+                    and nxt["text"].startswith("$")):
+                prev["text"] = prev["text"][:-1]
+                if not prev["text"]:
+                    out.pop()
+                out.append({"type": "math", "tex": node["text"]})
+                problem = validate_tex(node["text"], display=False)
+                if problem is not None:
+                    self.report(code_lines.get(id(node), line), problem[0], problem[1],
+                                **({"block": block} if block else {}))
+                if len(nxt["text"]) > 1:
+                    out.append({"type": "text", "text": nxt["text"][1:]})
+                i += 2
+                continue
+            out.append(node)
+            i += 1
         return out
 
     def reference(self, href: str, line: int, block: Optional[str], *, image: bool) -> None:
@@ -454,7 +515,14 @@ class _Parser:
         except RefError as exc:
             self.report(line, exc.code, exc.message, **extra)
             return
-        if ref["kind"] == "id":
+        if ref["kind"] == "term":
+            if self.in_glossary:
+                # A definition is runs of text (and, from S7, math): a term link there
+                # would open a term window inside a term window.
+                self.report(line, "ref-scheme", f"a glossary definition cannot link a term ({href!r})", **extra)
+                return
+            self.term_refs.append((ref["id"], line, block))
+        elif ref["kind"] == "id":
             self.id_refs.append((ref["id"], line, block))
         self.refs.append({**ref, "href": href, "line": line, "image": image})
 
@@ -484,6 +552,8 @@ def _plain(nodes: list) -> str:
         t = node["type"]
         if t in ("text", "code"):
             out.append(node["text"])
+        elif t == "math":
+            out.append(node["tex"])
         elif t == "break":
             out.append("\n")
         elif "children" in node:

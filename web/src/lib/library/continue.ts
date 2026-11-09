@@ -26,7 +26,7 @@ import {
 } from "@/lib/knowledge/reader";
 import type { KbBook, KbBookChapter } from "@/lib/knowledge/types";
 import { validateChapter } from "@/lib/native";
-import { plainText } from "@/lib/native/parse";
+import { displayText } from "@/lib/native/display-text";
 import { languageName } from "@/lib/reader/language";
 import { readerHref } from "@/lib/reader-href";
 
@@ -72,12 +72,15 @@ async function orMiss<T>(run: () => Promise<T>): Promise<T | undefined> {
   }
 }
 
-/** The heading text a block id sits under: the nearest heading at or before it. */
+/**
+ * The heading text a block id sits under: the nearest heading at or before it, as displayed
+ * (P39-hk.F4, OQ10: an inline formula as its linear text, never its TeX).
+ */
 export function sectionTitle(source: string, anchorId: string): string {
   const checked = validateChapter(source, "native");
   let heading = "";
   for (const block of checked.tree.blocks) {
-    if (block.type === "heading") heading = plainText(block.content);
+    if (block.type === "heading") heading = displayText(block.content);
     if (block.id === anchorId) return heading;
   }
   return "";

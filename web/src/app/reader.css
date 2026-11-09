@@ -772,6 +772,8 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 .rd-next__lede { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 34rem; }
 .rd-next__title:lang(ko), .rd-next__lede:lang(ko) { word-break: keep-all; }
 .rd-next .rd-btn { margin-top: var(--kb-space-xs); }
+/* A large root font: the button never outgrows the column, its label wraps (the nowrap of .rd-btn holds everywhere else) */
+.rd-next .rd-btn { max-width: 100%; white-space: normal; text-align: center; }
 .rd-end__list { margin-top: var(--kb-space-xl); }
 .rd-end__listhead { margin: 0 0 var(--kb-space-xs); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--kb-space-xs) var(--kb-space-md); }
 .rd-end__listtitle { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--rd-fs); color: var(--kb-ink); }
@@ -1420,6 +1422,9 @@ details[open] > .kb-ch-callout__sum .kb-ch-callout__toggle-closed { display: non
 .kb-ch .qz-card__answer { margin: calc(var(--kb-space-xs) * var(--rd-k)) 0 0; text-wrap: pretty; overflow-wrap: break-word; }
 .kb-ch .qz-card__why { margin: calc(var(--kb-space-sm) * var(--rd-k)) 0 0; color: var(--kb-secondary); text-wrap: pretty; overflow-wrap: break-word; }
 .kb-ch .qz-card .rd-btn { flex: none; }
+/* A large root font: the quiz's buttons wrap inside the column instead of widening the page (the Review card has its own, review.css) */
+.kb-ch:not(.rv-body) .qz-card .rd-btn, .kb-ch:not(.rv-body) .qz-acts .rd-btn { max-width: 100%; white-space: normal; text-align: center; }
+.kb-ch:not(.rv-body) .qz-acts .qz-swap { align-items: center; } /* the shorter of the two labels sits mid-button when the longer wraps */
 /* ---------- Cloze: blanks inside the sentence ---------- */
 /* Lines are tall enough for a 44px field on every line, so a blank never pushes its line apart from the next. */
 .kb-ch .qz-cloze { line-height: max(3.25rem, 2.3em); }

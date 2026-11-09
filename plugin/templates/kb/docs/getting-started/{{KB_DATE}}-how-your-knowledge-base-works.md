@@ -36,8 +36,9 @@ This one is built from three small, ordinary parts working together:
    linked to the topics it shares with its neighbours. Open the **Graph** tab to
    see it.
 
-None of these needs the others to be running to work. If the API is down, an
-explainer can still be written straight to a file. If you never publish the
+None of these needs the others to be running to work. If the API is down, the
+explainer is not published, but its draft is kept so you can publish it later,
+and nothing is written into your project. If you never publish the
 site, it still runs on your own machine.
 
 ## 2. The shape of an explainer
@@ -68,9 +69,10 @@ itself.
 ## 3. How a new page arrives
 
 You do not edit these files by hand. You ask the `/knowledge:explain` skill to
-explain something. From a repository with a workflow workspace (v86 or later), it
-confirms the plan with you once, then researches, writes and checks the
-explainer as an explain phase and sends it to the document API, which does three
+explain something. From a repository with a workflow workspace (v94 or later), it
+confirms the plan with you once, then writes the explainer from that
+repository's code and its phases' records, checks it as an explain phase and
+sends it to the document API, which does three
 things for you:
 
 1. Writes the explainer file with correct frontmatter under the right project.

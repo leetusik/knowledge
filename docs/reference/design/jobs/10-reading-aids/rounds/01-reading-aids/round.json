@@ -1,0 +1,27 @@
+{
+  "schema": 2,
+  "round": "01-reading-aids",
+  "title": "Reading aids: terms, glossary, formulas",
+  "slice": "P39-hk.D1",
+  "status": "signed",
+  "opened_at": "2026-11-02T16:13:34+09:00",
+  "closed_at": "2026-11-03T08:17:53+09:00",
+  "supersedes": [],
+  "signoff_words": "accept",
+  "canvas_version": "1793661304-517d",
+  "critique": "critic",
+  "pages": [
+    "terms",
+    "formulas",
+    "print"
+  ],
+  "published": "1793661304-517d",
+  "readback": {
+    "version": "1793661304-517d",
+    "base": "1793661304-517d",
+    "result": "unchanged",
+    "files": [],
+    "removed": [],
+    "at": "2026-11-03T08:17:49+09:00"
+  }
+}

@@ -1,0 +1,47 @@
+{
+ "MarkStates.dc.html": {
+  "w": 2100,
+  "h": 780,
+  "title": "Component — Term marker in running text"
+ },
+ "GlossStates.dc.html": {
+  "w": 2100,
+  "h": 3420,
+  "title": "Component — Definition window and phone sheet"
+ },
+ "GlossListStates.dc.html": {
+  "w": 2100,
+  "h": 5800,
+  "title": "Component — Glossary and paper appendix"
+ },
+ "MathInlineStates.dc.html": {
+  "w": 2100,
+  "h": 620,
+  "title": "Component — Inline formula"
+ },
+ "MathBlockStates.dc.html": {
+  "w": 2100,
+  "h": 2900,
+  "title": "Component — Display formula block"
+ },
+ "ShellStates.dc.html": {
+  "w": 1300,
+  "h": 460,
+  "title": "Component — Reader top bar (Shell)"
+ },
+ "Gloss.dc.html": {
+  "w": 720,
+  "h": 3600,
+  "title": "Component — Glossary term (alone, the glossary form)"
+ },
+ "MathBlock.dc.html": {
+  "w": 720,
+  "h": 560,
+  "title": "Component — Display formula block (alone)"
+ },
+ "Shell.dc.html": {
+  "w": 1200,
+  "h": 59,
+  "title": "Component — Shell (alone)"
+ }
+}

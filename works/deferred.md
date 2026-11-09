@@ -4,9 +4,9 @@
 
 ## Summary
 
-- Open: `73`
+- Open: `77`
 - Promoted: `6`
-- Dropped: `14`
+- Dropped: `20`
 
 ## Open
 
@@ -59,29 +59,33 @@
 | `D64` | `deferred` | Pages with their own CSS keep the previous page's scroll position on a client navigation | P30.F6 | The next book-page or library slice, or a decision to try experimental.appNewScrollHandler app-wide | `works/deferred/open/D64` |
 | `D65` | `deferred` | CLI line numbers are body-relative for files with a --- header | P31.REVIEW | Someone fixes a headered file by the printed line numbers | `works/deferred/open/D65` |
 | `D66` | `deferred` | A missing FILE exits 1 under knowledge check | P31.REVIEW | An agent loops on fix the listed lines | `works/deferred/open/D66` |
-| `D67` | `deferred` | Cross-vendor verifier for explain research and critique | P32 intake | P32 has shipped, and the operator asks for it, or the Claude verifier or critic is seen missing errors a different vendor's model would catch | `works/deferred/open/D67` |
+| `D67` | `deferred` | Cross-vendor critic for explain chapters | P32 intake | P32 has shipped, and the operator asks for it, or the Claude verifier or critic is seen missing errors a different vendor's model would catch | `works/deferred/open/D67` |
 | `D68` | `deferred` | Landing SKILL.md rejected by claude.ai skill upload (argument-hint) | P32.S3 | When claude.ai upload of the landing SKILL.md matters, or the next change to the three-copy parity rule | `works/deferred/open/D68` |
 | `D69` | `deferred` | explain: teach the plugin's §1 placement minted phase ids (P-7kq2) | P32.REVIEW | the first book on a minted id after the bootstrap applies P32's package, or the next §1 change | `works/deferred/open/D69` |
 | `D70` | `deferred` | explain: move the publish plumbing into the CLI and shrink the skill | P32.REVIEW | the next publish-step change, or the skill passing about 160 KB | `works/deferred/open/D70` |
 | `D71` | `deferred` | Server-side draft state for books and chapters | P32.REVIEW | the operator asks, or a book run needs drafts on the server | `works/deferred/open/D71` |
-| `D72` | `deferred` | explain: a mechanical dossier and search-total line | P32.REVIEW | the next §4.9/B12 change, or a report that hides a skipped stage | `works/deferred/open/D72` |
-| `D73` | `deferred` | explain: verifier batches and waves in the foreground under claude -p | P32.REVIEW | a headless run whose batch runs past 10 minutes, or a harness that runs the skill headless | `works/deferred/open/D73` |
 | `D74` | `deferred` | Landing: derive the skill pane's line count from the served SKILL.md | P32.REVIEW | the next SKILL.md edit that changes its line count after P32 | `works/deferred/open/D74` |
-| `D75` | `deferred` | explain: close the run mechanically at publish (run.md state and report.md) | P32.REVIEW | D72's job, or a resume that picks an already-published run | `works/deferred/open/D75` |
-| `D76` | `deferred` | explain: name 'family' in the verifier's and critic's same-model guards; give a missing researchers_model line its own block | P32.REVIEW | a cross-family block seen in a run, a lead 'correcting' model: for a missing line, or the next B4/B5 edit (e.g. D70's shrink) | `works/deferred/open/D76` |
 | `D77` | `deferred` | explain book: the outline gate's report runs ~3.7k chars against the ~2k stop rule | P32.REVIEW | the next bootstrap update that touches explain-decomposition.md | `works/deferred/open/D77` |
 | `D78-rq` | `deferred` | Explain front door: landing framing and wording follow-up | P33-n3.REVIEW | the operator's rewording, or the next plugin release (0.7.1) | `works/deferred/open/D78-rq` |
 | `D79-we` | `deferred` | Delete the vendored .claude/skills/explain/ | P33-n3.REVIEW | the operator's word, or the next /update-workspace | `works/deferred/open/D79-we` |
-| `D80-ch` | `deferred` | Plugin text drift outside the explain front door | P33-n3.REVIEW | the next touch of either file | `works/deferred/open/D80-ch` |
 | `D81-aa` | `deferred` | Teach the private-project matcher HTML card links | P34-n0.REVIEW | before a card is added for a project, or before any project is set public again | `works/deferred/open/D81-aa` |
 | `D82-kq` | `deferred` | Let the site build pass on a KB with no public project | P34-n0.REVIEW | when the operator wants a green push, or the red check gets in the way | `works/deferred/open/D82-kq` |
 | `D83-5s` | `deferred` | Off-box backup for tenant #1's documents | P34-n0.REVIEW | operator's word (P34-n0 OQ6, accepted as drawn: file now); at the latest before the next document of value is written | `works/deferred/open/D83-5s` |
-| `D84-8s` | `deferred` | A metered live 0.9.0 explain trial | P38-e1.REVIEW | the operator's word, after P38-e1 merges and the installed knowledge plugin is updated to 0.9.0 | `works/deferred/open/D84-8s` |
 | `D85-qk` | `deferred` | Workspace follow-ups for 0.9.0 explain runs (bootstrap repo) | P38-e1.REVIEW | the operator's answer to OQ1 at P38-e1's acceptance gate, or the next /update-workspace | `works/deferred/open/D85-qk` |
 | `D86-sd` | `deferred` | Explain skill wording follow-up after 0.9.0 | P38-e1.REVIEW | the start of P39-hk (which edits the same skill), or the next plugin release | `works/deferred/open/D86-sd` |
 | `D87-2g` | `deferred` | Setup's verify step puts the pasted KB key on the command line | P38-e1.REVIEW | the next edit of the setup skill, or the operator's word | `works/deferred/open/D87-2g` |
 | `D88-gd` | `deferred` | Landing hero h1 overflows at 390px | P37-1p.REVIEW | the next landing or marketing phase, or before a phone-focused launch | `works/deferred/open/D88-gd` |
 | `D89-zf` | `deferred` | Graph leftovers tidy-up | P37-1p.REVIEW | the next slice touching db.py, reader_api.py, books_api.py or the redirect routes, or a docs phase | `works/deferred/open/D89-zf` |
+| `D90-ke` | `deferred` | design-preview crashes writing preview.json on a split math italic character | P39-hk.REVIEW (from D1) | the next design round with math, or the next engine change in the bootstrap repo | `works/deferred/open/D90-ke` |
+| `D91-j2` | `deferred` | design-sign mis-parses a multi-line open_items: in SIGNOFF.md | P39-hk.REVIEW (from D1) | the next design-close with a multi-line open_items list | `works/deferred/open/D91-j2` |
+| `D92-dc` | `deferred` | phase-section --to-topic leaves relative links stale in the moved block | P39-hk.REVIEW (from DECOMP2, F6, F7) | the next --to-topic move of an entry with a relative link, or the next engine change in the bootstrap repo | `works/deferred/open/D92-dc` |
+| `D93-k1` | `deferred` | Re-sync the kb Design System from code after the reading aids (S8, S9) | P39-hk.REVIEW (from S8, S9) | a session that can open the kb system, before the next reader design job | `works/deferred/open/D93-k1` |
+| `D94-cp` | `deferred` | Re-run the explain front door under claude -p in a workspace on v94 | P39-hk.REVIEW round 3 | /update-workspace to v94 here, after P39-hk merges | `works/deferred/open/D94-cp` |
+| `D95-y7` | `deferred` | P30's reader chrome and the quiz at large text on a phone | P39-hk OQ21 (operator: accept) | the next reader-chrome design job, or a QA sweep at large text | `works/deferred/open/D95-y7` |
+| `D96-r0` | `deferred` | The console at 200% text | P39-hk OQ22 (operator: accept) | the next P28 console change, or a QA sweep at large text | `works/deferred/open/D96-r0` |
+| `D97-x6` | `deferred` | Show a stored quote with math as text in the notes lists | P39-hk OQ23 (operator: all as your recommendations) | the next notes-list change, or the first chapter whose highlights cross formulas | `works/deferred/open/D97-x6` |
+| `D98-mj` | `deferred` | A heading with no authored id takes a new id in each version, orphaning its marks | P39-hk.REVIEW rounds 2-3 (observation outside the boundary) | the next native-ingest change, or the first report of a lost highlight | `works/deferred/open/D98-mj` |
+| `D99-s9` | `deferred` | A place name's own name and language, everywhere the reader names a section | P39-hk.REVIEW round 3 (F7's observations; walkthrough decision 2) | the next reader-chrome or notes change, or the first VoiceOver report | `works/deferred/open/D99-s9` |
 | `D-pzs7` | `deferred` | Retire or redirect the orphaned document archive page | P-8jbf.DECOMP | the next reader or documents phase | `works/deferred/open/D-pzs7` |
 | `D-19n8` | `deferred` | Quiz Show answer button overflows a 390 phone at 200% root text | P-8jbf.REVIEW | the next reader or quiz phase, or a QA sweep | `works/deferred/open/D-19n8` |
 | `D-6pf9` | `deferred` | A long table's box state depends on resize history | P-8jbf.F1 | the next reader-tables phase or a QA sweep | `works/deferred/open/D-6pf9` |
@@ -115,3 +119,9 @@
 | `D38` | `dropped` | Unmeasured explainer box: 70rem vs round 06's flat per-tier heights | Moot after P30.S25: the measured box, frame print slicing and height reporter are retired (P30.REVIEW) | `works/deferred/dropped/D38` |
 | `D39` | `dropped` | Chrome print slicing of a framed explainer (page-1 gap, near-blank pages) | Moot after P30.S25: the measured box, frame print slicing and height reporter are retired (P30.REVIEW) | `works/deferred/dropped/D39` |
 | `D40` | `dropped` | Explainer reporter: measureAt can loop with a document that mutation-observes <html> | Moot after P30.S25: the measured box, frame print slicing and height reporter are retired (P30.REVIEW) | `works/deferred/dropped/D40` |
+| `D72` | `dropped` | explain: a mechanical dossier and search-total line | Moot after P39-hk: the explain runs no searches and writes no plan.md or run.md (S2, S4; P39-hk.REVIEW) | `works/deferred/dropped/D72` |
+| `D73` | `dropped` | explain: verifier batches and waves in the foreground under claude -p | Moot after P39-hk: no verifier batches or waves remain, and the critic already runs in the foreground (SKILL.md §4.10; S4; P39-hk.REVIEW) | `works/deferred/dropped/D73` |
+| `D75` | `dropped` | explain: close the run mechanically at publish (run.md state and report.md) | Moot after P39-hk: run.md and report.md are gone (S2) and pagetext.py only builds the payload (P39-hk.REVIEW) | `works/deferred/dropped/D75` |
+| `D76` | `dropped` | explain: name 'family' in the verifier's and critic's same-model guards; give a missing researchers_model line its own block | Done by P39-hk: B5 names the other family from the writer's (SKILL.md, S2) and the verifier half is retired; bootstrap v94 carries the critic-on-the-other-family rule (P39-hk.REVIEW) | `works/deferred/dropped/D76` |
+| `D80-ch` | `dropped` | Plugin text drift outside the explain front door | Done by P39-hk.F4: the KB template page's API-down line no longer says the explainer can be written straight to a file; setup's general-mode half was moot after S4 (P39-hk.REVIEW) | `works/deferred/dropped/D80-ch` |
+| `D84-8s` | `dropped` | A metered live 0.9.0 explain trial | Moot after P39-hk: the 0.9.0 cost table and team sizing it would meter are gone; a metered 0.10.0 run would be a new job, on the operator's word (P39-hk.REVIEW) | `works/deferred/dropped/D84-8s` |

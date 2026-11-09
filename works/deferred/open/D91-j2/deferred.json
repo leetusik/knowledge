@@ -1,0 +1,11 @@
+{
+  "id": "D91-j2",
+  "title": "design-sign mis-parses a multi-line open_items: in SIGNOFF.md",
+  "status": "deferred",
+  "source": "P39-hk.REVIEW (from D1)",
+  "reason": "D1's SIGNOFF lists its first open item word by word; the true list is in the round's result.md. A workspace engine bug: the fix belongs in the bootstrap repo",
+  "trigger": "the next design-close with a multi-line open_items list",
+  "created_at": "2026-11-09T16:22:04+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

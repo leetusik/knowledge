@@ -22,21 +22,22 @@ Checks:
     portable copies; a mismatch prints a warning but still exits 0 (unless a body/web
     check also failed).
   * MISSING (FAIL) — any of the three copies absent fails with a clear message.
-  * AGENTS (FAIL; P32.S4) — the canonical file's Part B holds the research roles' briefs
-    between ``<!-- part-b:begin <name>[ with=<a>,<b>,…] -->`` and
+  * AGENTS (FAIL; P32.S4; P39-hk.S4) — the canonical file's Part B holds the critic's
+    brief between ``<!-- part-b:begin <name>[ with=<a>,<b>,…] -->`` and
     ``<!-- part-b:end <name> -->`` marker lines (an *extract* is the lines strictly
     between the two). A role's brief is its own extract followed by the shared extracts
-    its ``with=`` list names, in that order, joined by one blank line. Each of the five
-    ``plugin/agents/<role>.md`` files must exist, carry ``name: <role>``, carry none of
-    the fields plugins ignore or forbid (``permissionMode``, ``hooks``, ``mcpServers``)
-    and no ``Agent``/``Task`` tool, and have a body (after the frontmatter and one blank
-    line) byte-equal to its brief. No other agent file may exist. The markers must be
-    well formed (unique, closed, not nested, every ``with=`` name defined), and the
-    ``pagetext`` extract (the page converter the skill writes out at run time) must
-    compile as Python.
+    its ``with=`` list names, in that order, joined by one blank line. Since P39-hk the
+    explain has no research roles, so the one role is the critic: its
+    ``plugin/agents/explain-critic.md`` must exist, carry ``name: explain-critic``, carry
+    none of the fields plugins ignore or forbid (``permissionMode``, ``hooks``,
+    ``mcpServers``) and no ``Agent``/``Task`` tool, and have a body (after the
+    frontmatter and one blank line) byte-equal to its brief. No other agent file may
+    exist. The markers must be well formed (unique, closed, not nested, every ``with=``
+    name defined), and the ``pagetext`` extract (the publish payload builder the skill
+    writes out at run time) must compile as Python.
 
-``--write-agents`` regenerates every agent body from the canonical Part B, keeping each
-file's frontmatter, then runs the checks. Edit a brief in SKILL.md (all three copies),
+``--write-agents`` regenerates the agent body from the canonical Part B, keeping each
+file's frontmatter, then runs the checks. Edit the brief in SKILL.md (all three copies),
 then run ``python3 scripts/skills_parity.py --write-agents``.
 """
 
@@ -51,7 +52,7 @@ CANONICAL = REPO_ROOT / "plugin" / "skills" / "explain" / "SKILL.md"
 PORTABLE = REPO_ROOT / ".agents" / "skills" / "explain" / "SKILL.md"
 WEB = REPO_ROOT / "web" / "public" / "SKILL.md"
 AGENTS_DIR = REPO_ROOT / "plugin" / "agents"
-AGENT_ROLES = ("web-researcher", "code-researcher", "gap-reviewer", "verifier", "explain-critic")
+AGENT_ROLES = ("explain-critic",)
 FORBIDDEN_FIELDS = ("permissionMode", "hooks", "mcpServers")
 FORBIDDEN_TOOLS = ("Agent", "Task")
 MARK_BEGIN = re.compile(r"^<!-- part-b:begin ([a-z][a-z0-9-]*)(?: with=([a-z0-9-]+(?:,[a-z0-9-]+)*))? -->$")
@@ -134,7 +135,7 @@ def check_agents(canonical_text: str, write: bool) -> list[str]:
     if failures:
         return [f"Part B markers: {e}" for e in failures]
     if "pagetext" not in extracts:
-        failures.append("Part B has no 'pagetext' extract (the page converter)")
+        failures.append("Part B has no 'pagetext' extract (the payload builder)")
     else:
         code = extracts["pagetext"].split("\n", 1)[-1].rsplit("```", 1)[0]
         try:
@@ -171,7 +172,7 @@ def check_agents(canonical_text: str, write: bool) -> list[str]:
         tools = [t.strip() for t in fields.get("tools", "").split(",")]
         for tool in FORBIDDEN_TOOLS:
             if tool in tools:
-                failures.append(f"{shown}: tools list '{tool}' (research agents never spawn)")
+                failures.append(f"{shown}: tools list '{tool}' (the critic never spawns)")
         expected = "\n" + brief(role, extracts, withs)
         if body != expected:
             if write:
@@ -230,7 +231,7 @@ def main() -> int:
 
     print(
         "PASS — explain skill copies are in body parity (web copy byte-identical); "
-        f"the {len(AGENT_ROLES)} plugin agents match Part B."
+        "the plugin agent matches Part B."
     )
     return 0
 

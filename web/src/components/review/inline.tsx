@@ -13,6 +13,8 @@ import { hangulRuns } from "@/lib/reader/hangul";
  * Links: an external address opens in a new tab; a `#id` link goes to that place in the card's
  * chapter (`hrefBase`); a chapter or document reference (`chapter:…`) needs the book to resolve
  * and is shown as its words, never as a guess at an address. An image is shown as its alt text.
+ * A formula arrives as its linear text, made on the server (P39-hk.S8, OQ9); a `term:` link,
+ * like any reference the card cannot open, is its words.
  *
  * A cloze sentence passes `cloze`: each blank becomes the card's input, numbered in reading
  * order, and what touches a blank's end with no space between (a comma, a full stop, a Korean
@@ -84,6 +86,10 @@ function run(
         return <Fragment key={i}>{hangulRuns(node.text, wrap)}</Fragment>;
       case "code":
         return <code key={i}>{node.text}</code>;
+      case "math":
+        // P39-hk.S8 (OQ9): the server turns every formula into its linear text before a card
+        // reaches here (`lib/review/actions.ts`). Should one ever arrive, it is shown, never dropped.
+        return <code key={i}>{node.tex}</code>;
       case "em":
         return (
           <em key={i}>{run(node.children, wrap, base, cloze, counter)}</em>

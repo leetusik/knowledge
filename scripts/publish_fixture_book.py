@@ -10,6 +10,9 @@ script publishes the one shared fixture book from ``tests/fixtures/book/`` throu
     images in a figure row, an svg; published twice, so it has a version 2;
   - ``write-lock``: an English chapter and its Korean translation (same ids);
   - ``legacy``: one legacy html chapter;
+  - ``reading-aids`` (P39-hk.S8): the signed reading-aids canvas's chapter (job
+    ``10-reading-aids``): inline math, four formula blocks, term links, a 12-term glossary
+    and a quiz, in English and its Korean translation;
 * one loose native document carrying ``subject`` (project ``fixture-finance``).
 
 Everything is invented text (P29's canvas content rule). The images are tiny PNG tiles
@@ -177,6 +180,11 @@ def main() -> int:
         save("legacy html", "legacy-explainer.html", "--slug", "legacy-explainer", *book, "--format", "html", "--lang", "en",
              "--tag", "fixture,legacy", "--chapter", "legacy", "--position", "3",
              "--chapter-title", "A legacy explainer")
+        # The reading aids (P39-hk.S8, S9): math, formulas, terms and a glossary, in two languages.
+        save("reading-aids en", "reading-aids.en.md", "--slug", "reading-aids", *book, "--chapter", "reading-aids",
+             "--position", "4", "--chapter-title", "Our bar: performance rule v1")
+        save("reading-aids ko", "reading-aids.ko.md", "--slug", "reading-aids-ko", *book, "--chapter", "reading-aids",
+             "--chapter-title", "우리의 기준: 성과 규칙 v1")
         # A loose native document with a subject, in its own project (general mode).
         save("loose note", "loose-note.md", "--slug", "compound-growth", "--subject", "Fixture finance",
              project=LOOSE_PROJECT)

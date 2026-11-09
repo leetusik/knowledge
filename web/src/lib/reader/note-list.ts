@@ -41,6 +41,8 @@ export interface ListItem {
   sec: string | null;
   /** The section's label ("Background", "Diagram · The flow"), for the meta line. */
   secTitle: string;
+  /** P39-hk.F7: the label's own language, when it is not the mark's (the Glossary h2's). */
+  secLang?: string;
   quote: string;
   note: string;
   label: string;
@@ -65,6 +67,8 @@ export interface ListItem {
 export interface SectionLook {
   n: number;
   label: string;
+  /** P39-hk.F7: the label's own language, when it is not the chapter's (the Glossary). */
+  lang?: string;
 }
 
 export type SectionIndex = ReadonlyMap<string, SectionLook>;
@@ -83,6 +87,52 @@ export interface BuildOptions {
   chapterTitle: string;
   /** The quotes that sit in a code block (highlight ids). */
   code: ReadonlySet<string>;
+  /**
+   * P39-hk.F4 (OQ10): the quote shown in place of the stored one, by highlight id: a quote
+   * holding an inline formula, with the formula as its linear text (`shownQuote`). Display only.
+   */
+  shown?: ReadonlyMap<string, string>;
+}
+
+/** P39-hk.F4 (OQ10): an inline formula in a section's text: its TeX's place (code points) and its linear text. */
+export interface QuoteAtom {
+  at: number;
+  len: number;
+  alt: string;
+}
+
+/**
+ * P39-hk.F4 (OQ10) — the quote a list or a card shows for a highlight whose stored quote holds a
+ * formula. The stored quote is a slice of the section's projected `text` (code points), where a
+ * formula is its bare TeX; here each formula wholly inside `[start, end)` becomes its linear text
+ * (`alt`, S8's: the inline `alttext`, the Review quiz card's text), everything else is the stored
+ * text as is. Mapped from the highlight's own offsets and the formulas' own places, never found by
+ * searching the string (a one-letter formula "n" is also the word "n"). Null, so the stored quote
+ * shows, when the text at those offsets is not the stored quote, when an offset falls inside a
+ * formula, or when no formula is in it. A formula with no linear text keeps its TeX.
+ */
+export function shownQuote(
+  text: readonly string[],
+  start: number,
+  end: number,
+  exact: string,
+  atoms: readonly QuoteAtom[],
+): string | null {
+  if (!(start >= 0 && end > start && end <= text.length)) return null;
+  if (text.slice(start, end).join("") !== exact) return null;
+  const inside = atoms
+    .filter((a) => a.at < end && a.at + a.len > start)
+    .sort((a, b) => a.at - b.at);
+  if (!inside.length) return null;
+  let out = "";
+  let i = start;
+  for (const a of inside) {
+    if (a.at < start || a.at + a.len > end || a.at < i) return null;
+    out += text.slice(i, a.at).join("");
+    out += a.alt || text.slice(a.at, a.at + a.len).join("");
+    i = a.at + a.len;
+  }
+  return out + text.slice(i, end).join("");
 }
 
 const SECTION_SCALE = 1e6;
@@ -112,7 +162,8 @@ export function noteItem(n: ReaderNote, o: BuildOptions): ListItem {
     version: n.version,
     sec,
     secTitle: where?.label ?? n.snapshot?.block ?? "",
-    quote: n.quote?.exact ?? "",
+    ...(where?.lang ? { secLang: where.lang } : {}),
+    quote: o.shown?.get(n.id) ?? n.quote?.exact ?? "",
     note: n.note,
     label: "",
     snippet: "",
@@ -158,6 +209,7 @@ export function bookmarkItem(
     version: b.version,
     sec: status === "orphan" ? null : b.at,
     secTitle: where?.label ?? b.snippet,
+    ...(where?.lang ? { secLang: where.lang } : {}),
     quote: "",
     note: "",
     label: b.label,
@@ -183,6 +235,7 @@ export function otherItem(n: ReaderOtherNote, o: BuildOptions): ListItem {
     status: "other",
     sec: n.at,
     secTitle: where?.label ?? n.snapshot?.block ?? "",
+    secLang: where?.lang,
     order: where ? where.n * SECTION_SCALE + (n.start ?? 0) : UNPLACED,
   };
 }
@@ -363,7 +416,13 @@ export function rowView(
     gone: goneText,
     hasGone: gone && !!goneText,
     title,
-    titleLang: isBm && it.label ? langOf(it.label, "en") : it.lang,
+    // P39-hk.F7: a section bookmark's title is its place name, in that name's own language.
+    titleLang:
+      isBm && it.label
+        ? langOf(it.label, "en")
+        : isBm && !it.approx && !it.pos && it.secLang
+          ? it.secLang
+          : it.lang,
     titleBold: isBm && !!it.label,
     hasTitle: !!title,
     note: it.note,

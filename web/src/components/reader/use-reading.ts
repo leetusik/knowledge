@@ -123,6 +123,24 @@ function hashTarget(root: HTMLElement): HTMLElement | null {
 
 const INPUT = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
 
+/**
+ * A heading's text as the contents list it (P39-hk.F6, OQ23): each inline formula read as its
+ * `alttext`, the linear text the renderer writes there (F4's `displayText`), never its MathML
+ * tokens; every other node as its text.
+ */
+function headingText(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) return node.nodeValue ?? "";
+  if (node instanceof Element && node.localName === "math") {
+    const alt = node.getAttribute("alttext");
+    if (alt !== null) return alt;
+  }
+  let out = "";
+  node.childNodes.forEach((c) => {
+    out += headingText(c);
+  });
+  return out;
+}
+
 /** The heading a block sits under (or is): the section a reader would name. */
 function sectionTitleOf(root: HTMLElement, el: Element): string | null {
   let found: string | null = null;
@@ -133,7 +151,7 @@ function sectionTitleOf(root: HTMLElement, el: Element): string | null {
         h === el ||
         h.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING
       ) {
-        found = h.textContent?.trim() || found;
+        found = headingText(h).trim() || found;
       }
     });
   return found;

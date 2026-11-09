@@ -22,11 +22,12 @@ search_text(result.tree)  # the FTS/embedding text (S5)
 
 | Module | What it holds |
 |---|---|
-| `parse.py` | `parse_chapter`. It runs markdown-it-py (CommonMark + GFM tables, strikethrough and autolinks) plus the three extensions, and builds the tree. |
+| `parse.py` | `parse_chapter`. It runs markdown-it-py (CommonMark + GFM tables, strikethrough and autolinks) plus the four extensions, and builds the tree. |
 | `schema.py` | The typed-block schemas and every limit. |
+| `tex.py` | The TeX allowlist validator for inline and display math (`ALLOWLIST`, held equal to `tests/fixtures/native/tex-allowlist.tsv`), and the `formula-legend` match. Pure Python, no math engine. |
 | `svg.py` | The SVG allowlist validator. It rejects and never strips. |
 | `ids.py` | Id syntax, the document namespace and assignment. |
-| `refs.py` | Reference syntax (`#id`, `http(s):`, `asset:`, `chapter:`, `doc:`). |
+| `refs.py` | Reference syntax (`#id`, `term:`, `http(s):`, `asset:`, `chapter:`, `doc:`). |
 | `project.py` | The section projection and the search text. |
 | `yamlcore.py` | The YAML 1.2 core-schema loader, on PyYAML. |
 | `errors.py` | `Violation` and `NativeFormatError`. |
@@ -54,7 +55,8 @@ The codes are:
 | Ids | `id-malformed`, `id-duplicate` |
 | YAML | `yaml`, `yaml-anchor`, `yaml-tag`, `yaml-duplicate-key`, `yaml-key`, `yaml-merge`, `yaml-value` |
 | Schema | `field-type`, `field-missing`, `field-unknown`, `field-value`, `limit`, `diagram-ref`, `quiz-answer`, `cloze-blank` |
-| References | `ref-scheme`, `ref-malformed`, `ref-missing-id`, `ref-external-image`, `ref-asset-link` |
+| References | `ref-scheme`, `ref-malformed`, `ref-missing-id`, `ref-missing-term`, `ref-external-image`, `ref-asset-link` |
+| Math | `math-syntax`, `math-command`, `formula-legend` (and `limit`) |
 | SVG | `svg-xml`, `svg-root`, `svg-element`, `svg-attribute`, `svg-value`, `svg-ref`, `svg-namespace`, `svg-text`, `svg-limit` |
 
 ## The grammar, as enforced
@@ -75,9 +77,54 @@ The codes are:
 - **Code fences.** The info string is `` ```[lang] [title="..."] [#id] ``. Any other token is
   `fence-info`. A language outside the typed-block names is an ordinary code block, `mermaid` included.
   An authored id is allowed only at the top level.
-- **Typed blocks.** These are `` ```figure|figures|diagram|svg|quiz|sources [#id] `` at the top level only,
-  with a YAML 1.2 core-schema mapping body (JSON accepted). Anchors, aliases, tags, `%` directives,
-  duplicate keys, non-string keys, `<<` and `.inf`/`.nan` are rejected.
+- **Typed blocks.** These are `` ```figure|figures|diagram|svg|quiz|sources|glossary|formula [#id] `` at the top
+  level only, with a YAML 1.2 core-schema mapping body (JSON accepted). Anchors, aliases, tags, `%`
+  directives, duplicate keys, non-string keys, `<<` and `.inf`/`.nan` are rejected.
+- **The glossary.** A chapter holds at most one `` ```glossary `` block (a second is `limit`), placed
+  anywhere: the convention is `` ```glossary #glossary ``, after the quiz and before `## Sources`. Its
+  body is `terms`, each `{id, term, aliases?, short, long?}`: `term` and each alias are plain text,
+  `short` and `long` are *(md)*. Its term ids are a namespace of their own (*Ids* below), which
+  `term:<id>` links resolve against (*References*). The author writes no heading for it: the section's
+  title is the reader's to draw.
+- **Inline math** is `` $`…`$ ``: a code span with a `$` touching each backtick. After the inline walk, at
+  every depth (emphasis, link text, table cells, callout titles, headings and *(md)* YAML fields), a `code`
+  node whose text before ends in `$` and whose text after starts with `$` becomes `{type: "math", tex}`,
+  the two dollars consumed, left to right (`` $`a`$$`b`$ `` is two formulas). Anything else stays text:
+  `$5 and $10`, `$HOME/$USER`, and `` $ `ls` `` (a space between the dollar and the backtick). An image's
+  alt is plain text and keeps its dollars. **There is no escape:** CommonMark resolves `\$` to `$` before
+  the pass, so to put a literal dollar beside a code span, leave a space between them. Its TeX is checked
+  in the inline context (*TeX* below). A heading slug and a citation's section name keep the TeX's
+  characters, as they keep code's.
+- **The formula block.** `` ```formula #id `` is one display formula: `tex` (TeX, display context; write
+  it in a block scalar `|` or single quotes, because a YAML double-quoted `"\frac"` holds a form feed),
+  `alt` (plain text, the spoken formula in the chapter's language), `reading` (*(md)*, one plain
+  sentence: inline math in it is `field-value`) and `where`, the legend: 1–20 items of `{sym, means}`,
+  where `sym` is TeX (inline context) and `means` is *(md)*, which may hold inline math and `term:` links.
+  Every `sym` must occur in `tex`, compared as tokens after dropping spaces and unwrapping each brace
+  group that holds one token (`e_{i}` matches `e_i`), else **`formula-legend`**. Whether the legend
+  lists every symbol, in order, is the critic's, not the grammar's. A `tex` whose top level is one
+  `\begin{aligned}…\end{aligned}` is the renderer's to draw as steps.
+- **TeX.** Inline and display math are validated against an allowlist (`tex.py`, its data
+  `tests/fixtures/native/tex-allowlist.tsv`: command, context `inline`|`display`, arity
+  `0`|`delim`|`op`|`limits`|`fence`|`1`|`2`|`text`|`opt1`|`env`|`cell` as `tex.py` defines them, and a
+  sample), and the first problem in a formula is reported:
+  - `limit`: inline TeX over 300 code points, display over 2,000, or nesting deeper than 20 (braces,
+    `\sqrt`'s `[…]`, `\left…\right` and environments together);
+  - `math-command`: a command outside the allowlist (`\color`, `\href`, `\def`, `\tag` …), or a
+    display-only form in inline math (`\frac`, `\tfrac`, `\dfrac`, `\binom`, the environments
+    `aligned` and `cases`, `&`, `\\`: inline math is one line), or `&` / `\\` outside an environment;
+  - `math-syntax`: a control character (a tab, a form feed; a line break is allowed only in display
+    TeX), a character outside printable ASCII outside a text argument (write `\alpha`, `\times`), `%`, `#`,
+    `~` or `$`, an unknown control symbol, an unbalanced brace or `[`, a missing argument, a double script
+    (`x^a^b`, `^^`, a prime after a superscript), `\limits` off a large operator, a command that takes
+    arguments used as a bare argument (`x^\sqrt{2}`: brace it), an unpaired `\left`/`\right` or
+    `\begin`/`\end`, an environment that is not at the top level, an empty formula, or `\\` followed by
+    `[`.
+
+  A text argument (`\text`, `\mathrm`, `\operatorname`) holds any printable character but
+  `\ { } $ % # & ^ _ ~`, so a Korean word may sit there; everywhere else only ASCII. The control symbols
+  `\ `, `\_` and `\&` are read but not allowlisted. In a GFM table cell a `|` inside math still splits
+  the cell: write `\lvert`.
 - **Schema checks.** Unknown keys are rejected. A required string must be non-empty. A string field must
   be a YAML string: `label: 2024` is a number, so quote it. Enum values are checked, so an unknown
   tone, shape, kind or type is rejected at ingest, and the renderer's fallbacks are defence in depth.
@@ -93,6 +140,9 @@ The codes are:
 | Typed blocks | 300 per chapter |
 | Figure row | 2–3 items |
 | Quiz | 1–20 items; a choice has 2–6 options; a cloze has 1–5 blanks |
+| Glossary | 1 per chapter; 1–100 terms; `aliases`, when given, 1–8 (an empty list is `limit`: omit the key). No length cap on a definition: "about 40 words" is the writer's and the critic's rule |
+| Formula | `where`: 1–20 legend items |
+| Math (TeX) | inline 300 code points, display 2,000; nesting 20 levels |
 | Diagram nodes | 60: flow/state `nodes`, and a stack's `items` in total |
 | Diagram edges | 100: flow/state `edges`, and sequence `steps` |
 | Diagram lanes | 12: flow/state `groups`, timeline `lanes`, sequence `actors` and stack `layers` |
@@ -116,7 +166,10 @@ The syntax is `[a-z0-9][a-z0-9-]{0,63}`, matched against the whole value: a trai
 
 - quiz option ids, within their item (`answer: [b]`);
 - diagram node, group and actor ids, within their diagram;
-- SVG element ids, within their SVG.
+- SVG element ids, within their SVG;
+- glossary term ids, within their glossary. They never join the document namespace, so a term may
+  share a heading's id: `[x](#rate-limit)` jumps to the heading and `[x](term:rate-limit)` names the
+  term. A duplicate is `id-duplicate`, a malformed one `id-malformed`.
 
 **Assignment** covers an id'd construct that has none, in source order, after every authored id is
 claimed:
@@ -136,6 +189,7 @@ sequence), and ` #id` on the fence line.
 | Form | Where | Notes |
 |---|---|---|
 | `#<id>` | links | Resolved here: a miss is `ref-missing-id`. |
+| `term:<id>` | links | Resolved here, against the glossary's term ids (never the document's), after the walk, so the glossary may follow its links: a miss is `ref-missing-term`. A `term:` image, and a `term:` link inside the glossary's own definitions, are `ref-scheme`. It is allowed everywhere else a link is: prose, captions, quiz text, and a formula's `reading` and legend `means`. |
 | `http(s)://host…` | links | An external **image** is `ref-external-image`. |
 | `asset:<name>` | images only | The name is `[A-Za-z0-9][A-Za-z0-9._-]{0,127}`. A link to an asset is `ref-asset-link`. S5 resolves it against the `assets` map. |
 | `chapter:[<project>/]<book>/<key>[?lang=<xx>][#<id>]` | links | S5 resolves it, and a miss is a warning. |
@@ -168,6 +222,8 @@ Block      {type:"paragraph", id:null, content:[Inline]}
            {type:"svg", id, label, caption:[Inline]|null, svg:SvgElement}
            {type:"quiz", id, title:str|null, items:[QuizItem]}
            {type:"sources", id, items:[{id, title, url, publisher, date, accessed, note}]}   # strings|null
+           {type:"glossary", id, terms:[{id, term, aliases:[str]|null, short:[Inline], long:[Inline]|null}]}
+           {type:"formula", id, tex, alt, reading:[Inline], where:[{sym, means:[Inline]}]}   # tex, sym verbatim
 
 FigItem    {kind:"image", src, alt, caption:[Inline]|null}
            {kind:"diagram", diagram:{kind, title, …Kind}, caption:[Inline]|null}   # no inner caption
@@ -191,8 +247,9 @@ QuizItem   {id, type:"choice", prompt:[Inline], options:[{id, text:[Inline]}], a
 
 Inline     {type:"text", text}            # adjacent text merged; a soft break is "\n" inside it
            {type:"code", text}
+           {type:"math", tex}             # inline math, $`…`$: the code span's text, verbatim
            {type:"em"|"strong"|"del", children:[Inline]}
-           {type:"link", href, title:str|null, children:[Inline]}
+           {type:"link", href, title:str|null, children:[Inline]}   # a term: link too
            {type:"image", src, alt, title:str|null}
            {type:"break"}                 # a hard line break
 Blank      {type:"blank", accept:[str]}   # a cloze blank, its accepted answers verbatim
@@ -251,14 +308,18 @@ This follows the signed `05-annotations` round, *Sections and offsets*. S12 must
    - each table cell: the header row, then each row, left to right. An empty cell is an empty container;
    - a code block's text, verbatim.
 3. **Containers that contribute nothing.** Headings, and all of a typed block's text (captions, titles,
-   labels, quiz prompts and options, source titles), are *head*/*cap* containers. They take a note or a
+   labels, quiz prompts and options, source titles, a glossary's terms and definitions, a formula with
+   its reading and legend), are *head*/*cap* containers. They take a note or a
    bookmark, never a highlight, so they add nothing to the section text. A section that starts at a
    typed block therefore holds only the passages after it.
 4. **A container's text** concatenates its inline nodes:
    - `text` and `code` verbatim; a soft break is already the `"\n"` inside the text;
+   - inline `math` as its TeX verbatim, so the offsets after a formula never move when the reader
+     typesets it;
    - `break` becomes `"\n"`;
    - `image` and `blank` become nothing;
-   - `em`, `strong`, `del` and `link` become their children's text.
+   - `em`, `strong`, `del` and `link` become their children's text. A `term:` link is a `link`, so
+     marking a word as a term moves no offset.
 
    **No whitespace is collapsed and nothing is normalized.**
 5. **Offsets** count Unicode code points of the section text, so a TS port counts with
@@ -269,7 +330,10 @@ The `.txt` fixture form (`format_sections`) writes, for each section, `=== <id>\
 `search_text` is the wider P29 search projection. It covers the summary, headings, every passage,
 figure alt and caption and credit, every diagram label, title and caption, SVG labels, and quiz titles,
 prompts, options and explanations. It never includes answer keys: a recall `answer`, a choice `answer` or
-a cloze blank. It also covers source titles. It is Python-only (S5).
+a cloze blank. It also covers source titles, each glossary term with its aliases and both
+definitions, and each formula's `alt`, `reading` and legend meanings (never its `tex`, as a figure gives
+its alt and caption). Inline math in a passage is there as its TeX, with the passage. It is
+Python-only (S5).
 
 ## Ingest (S5)
 
@@ -289,6 +353,8 @@ a cloze blank. It also covers source titles. It is Python-only (S5).
   | `body-too-large` | 422 | over the format's body limit: native 512 KB (P29), md 512 KB, html 1 MB |
   | `ref-unknown-asset` | 422 | an `asset:` image, figure `src` or figure-row image names no asset of THIS publish (a new version inherits none) |
   | `translation-quiz-ids` | 422 | a `translated_from` publish whose quiz item or option ids differ from that source version's |
+  | `translation-term-ids` | 422 | a `translated_from` publish whose glossary term ids differ from the source version's (its `term:` links hang on them) |
+  | `translation-math` | 422 | a `translated_from` publish whose math differs: the display formulas in order, each `tex` and its legend's `sym` list byte for byte, and the inline TeX as a multiset (a translated sentence may move a formula) |
   | `asset-format` | 422 | assets on an `md` or `html` document: only native chapters carry images |
   | `ref-unresolved` | warning | a `chapter:` or `doc:` target that does not exist yet (it renders as a missing link) |
   | `translation-ids` | warning | heading and block ids that differ from the translation's source |
@@ -322,6 +388,10 @@ Each case in `tests/fixtures/native/` is `<case>.md` plus one of these:
 
 - `<case>.json` (`format_tree`) and `<case>.txt` (`format_sections`);
 - `<case>.err`: one `<line> <code>` row per distinct pair, sorted.
+
+`tex-allowlist.tsv` has no `.md`, so it is no conformance case: `tests/test_native_tex.py` and
+`web/tests/native-tex.test.ts` assert that each twin's allowlist equals it and that every sample passes
+in its context. The `math`, `err-math` and `err-formula` cases hold the math grammar.
 
 The `limits-at` case and the two `err-typed-blocks-*` cases sit exactly at each limit and one over it.
 The at-limit typed-block case carries one unrelated h1, so its `.err` proves that 300 typed blocks raise
