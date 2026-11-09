@@ -1821,3 +1821,8 @@
 {"ts": "2026-11-09T16:22:52+09:00", "type": "deferred_dropped", "deferred": "D80-ch", "reason": "Done by P39-hk.F4: the KB template page's API-down line no longer says the explainer can be written straight to a file; setup's general-mode half was moot after S4 (P39-hk.REVIEW)"}
 {"ts": "2026-11-09T16:24:16+09:00", "type": "phase_status_changed", "phase": "P39-hk", "old_status": "in_progress", "new_status": "pending"}
 {"ts": "2026-11-09T16:24:16+09:00", "type": "acceptance_opened", "phase": "P39-hk"}
+{"ts": "2026-11-09T17:25:04+09:00", "type": "phase_status_changed", "phase": "P39-hk", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-11-09T17:25:04+09:00", "type": "acceptance_cleared", "phase": "P39-hk"}
+{"ts": "2026-11-09T17:25:29+09:00", "type": "slice_status_changed", "slice": "P39-hk.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-09T17:25:29+09:00", "type": "phase_reviewed", "phase": "P39-hk", "verdict": "pass", "reviewer": "slice-executor"}
+{"ts": "2026-11-09T17:25:29+09:00", "type": "phase_consolidation_owed", "phase": "P39-hk", "notes": 33}

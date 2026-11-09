@@ -139,3 +139,8 @@ The phase keeps the glossary above and adds three things. Where they conflict wi
   - OQ23 (math still shown as TeX): F6 fixed its two exact cases (the resume pill, the Glossary entry's language). The stored quotes' TeX (the book's notes list, the other-language group, the Notes sheet's Unanchored rows) is one deferred job.
   - OQ25 (in a Korean chapter the place bar and the note box tag "Glossary" as Korean): fix now, F7. The pre-F6 Glossary bookmark that stays blank on the per-book page is the review's scratch data (the Glossary has never shipped): dropped.
 - The operator, 2026-11-09, on the bootstrap release: "done". Read as: the bootstrap released and pushed S5's package as v94 (`1f02da5`), so F5 names v94.
+- The operator, 2026-11-09, at the acceptance gate: "accept". Read as: the walkthrough signs as presented.
+  - OQ7: accepted. An inline formula is spoken from its derived linear text; no written alt per formula.
+  - The Glossary's place names outside the notes (library Continue, the resume pill's language): deferred job D99-s9, not a fix now.
+  - The "decided as drawn" list stands: OQ9, OQ11, OQ13, OQ17 and OQ18 as built, and the rest as listed.
+  - The integration: this branch merges; the push waits for the operator's word; then `/update-workspace` here.
