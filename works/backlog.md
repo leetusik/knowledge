@@ -18,7 +18,7 @@
 |---|---|---|---|---|---|---|
 | `default` | - | idle | - | - | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
-| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 0/2 | `P39-hk.DECOMP` | 0/2 | `.claude/worktrees/P39-hk-explain_what_was_built` | local copy |
+| `phase/P39-hk-explain_what_was_built` | `P39-hk` | ready to merge | `none` | 23/23 | `.claude/worktrees/P39-hk-explain_what_was_built` | worktree |
 
 ## Active Phases
 
@@ -44,7 +44,7 @@
 | [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.D1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [x] `P37-1p` | `done` | `pass` | Drop the knowledge graph | `none` | `works/phases/active/P37-1p` |
 | [x] `P38-e1` | `done` | `pass` | Right-size explain runs (plugin 0.9.0) | `none` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
-| [ ] `P39-hk` | `planned` | `pending` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `P39-hk.DECOMP` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
+| [x] `P39-hk` | `done` | `pass` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `none` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
 
 ## Phase P21: Web document deletion
 
@@ -330,7 +330,30 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 
 ## Phase P39-hk: Explain what was built: phase-grounded, suggested shape, glossary, formulas
 
+_Read live from its worktree `.claude/worktrees/P39-hk-explain_what_was_built`, where this phase advances._
+
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [~] `P39-hk.DECOMP` | `pending` | decompose phase | `decomposition` | `works/phases/active/P39-hk/slices/P39-hk.DECOMP` |
-| [ ] `P39-hk.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |
+| [x] `P39-hk.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P39-hk/slices/P39-hk.DECOMP` |
+| [x] `P39-hk.D1` | `done` | Design the reading aids: term window, glossary section, formulas | `co-work` | `works/phases/active/P39-hk/slices/P39-hk.D1` |
+| [x] `P39-hk.R1` | `done` | Settle the glossary and formula grammar, the math engine and the term window wiring | `research` | `works/phases/active/P39-hk/slices/P39-hk.R1` |
+| [x] `P39-hk.S1` | `done` | Explain front door: suggested reader and shape, codebase-only, research-phase offer | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S1` |
+| [x] `P39-hk.S2` | `done` | Explain writes from the phases' records and the code: the evidence model | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S2` |
+| [x] `P39-hk.S3` | `done` | Explain writing rules: visuals first, short paragraphs, subject-shaped outline, next steps | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S3` |
+| [x] `P39-hk.S4` | `done` | Retire the research agents and sync every copy, guard and promise | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S4` |
+| [x] `P39-hk.S5` | `done` | Workspace explain route: the handoff package for the bootstrap repo | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S5` |
+| [x] `P39-hk.DECOMP2` | `done` | Cut the build from the signed canvas and R1's findings | `decomposition` | `works/phases/active/P39-hk/slices/P39-hk.DECOMP2` |
+| [x] `P39-hk.S6` | `done` | Native grammar: the glossary block and term: links, in all four places | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S6` |
+| [x] `P39-hk.S7` | `done` | Native grammar: inline math, the formula block, the TeX allowlist twin, translation checks | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S7` |
+| [x] `P39-hk.S8` | `done` | Reader and print: typeset math to the signed canvas (Temml, STIX Two Math) | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S8` |
+| [x] `P39-hk.S9` | `done` | Reader and print: term marker, definition window, phone sheet, glossary section | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S9` |
+| [x] `P39-hk.S10` | `done` | Explain skill §4: the glossary, term links and formulas | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S10` |
+| [x] `P39-hk.S11` | `done` | Release plugin 0.10.0: versions, the v92 handshake, copy and counts | `implementation` | `works/phases/active/P39-hk/slices/P39-hk.S11` |
+| [x] `P39-hk.F1` | `done` | Bound the reading aids' no-wrap runs to their line | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F1` |
+| [x] `P39-hk.F2` | `done` | Keep hyphenated words and a Korean particle with their run, in prose and readings | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F2` |
+| [x] `P39-hk.F3` | `done` | Bound P30's no-wrap controls at large text: the chapter-end button, the Older translation tag, Show answer | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F3` |
+| [x] `P39-hk.F4` | `done` | List the Glossary in the contents, linear text for math on text-only surfaces, the template's file fallback line | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F4` |
+| [x] `P39-hk.F6` | `done` | Name the Glossary in the annotation layer, read the resume pill through linear math, tag the Glossary entry English | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F6` |
+| [x] `P39-hk.F7` | `done` | Tag the Glossary's place name with the h2's language in the place bar, the note box and the notes rows | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F7` |
+| [x] `P39-hk.F5` | `done` | Re-pin the explain front door to the bootstrap release that carries S5's package | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F5` |
+| [x] `P39-hk.REVIEW` | `done` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |
