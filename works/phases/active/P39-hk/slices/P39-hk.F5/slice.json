@@ -3,11 +3,11 @@
   "phase_id": "P39-hk",
   "name": "Re-pin the explain front door to the bootstrap release that carries S5's package",
   "kind": "fix",
-  "status": "pending",
+  "status": "in_progress",
   "order": 190,
   "depends_on": [],
   "created_at": "2026-11-06T12:05:38+09:00",
-  "started_at": null,
+  "started_at": "2026-11-09T14:35:49+09:00",
   "completed_at": null,
   "risk": "high",
   "source": {
@@ -28,10 +28,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "operator-action",
-    "on_words": "the operator reports the bootstrap release vN that carries S5's package, pushed to GitHub (OQ24 (a)); F5 is then planned to name vN in every site and re-run the package checks at that release",
-    "since": "2026-11-06T16:06:12+09:00"
   }
 }
