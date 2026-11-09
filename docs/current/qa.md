@@ -1,11 +1,11 @@
 ---
 doc_id: qa
-version: v2611020616
-created_at: 2026-11-02T15:16:34+09:00
-commit: e6064830160bbc57c2388ffae969df6a3418a420
-source: P37-1p.REVIEW
-summary: P37-1p gate section: Regression Checklist retires the web-graph lines and adds the old-graph-link, landing, public-grid and graph-API checks
-previous: v2611011438_p38-e1_gate_section_explain_front-door_lines_expect_the_plain_summary_sections_and_cost_line_add_v2_full_v1_and_kb-key_lines
+version: v2611090827
+created_at: 2026-11-09T17:27:33+09:00
+commit: a79c8e1cc4b259bf4ea62e35bbbfcf27dfac2299
+source: P39-hk.REVIEW
+summary: P39-hk gate section: regression checklist adds reader math, terms, the glossary, paper, text-only math, keeps, publish 422s and the v94 explain front door
+previous: v2611020616_p37-1p_gate_section_regression_checklist_retires_the_web-graph_lines_and_adds_the_old-graph-link_landing_public-grid_and_graph-api_checks
 ---
 
 # QA
@@ -417,6 +417,39 @@ apply there; use *In-app graph label focus (P22)* instead._
       `plugin/templates/kb/` still ships `scripts/graph_hook.py`,
       `docs/graph.md`, `docs/javascripts/graph.js` and the `mkdocs.yml` hook
       (P37-1p)
+- [ ] Reader math: inline $`…`$ and formula blocks render as STIX Two Math
+      MathML, never raw TeX, each display formula with its reading and "where"
+      legend; a formula wider than a 320 phone scrolls in its own box, never
+      the page (P39-hk)
+- [ ] Reader terms: a term: link opens its window on click, Enter, Space or a
+      250 ms hover; Esc and Close return focus to the term; "In the glossary →"
+      marks the entry and "‹ Back to the text" returns there; under 40rem it is
+      a fixed bottom sheet (P39-hk)
+- [ ] Glossary: a chapter with a glossary shows "Glossary" (h2, A to Z) where
+      placed, lists it in In this chapter and the Contents sheet, and names it
+      in the place bar and the notes rows (lang="en" in a Korean chapter); a
+      chapter with no terms or math loads no math face (P39-hk)
+- [ ] Reading aids on paper: ⌘P at A4 and Letter prints markers as dotted ink,
+      formulas with their reading and legend, and the glossary after the quiz
+      and before Sources, with no windows (P39-hk)
+- [ ] Text-only math: a heading or highlight with inline math reads as linear
+      text (e^(−λ), t = s × √n) in the contents, Continue, place names, the
+      resume pill, a citation's way back and the Review card, never TeX
+      (P39-hk)
+- [ ] Reader keeps: a hyphenated word or a Korean particle after a formula
+      never breaks while it fits; a wider run breaks inside; a wider inline
+      formula scrolls in its own line-wide box; at 320 and 390 with 200% text
+      the page never scrolls sideways (P39-hk)
+- [ ] Publish: an unknown term: link, bad TeX or a legend symbol the formula
+      lacks is a 422 (ref-missing-term, math-syntax / math-command,
+      formula-legend), and a translation that changes term ids or math is a 422
+      (translation-term-ids, translation-math) (P39-hk)
+- [ ] Explain front door: in a v94 workspace, /knowledge:explain <subject>
+      under claude -p --plugin-dir plugin prints one confirmation (a guessed
+      Reader, subject-shaped Sections, one or two Other shapes, Built by: or
+      the research-first offer, the one-writer, one-critic Cost: line, the
+      sixteen-line ## Explain with phases:) and creates nothing; a v93
+      workspace is refused naming v94 (P39-hk)
 
 ## Verifying the Guard Itself (negative-test pattern)
 
