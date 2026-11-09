@@ -1,0 +1,11 @@
+{
+  "id": "D90-ke",
+  "title": "design-preview crashes writing preview.json on a split math italic character",
+  "status": "deferred",
+  "source": "P39-hk.REVIEW (from D1)",
+  "reason": "D1 hit it while self-checking a math board; the workaround is PYTHONIOENCODING=utf-8:backslashreplace. A workspace engine bug: the fix belongs in the bootstrap repo",
+  "trigger": "the next design round with math, or the next engine change in the bootstrap repo",
+  "created_at": "2026-11-09T16:22:03+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

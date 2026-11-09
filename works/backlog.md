@@ -6,18 +6,18 @@
 ## Pointer
 
 - Current phase: `P39-hk`
-- Current slice: `P39-hk.REVIEW`
+- Current slice: `none`
 - Next slice: `none`
-- Waiting on operator: `none`
+- Waiting on operator: `P39-hk`
 - Stream: `phase/P39-hk-explain_what_was_built` (parallel phase checkout; the pointer above is scoped to it)
-- Open deferred jobs: `73`
+- Open deferred jobs: `77`
 - Workspace version: `v89`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P39-hk-explain_what_was_built` | `P39-hk` | in flight 22/23 | `P39-hk.REVIEW` | 22/23 | `.` | working tree |
+| `phase/P39-hk-explain_what_was_built` | `P39-hk` | pending | `P39-hk.REVIEW` | 22/23 | `.` | working tree |
 | `default` | - | idle | - | - | - | branch main |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
@@ -45,7 +45,7 @@
 | [ ] `P36-1s` | `planned` | `pending` | Hermes: a chat agent beside the reader | `P36-1s.D1` · parallel: `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `works/phases/active/P36-1s` |
 | [x] `P37-1p` | `done` | `pass` | Drop the knowledge graph | `none` | `works/phases/active/P37-1p` |
 | [x] `P38-e1` | `done` | `pass` | Right-size explain runs (plugin 0.9.0) | `none` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
-| [ ] `P39-hk` | `in_progress` | `changes_requested` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `P39-hk.REVIEW` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
+| [~] `P39-hk` | `pending` | `changes_requested` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `P39-hk.REVIEW` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
 
 ## Phase P21: Web document deletion
 

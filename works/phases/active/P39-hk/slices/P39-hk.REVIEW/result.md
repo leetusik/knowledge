@@ -2,13 +2,13 @@
 
 ## Verdict (round 3)
 
-- **status:** needs_operator
-- **review_verdict:** not rendered. The gate's Claude in Chrome stages are held (the third halt): `list_connected_browsers` returned an empty list on every call this span, from the round's start to just before this file was written, so no browser carries deviceId `c14e5b18-f250-45f1-b92e-4a08a31197b5`. Everything that needs no browser is done. On that evidence F5, F6 and F7 each pass their whole case list, and there is no new finding. Provisional, not to be recorded: **pass**, once the Claude in Chrome spot-check and the fresh-eyes walk (§ Round 3 › What the resumed run does) find nothing.
+- **status:** done
+- **review_verdict:** pass
 - **route:** high
 - **model:** opus
 - **effort:** xhigh
-- **summary:** Round 3 is a bounded re-review after F5–F7. The whole validation passes on `733ae362`, and the final tree's production build is on `:3978`. F5's matrix passes: no site names v92, both refusals name v94, and the counts agree. At v94 the version is 94 and the explain route lists `**phases**`; cites reports missing=0. A fresh v94 install passes the front door, and a fresh v93 install is refused with the v94 text. F6's 11 cases and F7's 7 cases pass on the final build. The checks were server-rendered diffs against round 2's build and headless Chrome over CDP with real mouse, wheel and typing input. Every difference is at the Glossary or in the pill's math. The browser walk is held because Claude in Chrome is not connected.
-- **validation** (all at `733ae362`; detail in § Round 3 › Validation):
+- **summary:** Round 3 is a bounded re-review after F5–F7, and it passes. The whole validation passes on `733ae362`. F5's matrix passes: v94 is named everywhere, both refusals name v94, a fresh v94 install is ready, and a fresh v93 install is refused with the v94 text. F6's 11 cases and F7's 7 cases also pass. The resumed span drove the final production build on `:3978` in Claude in Chrome, on the "sugang" profile. In reading-aids ko and math-check ko, at 1728 and 390, the Glossary is named "Glossary" `lang="en"` in the place bar, In this chapter and the Contents sheet. The resume pill reads "When e^(−λ) is near one". A term window and its sheet, the display formulas, en and ko, light and dark all hold. There is no new finding. The remaining place-name gaps are job 10, which is walkthrough decision 2.
+- **validation** (all at `733ae362`; detail in § Round 3 › Validation and § Round 3 › The resumed run):
   - `uv run pytest -q`: 183 passed, 60 skipped. With a disposable Postgres: 243 passed.
   - `pnpm --dir web typecheck` / `lint`: exit 0 / exit 0. `pnpm --dir web test`: 41 files, 589 tests.
   - scratch standalone `next build` of the final tree (`review/webbuild-r3`): exit 0, 13/13 static pages.
@@ -19,42 +19,49 @@
   - `cites.py` over v94's (`1f02da5`) shipped files: 119 / 15, missing=0.
   - `wc -l` 2492 = `content.ts` "2,492". The v86 grep is empty. `git status --porcelain .claude/` is empty.
   - The "v92" / "92 or later" grep of the product tree: only `scripts/workflow.py` L14680 and L14694, the deferred-id example.
-  - `python3 scripts/workflow.py validate`: passed. Pre-existing warnings only, and no dangling pointer.
-- **operator_need:** connect the agent's Chrome profile to this session: the "sugang" profile, deviceId `c14e5b18-f250-45f1-b92e-4a08a31197b5`, which `## Operator Runtime` records.
-  - Open Chrome on that profile with the Claude extension signed in and connected, or run `/chrome` (or `claude --chrome`) in the session, so that `list_connected_browsers` lists that id.
-  - If the extension was reinstalled or signed out, re-record its new deviceId in `## Operator Runtime`.
-  - Then re-dispatch REVIEW round 3, for § Round 3 › What the resumed run does only. The stack is left running for it.
-- **findings:** none from what ran. F5, F6 and F7 each pass their whole case list (§ Round 3 › Each fix against its case list).
-  - One remainder of the OQ25/R2-F2 class sits outside F6's and F7's matrices: the Glossary's place name outside the annotation layer. It is inside the boundary, but rounds 1 and 2 could have seen it. By the bounded-round rule it is a deferred-job candidate (job 10), not a finding.
-  - The walkthrough draft asks the operator about it (decision 2), because deferring it may contradict "fix everything now.".
-- **doc_impact_added:** none yet. Appending is pass-only. The drafts are in § Round 3 › Drafts for the pass round.
-  - `phase.md` is at 38,878 of 40,960 B. The drafts are about 2.6 KB, so they will not fit under the cap: the orchestrator makes room first.
+  - **Gate stages 2–3 in Claude in Chrome:** pass. No new finding.
+  - `python3 scripts/workflow.py validate`: passed, after the Doc impact append. Pre-existing warnings remain, plus the notebook budget warning below. There is no dangling pointer.
+- **findings:** none. F5, F6 and F7 each pass their whole case list (§ Round 3 › Each fix against its case list), and the Claude in Chrome stages pass (§ Round 3 › The resumed run).
+  - Four gaps of the OQ25/R2-F2 class sit outside F6's and F7's matrices: the Glossary's place name outside the annotation layer, and a row's language in the notes rows (job 10 (a)–(d)). The Chrome walk confirmed (a), (c) and (d); (b) was not re-run. They are inside the boundary, but rounds 1 and 2 could have seen them. By the bounded-round rule they are deferred-job candidates (job 10), not findings.
+  - The walkthrough asks the operator about them (decision 2), because deferring them may contradict "fix everything now.".
+- **doc_impact_added:** 11 lines, appended verbatim through `phase-section P39-hk "Doc impact" --append` (entries 23–33): the two lines and the gate section's header plus its eight checklist lines, from § Round 3 › Drafts for the pass round.
+  - `phase.md` is now 41,546 of 40,960 B, 586 B over the soft cap. `phase-section` accepted the append (`appended=Doc impact bytes=9336->12004`), and `validate` warns but passes.
+  - The orchestrator may make room afterwards, for example by moving Doc impact's long S7 entry to a topic.
 - **doc_versions:** none — deferred to post-merge consolidation (parallel mode).
-- **walkthrough:** not returned (needs_operator). The draft for the resumed run is in § Round 3 › Walkthrough draft. OQ7–OQ25 are all routed (§ Round 3 › Operator Questions).
+- **walkthrough:** § Round 3 › Walkthrough draft, returned unchanged as the final walkthrough. It has two decisions: OQ7, and the place names (job 10). OQ7–OQ25 are all routed (§ Round 3 › Operator Questions).
 - **deferred_jobs:** 10 candidates, with dispositions of the existing items (§ Round 3 › Deferred jobs).
 - **team-rules check:** n/a (at-root install).
 - **explain:** not written — run /knowledge:explain P39-hk for a document, or ask it for a book.
 - **instruments:**
-  - **Claude in Chrome: not available this span.** `list_connected_browsers` returned `[]` on every call, so no browser tool was used, and the agent profile was not touched.
-  - Headless Chrome 156 over CDP (a throwaway profile, classic scrollbars), with real `Input.dispatchMouseEvent` / `mouseWheel` / `insertText` input, signed in through `member_proxy.py`.
-  - Server-rendered HTML and flight-data diffs against round 2's build (`0162fb65`), both signed in.
+  - **Claude in Chrome, on the "sugang" profile.** `list_connected_browsers` listed deviceId `c14e5b18-f250-45f1-b92e-4a08a31197b5` ("Browser 1"). `select_browser` on that id came before any other browser tool.
+  - I used my own tab, and closed it at the end. The window stayed at 960×963, because `resize_window` had no effect. So 1728 and 390 ran in the viewport harness iframe (`/__vp`), and 960 ran direct.
+  - Signed in through `member_proxy.py` `:3975` (server side), and anonymous harness `:3976` (started, unused).
+  - Before this span: headless Chrome 156 over CDP (a throwaway profile), with real mouse, wheel and typing input.
+  - Server-rendered HTML and flight-data diffs against round 2's build.
   - Read-only `psql` against `kb_p39review`.
-  - Read-only `git log`, `show` and `archive` of the bootstrap repo, plus fresh scratch installs of v93 and v94.
-  - No WebKit, no real device, no screen reader.
+  - Read-only `git` on the bootstrap repo, and fresh scratch installs of v93 and v94.
+  - Not used: WebKit, a real device, a screen reader. Those checks are the walkthrough's.
 - **stack:**
   - API `:8977`, PID 68284 (kept), and DB `kb_p39review`.
-  - Production build of `733ae362` on `:3978`, PID **17812**, started with `nohup` (`review/standalone-r3.sh`). It replaced PID 3131, which is stopped.
-  - Everything else this round started is stopped.
+  - The production build of `733ae362` on `:3978`, PID 17812 (kept, `nohup`).
+  - This span's proxies `:3975` (PID 22954) and `:3976` (PID 22958) are stopped.
+  - `:3030` and `:8766` were never touched.
   - Cleanup commands are in § Round 3 › Stack left running.
 - **deviations:**
-  1. **needs_operator instead of a verdict:** the manifest's third halt (Chrome missing from the session). The CDP and HTTP checks below are evidence for the fix matrices. They do not stand in for the gate's Claude in Chrome stages.
-  2. **Checks beyond the plan:**
-    - round 2's build served once more (`:3988`, stopped) as the baseline for the byte comparisons;
-    - throwaway reader data on the scratch member: one bookmark, one section note, Mark as unread on math-check en/ko, and moved positions;
-    - fresh scratch installs of bootstrap v93 and v94;
-    - the applied-tree-against-`d6856a8` diff.
-  3. **The pass drafts merge round 2's ten checklist lines into eight.** The Review card goes into the text-only line, and the Glossary-in-contents line goes into the Glossary line. This follows the plan's budget rule.
-  4. **Not run:** the `claude -p` front-door lines 28, 29, 33 and 34 (job 5), and a highlight (F6 and F7 changed only the selection bar's `lang`; round 2 passed highlights).
+  1. **Two spans.** The first round-3 span halted on the manifest's third halt: Claude in Chrome was not connected. This span ran only § Round 3 › What the resumed run does, and then the verdict. Nothing from the first span was redone.
+  2. **Checks beyond the plan** (first span):
+     - round 2's build served once more (`:3988`, stopped) as the baseline for the byte comparisons;
+     - throwaway reader data on the scratch member;
+     - fresh scratch installs of bootstrap v93 and v94;
+     - the applied-tree-against-`d6856a8` diff.
+  3. **The pass drafts merge round 2's ten checklist lines into eight**, following the plan's budget rule.
+  4. **Not run:**
+     - the `claude -p` front-door lines 28, 29, 33 and 34 (job 5);
+     - a highlight (F6 and F7 changed only the selection bar's `lang`).
+  5. **The window could not be resized,** so 1728 ran in the harness iframe rather than in a window at 1728. For whole-width screenshots, my harness page scaled the iframe to 0.5555. The iframe's own viewport stayed 1728 wide (`innerWidth` 1728, `scrollWidth` 1728).
+  6. **The scratch member's saved state was not what § Stack recorded.** My first two loads (math-check ko, then en, both in the harness) landed at the top without the pill. Each wrote a top position.
+     - Cause: a reader resumes from the unit's latest position in any language (`server/reader_api.py` `resume`, P30's S15, outside the boundary). That latest was already a top-of-chapter position, consistent with round 3's Mark as unread.
+     - After a wheel scroll and a reload, en resumed with the pill at 960, 390 and 1728. No defect.
 
 ## Round 3
 
@@ -155,8 +162,8 @@ The rows the fixes reach. Every other row stands as rounds 1 and 2 record it.
 
 | # | Line | Round 3 |
 |---|---|---|
-| 10 | KO 390, Contents sheet fits | pass (CDP, signed in: the sheet spans 0–390, the page is 390, and Glossary is `lang="en"`); Claude in Chrome held |
-| 17 | Resume | pass (CDP: a wheel scroll, a wait past the save, then a reload lands on the same block with the pill; From the top clears it and goes to y 0; three more reloads on one variant keep the anchor). Claude in Chrome held |
+| 10 | KO 390, Contents sheet fits | pass (CDP, signed in: the sheet spans 0–390, the page is 390, and Glossary is `lang="en"`). Claude in Chrome (resumed run): math-check ko at 390, the sheet lists Glossary bold as current, and choosing it lands the h2 at 72 with `lang="en"`; page 390 |
+| 17 | Resume | pass (CDP: a wheel scroll, a wait past the save, then a reload lands on the same block with the pill; From the top clears it and goes to y 0; three more reloads on one variant keep the anchor). Claude in Chrome (resumed run): math-check en, a wheel scroll, a wait, then a reload, resumes with the pill at 960, 390 and 1728 |
 | 19 | Annotations persist | the section bookmark and the note pass: made with real clicks on the final build, they persist across a reload in the Notes sheet and the per-book list, stored "Glossary". The highlight was not re-run, since F6 and F7 changed only the selection bar's `lang` |
 | 27 / 32 / 36 | Parity, the landing count, the KB key | pass |
 | 28, 29, 33, 34 | The front door under `claude -p` | not run (they need a workspace on v94 with plugin 0.10.0): job 5, narrowed |
@@ -165,7 +172,7 @@ The rows the fixes reach. Every other row stands as rounds 1 and 2 record it.
 
 The outside lines' proof: 9 lines (1, 2, 5, 9, 21, 40, 41, 42, 43). The five files new to the list are reader-only, and none of them feeds those surfaces.
 
-### Fresh eyes, round 3 (headless; the Claude in Chrome walk is held)
+### Fresh eyes, round 3 (headless; the Claude in Chrome walk is in § The resumed run)
 
 I looked at reading-aids ko and math-check ko at 1728 and 390, in CDP screenshots (`rv3/look/`) and measures.
 - **The Glossary's place name:** "Glossary · Add note · Bookmarked", and the bar fits at 390 (55–335).
@@ -177,7 +184,7 @@ I looked at reading-aids ko and math-check ko at 1728 and 390, in CDP screenshot
   - In an English chapter, a Korean bookmark at the Glossary reads "Glossary" `lang="ko"` in the other-language group (F7's observation 1, seen here on math-check en).
 - **Pre-existing, and not this phase's:** landing on `#glossary` at 390 puts the section's "BOOKMARKED" margin tag half under the top bar.
 
-### What the resumed run does (only this, once Claude in Chrome is connected)
+### What the resumed run does (only this, once Claude in Chrome is connected) — done: § The resumed run
 
 1. `list_connected_browsers`, then `select_browser` on `c14e5b18-…`, before any other browser tool. Restart the harness: `nohup python3 <review>/member_proxy.py 3975 3978 &` and `nohup python3 <review>/vp_proxy.py 3976 3978 &`.
 2. **Stage 2 on `:3978`:**
@@ -188,6 +195,49 @@ I looked at reading-aids ko and math-check ko at 1728 and 390, in CDP screenshot
 4. **The verdict.** On a pass:
    - append the drafts below through `phase-section` (after the orchestrator makes room);
    - return the walkthrough below.
+
+### The resumed run: gate stages 2 and 3 in Claude in Chrome (2026-11-09)
+
+**The setup:**
+- `list_connected_browsers` returned one browser, deviceId `c14e5b18-f250-45f1-b92e-4a08a31197b5`, and `select_browser` on that id came first. I opened my own tab and closed it at the end.
+- The profile's cookies on `127.0.0.1` were `csrftoken` and `kb_rail` at the start, and no local or session storage was set.
+  - Choosing Display → Dark wrote a `kb_reader` cookie. I set Display back to System and expired `kb_reader`, which left the same two names.
+  - No value was read or recorded.
+- `resize_window` to 1728 had no effect, and the window stayed 960×963. So 1728 and 390 ran in the harness iframe (`/__vp?w=&h=&path=` on `:3975`), and 960 ran direct.
+  - The iframe's viewport was the true width (`innerWidth` 1728 or 390, and `scrollWidth` equal to it).
+  - My harness page scaled the iframe to 0.5555 for whole-width screenshots. Clicks went through the transform.
+- The harness was `member_proxy.py 3975 3978` (PID 22954), which signed in on the server side. `vp_proxy.py 3976 3978` (PID 22958) was started and not needed. Both are stopped.
+- **Stage 2, on `:3978`, signed in:**
+
+| Check | Result |
+|---|---|
+| reading-aids ko, `#glossary`, 1728 | place bar "Glossary · Add note · Bookmarked", `<b lang="en">Glossary</b>`; h2 top 72 (bar 59); In this chapter `rd-toc__a lang="en"`; Contents sheet (opened with a real click) `rd-ch__sec lang="en"`, `aria-current="location"`, bold; page 1728 |
+| reading-aids ko, `#glossary`, 390 | the same `<b lang="en">`; bar 55–335; h2 top 72; In this chapter `lang="en"`; page 390 |
+| math-check ko, `#glossary`, 1728 | `<b lang="en">Glossary</b>`; In this chapter: every entry `lang="ko"` but Glossary `lang="en"`, the math heading as "e^(−λ)가 1에 가까울 때"; page 1728 |
+| math-check ko, 390, through the Contents sheet (real clicks: the sheet → "e^(−λ)가 1에 가까울 때" → the sheet → "Glossary") | the sheet lists "Glossary" bold as the current section; the h2 lands at top 72; once the pill is gone, `<b lang="en">Glossary</b>`, bar 55–335; page 390 |
+| The pill at the math section, math-check en (wheel scroll to the section, a 4 s wait, then a reload) | "Picked up where you left off · `<b lang="en">`When e^(−λ) is near one" at 960 direct (y 3103), 390 (y 3872) and 1728 (y 3275), with From the top beside it |
+| A term window, reading-aids en at 960 | a click on "t-statistic" opens the window (Also called t, the text, Read more, In the glossary →) with focus inside; Esc closes it and focus returns to the term |
+| The term sheet, reading-aids ko at 390 | a click on "t-통계량" opens a fixed bottom sheet with focus inside; the term stays visible above it; Esc returns focus to the term; page 390 |
+| Display formulas, math-check en | the stepped `t = (mean/sd) × √n ≈ 2.19`, `N = (∑ e)² / ∑ e²` and the aligned `λ = rate × time / P(no event) = e^−λ` render as MathML, each with its reading and "where" legend; the heading's inline `e^−λ` renders as math |
+
+- **Two loads landed at the top first.** math-check ko, then en (1728 harness), landed at y 0 with no pill, and each wrote a top position (`psql`: fraction 0 at 07:01:53 and 07:02:46).
+  - A reader resumes from the unit's latest position in any language (`server/reader_api.py` `resume`, "The unit's latest position (any variant)"; P30's S15, outside the boundary). That latest was already at the top before this span, consistent with round 3's Mark as unread, so § Stack's "ko at glossary" was out of date.
+  - After one wheel scroll and a reload, en resumed with the pill at all three widths.
+  - math-check ko then resumed from en's place by fraction, at "시도 횟수 세기", because en v3's `when-e-lambda-is-near-one-3` does not map to ko v1's `when-e-lambda-is-near-one`. That is job 9's id drift, outside the boundary.
+  - There is no defect.
+
+**Stage 3, fresh eyes, in Claude in Chrome.** Covered: ko light at 1728 and 390, ko dark at 390 and 1728, en light at 960, 390 and 1728, and en dark at 960. Continue was reached from the top bar's Library link. Nothing new is dead, confusing or annoying in the Glossary's place name, its contents entries or the pill at the math section. These are what round 3's headless look named, now seen in Chrome:
+- **The resume pill at the Glossary in a Korean chapter** reads "Picked up where you left off · `<b lang="ko">Glossary</b>`" (math-check ko, 390). This is job 10 (c).
+- **Library Continue** (`/library`) reads "Left off at `<b lang="ko">`e^(−λ)가 1에 가까울 때 · 55% · 한국어" while math-check ko is saved at the Glossary. This is job 10 (d). The linear math is right.
+- **In the English chapter's Notes sheet (dark)**, the "In 한국어" group's Glossary bookmark row is `<span class="an-li__main" lang="ko">Glossary</span>`. This is job 10 (a).
+  - The same sheet's Unanchored row shows the stored quote's TeX ("Poisson with mean \lambda = \mathrm{rate} \times …"), which is job 8.
+- **Pre-existing, as before:** at 390, the Glossary's "BOOKMARKED" margin tag sits half under the top bar on landing.
+- **Checked, and not a gap:** math-check ko's "Sources" entry is `lang="ko"`, and so is its h2. The ko fixture's authored `## Sources` heading is English text, so this is content, not chrome. The entry matches its h2, as F6's rule says.
+
+**This span's throwaway data:**
+- positions moved: math-check en at `glossary` (52%), math-check ko at `glossary` (55%), reading-aids ko at `glossary` (still finished), reading-aids en at `scoring-a-run` (still finished);
+- no mark, note or bookmark was made or removed;
+- the existing highlight "with a t-statistic" was only seen.
 
 ### Operator Questions (OQ7–OQ25), routed
 
@@ -250,7 +300,9 @@ None is unrouted.
 
 ### Drafts for the pass round (append through `phase-section P39-hk "Doc impact" --append` on a pass)
 
-**Budget:** `phase.md` is 38,878 of 40,960 B, and the lines below are about 2.6 KB. The orchestrator makes room first, for example by moving Doc impact's long S7 entry (908 B) to a topic, if Doc impact may move. Otherwise these lines stay here for the post-merge step.
+**Appended on the pass** (resumed run): `phase-section P39-hk "Doc impact" --append --file` with these eleven lines verbatim, as Doc impact entries 23–33 (`appended=Doc impact bytes=9336->12004 phase_md=41546`). `phase.md` is now 586 B over the 40,960 B soft cap. `validate` warns and passes, and the orchestrator may make room, for example by moving Doc impact's long S7 entry (908 B) to a topic.
+
+**Budget (first span):** `phase.md` was 38,878 of 40,960 B, and the lines below are about 2.6 KB.
 
 **`doc_impact_added`:**
 - `- **(P39-hk.REVIEW)** qa.md ## Test Commands: at P39-hk's end pytest 183 passed, 60 skipped (243 with a disposable Postgres), vitest 589 in 41 files`
@@ -324,6 +376,8 @@ Paths are under `/private/tmp/claude-502/-Users-sugang-projects-personal-knowled
   - the math-check en section note `181abc3e` ("R3 throwaway section note");
   - Mark as unread on math-check en and ko (both now `started`; en at `when-e-lambda-is-near-one-3`, ko at `glossary`);
   - positions moved on reading-aids en/ko.
+  - the resumed run's positions: § The resumed run › This span's throwaway data.
+- **The resumed run's proxies:** `member_proxy.py 3975 3978` (PID 22954) and `vp_proxy.py 3976 3978` (PID 22958), both started with `nohup` and stopped with `kill 22954 22958`. `:3978` (17812) and `:8977` (68284) were left running, and `:3030` (8452) and `:8766` (80074) were never touched.
 - **Restart the build:** `nohup zsh <review>/standalone-r3.sh > <review>/standalone-r3.log 2>&1 &`.
 - **Device walk:** the same with `HOSTNAME=0.0.0.0` in `standalone-r3.sh`. Then browse `http://<the Mac's LAN or tailnet address>:3978/@p39rv`, anonymous only.
 - **Stop and clean up** after the gate:
@@ -336,11 +390,14 @@ Paths are under `/private/tmp/claude-502/-Users-sugang-projects-personal-knowled
   ```
 
   F6's and F7's scratch build clones (`<sp>/f6/mine`, `<sp>/f7/mine`, `<sp>/f7/head`) and F5's trees (`<sp>/f5/`) are theirs, and can go with the scratchpad.
-- **Agent profile:** not touched this round. No browser connected, and no browser tool beyond `list_connected_browsers` was called.
+- **Agent profile:** untouched in the first span. In the resumed run I used my own tab and closed it. The reader's Display was set back to System, and the `kb_reader` cookie it wrote was expired, so the `127.0.0.1` cookie names are back to `csrftoken` and `kb_rail`. The window size is unchanged, because `resize_window` had no effect.
+  - One blank "New Tab" (`1503955653`) remains in the extension's tab group. My first `tabs_context_mcp` call (`createIfEmpty`) returned it, so it was either there already or created by that call. I cannot tell which, so I left it rather than close a tab that may not be mine.
 
 ### Instruments (round 3)
 
-- **Claude in Chrome: not available.** I called `list_connected_browsers` repeatedly across the span, from the round's start to just before writing this file, and it returned `[]` every time. No `select_browser` and no other browser tool was called. That is the manifest's third halt, hence needs_operator. The Aside fallback is not the agent's to choose for a missing Chrome.
+- **Claude in Chrome:**
+  - **First span: not available.** `list_connected_browsers` returned `[]` on every call, and no other browser tool was called. That was the manifest's third halt, hence needs_operator.
+  - **Resumed span: used.** deviceId `c14e5b18-…` was selected by id before any other browser tool, and the run used the harness through `member_proxy.py` (§ The resumed run).
 - **Headless Chrome 156 over CDP:** a throwaway profile `rv3/chrome-prof`, `--disable-features=OverlayScrollbar`. The scripts are `rv3/matrix.mjs`, `marks.mjs`, `notes.mjs`, `pill.mjs`, `state.mjs`, `look.mjs` and `drift.sh`. Input was real (`Input.dispatchMouseEvent` press/release, `mouseWheel`, `Input.insertText`). Page JS only measured, read and scrolled to set up a sweep.
 - **`member_proxy.py`** signed the scratch member in on the server side for both builds. No credential or cookie was printed or reached a browser.
 - **Server-rendered DOM and flight-data diffs** (`rv3/diff.py`) of the final build against round 2's build.

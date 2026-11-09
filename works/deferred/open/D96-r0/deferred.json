@@ -1,0 +1,11 @@
+{
+  "id": "D96-r0",
+  "title": "The console at 200% text",
+  "status": "deferred",
+  "source": "P39-hk OQ22 (operator: accept)",
+  "reason": "the past-version page is 446 px at 390/200% (447 at 320/200%, 335 at 320/150%) from the docview's source URL (a.fg-src__link); the console top bar's signed-out Sign in and Full width at 320 also overflow. The display formula there already scrolls in its own box (P39-hk.F3)",
+  "trigger": "the next P28 console change, or a QA sweep at large text",
+  "created_at": "2026-11-09T16:22:15+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

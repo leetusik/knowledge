@@ -1,0 +1,11 @@
+{
+  "id": "D97-x6",
+  "title": "Show a stored quote with math as text in the notes lists",
+  "status": "deferred",
+  "source": "P39-hk OQ23 (operator: all as your recommendations)",
+  "reason": "the book's notes list, the other-language group and the Notes sheet's Unanchored rows show the stored quote's TeX (e.g. 'Poisson with mean \\lambda = \\mathrm{rate} \\times …'); a stored quote is projection text and can cut through a formula, so there is no exact linear form for half a formula: a design question, not a mapping",
+  "trigger": "the next notes-list change, or the first chapter whose highlights cross formulas",
+  "created_at": "2026-11-09T16:22:16+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

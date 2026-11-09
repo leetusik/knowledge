@@ -1,0 +1,11 @@
+{
+  "id": "D99-s9",
+  "title": "A place name's own name and language, everywhere the reader names a section",
+  "status": "deferred",
+  "source": "P39-hk.REVIEW round 3 (F7's observations; walkthrough decision 2)",
+  "reason": "(a) in an English chapter a Korean bookmark's row tags the English section name lang=ko (note-list.ts rowView); (b) Korean section names in a Notes row's meta line inherit lang=en (note-row.tsx); (c) the resume pill tags Glossary lang=ko in a Korean chapter (reader-frame.tsx); (d) library Continue names the heading before the Glossary when the reader left off in it (continue.ts sectionTitle)",
+  "trigger": "the next reader-chrome or notes change, or the first VoiceOver report",
+  "created_at": "2026-11-09T16:22:24+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

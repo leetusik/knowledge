@@ -1,0 +1,11 @@
+{
+  "id": "D92-dc",
+  "title": "phase-section --to-topic leaves relative links stale in the moved block",
+  "status": "deferred",
+  "source": "P39-hk.REVIEW (from DECOMP2, F6, F7)",
+  "reason": "a link written relative to phase.md points one level off from topics/; DECOMP2, F6 and the orchestrator fixed moved links by hand. A workspace engine bug: the fix belongs in the bootstrap repo",
+  "trigger": "the next --to-topic move of an entry with a relative link, or the next engine change in the bootstrap repo",
+  "created_at": "2026-11-09T16:22:04+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

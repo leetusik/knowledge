@@ -1,0 +1,11 @@
+{
+  "id": "D98-mj",
+  "title": "A heading with no authored id takes a new id in each version, orphaning its marks",
+  "status": "deferred",
+  "source": "P39-hk.REVIEW rounds 2-3 (observation outside the boundary)",
+  "reason": "retired_ids (server/native_ingest.py, P30.S5) reserves every id the current row and earlier versions used, so IdRegistry.assign_slug re-mints an unchanged heading's slug as -2, -3: throwaway math-check went when-e-lambda-is-near-one → -2 → -3 and its highlight went Unanchored; ids.py's docstring says only retired ids are reserved. The explain skill authors every heading id, so only hand-written chapters hit it",
+  "trigger": "the next native-ingest change, or the first report of a lost highlight",
+  "created_at": "2026-11-09T16:22:23+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
