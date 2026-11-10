@@ -29,5 +29,12 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "execution": {
+    "mode": "parallel",
+    "branch": "phase/P40-2t-one_way_to_explain_what_the_records_don",
+    "worktree": "/Users/sugang/projects/personal/knowledge/.claude/worktrees/P40-2t-one_way_to_explain_what_the_records_don",
+    "consolidation": "pending",
+    "base_branch": "main"
   }
 }
