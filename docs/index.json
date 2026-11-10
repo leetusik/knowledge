@@ -1227,7 +1227,7 @@
       ]
     },
     "qa": {
-      "latest": "v2611090827_p39-hk_gate_section_regression_checklist_adds_reader_math_terms_the_glossary_paper_text-only_math_keeps_publish_422s_and_the_v94_explain_front_door",
+      "latest": "v2611102045_p40-2t_gate_section_regression_checklist_moves_the_explain_front_door_to_v96_and_adds_a_no-code_subject_covered-but-lacking_the_chained_from_p_n_skill.md_with_the_landing_count_and_the_critic_s_nested_sibling_read",
       "current_path": "docs/current/qa.md",
       "versions": [
         {
@@ -1457,6 +1457,15 @@
           "source": "P39-hk.REVIEW",
           "summary": "P39-hk gate section: regression checklist adds reader math, terms, the glossary, paper, text-only math, keeps, publish 422s and the v94 explain front door",
           "previous": "v2611020616_p37-1p_gate_section_regression_checklist_retires_the_web-graph_lines_and_adds_the_old-graph-link_landing_public-grid_and_graph-api_checks"
+        },
+        {
+          "id": "v2611102045_p40-2t_gate_section_regression_checklist_moves_the_explain_front_door_to_v96_and_adds_a_no-code_subject_covered-but-lacking_the_chained_from_p_n_skill.md_with_the_landing_count_and_the_critic_s_nested_sibling_read",
+          "path": "docs/versions/qa/v2611102045_p40-2t_gate_section_regression_checklist_moves_the_explain_front_door_to_v96_and_adds_a_no-code_subject_covered-but-lacking_the_chained_from_p_n_skill.md_with_the_landing_count_and_the_critic_s_nested_sibling_read.md",
+          "created_at": "2026-11-11T05:45:51+09:00",
+          "commit": "0709094460754abf566aefb37c1d8f967589eab7",
+          "source": "P40-2t.REVIEW",
+          "summary": "P40-2t gate section: regression checklist moves the explain front door to v96 and adds a no-code subject, covered-but-lacking, the chained from=P<N>, /SKILL.md with the landing count, and the critic's nested sibling read",
+          "previous": "v2611090827_p39-hk_gate_section_regression_checklist_adds_reader_math_terms_the_glossary_paper_text-only_math_keeps_publish_422s_and_the_v94_explain_front_door"
         }
       ]
     },
@@ -1635,5 +1644,5 @@
       ]
     }
   },
-  "last_rebuilt_at": "2026-11-09T17:27:33+09:00"
+  "last_rebuilt_at": "2026-11-11T05:45:51+09:00"
 }

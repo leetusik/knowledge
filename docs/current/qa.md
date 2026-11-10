@@ -1,11 +1,11 @@
 ---
 doc_id: qa
-version: v2611090827
-created_at: 2026-11-09T17:27:33+09:00
-commit: a79c8e1cc4b259bf4ea62e35bbbfcf27dfac2299
-source: P39-hk.REVIEW
-summary: P39-hk gate section: regression checklist adds reader math, terms, the glossary, paper, text-only math, keeps, publish 422s and the v94 explain front door
-previous: v2611020616_p37-1p_gate_section_regression_checklist_retires_the_web-graph_lines_and_adds_the_old-graph-link_landing_public-grid_and_graph-api_checks
+version: v2611102045
+created_at: 2026-11-11T05:45:51+09:00
+commit: 0709094460754abf566aefb37c1d8f967589eab7
+source: P40-2t.REVIEW
+summary: P40-2t gate section: regression checklist moves the explain front door to v96 and adds a no-code subject, covered-but-lacking, the chained from=P<N>, /SKILL.md with the landing count, and the critic's nested sibling read
+previous: v2611090827_p39-hk_gate_section_regression_checklist_adds_reader_math_terms_the_glossary_paper_text-only_math_keeps_publish_422s_and_the_v94_explain_front_door
 ---
 
 # QA
@@ -325,7 +325,7 @@ apply there; use *In-app graph label focus (P22)* instead._
       `plugin/agents/*.md` bodies equal to Part B (P32)
 - [ ] Explain front door, headless (replaces P32's `quick` single-document
       line): `/knowledge:explain <a subject> quick` under `claude -p
-      --plugin-dir plugin` in this v86+ workspace prints one confirmation
+      --plugin-dir plugin` in a v96 workspace prints one confirmation
       (`In plain words:`, a `Sections` list, a `Cost:` line from the skill's
       cost table, `run: quick`, the seventeen-line `## Explain` block in
       create-phase's order, a `Why:` line) and stops; `git status`,
@@ -347,8 +347,8 @@ apply there; use *In-app graph label focus (P22)* instead._
       degraded)` (P32)
 - [ ] Explain front door, refusals (replaces P32's `book` outside a workspace
       line): `/knowledge:explain <a subject>` in a folder with no workflow
-      workspace refuses with the installer pointer, and in a v85 workspace
-      (or a v86 whose create-phase explain route lists no `**unit**`) with
+      workspace refuses with the installer pointer, and in a v95 workspace
+      (or one whose create-phase research route lists no `**sources**`) with
       `/update-workspace`; neither runs nor writes anything (P33-n3)
 - [ ] The landing's skill pane: the line count in
       `web/src/content/marketing/content.ts` (`lede`, `pane.meta`) equals
@@ -444,12 +444,37 @@ apply there; use *In-app graph label focus (P22)* instead._
       lacks is a 422 (ref-missing-term, math-syntax / math-command,
       formula-legend), and a translation that changes term ids or math is a 422
       (translation-term-ids, translation-math) (P39-hk)
-- [ ] Explain front door: in a v94 workspace, /knowledge:explain <subject>
-      under claude -p --plugin-dir plugin prints one confirmation (a guessed
-      Reader, subject-shaped Sections, one or two Other shapes, Built by: or
-      the research-first offer, the one-writer, one-critic Cost: line, the
-      sixteen-line ## Explain with phases:) and creates nothing; a v93
-      workspace is refused naming v94 (P39-hk)
+- [ ] Explain front door: in a v96 workspace, `/knowledge:explain <subject>`
+      under `claude -p --plugin-dir plugin` prints one confirmation (a guessed
+      Reader, subject-shaped Sections, one or two Other shapes, `Built by:`,
+      the research-first offer naming its sources when the records lack what
+      the reader needs, the one-writer, one-critic `Cost:` line, the
+      sixteen-line `## Explain` with `phases:`) and creates nothing; a v95
+      workspace, or one whose create-phase research route lists no
+      `**sources**`, is refused naming v96 (P39-hk; updated P40-2t)
+- [ ] Explain, a subject with no code: `/knowledge:explain <a subject no
+      phase covers>` under `claude -p` in a v96 workspace offers only
+      "research first", naming its sources (the web, your own material) and
+      that the confirmation comes back by itself; outside a git repository it
+      declines; nothing is created (P40-2t)
+- [ ] Explain, covered but the records lack what the reader needs:
+      `/knowledge:explain <code that phases built, for a reader who also needs
+      outside basics no covering record states>` under `claude -p` in a v96
+      workspace keeps `Built by:` naming those phases, names what the records
+      lack, and offers "research first" (sources: the web) beside "yes";
+      nothing is created (P40-2t)
+- [ ] Explain, chained: `/knowledge:explain <subject> from=P<N>` (a passed
+      research phase) redraws the confirmation from that phase's quoted
+      proposal, puts P<N> on `phases:` beside any phase that built the code,
+      says in `Why:` what changed, and waits for the literal yes (P40-2t)
+- [ ] `/SKILL.md` and the landing's skill pane: `/SKILL.md` serves
+      `plugin/skills/explain/SKILL.md` byte-identical (the v96 readiness test,
+      `from=P<N>`), and the lede and `pane.meta` counts equal its `wc -l`
+      (P40-2t)
+- [ ] Explain critic's sibling read, nested: in a nested install,
+      `git -C workflow/works/phases/active/P<N>/book show HEAD:./<key>.md` run
+      from the host root prints a committed chapter and fails on one not yet
+      committed (P40-2t)
 
 ## Verifying the Guard Itself (negative-test pattern)
 

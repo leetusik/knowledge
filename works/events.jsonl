@@ -1892,3 +1892,4 @@
 {"ts": "2026-11-11T05:44:58+09:00", "type": "slice_status_changed", "slice": "P40-2t.REVIEW", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-11-11T05:44:58+09:00", "type": "phase_reviewed", "phase": "P40-2t", "verdict": "pass", "reviewer": "slice-executor (opus, xhigh)"}
 {"ts": "2026-11-11T05:44:58+09:00", "type": "phase_consolidation_owed", "phase": "P40-2t", "notes": 20}
+{"ts": "2026-11-11T05:45:51+09:00", "type": "doc_version_created", "doc": "qa", "version": "v2611102045_p40-2t_gate_section_regression_checklist_moves_the_explain_front_door_to_v96_and_adds_a_no-code_subject_covered-but-lacking_the_chained_from_p_n_skill.md_with_the_landing_count_and_the_critic_s_nested_sibling_read", "source": "P40-2t.REVIEW"}

@@ -18,7 +18,7 @@
 |---|---|---|---|---|---|---|
 | `default` | `P41-sr` | planned | `P41-sr.DECOMP` | 0/2 | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
-| `phase/P40-2t-one_way_to_explain_what_the_records_don` | `P40-2t` | ready to merge | `none` | 12/12 | `.claude/worktrees/P40-2t-one_way_to_explain_what_the_records_don` | worktree |
+| `phase/P40-2t-one_way_to_explain_what_the_records_don` | `P40-2t` | merged — awaiting consolidation | `none` | 12/12 | `.claude/worktrees/P40-2t-one_way_to_explain_what_the_records_don` | worktree |
 
 ## Active Phases
 
