@@ -300,7 +300,7 @@
       "execution": {
         "mode": "parallel",
         "branch": "phase/P40-2t-one_way_to_explain_what_the_records_don",
-        "worktree": "/Users/sugang/projects/personal/knowledge/.claude/worktrees/P40-2t-one_way_to_explain_what_the_records_don",
+        "worktree": null,
         "consolidation": "pending",
         "base_branch": "main"
       },
@@ -322,5 +322,5 @@
   "deferred_open_count": 81,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 20,
-  "last_rebuilt_at": "2026-11-11T05:44:58+09:00"
+  "last_rebuilt_at": "2026-11-11T05:46:21+09:00"
 }
