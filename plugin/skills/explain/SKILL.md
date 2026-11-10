@@ -891,16 +891,18 @@ call shows itself where it is made.
 - **A call this skill gives, in its given form, denied** → stop with the block below, and
   write nothing more. So does a critic that returns `blocked` for a denied call in its
   brief's form (B5).
-- **A call in another form** (a `cd`, a `git -C`, a `$`, a chained `&&`) is your error, not
-  a stop: make it once more in the given form.
+- **A call in another form** (a `cd`, a `git -C` other than the critic's one read of an
+  earlier chapter, a `$`, a chained `&&`) is your error, not a stop: make it once more in
+  the given form.
 
 The block, with the real absolute paths filled in. `<ROOT>` is `<KB_EXPLAIN_STATE>`, the
 root of `<TOOLS>`, never a folder above it (with `<TOOLS>` in the dossier's `pages/`, §2,
 drop its two rules), `<SKILL_DIR>` the folder holding this file (the critic reads it), and
 `<UNIT>` the unit's folder in the phase: a document's or a chapter's `doc/`, a book's
 `book/` (§9.2); the rules' extra leading `/` makes `//…`, which Claude Code reads as the
-filesystem root. They cover the publish too (§5: the CLI, or the payload builder's `--payload`
-and `curl`):
+filesystem root. `<BOOK>` alone is relative: a book's folder exactly as its critic's
+`draft:` path writes it (B5, *Inputs* item 7). They cover the publish too (§5: the CLI, or
+the payload builder's `--payload` and `curl`):
 
     FAILED: permissions — this session denied: <the calls>. Nothing more of the run was written.
     The explain runs on the session's permissions, not on this skill's. Use auto mode
@@ -915,7 +917,8 @@ and `curl`):
       "Read(/<ROOT>/**)", "Edit(/<ROOT>/**)", "Read(/<SKILL_DIR>/**)"
     A writer that read this skill by path (an explain phase's executor) also needs
     "Bash(python3 -c *)" (it lets any inline Python run; auto mode needs none of this),
-    and for the unit's folder "Read(/<UNIT>/**)", "Edit(/<UNIT>/**)".
+    and for the unit's folder "Read(/<UNIT>/**)", "Edit(/<UNIT>/**)". A book's chapter
+    also needs "Bash(git -C <BOOK> show HEAD:./*)", the critic's read of earlier chapters.
     On another host, allow the same commands and paths in its own terms.
 
 **The payload builder.** Only §5's curl form needs it; the CLI publishes without it. Before that
@@ -2160,7 +2163,8 @@ and `Read` only their ranges.
   another repository. What they do not show, you cannot pass.
 - **Bash runs only read-only `git`** (`git show`, `git diff`, `git log`, `git grep`,
   `git blame`) and B9's hash, each as written, one to a call, in the session's working
-  folder (the repository), with repo-relative paths: never `-C`, `cd` or a `$`. Read files
+  folder (the repository), with repo-relative paths: never `cd` or a `$`, and never `-C`
+  but in *Inputs* item 7's read of an earlier chapter, in its form. Read files
   with Read; list and search them with Glob and Grep. A call in that form that is denied:
   return `blocked`, naming it.
 - **Never touch the KB key.** Never read, print or pass the writer's `auth.header` file or
@@ -2195,13 +2199,18 @@ and `Read` only their ranges.
    the code; confirm a range by its hash when unsure), a record with Read at its path (if
    the phase was archived since, Grep its quote under the archived folder).
 7. **The earlier chapters** (a chapter only), only as far as the order rule needs: their
-   `##`/`###` headings and the terms they define (`Grep` them), and the body of any chapter
-   the outline lists as this one's prerequisite: what this chapter must recap, never what
-   its reader already knows. Read an earlier chapter **only as committed**, `git show
-   HEAD:<path>`, never from the working folder, where a sibling written beside this one may
-   be half done. A sibling with no file at `HEAD` is judged by the outline instead: its
-   taught terms and their one-line recap lines in `book/outline.md` are what this chapter
-   must agree with and recap.
+   `##`/`###` headings and the terms they define, and the body of any chapter the outline
+   lists as this one's prerequisite: what this chapter must recap, never what its reader
+   already knows. Read an earlier chapter **only as committed**, never from the working
+   folder (no Read or Grep of it there), where a sibling written beside this one may be
+   half done. One command reads it, run as written:
+   `git -C <the draft's folder> show HEAD:./<its file>`, with the folder of your `draft:`
+   path exactly as that path writes it (a book's `…/book`) and the chapter's file name in
+   it (`<key>.md`, from the outline). `HEAD:./` resolves in that folder's own repository,
+   so it reads the nested one when the workspace is nested (`workflow/`, which the host
+   repository never tracks) and the host's when it sits at the root. A sibling it does not
+   find at `HEAD` is judged by the outline instead: its taught terms and their one-line
+   recap lines in `book/outline.md` are what this chapter must agree with and recap.
 8. **The explain skill** (`skill:`; otherwise the `knowledge` plugin's `installPath` in
    `~/.claude/plugins/installed_plugins.json`, plus `/skills/explain/SKILL.md`). It is the
    writer's contract and your yardstick: read §3.4 (what counts as evidence), §4's prose

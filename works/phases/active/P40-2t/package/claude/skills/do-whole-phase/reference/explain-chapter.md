@@ -193,12 +193,16 @@ chapter `pending --stop-kind limit`, a stop like those above.
 
 **What a chapter sees of the others: nothing in flight.** Its writer recaps, names and links from the
 outline's pins (span 1, above). Its critic reads an earlier chapter only as committed, by
-`git show HEAD:<path>` (B5 *Critic (`knowledge:explain-critic`)*, *Inputs*), and judges a sibling still in
-flight by the outline's recap lines; in a run with one chapter at a time every earlier chapter is
-committed, so nothing changes there. The synthesis chapter starts only once every chapter it draws on is
-`done` and committed (its declaration binds, and a held commit holds every start:
-`wave.md`, *At each return*, step 5), so it reads them finished. A correction reaches the other chapters
-through its note, and the review checks it in each of them (`reference/explain-review.md`).
+`git -C <the draft's folder> show HEAD:./<its file>` (B5 *Critic (`knowledge:explain-critic`)*, *Inputs*),
+the folder exactly as its dispatch block's `draft:` writes it (`works/phases/active/P<N>/book`), and judges
+a sibling still in flight by the outline's recap lines. `HEAD:./` resolves in that folder's own
+repository, so the one command reads the nested repo when nested (the host never tracks `workflow/`) and
+this repo at the root, from the same working folder: in a run with one chapter at a time every earlier
+chapter is committed and read, in both layouts, so nothing changes there. The synthesis chapter starts
+only once every chapter it draws on is `done` and committed (its declaration binds, and a held commit
+holds every start: `wave.md`, *At each return*, step 5), so it reads them finished. A correction reaches
+the other chapters through its note, and the review checks it in each of them
+(`reference/explain-review.md`).
 
 **Where each chapter is, read from disk alone.** The resume card's `returned=`, and its next action, read
 any `result.md` that exists as a return; after span 1 it is not one. So at every session start, after

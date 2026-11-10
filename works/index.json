@@ -294,9 +294,9 @@
       "order": 22,
       "path": "works/phases/active/P40-2t",
       "review_status": "changes_requested",
-      "current_slice": "P40-2t.F2",
+      "current_slice": "P40-2t.F1",
       "slice_count": 12,
-      "done_slice_count": 9,
+      "done_slice_count": 10,
       "execution": {
         "mode": "parallel",
         "branch": "phase/P40-2t-one_way_to_explain_what_the_records_don",
@@ -322,5 +322,5 @@
   "deferred_open_count": 77,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 20,
-  "last_rebuilt_at": "2026-11-10T22:45:06+09:00"
+  "last_rebuilt_at": "2026-11-10T23:03:05+09:00"
 }

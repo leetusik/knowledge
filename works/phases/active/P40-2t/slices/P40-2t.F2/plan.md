@@ -88,3 +88,16 @@ Write your own notebook entries through `phase-section`, since you run alone:
 - one `## Doc impact` line (`--append`): decisions.md, the critic reads committed siblings with
   `git -C <draft folder> show HEAD:./<file>`, so it works at root and nested;
 - `## Now`, replaced.
+
+## Dispatch
+
+route=high
+reason=risk high (not low)
+subagent_type=slice-executor
+model=opus
+pass_model=yes
+effort=xhigh
+pass_effort=yes
+attribution=Claude Opus 5.5
+explore_model=haiku
+explore_effort=xhigh

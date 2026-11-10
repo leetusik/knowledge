@@ -235,7 +235,8 @@ and three additions come from the evidence.
      - The proposal's "running examples and numbers" is kept and widened by the recap lines and the names.
   2. **Each chapter's span 3 returns a notebook note:** the terms it taught, its link ids, and **corrections**:
      any fix it made to a fact the outline or the frozen evidence states. This replaces P59-d8's forward channel.
-  3. **The critic reads an earlier chapter only as committed** (`git show HEAD:<path>`). A sibling still in
+  3. **The critic reads an earlier chapter only as committed** (`git -C <the draft's folder> show HEAD:./<file>`, F2: the
+     form reads the nested repo when nested and the host's at root). A sibling still in
      flight is judged by the outline's recap lines. In a sequential run every earlier chapter is committed, so
      nothing changes there.
   4. **The synthesis chapter runs last** and reads the finished chapters.
@@ -332,7 +333,7 @@ is two natural halves in series: **A-front** (A1–A13) and **A-evidence** (A14�
 | A16 | §5 *Publish via the KB document API* (the command and its flags) | `--book-kind codebase` becomes `<codebase\|subject>`, plus `--book-subject "<label>"` for a subject book | (b) | S |
 | A17 | §9.2 *The evidence for a book (an explain phase)* | "A book is a codebase book" becomes codebase or subject. Item 3's outline adds the pinned recap lines, names, running examples and link ids, which the workspace asks for | 2, 5, (d) | S |
 | A18 | §9.3 *A chapter: its evidence, then the draft* | Written beside other chapters: recap with the outline's recap lines, link only to section ids the outline names, and report corrections (the workspace's note) | 5, (d) | S |
-| A19 | B5 *Critic (`knowledge:explain-critic`)* · *Inputs*, item 7 | Earlier chapters are read only as committed (`git show HEAD:<path>`); a sibling not at `HEAD` is judged by the outline's taught terms and recap lines | 5, (d) | S |
+| A19 | B5 *Critic (`knowledge:explain-critic`)* · *Inputs*, item 7 | Earlier chapters are read only as committed (`git -C <the draft's folder> show HEAD:./<file>`, both layouts, F2); a sibling not at `HEAD` is judged by the outline's taught terms and recap lines | 5, (d) | S |
 | A20 | B5 · *How you check*, **Nothing from outside** (and *The trace*) | A finding resting on an outside work supports the sentence: check the record line and its `source:`, never the work. A gloss beyond the finding is `outside`. Attribution comes by the standing gap or in plain words | 2, (b) | S |
 | A21 | B9 *The dossier: files, ids and entries* · the record-entry form and *What an entry supports* | A `- source: <title, URL> \| none` field on a `finding` entry; what a finding entry supports | (b) | S |
 | A22 | B9 · *The evidence* paragraph | Records include research findings (web-sourced, or the operator's material); still nothing read from outside the records | 2, (b) | S |

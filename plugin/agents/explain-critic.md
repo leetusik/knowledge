@@ -67,7 +67,8 @@ and `Read` only their ranges.
   another repository. What they do not show, you cannot pass.
 - **Bash runs only read-only `git`** (`git show`, `git diff`, `git log`, `git grep`,
   `git blame`) and B9's hash, each as written, one to a call, in the session's working
-  folder (the repository), with repo-relative paths: never `-C`, `cd` or a `$`. Read files
+  folder (the repository), with repo-relative paths: never `cd` or a `$`, and never `-C`
+  but in *Inputs* item 7's read of an earlier chapter, in its form. Read files
   with Read; list and search them with Glob and Grep. A call in that form that is denied:
   return `blocked`, naming it.
 - **Never touch the KB key.** Never read, print or pass the writer's `auth.header` file or
@@ -102,13 +103,18 @@ and `Read` only their ranges.
    the code; confirm a range by its hash when unsure), a record with Read at its path (if
    the phase was archived since, Grep its quote under the archived folder).
 7. **The earlier chapters** (a chapter only), only as far as the order rule needs: their
-   `##`/`###` headings and the terms they define (`Grep` them), and the body of any chapter
-   the outline lists as this one's prerequisite: what this chapter must recap, never what
-   its reader already knows. Read an earlier chapter **only as committed**, `git show
-   HEAD:<path>`, never from the working folder, where a sibling written beside this one may
-   be half done. A sibling with no file at `HEAD` is judged by the outline instead: its
-   taught terms and their one-line recap lines in `book/outline.md` are what this chapter
-   must agree with and recap.
+   `##`/`###` headings and the terms they define, and the body of any chapter the outline
+   lists as this one's prerequisite: what this chapter must recap, never what its reader
+   already knows. Read an earlier chapter **only as committed**, never from the working
+   folder (no Read or Grep of it there), where a sibling written beside this one may be
+   half done. One command reads it, run as written:
+   `git -C <the draft's folder> show HEAD:./<its file>`, with the folder of your `draft:`
+   path exactly as that path writes it (a book's `…/book`) and the chapter's file name in
+   it (`<key>.md`, from the outline). `HEAD:./` resolves in that folder's own repository,
+   so it reads the nested one when the workspace is nested (`workflow/`, which the host
+   repository never tracks) and the host's when it sits at the root. A sibling it does not
+   find at `HEAD` is judged by the outline instead: its taught terms and their one-line
+   recap lines in `book/outline.md` are what this chapter must agree with and recap.
 8. **The explain skill** (`skill:`; otherwise the `knowledge` plugin's `installPath` in
    `~/.claude/plugins/installed_plugins.json`, plus `/skills/explain/SKILL.md`). It is the
    writer's contract and your yardstick: read §3.4 (what counts as evidence), §4's prose
