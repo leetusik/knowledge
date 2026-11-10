@@ -6,18 +6,18 @@
 ## Pointer
 
 - Current phase: `P40-2t`
-- Current slice: `P40-2t.REVIEW`
+- Current slice: `none`
 - Next slice: `none`
-- Waiting on operator: `none`
+- Waiting on operator: `P40-2t`
 - Stream: `phase/P40-2t-one_way_to_explain_what_the_records_don` (parallel phase checkout; the pointer above is scoped to it)
-- Open deferred jobs: `77`
+- Open deferred jobs: `81`
 - Workspace version: `v89`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P40-2t-one_way_to_explain_what_the_records_don` | `P40-2t` | in flight 11/12 | `P40-2t.REVIEW` | 11/12 | `.` | working tree |
+| `phase/P40-2t-one_way_to_explain_what_the_records_don` | `P40-2t` | pending | `P40-2t.REVIEW` | 11/12 | `.` | working tree |
 | `default` | `P41-sr` | planned | `P41-sr.DECOMP` | 0/2 | - | branch main |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
@@ -46,7 +46,7 @@
 | [x] `P37-1p` | `done` | `pass` | Drop the knowledge graph | `none` | `works/phases/active/P37-1p` |
 | [x] `P38-e1` | `done` | `pass` | Right-size explain runs (plugin 0.9.0) | `none` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
 | [x] `P39-hk` | `done` | `pass` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `none` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
-| [ ] `P40-2t` | `in_progress` | `changes_requested` | One way to explain what the records don't cover | `P40-2t.REVIEW` · parallel: `phase/P40-2t-one_way_to_explain_what_the_records_don` | `works/phases/active/P40-2t` |
+| [~] `P40-2t` | `pending` | `changes_requested` | One way to explain what the records don't cover | `P40-2t.REVIEW` · parallel: `phase/P40-2t-one_way_to_explain_what_the_records_don` | `works/phases/active/P40-2t` |
 | [ ] `P41-sr` | `planned` | `pending` | Listen: a free AI voice reader | `P41-sr.DECOMP` | `works/phases/active/P41-sr` |
 
 ## Phase P21: Web document deletion

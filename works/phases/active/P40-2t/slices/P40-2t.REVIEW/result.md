@@ -1,4 +1,4 @@
-# P40-2t.REVIEW — result (round 1)
+# P40-2t.REVIEW — result (round 2)
 
 ## Verdict
 
@@ -6,289 +6,309 @@
 - **route:** high
 - **model:** opus
 - **effort:** xhigh
-- **review_verdict:** changes_requested
-- **summary:** Validated all six edit slices together: parity, pytest, the web gate, the package's finds/apply/cites and the whole patched smoke suite on a fresh `fdb1151` copy (504 PASS) all pass. A live probe on a patched install showed the outline gate holding every declared chapter and the quoted proposal no longer marking a research phase as an explain phase. In Claude in Chrome, a scratch standalone build serves the 0.11.0 `/SKILL.md` and the landing shows 2,665. Read end to end, the route works for a subject no phase covers and for a no-code subject. It has two gaps. (1) **P59-d8's own shape**, code that phases already cover but whose reader needs outside basics, has no way into "research first". (2) In a **nested install** the critic's new rule, read siblings at `HEAD`, reads the wrong repository, so it never sees a committed chapter.
-- **files_changed:** `works/phases/active/P40-2t/slices/P40-2t.REVIEW/result.md`; `works/phases/active/P40-2t/phase.md` (through `phase-section`: `## Now` replaced, one `## Notes for later slices` entry appended). No source, package, doc or other-repo file was touched. Scratch only: `<scratchpad>/p40-review*` (a fresh `fdb1151` copy, two scratch installs, a scratch web build, a throwaway viewport proxy, two hand-walk scripts).
+- **round:** 2 (round 1: `changes_requested`, F1 and F2; its result is in this file's git history and the phase's Decisions)
+- **review_verdict:** pass
+- **summary:** Round 2 checked both fixes against their full case lists, their blast radius and the whole validation suite. F1 now offers "research first" whenever the records lack what the reader needs, always honoured on the operator's word. Re-traced through the texts, cases 5–9 pass, and P59-d8's covered-plus-basics shape runs end to end. F2's critic read, `git -C <draft folder> show HEAD:./<file>`, reads committed chapters in a fresh nested scratch pair, where the old form misses. The whole suite is green: parity, pytest, the web gate and a scratch build, finds, apply, the patched smoke suite with 504 PASS, cites and validate. In Claude in Chrome, a scratch production build serves `/SKILL.md` byte-identical to the 0.11.0 skill, and the landing reads 2,722. There is no repeat failure and no new finding.
+- **findings:** none. Round 1's F1 and F2 both hold (no `repeat of round 1 finding`).
+- **files_changed:**
+  - `works/phases/active/P40-2t/slices/P40-2t.REVIEW/result.md` (rewritten for round 2);
+  - `works/phases/active/P40-2t/phase.md`, through `phase-section` only: seven gate-section notes appended to `## Doc impact`; the five REVIEW-only `## Notes for later slices` entries this round consumed removed (R1 ×3, S3, REVIEW); `## Now` replaced.
+  - No source, package, doc or other-repo file was touched.
+  - Scratch only, under `<scratchpad>/r2/`: a fresh `fdb1151` copy, patched and rebuilt; a nested git proof pair; a patched scratch install; a scratch web build; the note drafts.
 - **validation:**
-  - `python3 scripts/skills_parity.py`: PASS; `python3 scripts/plugin_parity.py`: PASS.
-  - `uv run pytest -q`: 183 passed, 60 skipped: PASS (includes `tests/test_explain_resolver.py`).
-  - `pnpm --dir web typecheck`: rc 0; `lint`: rc 0; `test`: 41 files, 589 tests: PASS.
-  - Build: `pnpm exec next build` in a scratch clone of `web/` (no `.next`; the same `next build` the `build` script runs, done in a clone so it does not touch S6's `web/.next`): rc 0.
-  - `package/checks/finds.py <bootstrap> fdb1151`: `finds checked=33 not-exactly-once=0`: PASS. The bootstrap is still at `fdb1151` and clean.
-  - `package/checks/apply.py` on a fresh `git archive` of `fdb1151`: `applied finds=33`, explain block L211–316 passed, caps 12,285/8,185/8,180 of 12,288/8,192/8,192, skill count 21, create-phase core 50,681 B: PASS.
-  - On that copy: `python3 installer/build.py` and `--check` OK; `bash tests/retrofit_smoke.sh` alone: `ALL RETROFIT SMOKE TESTS PASSED`, rc 0, **504 PASS, 0 FAIL**.
-  - `package/checks/cites.py plugin/skills/explain/SKILL.md` over the package's five texts: 118/17, missing 0. Over the patched copy's 64 `payload/claude/**/*.md` and the seed operations doc: 124/17, missing 0: PASS.
-  - P33-n3's citation check (checklist line 37):
-    - on a fresh patched install: 229, missing 0;
-    - on a fresh `fdb1151` (v95) install against the 0.11.0 skill: 218, missing 0;
-    - this repo's vendored v89 `.claude/`: 200, missing 85. That is known and pre-existing: it clears at `/update-workspace`.
-  - `python3 scripts/workflow.py validate`: passed. Its warnings were already there (the Decisions long entries 14 and 16, consolidation debt, stale docs, oversized sections) and include no dangling pointer.
+  - `python3 scripts/skills_parity.py`: PASS (the web copy is byte-identical; the plugin agent matches Part B). `python3 scripts/plugin_parity.py`: PASS.
+  - `uv run pytest -q`: 183 passed, 60 skipped, rc 0. This includes `tests/test_explain_resolver.py`.
+  - `pnpm --dir web typecheck`: rc 0. `lint`: rc 0. `test`: 41 files, 589 tests, rc 0.
+  - Build: `pnpm exec next build` in a scratch clone of `web/` (no `.next`, P37-1p's recipe): rc 0.
+  - `package/checks/finds.py <bootstrap> fdb1151`: `finds checked=33 not-exactly-once=0`. The bootstrap is still at `fdb1151` and clean.
+  - `package/checks/apply.py` on a fresh `git archive` of `fdb1151`: `applied finds=33`; smoke explain block L211–316 passed; caps 12,285 / 8,185 / 8,180 B; other pins passed; skill count 21; create-phase core 53,667 B.
+  - On that copy: `python3 installer/build.py` and `--check`: OK. `bash tests/retrofit_smoke.sh` alone, the whole patched suite: **504 PASS, 0 FAIL**, `ALL RETROFIT SMOKE TESTS PASSED`, rc 0.
+  - `package/checks/cites.py plugin/skills/explain/SKILL.md`:
+    - over the package's five texts and four patch files: `citations checked=120 bold parts checked=19 missing=0`;
+    - over the patched copy's 64 `payload/claude/**/*.md` plus the seed operations doc: `checked=126 bold parts checked=19 missing=0`.
+  - P33-n3's citation check (checklist line 37) on a fresh patched install: `citations checked=231 missing=0`.
+  - `python3 scripts/workflow.py validate`: "Workflow validation passed". Its warnings were already there: the Decisions long entries 14 and 16, consolidation debt, stale docs, oversized doc sections. No dangling pointer.
 - **deviations:**
-  1. The checklist's `claude -p --plugin-dir plugin` front-door lines were **not run**. Plugin 0.11.0 refuses every workspace that exists today (this one is v89, the others v95), and a headless model session is spend the plan forbids. Their readiness half was hand-walked on scratch installs instead (§ Checklist). D94-cp should be retargeted to v96 (deferred jobs).
-  2. The web build ran in a scratch clone, not as `pnpm --dir web build` in the worktree (above).
-  3. Because the verdict is `changes_requested`, I did none of the pass-only duties: no `## Doc impact` append and no gate-section notes. Their drafts are below, for round 2.
-- **findings:** two problem classes, F1 and F2 (§ Findings): one fix slice each, both `risk: high`.
-- **doc_impact_added:** none (the verdict is not a pass). The list was checked and is complete for what shipped (§ Doc impact).
-- **doc_versions:** none — deferred to post-merge consolidation (parallel mode).
-- **walkthrough:** none, since the verdict is `changes_requested`. The round-2 draft is under § Walkthrough draft.
+  1. The checklist's `claude -p --plugin-dir plugin` front-door lines (28, 29, 33, 34, 35, 54) were **not run**, as in round 1. Plugin 0.11.0 refuses every workspace that exists today, and a headless model session is spend the plan forbids. The readiness half was re-walked on a fresh patched install (§ Checklist). D94-cp should be retargeted to v96 (deferred job 2).
+  2. Round 1 counted the outside lines as "44". The correct count is 40: lines 1–3, 5–26, 30, 38–43, 45 and 47–53. Corrected below.
+- **doc_impact_added:** none to the durable-truth list, which is complete: F1 and F2 had each appended theirs, and the eight slices are covered (§ Doc impact). The gate-section notes are appended separately, below.
+- **gate-section notes appended** (`## Doc impact`, tagged `(gate section — written at merge)`), all `qa.md` *## Regression Checklist*:
+  - the v94 front-door line, replaced by a v96 one;
+  - two version edits, to the headless line and the refusals line;
+  - five new lines: a subject with no code; covered but lacking; chained; `/SKILL.md` and the landing count; the critic's nested sibling read.
+  - `## Operator Runtime`: no change.
+- **doc_versions:** none — deferred to post-merge consolidation (parallel mode)
+- **walkthrough:** § Walkthrough (below), verbatim for `accept-gate --open`.
+- **deferred-job candidates:** four (§ Deferred-job candidates): the server grammar deploy; D94-cp retargeted to v96; an on-disk trigger for the chained explain; retire checklist line 30. Plus one observation: D77's trigger fires with this package.
 - **explain:** not written — run /knowledge:explain P40-2t for a document, or ask it for a book
 - **team-rules check:** n/a (at-root install: the contract's Commit Convention is the only one).
-- **instrument:** Claude in Chrome. `list_connected_browsers`, then `select_browser` on `c14e5b18-f250-45f1-b92e-4a08a31197b5`, then my own tab, closed at the end. The scratch standalone build was served on `:3991` and a throwaway same-origin viewport proxy on `:3992`; both were stopped. `:3030` was never touched.
+- **instrument:** Claude in Chrome.
+  - `list_connected_browsers`, then `select_browser` on `c14e5b18-f250-45f1-b92e-4a08a31197b5` (the one entry, matched by deviceId), then my own tab. That tab, and the empty group tab the context call opened, were closed at the end.
+  - The scratch standalone build was served on `:3993` and stopped (`kill`, port free afterwards). `:3030` was never touched (PID 8452 still listening).
 
-## Findings
+## Fix F1 against its case list (re-traced, not taken on the executor's word)
 
-### F1 — "research first" is offered only when no phase covers the subject, so P59-d8's shape has no route
+Sources: the plugin skill (`plugin/skills/explain/SKILL.md`), the package's `explain-route.md` (ER) and `research-route.md` (RR), and create-phase step 2 as applied to the fresh patched copy.
 
-**The rule that failed.** The operator confirmed the arb_upbit_1 shape as the one standard way: research in its own phase, then an explain from its records, from one request. That run began with a codebase subject whose code phases already covered: "performance rule v2 with basic quant knowledge". The reader needed outside basics that no record held.
+| # | Case | Result | What I traced |
+|---|---|---|---|
+| 1–4 | Uncovered code; uncovered code plus basics; no-code subject with no research; no-code subject covered | pass | Unchanged paths. **None covers it** still holds the uncovered case and its "yes from the code alone". MODE's subject case still offers only "research first" with no research phase, and goes on with one. |
+| 5 | Code phases cover, but the reader needs outside basics no covering record states (P58-pm → P59-d8) | pass | **The offer.** Step 6 now ends with "Then check **what the records lack**": one Grep over the covering phases' `intent.md`, `phase.md` and `topics/`. COVERAGE's new **Covered, but the records lack what the reader needs** names the trading-rule-plus-quant case. Step 7's third template keeps `Built by:` naming the phases, names what is lacking, and offers "research first" (`sources:` the web) beside "yes". **The hand-off:** step 8, "**On "research first"**, whatever the coverage". **Create-phase** step 2, applied: "or phases cover it but none of their records states what the reader needs … A covered subject's block is accepted like any other". **RR** opening: the three cases. **The chain:** RR **When it passes**, `P<N>` "beside any phase that covers the code". **The redraw:** step 5's `from=` paragraph, "The coverage still runs over the subject's paths, so a covered subject keeps the phases that built its code on `phases:` … stays kind `codebase`". The redraw's own lack check now Greps the research phase's `topics/` too, so the findings count. **The book:** `explain-decomposition.md` L34 keeps `codebase` "even where it leans on outside basics a research phase recorded". ER *A confirmed proposal* checks "that research phase among its `phases:`". |
+| 6 | A covered subject, and the operator replies "research first" or asks in their own words | pass | Step 8: "Anything but a literal yes, a changed line, a picked shape or a "research first" (below) creates nothing", and "**On "research first"**, whatever the coverage: offered or not … never a reply that creates nothing … A confirmation that offered no research has no block yet: fill it now by COVERAGE's rules". COVERAGE **Research first** is "**always honoured**". Step 7's opener "You asked for the research first: …" covers a request that asked, as the upbit operator's words did. Create-phase step 2: "honoured whenever the operator asks for it, whatever the coverage". |
+| 7 | Cases 5–6 through the explain route's own confirmation | pass | ER step 1 drafts by the front door's "steps 4–6", which now include the lack check. ER's **When the records lack what the reader needs,** lists the three cases. ER's *A "research first" reply* covers "the front door's, or this route's own confirmation's … whatever the coverage, offered or not", and fills the block first when the route offered none. |
+| 8 | A v2 of a covered subject that asks for outside material | pass | COVERAGE: "A v2 that asks for outside material is this case too; its research phase is then one of the phases since (§3.4 *A v2*)". §3.4 *A v2* step 2 reads the covering phases the prior did not read. The citation "(§3.4, step 6)" points at D1's step 6, **The gaps**: correct. |
+| 9 | The research route and create-phase step 2 accept a covered subject's block | pass | Applied step 2 (L35 of the patched copy) says so word for word. RR **paths**: "A subject that phases already cover still names its code here". RR **sources**: "usually `web` …, plus `code` when the operator wants its code read again". Nothing in RR's steps or its `DECOMP` cut gates on coverage. |
+| 10 | Every prose description agrees | pass | `git grep -i "when no phase covers"` over the repo finds only the skill's step-7 bold (its opening kept, now listing all three triggers), P39-hk's archived-era package and the phase's own logs. These all carry the new rule: the plugin README; the root README; setup; the KB template; `plugin.json`; `marketplace.json`; the skill frontmatter and intro; the package README; ER; RR; patch 1c and 1e's *Why*; `release.md` §2, §3 and §5. The last three are confirmed in the patched copy's `README.en.md` L553, seed `operations.md` L60 and `changelog.d/explain-research-chained.md`. |
+| 11 | Readiness test, `**sources**`, the 44 headings, the citations | pass | All checks above are green. The readiness test text is unchanged, and the browser shows it (`**96 or later**`, the `sources` field). |
 
-The shipped trigger cannot reach that case. Every text gates "research first" on the subject having **no covering phase**:
-- the plugin's §1 *The phases that cover the subject*, **None covers it**;
-- the front door's step 7, "When no phase covers the subject";
-- step 8's *On "research first"*, "(no phase covers the subject: …)";
-- the explain route, *When no phase covers the subject* and *A "research first" reply*;
-- the research route's opening, "When no phase covers its subject";
-- create-phase step 2, patch 1c, "no phase covers the subject yet".
+**The two renamed package bold openings** (ER **When the records lack what the reader needs,**, RR **When the records lack what its reader needs**) are cited nowhere:
+- no smoke pin, `apply.py` assert or cites target names them (apply and the suite pass);
+- the plugin keeps its own bold **When no phase covers the subject** (opening unchanged), which nothing in the package cites.
 
-For a covered subject:
-- step 5's coverage names the building phases;
-- step 7 shows `Built by:` with no research offer;
-- the outside basics become a must-cover item the records cannot carry, which ends up a stated gap;
-- an operator who replies "research first" anyway gets nothing: step 8 says anything but a literal yes, a changed line or a picked shape creates nothing.
+The only old-name mention left is `topics/change-list.md` B3, a historical row of the pinned change list, not shipped text.
 
-That is the improvisation the intent names ("P58-pm stretched it to web research"), and it is still needed. The downstream half is already in place. **When it passes** carries `P<N>` on `phases:` "beside any phase that covers the code", and §9.2 allows "a research phase that recorded outside basics" in a codebase book. Only the entry is missing.
+## Fix F2 against its case list
 
-**Cases (the acceptance matrix):**
+- **Case 3, re-run by me** (nested, one at a time): a fresh pair under `<scratchpad>/r2/f2/`:
+  - `host/` is a git repo with `/workflow/` in `.git/info/exclude` (`git status --ignored` shows `!! workflow/`);
+  - `host/workflow/` is its own repo, with `ch1.md` and `ch2.md` committed and `ch3.md` (the draft) untracked.
 
-| # | Case | Today |
-|---|---|---|
-| 1 | Code no phase covers, no outside basics: "research first" (sources: code) or "yes" from the code | pass |
-| 2 | Code no phase covers, the reader needs outside basics: research first with `sources: code · web` | pass |
-| 3 | A no-code subject with no research phase: research first only (web, operator material) | pass |
-| 4 | A no-code subject a research phase covers (by coverage or `from=P<N>`): goes on | pass |
-| 5 | **Code phases cover, but the reader needs outside basics no covering record states** (P58-pm → P59-d8): the confirmation names what the records lack and offers "research first" beside "yes"; the chain runs; the redraw puts the building phases and the research phase on `phases:`; the book kind stays `codebase` | **fail**: no offer |
-| 6 | **A covered subject, and the operator replies "research first"** (or asks for research in their own words) | **fail**: creates nothing |
-| 7 | Cases 5–6 through the explain route's own confirmation (a direct "make an explain phase for X") | **fail** |
-| 8 | A v2 of a covered subject that asks for outside material | **fail**, as case 5 |
-| 9 | The research route and create-phase step 2 accept a block for a covered subject (`paths:` its code; `sources:` web, and code if wanted) | **fail**: both say "no phase covers the subject yet" |
-| 10 | Every prose description of the trigger agrees. Today each says "a subject no phase covers": `plugin/README.md`, root `README.md`, setup `SKILL.md`, the KB template, the description in `plugin.json`/`marketplace.json`/the skill frontmatter, and the release fragment, `README.en.md` block and seed operations doc in `patches/release.md` | **fail** |
-| 11 | The readiness test, the `**sources**` marker, the 44 headings and the citation checks stay green | must stay pass |
+  From the host root:
 
-**Proposed fix slice: `P40-2t.F1`, `risk: high`.** The defect spans S1 (high), S2 (mid) and S6 (mid): mid-row work goes to the high row. It is also open design: the plan must pin the new trigger.
+  | Command | Result |
+  |---|---|
+  | Old form: `git show HEAD:workflow/works/phases/active/P1/book/ch1.md` | `fatal: path '…/ch1.md' exists on disk, but not in 'HEAD'`, rc 128: the defect |
+  | New form: `git -C workflow/works/phases/active/P1/book show HEAD:./ch1.md` | ch1, rc 0 |
+  | The same for `./ch2.md` | ch2, rc 0 |
+  | The same for `./ch3.md` | `fatal … not in 'HEAD'`, rc 128: judged by the outline, as the text says |
 
-- **The simplest rule:** offer "research first" whenever the records do not carry what the reader needs. That is either a subject no phase covers, or a covered subject with a drafted section or must-cover item that no covering record states (a field's terms, a formula). Always honour an operator's "research first", whatever the coverage.
-- **What does not change:** the research block (`paths:` names the subject's code), the chain and **When it passes**.
-- **Files:**
-  - `plugin/skills/explain/SKILL.md`: §1 COVERAGE, steps 7–8 and the frontmatter description. Then its `.agents` and web copies, `skills_parity --write-agents`, and the landing count if the line count moves.
-  - Package: `explain-route.md`, `research-route.md`, `patches/create-phase.md` 1c, and `patches/release.md` sections 2, 3 and 5.
-  - `plugin/README.md`, root `README.md`, setup `SKILL.md`, the KB template, `plugin.json` and `marketplace.json`.
-  - Re-run `finds.py`, `apply.py`, the patched suite and `cites.py`.
-- The orchestrator may want the operator's word on the rule first: it changes when the front door offers research, a contract between the plugin and the payload.
+  The session refuses a bare relative `-C` after a `cd`, so the host root came first as `git -C <host>`. Git resolves the second, relative `-C` against it, exactly as the critic's working folder would.
+- **Cases 1, 2, 2b, 4, 5 and 6:** F2's `result.md` evidence, checked against the texts:
+  - B5 *Inputs* item 7 says "only as committed, never from the working folder (no Read or Grep of it there)" and gives the one command;
+  - *Your rules* allows `-C` only in item 7's form;
+  - §3.2 lists `"Bash(git -C <BOOK> show HEAD:./*)"`, with `<BOOK>` defined as relative;
+  - the regenerated `plugin/agents/explain-critic.md` carries both (parity PASS);
+  - `explain-chapter.md` restates "nothing changes there … in both layouts";
+  - `explain-decomposition.md` *Say what the run needs* names the rule for a book;
+  - `explain-review.md`'s freeze check is unchanged (`git -C workflow …`).
 
-### F2 — in a nested install, the critic's "read siblings at `HEAD`" reads the host repo, which never tracks the book
+## Blast radius (everything the two fixes touched)
 
-**The rule that failed.** A19 and C5 make the critic read an earlier chapter "only as committed, `git show HEAD:<path>`", with its paths "from the repo root". If a sibling has no file at `HEAD`, the critic judges it by the outline's recap lines instead.
+- **Skill and copies:** 2,722 lines. `web/public/SKILL.md` is byte-identical (sha256 `2f7c4375…`, the same as the served file). The `.agents` copy (2,720 lines) carries the plugin's new `description:` and body. The critic agent was regenerated.
+- **Package:**
+  - the two create-phase routes: above;
+  - `explain-chapter.md` and `explain-decomposition.md`: F2's lines only;
+  - `patches/create-phase.md`: 1c's *Becomes* and title, and 1e's *Why*;
+  - `patches/release.md` §2, §3 and §5: the same rule in three places;
+  - `PATCHES.md`: now correct, since `finds.py`'s list shows only `tests/retrofit_smoke.sh` across two patch files;
+  - `README.md`: the trigger bullet and the 53,667 B core, which equals `apply.py`'s print.
+- **Prose and manifests:**
+  - the plugin README, including the permission line F2 handed to F1;
+  - the root README, setup, the KB template, `plugin.json` and `marketplace.json`.
 
-In a **nested** install (Note is one), the book lives under `workflow/works/phases/active/P<N>/book/`:
-- `workflow/` is its own git repository and is excluded from the host (`/workflow/` sits in the host's `.git/info/exclude`; the scratch install showed it);
-- the critic runs from the host worktree's root, where the dispatch block's paths read `workflow/works/…`.
+  All carry the same rule. None says "a subject no phase covers" as the only case.
+- **`content.ts`:** only the two counts moved (2,665 → 2,722). The lede is OQ2's.
+- **Round 1's minor items:**
+  - fixed: the `unit` sentence in ER and `PATCHES.md`'s two-files line;
+  - still a deferred-job candidate: the chained explain's on-disk trigger.
+- **Reused from round 1, untouched by either fix:**
+  - the S2–S4 package parts;
+  - the wave and engine probes (`parallel-plan` rounds, `finish-slice` on a declared explain `DECOMP`, the outline-gate stop holding every chapter);
+  - the `## Explain` hazard probe (a quoted proposal is not an explain phase);
+  - S3's extra `wave.md` finds and its `&&` gate line;
+  - resume from disk;
+  - the subject-1 (no-code) trace.
 
-So `git show HEAD:workflow/works/…` asks the host's `HEAD` for a path the host never tracks. It always misses. Every committed sibling is then judged by the outline alone, silently. That holds even in a sequential run, which contradicts `explain-chapter.md`'s "in a run with one chapter at a time every earlier chapter is committed, so nothing changes there".
+## The route, end to end, for the covered-plus-basics case ("rule v2 + quant basics", at root as arb_upbit_1 is)
 
-Before this phase (0.10.0), the critic read earlier chapters from the working folder, which works when nested. The workspace already knows this trap: `explain-review.md`'s freeze check says "(Nested: run both in the nested repo, `git -C workflow …`, with paths relative to it.)".
+1. **The front door.** MODE is topic: "an idea the code relies on" when the request is about this code. Readiness needs v96 plus `**sources**`. Step 5's coverage finds the rule-v2 phases.
+2. **Step 6** drafts the book's chapters. The lack check Greps the covering records for the quant terms and finds none.
+3. **Step 7** shows `Built by:` with those phases and the third template: what is lacking, then "research first" (`sources:` the web) or "yes". The book's stops line says the research runs first.
+4. **"Research first"**, offered or typed, goes to step 8, which hands create-phase the request, a block (`paths:` the rule-v2 code; `sources: web`; `question:` the lacking parts; `then:` the book for its reader) and the proposal.
+5. **Create-phase.** Step 2 sends it to *The research route*, whose one confirmation names the web sources. On the yes:
+   - `new-phase`;
+   - `intent.md`, with the proposal as a `> ` blockquote, so the hazard holds;
+   - the intake commit;
+   - a run in `auto` on the default stream.
+6. **The research phase.** `DECOMP` cuts the `research` slices under the web rules (a source beside each fact, `unsourced:` lines). The review re-opens at least 2 sources per topic. The gate is waived.
+7. **The pass.** The review's pass leads, through the `review.md` chain line, to **When it passes**: `/knowledge:explain <subject> from=<P>`.
+8. **The redraw.** The research phase is covering. The coverage still finds the rule-v2 phases, so `phases:` names both and the kind stays `codebase`. `Why:` says what changed. The redraw waits for the literal yes.
+9. **Create-phase's explain route** takes it as *A confirmed proposal*, with the research phase among `phases:`. It creates the explain phase, starts its worktree, and runs it in `auto`.
+10. **The book `DECOMP`.** D1 holds the code, the records, and the research findings with their `source:`. The outline pins recap lines, names, examples and link ids. The chapters are declared.
+11. **The outline gate**, then **the wave**: at most 4 chapters at once, the synthesis chapter last.
+12. **The critic** reads committed siblings by F2's command.
+13. **The review** runs its consistency pass, then publishes with `--book-kind codebase`.
 
-**Cases (the acceptance matrix):**
-
-| # | Case | Today |
-|---|---|---|
-| 1 | At-root install, chapters one at a time: the critic reads each committed earlier chapter | pass |
-| 2 | At-root, a wave: committed siblings are read at `HEAD`, and in-flight ones are judged by the outline | pass |
-| 3 | **Nested install, one at a time**: the critic reads the committed earlier chapters | **fail**: every sibling is judged by the outline |
-| 4 | **Nested, a wave**: the same | **fail** |
-| 5 | The texts' claim that a sequential run changes nothing holds in both layouts | **fail** when nested |
-| 6 | The review's freeze check (already `git -C workflow`) | pass |
-
-**Proposed fix slice: `P40-2t.F2`, `risk: high`.** The defect is in S5 (mid) and S3 (high).
-
-- **The simplest rule** works in both layouts: read a sibling as `git -C <the draft's folder> show HEAD:./<sibling file>`. `HEAD:./…` resolves against `-C`'s folder, so it reads the nested repo when nested and the host repo at root.
-- **Files:**
-  - `plugin/skills/explain/SKILL.md` B5 *Inputs*, item 7, then the copies, `--write-agents` (which regenerates `plugin/agents/explain-critic.md`) and parity;
-  - the package's `explain-chapter.md`, *What a chapter sees of the others: nothing in flight*;
-  - re-run `cites.py` and `apply.py`.
-
-### Minor (no fix slice of their own; F1's slice may correct the first two in passing, since it edits those files)
-
-- `explain-route.md`, under **unit**, says "The literal `unit` line is what the plugin's front door tests for". It is stale. 0.11.0 tests `**sources**` under *The research route*, and 0.10.0 tested `**phases**`. The sentence was inherited verbatim from `fdb1151`.
-- `PATCHES.md` says "Two files are edited by two patch files … `payload/claude/agents/slice-executor.md` (only `patches/workflow.md`) and `tests/retrofit_smoke.sh`". Only the smoke suite is edited by two of them (`finds.py`'s list confirms it).
-- The chained explain has no on-disk trigger. Its only trigger is the `review.md` line followed at the moment of the pass, so a compaction between the recorded pass and the front-door call loses the "comes back by itself". The way back is documented: `/knowledge:explain <subject> from=<P>`, or coverage. The window is small, so I did not judge it fix-worthy. It is listed as a deferred-job candidate.
-
-## The route, read end to end (step 2)
-
-**Subject 1: no code, "the operator's English"** (a nested install, as Note is):
-
-1. The front door's MODE says **No code behind it: a subject**. Readiness needs v96 plus `**sources**`.
-2. The cheap look reads a covering research phase's gists, and the coverage greps the plain name. None covers it.
-3. Step 7 shows the subject paragraph, with "research first" only and its sources named. The book's stops line says the research runs first.
-4. Step 8 hands create-phase the request, the block and the proposal. Create-phase step 2 routes it to *The research route*.
-5. The research route confirms once. The confirmation names the sources, the landing repository and its git remote.
-6. On the yes: `new-phase`, then `intent.md` with the proposal as a `> ` blockquote, then the intake commit, then a run in `auto` on the default stream.
-7. Its DECOMP cuts a corpus slice first, under the eight privacy rules. The research review samples sources and runs the self-tests, the secret scan and the masking checks. The gate is waived.
-8. On the pass, the chain line in `review.md` (both copies) leads to **When it passes**, which runs `/knowledge:explain <subject> from=<P>`.
-9. With `from=`, the front door reads the quoted proposal as the starting draft, redraws it, says in `Why:` what changed, and waits for the literal yes.
-10. The explain route takes it as *A confirmed proposal*: "covered by a research phase on `phases:`".
-11. The book DECOMP:
-    - accepts a subject explain only when `phases:` names a research phase;
-    - sets the registry floor to 0.11.0;
-    - builds D1 from the records, reading a corpus only at the cited ids, with the standing gap;
-    - pins recap lines, names, running examples and link ids in the outline;
-    - declares the chapters (`--depends-on none`, the synthesis chapter on the chapters it draws on).
-12. The outline gate runs as one `&&` line, and a probe showed the stop holding every chapter. Then *Chapters at once (a wave)* runs at most 4, and the synthesis chapter goes last.
-13. The review's consistency pass runs, then the publish with `--book-kind subject --book-subject`. The CLI and the server accept both (`cli/…/knowledge.py` `--book-subject`; `server/books.py` `BOOK_KINDS`).
-
-Only the critic's sibling reads break here (F2).
-
-**Subject 2: a codebase subject that needs outside knowledge, "rule v2 + quant basics"** (at root, as arb_upbit_1 is): it breaks at step 1 of the route (F1). The coverage finds the rule v2 phases, the confirmation offers no research, and quant basics become gaps. From a research phase onward, everything traces as for Subject 1, with `kind codebase`.
-
-**Plugin against package** (names, cited headings, bold parts, versions, `**sources**`, `from=`, the `## Explain` hazard, resume):
-- **Agree:** *The research route* and **When it passes** are cited the same way in the plugin, both `review.md` files and the release pins. `from=P<N>` and `from=<P>` agree.
-- **Versions:** 0.11.0 everywhere: the plugin, setup, the route floor, the DECOMP's registry floor and the legacy-block line. v96 everywhere: the front door, the READMEs and the package README.
-- **The hazard is fixed:** `explain_phase()` on a scratch research phase with a quoted `> ## Explain` returns False, and on a real explain phase it returns True.
-- **Resume:** the wave's resume reads each chapter from disk (`critic_ready`, `critique: answered`, the critique file's `- verdict:`). That holds.
-- **S3's extras:** `wave.md`'s four extra finds (`returned=`, *Rolling starts*, *At each return* opening and step 6, *Resume* step 2 twice) are consistent with *Chapters at once (a wave)*. The outline gate's single `&&` line has the same order `fdb1151` used.
-- **The engine probe** (a patched scratch install):
-  - `parallel-plan` printed `S1 + S2 -> S3 -> REVIEW`;
-  - `finish-slice` took the declared explain DECOMP;
-  - after the gate and the stop, `next` printed `ready_slices=none -- stopped by P1.S1`;
-  - after "accept", `ready_slices=P1.S2` and `running_slices=P1.S1`, with the synthesis chapter waiting.
+Nothing breaks.
 
 **The six confirmed points:**
-1. **Own research phase:** holds, except for F1's case 5.
-2. **Records-only, no-code subject accepted:** holds.
-3. **One request runs both:** holds once research is offered; F1 is its gap.
-4. **Checks stay, and a real book:** holds in the text; the live test is P59-d8's publish (below).
-5. **Chapters at once:** holds, bar F2 in nested installs.
-6. **Checked against P59-d8 first:** done by R1 and re-checked below. Nothing contradicts the direction.
+
+1. **Its own research phase:** holds, now for the covered case too.
+2. **Records-only, a no-code subject accepted:** holds.
+3. **One request runs both:** holds for every case, including an unoffered "research first".
+4. **Checks stay, and a real book:** holds in the text. The live test is P59-d8's publish (below).
+5. **Chapters at once:** holds in both layouts.
+6. **Checked against P59-d8:** its whole-book review found exactly the class this phase's pinned recap lines and consistency pass target. Chapters 1 and 7 said "judged on G and D", while chapters 6 and 8 teach G alone. That supports the direction.
 
 ## Gate stages
 
-1. **The manifest:** `## Operator Runtime` is filled. The deviceId matched, and Claude in Chrome was selected first.
-2. **Spot-check** (the scratch standalone build of this branch, served by P37-1p's recipe on `:3991`):
-   - `/SKILL.md` answers 200 with `text/markdown`, byte-identical (sha256 `9d3354e9…`) to `plugin/skills/explain/SKILL.md` and `web/public/SKILL.md`. In the browser it shows the v96 readiness test (`**96 or later**`, the `**sources**` field), `argument-hint … [from=P<N>]`, the `from=P<N>` → FROM rule, and no "v94".
-   - The landing's lede and pane read "2,665-line" and "2,665 lines", which equals `wc -l`. "read the whole skill ↓" expands to the whole file, 2,666 lines with the end newline, holding *Written beside other chapters*.
-   - No console errors.
-3. **Fresh eyes:** on the landing's skill band at 1728 and 390, the copy fits with no horizontal scroll. The only thing that reads oddly for a subject book is OQ2's "cite every line to the code" (below). The pane's "showing the head" shows the new description, which is long but complete.
+1. **The manifest:** `## Operator Runtime` is filled. The deviceId matched the one connected browser and was selected before any other browser tool.
+2. **Spot-check** (scratch standalone build of this branch, P37-1p's recipe, `:3993`):
+   - `curl /SKILL.md`: 200, `text/markdown; charset=UTF-8`, sha256 equal to `plugin/skills/explain/SKILL.md` and `web/public/SKILL.md`.
+   - In the browser, `/SKILL.md` shows:
+     - the readiness test (`**96 or later**`, "they need v96 or later");
+     - `[from=P<N>]`, "whenever the records lack what the reader needs" and **Covered, but the records lack what the reader needs**;
+     - "It is **always honoured**";
+     - item 7's `git -C <the draft's folder> show HEAD:./<its file>` and the `<BOOK>` permission line;
+     - no "v94".
+   - The landing `/`:
+     - the lede reads "2,722-line skill" and the pane "2,722 lines · yaml"; "2,665" appears nowhere;
+     - "read the whole skill ↓" opens the whole file (2,723 lines with the end newline), holding the new **Covered** paragraph, item 7's read and B12;
+     - `scrollWidth` equals `innerWidth` (1728);
+     - after a reload, the console has no messages.
+3. **Fresh eyes** (the landing's skill band, the pane head, `/SKILL.md`): the pane's "showing the head" now shows the longer description with the new trigger, still complete and readable. The one thing that reads oddly for a subject book is OQ2's "cite every line to the code". Nothing is dead or broken.
 4. **Checklist:** the table below.
 5. **Questions:**
-   - OQ1 is resolved.
-   - OQ2 goes into the walkthrough on a pass, with the recommendation below. It could also be asked now, beside F1, since both touch how a subject book is described.
+   - OQ1 is resolved (→ DECOMP2's gate).
+   - OQ2 is routed into the walkthrough as decision 1, with the recommendation.
+   - No other entry.
 
-### Checklist, classified (`phase-scope P40-2t`: 11 files)
+### Checklist, classified (`phase-scope P40-2t`: the same 11 files; F1 and F2 added none)
 
 The changed files feed four surfaces:
 - the explain plugin: the skill, its copies, the critic, the metadata, setup and the READMEs;
 - `/SKILL.md`, through `web/public`;
-- the KB template;
-- the landing `/`. `content.ts` reaches only the `(marketing)` route group: `layout.tsx` and `page.tsx`.
+- the KB template (template-only files, rendered at a user's scaffold, never this repo's site);
+- the landing `/`: `content.ts` reaches only the `(marketing)` route group.
 
-| Lines (block order) | Surface | In/out | Result |
+| Lines (block order) | Surface | In/out | Result (round 2) |
 |---|---|---|---|
 | 4 `validate` | workspace | in | pass |
 | 27 parity | plugin | in | pass |
-| 32 landing count = `wc -l` | `/` | in | pass (live: 2,665 ×2) |
-| 44 landing: no graph, bands alternate | `/` | in | pass at 390, 820, 1024 and 1440 (proxy harness): skill `rgb(239,233,219)`, then pricing `rgb(246,242,232)`; no `#graph`, no graph word; `scrollWidth` equals width |
-| 46 graph API gone, template graph kept | template | in | template half pass. The API half was not re-run: `server/` is untouched and no API is up on `:8766` |
+| 32 landing count = `wc -l` | `/` | in | pass: live 2,722 ×2, and 2,722 = `wc -l` |
 | 36 KB key | plugin | in | pytest half pass. The headless-log half needs `claude -p`: not run |
-| 37 P33-n3 citation check | plugin | in | 229/0 on a patched install. The vendored v89 copy here is 200/85 until `/update-workspace` |
-| 31 refusals (and 54's refusal half) | plugin | in | **stale text, behaviour re-checked by hand walk** (the plugin's steps 1–2 applied to scratch folders): no workspace → refuse naming v96; fresh `fdb1151` v95 → too old (no `**sources**`); patched but v95-stamped → too old; patched and stamped 96 → ready. The line names v85/v86 `**unit**`: rewrite below |
-| 28, 29, 33, 34, 35, 54 | plugin under `claude -p` | in | **not run**: 0.11.0 refuses every existing workspace, and a model session is spend. Retarget D94-cp to v96. Lines 28 ("this v86+ workspace"), 33 and 54 ("v94") name the old floor: rewrite below |
-| 30 the verifier's same-model guard | `plugin/agents` verifier | out | no verifier agent ships now (`plugin/agents/` holds only `explain-critic.md`): a stale line for the docs phase, not this phase's |
-| 1, 2, 3, 5–26, 38–43, 45, 47–53 | docs site, reader, console, CLI, server, publish | out (44 lines) | not re-run. No changed file feeds them: `content.ts` feeds only `(marketing)`, and `server/`, `cli/`, `web/src/app/(app)` and the reader are untouched |
+| 37 P33-n3 citation check | plugin | in | pass: 231/0 on a fresh patched install. This repo's vendored v89 `.claude/` stays 200/85 until `/update-workspace` (pre-existing, round 1) |
+| 31 refusals | plugin | in | **Stale text; behaviour hand-walked:** a fresh patched install stamped v95 is refused as too old (the release stamps 96). The rest is reused from round 1: no workspace → refused naming v96; `fdb1151` → too old; stamped 96 → ready. The rewrite is a gate-section note |
+| 44 landing: no graph, bands alternate | `/` | in | reused from round 1: pass at 390, 820, 1024 and 1440 via the proxy harness. F1 changed only two numbers in `content.ts`; at 1728, `scrollWidth` equals width |
+| 46 graph API gone, template graph kept | template | in | template half pass: `graph_hook.py`, `graph.md` and `graph.js` ship, and the `mkdocs.yml` hook is at L63. The API half was not re-run: `server/` is untouched |
+| 28, 29, 33, 34, 35, 54 | plugin under `claude -p` | in | **not run** (deviation 1). Lines 28, 31 and 54 get gate-section rewrites. Lines 28 and 33–35 also still describe the pre-0.10.0 front door (`quick`, `run: full`, research agents, the cost table, a seventeen-line block): that staleness is P39-hk's, folded into deferred job 2 |
+| 30 the verifier's same-model guard | `plugin/agents` verifier | out | no verifier ships (`plugin/agents/` holds only `explain-critic.md`): deferred job 4 |
+| 1–3, 5–26, 38–43, 45, 47–53 | docs site, reader, console, CLI, server, publish | out (39 lines) | not re-run. No changed file feeds them: `server/`, `cli/`, `web/src/app/(app)`, the reader and this repo's `docs/` are untouched, and the KB template's changed file is template-only (`plugin/templates/manifest.json`) |
 
-### Drafts for a pass (round 2 appends them; nothing is appended now)
+That is 54 lines: 14 inside, 40 outside (39 + line 30). The proof is `phase-scope`'s 11-file diff.
 
-Checklist rewrites and additions, as `## Doc impact` notes tagged `(gate section — written at merge)`:
-- **Replace** P39-hk's v94 line (54): `- [ ] Explain front door: in a v96 workspace, /knowledge:explain <subject> under claude -p --plugin-dir plugin prints one confirmation (a guessed Reader, subject-shaped Sections, one or two Other shapes, Built by: or the research-first offer naming its sources, the one-writer, one-critic Cost: line, the sixteen-line ## Explain with phases:) and creates nothing; a v95 workspace, or one whose create-phase research route lists no **sources**, is refused naming v96 (P39-hk; updated P40-2t)`
-- **Update** line 31's tail, "in a v85 workspace (or a v86 whose create-phase explain route lists no `**unit**`)", to "in a v95 workspace (or one whose create-phase research route lists no `**sources**`)", and line 28's "this v86+ workspace" to "a v96 workspace".
-- **Add:**
-  - `- [ ] Explain, a subject with no code: /knowledge:explain <a subject no phase covers> under claude -p in a v96 workspace offers only "research first", naming its sources (web, your own material) and that the confirmation comes back by itself; outside a git repository it declines; nothing is created (P40-2t)`
-  - `- [ ] Explain, chained: /knowledge:explain <subject> from=P<N> (a passed research phase) redraws the confirmation from that phase's quoted proposal, puts P<N> on phases:, says in Why: what changed, and waits for the literal yes (P40-2t)`
-  - `- [ ] The landing's skill pane and /SKILL.md: /SKILL.md serves the 0.11.0 skill byte-identical to plugin/skills/explain/SKILL.md (the v96 readiness test, from=P<N>), and the lede and pane count equal wc -l (P40-2t)`
-- `## Operator Runtime`: no change.
+## Doc impact — verified
 
-### Doc impact — checked (for round 2)
+Eight durable-truth notes cover the eight edit and fix slices:
+- S1: the front door;
+- S2: the routes;
+- S3: chapters at once;
+- S4: the engine;
+- S5: the evidence and the critic;
+- S6: the release and its order;
+- F2: the critic's read;
+- F1: the research-first trigger, superseding "only when no phase covers it".
 
-The six notes cover what shipped:
-- product.md and decisions.md: the front door, the routes, the evidence, the critic and the wave;
-- decisions.md: the engine;
-- operations.md: the release order;
-- qa.md: the stale v94 lines.
+`docs/current/` holds no other stale mention of this phase's change. `grep` finds `v94` only in qa.md's front-door line (L447–452) and its summary header, which the gate-section notes replace. The other P39-hk-era wording sits in P39-hk's own unconsolidated notes, which F1's note says are superseded.
 
-`docs/current/` has no other stale mention: `grep` finds `v94`, `0.10.0` and `2,492` only in qa.md's three front-door lines. F1 and F2 will each owe one more line when they change the trigger and the critic's read.
+**The gate-section notes, as appended** (`## Doc impact` entries 9–15):
+1. **Replace** P39-hk's v94 front-door line with a v96 line: `Built by:`, the research-first offer "when the records lack what the reader needs", and refusal naming v96 for a v95 workspace or one with no `**sources**`.
+2. **Edit** two version floors: the headless line, "in this v86+ workspace" → "in a v96 workspace"; and the refusals line's v85/`**unit**` tail → "in a v95 workspace (or one whose create-phase research route lists no `**sources**`)".
+3. **Append** five lines:
+   - a subject with no code (offers only "research first");
+   - covered but lacking ("research first" beside "yes", `Built by:` kept);
+   - chained `from=P<N>`;
+   - `/SKILL.md` byte-identical, and the landing counts equal `wc -l`;
+   - the critic's nested sibling read.
 
-## OQ2 — the lede's "cite every line to the code" (walkthrough decision on a pass)
+`## Operator Runtime`: no change.
 
-**Recommendation:** change it to "trace every line to the code and its records". Even before 0.11.0 the lede was slightly off: every sentence traces to a code range **or a record line**, and a subject book has no code at all. The change keeps the voice and the length.
+## OQ2 — the lede's "cite every line to the code" (walkthrough decision 1)
 
-The alternative is to leave it, since codebase books are still the main case. D78-rq (the landing wording follow-up) could absorb it if the operator prefers to batch copy. Either answer is one `content.ts` line.
+**Recommendation:** "trace every line to the code and its records".
+- A subject book has no code at all.
+- Even before this phase, each sentence traced to a code range **or a record line**.
+- It keeps the voice and the length.
 
-## P59-d8 now (arb_upbit_1, read-only, about 22:30)
+**The alternatives:**
+- leave it, since codebase books are still the main case;
+- let D78-rq, the landing wording follow-up, batch it.
 
-**State:** S1–S8 are all `done`, each with its critique answered and none disputed. S8, the synthesis chapter, committed at `9c2763f1`. The REVIEW has been `in_progress` since 22:26:58, with a plan and no `result.md` yet, so there is **no whole-book read and no publish yet**.
+Any answer is one `content.ts` line.
 
-**Chapter 7** (`benchmarks-and-tiers`) critic: `pass`, 0 must-fix, 10 should-fix. **Chapter 8** (`the-verdict`) critic: `revise`, 1 must-fix: an order finding (C01) inside the chapter, where a table uses `n_dec` before the chapter teaches it. Neither has an `outside` must-fix.
+## P59-d8 now (arb_upbit_1, read-only, 23:33)
 
-**All 8 chapters:** 12 must-fix (8 of them facts) and 0 `outside`. That confirms point 2 to the end of the book.
+Its phase worktree is `phase/P59-d8-…`, head `535498b4`.
 
-**New cross-chapter recap findings:** ch 7 C07 and ch 8 C08 (should-fix), and ch 8 C15 (a note). They are the class the outline's pinned recap lines and the consistency pass target.
+- **The chapters:** S1–S8 are `done`.
+- **Its review, round 1** (22:41): `changes_requested`. The whole-book read found two classes:
+  1. typed blocks the 0.10.0 grammar refuses, in chapters 2–6. Only the plugin's bundled parser saw them, offline: the live server predates the grammar.
+  2. the judged set, worded two ways across chapters.
+- **The fixes:** F1–F8 are all `done` (22:46–23:07). Each restores first-use `term:` links, and each validates with 0 violations against the bundled grammar.
+- **Its REVIEW** has been `pending --stop-kind operator-action` since 23:08: "deploy the knowledge server with the 0.10.0 grammar, then round 2 runs (live check, private publish, reader pass, walkthrough)".
 
-**Still to come**, and the live test of point 4 once its server grammar (its OQ2) is deployed:
-- its whole-book read;
-- the 8 chapter pages on production;
-- each quiz grading;
-- formulas and the glossary;
-- `chapter:` links;
-- the anonymous 404.
-
-S8 shows the cost of waiting: it wrote first uses in italics with no `term:` link, by the dispatch's OQ2 note.
+**Nothing is published.** It is still the live test of point 4: the 8 chapter pages on production, each quiz grading, formulas and the glossary, `term:` and `chapter:` links, the anonymous 404. That test now waits on deferred job 1 alone.
 
 ## Deferred-job candidates (title · reason · trigger)
 
+None of round 1's four was resolved by a fix. All four are re-listed:
+
 1. **Deploy the knowledge server with plugin 0.10.0's grammar** (the `glossary` block, `term:` links, the formula and inline-math checks).
-   - Reason: both books hit it. P8-x9's glossary work-around (its OQ3) and P59-d8's OQ2. P59-d8 S8 already dropped `term:` links for it. Outside the boundary: a deploy of `server/`.
-   - Trigger: before the next book publishes. P59-d8's REVIEW is publishing next.
+   - Reason: P59-d8's REVIEW is parked on exactly this deploy, and its fixes F1–F8 restored `term:` links that only that grammar accepts. P8-x9 hit it too (its OQ3 glossary work-around). It is a deploy of `server/`, outside this boundary.
+   - Trigger: now. P59-d8's publish waits on it.
 2. **Retarget D94-cp to v96:** "Re-run the explain front door under `claude -p` in a workspace on v96".
-   - Reason: checklist lines 28, 29, 33, 34, 35 and 54, and the drafted v96 lines, need a real `claude -p --plugin-dir plugin` run. 0.11.0 refuses every workspace that exists today.
-   - Trigger: `/update-workspace` to v96 here, after the bootstrap release and this merge. The orchestrator files it superseding D94-cp.
-3. **Give the chained explain an on-disk trigger** (inside the boundary, judged not fix-worthy).
-   - Reason: **When it passes** fires only from the `review.md` line followed at the pass, so a compaction in that window loses the confirmation that should "come back by itself". The way back is to type `/knowledge:explain <subject> from=<P>`.
+   - Reason: 0.11.0 refuses every workspace that exists today, so a real `claude -p --plugin-dir plugin` run is still needed for:
+     - checklist lines 28, 29, 33, 34, 35 and 54;
+     - the five new v96 lines.
+     That run should also rewrite or retire lines 28 and 33–35, which still describe the pre-0.10.0 front door (`quick`, `run: full`, research agents, the cost table, a seventeen-line block).
+   - Trigger: `/update-workspace` to v96 here, after the bootstrap release and this merge. File it superseding D94-cp, whose trigger names v94.
+3. **Give the chained explain an on-disk trigger** (inside the boundary, judged not fix-worthy in round 1).
+   - Reason: **When it passes** fires only from the `review.md` line followed at the pass. A compaction in that window loses the confirmation that should come back by itself. The way back is to type `/knowledge:explain <subject> from=<P>`, or to let coverage find the research phase.
    - Trigger: the first chained research run, or a resume that misses it.
 4. **Retire checklist line 30**, the verifier's same-model guard.
-   - Reason: no `knowledge:verifier` ships since the one-critic run (`plugin/agents/` holds only `explain-critic.md`). It is outside this phase's boundary, and a stale line for the next docs or QA phase.
-   - Trigger: the next docs phase.
+   - Reason: no `knowledge:verifier` ships since the one-critic run.
+   - Trigger: the next docs or QA phase.
 
-## Walkthrough draft (for the pass round; at most ~5 decisions)
+**Observation (not a job to file):** D77's trigger, "the next bootstrap update that touches explain-decomposition.md", fires with this package, which edits that file. D77 asks to cap the outline-gate report at about 2k characters, and the package does not fold it in. The orchestrator may tell the operator, or re-point D77's trigger at the next bootstrap update.
 
-**What changed, step by step:**
-1. `/knowledge:explain <subject>`: if no phase covers it, or it has no code, you get "research first".
-2. One confirmation names what the research reads: code, web with sources, or your own words.
-3. The research phase then runs at once.
-4. When it passes, the explain's confirmation comes back by itself, redrawn from the findings (`from=P<N>`). You say yes.
-5. A book: you sign the outline, then up to 4 chapters are written at once, each with its own critic. The synthesis chapter goes last, and the review checks the chapters agree.
+## Walkthrough
+
+P40-2t, one way to explain what the records don't cover: review round 2 passed.
+
+**What changed for you:**
+1. `/knowledge:explain <subject>` offers "research first" whenever the records lack what the reader needs: no phase covers it, it has no code (a language, your notes), or phases built it but the reader needs outside basics no record states (rule v2 + quant basics). With code, "yes" stays beside it. Your own "research first" always works.
+2. One confirmation names what the research reads (code, the web with a source per fact, or your own material). Then it runs at once.
+3. When it passes, the explain's confirmation comes back by itself, redrawn from the findings (`from=P<N>`). You say yes.
+4. A book: you sign the outline once, then up to 4 chapters are written at once, each with its own critic, which reads earlier chapters as committed (nested installs too). The synthesis chapter goes last, and the review checks the chapters agree.
 
 **The release order you run:**
-1. Your bootstrap session applies `works/phases/active/P40-2t/package/` (its README), releases v96 and pushes.
+1. Your bootstrap session applies `works/phases/active/P40-2t/package/` (its README), releases v96, and pushes.
 2. Plugin 0.11.0 is pushed with this branch's merge.
 3. Run `/update-workspace` here (v89), in arb_upbit_1 and in Note.
 
-**Try:** open the landing and `/SKILL.md` on production after the deploy, and check the count (2,665, or the new count after F1) and the v96 test.
+**Try:** on this branch, read `plugin/skills/explain/SKILL.md` §1, **Covered, but the records lack what the reader needs**. After the merge and deploy, https://knowledge.hi2vi.com/ reads "2,722-line skill" and /SKILL.md serves that file. I checked both on a scratch production build.
 
 **Decisions:**
-1. OQ2: the lede wording, recommendation above.
-2. P59-d8 is the live test of the book pages. Its publish waits on deferred job 1.
+1. **OQ2, the lede's "cite every line to the code".** I recommend "trace every line to the code and its records", since a subject book has no code. You can also leave it, or batch it into D78-rq.
+2. **P59-d8, the live test of a real book.** Its chapters and fixes F1–F8 are done. Its review is parked until the server is deployed with the 0.10.0 grammar, and nothing is published. File that deploy, or run it now.
 
-**Decided as drawn:**
-- the research route claims the contract's explain-route exception (no contract edit, 3 B of headroom);
-- the cap of 4 is a text rule;
-- Sources list the research-read works (OQ1);
-- a legacy five-line block runs with no chain.
+**Decided as drawn:** the research route uses the explain-route exception; the cap of 4 is a text rule; Sources list the research-read works (OQ1); a legacy block runs without the chain; the critic's `git -C` read needs one permission line in manual mode.
 
-**Deferred jobs:** 1 and 2.
+**Jobs to file:** the server deploy; D94-cp retargeted to v96; an on-disk trigger for the chained explain; retire checklist line 30.
+
+Reply "accept" to clear the gate.
+
+## Scratch
+
+All of it is throwaway, in the session scratchpad under `r2/`:
+- `copy/`: `fdb1151`, patched and rebuilt;
+- `p40-r2.tar`;
+- `smoke.log`, `web.log`, `webbuild.log`;
+- `f2/host` (the nested proof pair);
+- `inst/patched` (a fresh patched install);
+- `webbuild/` (the scratch build; its server is stopped);
+- `notes/` (the appended note texts).
+
+A stray `r2/web/` from a mis-ordered copy is unused.
+
+Nothing was written to the bootstrap repo, Note or arb_upbit_1 (read-only `git -C … worktree list` / `log`, and file reads). Nothing was committed or pushed.
