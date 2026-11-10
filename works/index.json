@@ -290,12 +290,12 @@
       "id": "P40-2t",
       "name": "One way to explain what the records don't cover",
       "objective": "Compare the two research-first book runs (Note's P8-x9 English textbook; arb_upbit_1's P58-pm research then P59-d8 book) and build one standard route into the explain plugin and the workspace's explain route: research runs in its own findings-only phase, explain writes only from records and accepts a research-covered subject with no code, one request chains both, the explain checks stay, the result is always a real book, and a signed book's chapters are written in parallel.",
-      "status": "planned",
+      "status": "in_progress",
       "order": 22,
       "path": "works/phases/active/P40-2t",
-      "review_status": "pending",
-      "current_slice": "P40-2t.REVIEW",
-      "slice_count": 10,
+      "review_status": "changes_requested",
+      "current_slice": "P40-2t.F2",
+      "slice_count": 12,
       "done_slice_count": 9,
       "execution": {
         "mode": "parallel",
@@ -322,5 +322,5 @@
   "deferred_open_count": 77,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 20,
-  "last_rebuilt_at": "2026-11-10T22:23:45+09:00"
+  "last_rebuilt_at": "2026-11-10T22:45:06+09:00"
 }

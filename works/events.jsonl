@@ -1867,3 +1867,9 @@
 {"ts": "2026-11-10T22:12:10+09:00", "type": "slice_status_changed", "slice": "P40-2t.S6", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-11-10T22:23:45+09:00", "type": "executor_dispatched", "slice": "P40-2t.S6", "phase": "P40-2t", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-10T22:23:45+09:00", "type": "slice_status_changed", "slice": "P40-2t.S6", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-10T22:24:39+09:00", "type": "slice_status_changed", "slice": "P40-2t.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-10T22:45:01+09:00", "type": "executor_dispatched", "slice": "P40-2t.REVIEW", "phase": "P40-2t", "kind": "review", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-10T22:45:01+09:00", "type": "slice_status_changed", "slice": "P40-2t.REVIEW", "old_status": "in_progress", "new_status": "changes_requested"}
+{"ts": "2026-11-10T22:45:01+09:00", "type": "phase_reviewed", "phase": "P40-2t", "verdict": "changes_requested", "reviewer": "slice-executor"}
+{"ts": "2026-11-10T22:45:05+09:00", "type": "slice_created", "phase": "P40-2t", "slice": "P40-2t.F2"}
+{"ts": "2026-11-10T22:45:06+09:00", "type": "slice_created", "phase": "P40-2t", "slice": "P40-2t.F1"}

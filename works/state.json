@@ -1,9 +1,9 @@
 {
   "current_phase": "P40-2t",
-  "current_slice": "P40-2t.REVIEW",
-  "next_slice": null,
+  "current_slice": "P40-2t.F2",
+  "next_slice": "P40-2t.F1",
   "waiting_on_operator": null,
   "mode": "phase",
   "stream": "phase/P40-2t-one_way_to_explain_what_the_records_don",
-  "updated_at": "2026-11-10T22:23:45+09:00"
+  "updated_at": "2026-11-10T22:45:06+09:00"
 }
