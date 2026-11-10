@@ -5,9 +5,9 @@
 
 ## Pointer
 
-- Current phase: `none`
-- Current slice: `none`
-- Next slice: `none`
+- Current phase: `P40-2t`
+- Current slice: `P40-2t.DECOMP`
+- Next slice: `P40-2t.REVIEW`
 - Waiting on operator: `none`
 - Open deferred jobs: `77`
 - Workspace version: `v89`
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | - | idle | - | - | - | working tree |
+| `default` | `P40-2t` | planned | `P40-2t.DECOMP` | 0/2 | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
@@ -44,6 +44,8 @@
 | [x] `P37-1p` | `done` | `pass` | Drop the knowledge graph | `none` | `works/phases/active/P37-1p` |
 | [x] `P38-e1` | `done` | `pass` | Right-size explain runs (plugin 0.9.0) | `none` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
 | [x] `P39-hk` | `done` | `pass` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `none` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
+| [ ] `P40-2t` | `planned` | `pending` | One way to explain what the records don't cover | `P40-2t.DECOMP` | `works/phases/active/P40-2t` |
+| [ ] `P41-sr` | `planned` | `pending` | Listen: a free AI voice reader | `P41-sr.DECOMP` | `works/phases/active/P41-sr` |
 
 ## Phase P21: Web document deletion
 
@@ -354,3 +356,17 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | [x] `P39-hk.F7` | `done` | Tag the Glossary's place name with the h2's language in the place bar, the note box and the notes rows | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F7` |
 | [x] `P39-hk.F5` | `done` | Re-pin the explain front door to the bootstrap release that carries S5's package | `fix` | `works/phases/active/P39-hk/slices/P39-hk.F5` |
 | [x] `P39-hk.REVIEW` | `done` | phase review | `review` | `works/phases/active/P39-hk/slices/P39-hk.REVIEW` |
+
+## Phase P40-2t: One way to explain what the records don't cover
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P40-2t.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P40-2t/slices/P40-2t.DECOMP` |
+| [ ] `P40-2t.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P40-2t/slices/P40-2t.REVIEW` |
+
+## Phase P41-sr: Listen: a free AI voice reader
+
+| Slice | Status | Name | Kind | Path |
+|---|---|---|---|---|
+| [ ] `P41-sr.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P41-sr/slices/P41-sr.DECOMP` |
+| [ ] `P41-sr.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P41-sr/slices/P41-sr.REVIEW` |
