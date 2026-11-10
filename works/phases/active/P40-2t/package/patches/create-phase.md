@@ -41,7 +41,7 @@ so it creates, then runs (*The explain route*), and the research an explain aske
 - **Why:** without it the paragraph's last sentence says a research phase stops after creation, which the
   research route no longer does.
 
-**1c. Step 2 routes the research reply, code or not (B11).**
+**1c. Step 2 routes the research reply, whatever the coverage (B11; P40-2t.F1).**
 
 **Find** in `payload/claude/skills/create-phase/SKILL.md` (L35, *Procedure* step 2):
 
@@ -52,11 +52,13 @@ so it creates, then runs (*The explain route*), and the research an explain aske
 **Becomes:**
 
 ```markdown
-(the explain's "research first": no phase covers the subject yet, whether it is this repository's code or a subject with no code behind it), it is not an explain but an ordinary phase that records findings for one. It is the explain's own research: confirmed once, then created and run at once, and when it passes the explain's confirmation comes back by itself. Follow *The research route* below.
+(the explain's "research first", offered whenever the records lack what the reader needs: no phase covers the subject yet, whether it is this repository's code or a subject with no code behind it, or phases cover it but none of their records states what the reader needs, such as a field's terms or a formula; and honoured whenever the operator asks for it, whatever the coverage), it is not an explain but an ordinary phase that records findings for one. A covered subject's block is accepted like any other: `paths:` names its code, `sources:` the web, and the code too if wanted. It is the explain's own research: confirmed once, then created and run at once, and when it passes the explain's confirmation comes back by itself. Follow *The research route* below.
 ```
 
-- **Why:** step 2 said only "no phase covers the subject yet"; the request may now be a subject with no code, and
-  the phase no longer stops after creation. The paragraph's bold opening, which the smoke suite pins, stays.
+- **Why:** step 2 said only "no phase covers the subject yet". The request may now be a subject with no code, or
+  a subject phases already cover whose reader needs outside basics no record states (P58-pm → P59-d8's shape,
+  review round 1's F1), and the phase no longer stops after creation. The paragraph's bold opening, which the
+  smoke suite pins, stays.
 
 **1d. Step 5: the research phase commits and runs on (B11).**
 
@@ -93,12 +95,15 @@ paragraph), and put in its place, in order:
   - *The explain route*: records only, a research phase's findings included; a subject with no code that a
     research phase covers is accepted, and its no-code refusal goes; the plugin floor is **0.11.0** (B1, B2);
     `subject`, `phases` and `book` (kind `codebase` or `subject` with a label) in step 1, and "research first"
-    for both cases, the only way on for a subject (B3); *A confirmed proposal* accepts a subject a research
+    whenever the records lack what the reader needs (no phase covers the subject, or a covered subject's reader
+    needs what no record states), always honoured on the operator's word, the only way on for an uncovered
+    subject with no code (B3; P40-2t.F1); *A confirmed proposal* accepts a subject a research
     phase on `phases:` covers, and reads an old `mode: general` so covered as a subject explain (B4); a book's
     chapters are declared, run as a wave after the outline gate, at most 4 at once, with a synthesis chapter
     after, and the outline pins the recap lines, names, running examples and link ids (B5).
   - *The research route*: the block's fields as a bold list, with `paths: … | none`, the new **`sources`** field
-    (the v96 marker the plugin's front door tests for) and the chained `then:` (B6); one confirmation naming the
+    (the v96 marker the plugin's front door tests for) and the chained `then:` (B6), offered whenever the records
+    lack what the reader needs and accepted for a covered subject too (P40-2t.F1); one confirmation naming the
     sources and, for the operator's material, the repository the extract lands in and whether it has a git
     remote, then created and run at once in `auto` on the default stream, as the explain's own research (B7);
     the per-source rules, the eight privacy rules, reader-shaped findings and the research review's sample,

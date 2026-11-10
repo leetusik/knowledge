@@ -1,6 +1,6 @@
 ---
 name: explain
-description: Explain what code in the current repo does, a code change in it, or a subject a research phase covered, as a document in your own knowledge base (the one /knowledge:setup configured), written only from the code and from what the workflow workspace's phases recorded, a research phase's findings included. Records-only, with no research of its own: no web search, no research agents, nothing from outside the code and the records; a subject no phase covers, or one with no code in this repo, is offered a research phase first (it reads the code, the web or your own material and records findings), and the explain's confirmation comes back by itself when that research passes. /knowledge:explain suggests the reader and the shape and asks one confirmation (a standalone document by default; a book or a chapter of a book only when asked) and, on your yes, hands it to the workspace's create-phase, which runs it as an explain phase in its own worktree: one writer drafts a native chapter traced sentence by sentence to the code and the records (visuals first, next steps from what is still open in the workspace, a quiz only when the subject earns one), one critic on a second model checks it, then a private publish. Needs a workflow workspace v96 or later; without one it refuses and runs nothing. Use ONLY when the user wants an explanation persisted as a document (explain and document, write this up, document what we just changed, teach me X and save it) — NOT for ordinary questions that deserve a normal chat answer.
+description: Explain what code in the current repo does, a code change in it, or a subject a research phase covered, as a document in your own knowledge base (the one /knowledge:setup configured), written only from the code and from what the workflow workspace's phases recorded, a research phase's findings included. Records-only, with no research of its own: no web search, no research agents, nothing from outside the code and the records; whenever the records lack what the reader needs (a subject no phase covers, one with no code in this repo, or a covered subject whose reader needs outside basics no record states), it offers a research phase first (it reads the code, the web or your own material and records findings), it always honours your own "research first" whatever the coverage, and the explain's confirmation comes back by itself when that research passes. /knowledge:explain suggests the reader and the shape and asks one confirmation (a standalone document by default; a book or a chapter of a book only when asked) and, on your yes, hands it to the workspace's create-phase, which runs it as an explain phase in its own worktree: one writer drafts a native chapter traced sentence by sentence to the code and the records (visuals first, next steps from what is still open in the workspace, a quiz only when the subject earns one), one critic on a second model checks it, then a private publish. Needs a workflow workspace v96 or later; without one it refuses and runs nothing. Use ONLY when the user wants an explanation persisted as a document (explain and document, write this up, document what we just changed, teach me X and save it) — NOT for ordinary questions that deserve a normal chat answer.
 argument-hint: <topic or change-ref> [book=<slug>] [lang=<xx>] [from=P<N>]
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash(curl -sS --max-time 5:*), Bash(curl -sS --max-time 30:*), Bash(python3 -c:*), Bash(python3 -I *knowledge-kb/explain/tools/pagetext.py *), Bash(knowledge --base-url:*), Bash(knowledge --version:*), Bash(git diff:*), Bash(git log:*), Bash(git show:*), Bash(git grep:*), Bash(git blame:*), Bash(git status:*), Bash(shasum -a 256:*), Bash(sha256sum:*), Bash(mktemp -d:*)
 ---
@@ -13,11 +13,12 @@ itself — about a topic **or a code change** in the current repository, or a **
 research phase covered: what its code does, or what the subject is, told from the code and
 from what the workspace's phases recorded, a research phase's findings included. It
 files the chapter in **your** personal knowledge base (the one `/knowledge:setup`
-created). Explain is **records-only**: it never researches by itself. A subject no phase
-covers (code no phase recorded, or a subject with no code in this repository) is offered
-a research phase first, and nothing is written until the operator says yes (§1). This
-skill produces a **saved document**: if the user only asked a question and did not ask
-for anything to be saved, answer normally in chat and write no files.
+created). Explain is **records-only**: it never researches by itself. Whenever the records
+lack what the reader needs (a subject no phase covers, code or not, or a covered subject
+that rests on outside basics no record states), a research phase is offered first, an
+operator's "research first" is always honoured, and nothing is written until the operator
+says yes (§1). This skill produces a **saved document**: if the user only asked a question
+and did not ask for anything to be saved, answer normally in chat and write no files.
 
 There is one output format everywhere: **native**. You never write HTML, and the
 knowledge base never runs your code. Everything interactive (the quiz, the collapsible
@@ -271,14 +272,30 @@ finds them from the records, and the confirmation names them:
 **None covers it** — the code is there, but no phase built or recorded it (older code, a
 vendored part, a commit with no phase id), or the subject has no code behind it and no
 research phase covers it: the confirmation says so, and offers to **create a research
-phase first**, a findings-only phase that reads what its `sources:` line names (the code,
-the web, or the operator's own material) and records its findings. It runs at once, and
-when it passes, the explain's confirmation comes back by itself, redrawn from those
-findings, and still waits for the operator's literal yes. For code no phase covers, the
-operator may instead say `yes` to explain from the code alone; a subject with no code has
-no such reply. The hand-off for the research phase (the front door's step 8) invokes the
-workspace's `create-phase` with the operator's request, this block, filled in, and the
-proposal as last shown, verbatim:
+phase first**. For code no phase covers, the operator may instead say `yes` to explain
+from the code alone; a subject with no code has no such reply.
+
+**Covered, but the records lack what the reader needs** — phases cover the subject, yet a
+drafted section or a must-cover item rests on something no covering record states: a
+field's terms, a formula, the outside basics this reader is new to (a trading rule its
+phases built, for a reader who also needs the quant basics behind it). Step 6 finds it,
+after drafting the sections. The confirmation names what the records lack and offers
+**"research first"** beside `yes`: `yes` explains from the records as they are, and the
+missing parts become stated gaps (§3.4, step 6). A v2 that asks for outside material is
+this case too; its research phase is then one of the phases since (§3.4 *A v2*).
+
+**Research first** is offered in both cases above, and whenever the request itself asks
+for research ("gather the facts first, then write"). It is **always honoured**: an
+operator's "research first", or research asked for in their own words at any
+confirmation, is handed on and the research phase created, whatever the coverage, offered
+or not (the front door's step 8; create-phase's research route confirms it once). The
+research phase is a findings-only phase that reads what its `sources:` line names (the
+code, the web, or the operator's own material) and records its findings. It runs at
+once, and when it passes, the explain's confirmation comes back by itself, redrawn from
+those findings, with the research phase on `phases:` beside any phase that built the
+code, and still waits for the operator's literal yes. The hand-off for the research phase
+(the front door's step 8) invokes the workspace's `create-phase` with the operator's
+request, this block, filled in, and the proposal as last shown, verbatim:
 
     Research: <subject>
     - subject: <subject, refined from the operator's words>
@@ -288,18 +305,21 @@ proposal as last shown, verbatim:
     - findings-only: yes — it records findings in its phase's notebook and topics; it writes no product code and spends no money
     - then: explain <subject> — <unit>, for <reader>; its confirmation, redrawn from these findings, is shown for your yes when this phase passes
 
-Fill `paths:` from the cheap look (`none` for a subject with no code), `question:` from the
-drafted shape, and `then:` from the proposal (its unit and reader). `sources:` names what
-the research reads: `code` when the subject has paths; `web` when the reader needs
-outside basics the code and the records do not state (a field's terms, a formula);
+Fill `paths:` from the cheap look (`none` for a subject with no code; a covered subject's
+code all the same), `question:` from the drafted shape (for a covered subject, the parts
+its records lack), and `then:` from the proposal (its unit and reader). `sources:` names
+what the research reads: `code` when the subject has paths no phase covers, and for a
+covered subject only when the operator wants its code read again; `web` when the reader
+needs outside basics the code and the records do not state (a field's terms, a formula);
 `operator material` when the subject is the operator's own words, naming which (intent
 files' original input, typed chat messages) and the repositories and hosts it is read
-from. create-phase's *The research route* holds the per-source rules and the privacy
-rules for the operator's material; its one confirmation names the sources, where the
-operator's material is read, and the repository its extract lands in and whether that
-repository has a git remote, so that the operator decides before anything is read. It
-then creates the research phase and runs it at once, in `auto` on the default stream, as
-the explain's own research.
+from. A "research first" the confirmation did not offer takes its `question:` and
+`sources:` from what the operator asked for, by the same rules. create-phase's
+*The research route* holds the per-source rules and the privacy rules for the operator's
+material; its one confirmation names the sources, where the operator's material is read,
+and the repository its extract lands in and whether that repository has a git remote, so
+that the operator decides before anything is read. It then creates the research phase and
+runs it at once, in `auto` on the default stream, as the explain's own research.
 
 ### The front door, step by step
 
@@ -388,8 +408,11 @@ artifact.
 
    **With `from=P<N>`**, that phase is covering, whatever the Grep finds (an id that names
    no phase of this workspace, active or archived, is said so in one line and dropped).
-   Its `intent.md` holds, under *Original Input (verbatim)*, the explain proposal as last
-   shown before the research ran, and under *Confirmed Intent* the block's `then:` line.
+   The coverage still runs over the subject's paths, so a covered subject keeps the phases
+   that built its code on `phases:` beside it, and a book of it stays kind `codebase`
+   (§1 *The unit, and where it goes*). Its `intent.md` holds, under *Original Input
+   (verbatim)*, the explain proposal as last shown before the research ran, and under
+   *Confirmed Intent* the block's `then:` line.
    That proposal is step 6's starting draft (unit, reader, sections or chapters, project,
    lang, must-cover), redrawn from what the research recorded: the findings may change the
    sections or the chapters, and step 7's `Why:` says what changed. A research phase with
@@ -434,6 +457,13 @@ artifact.
    plain words. A v2 marks each prior heading `kept`, `renamed` (with its old heading) or
    `dropped`, and each addition `new`; a kept or renamed heading carries its id (§3.1).
 
+   Then check **what the records lack** (COVERAGE, *Covered, but the records lack what the
+   reader needs*): with covering phases, one Grep over their `intent.md`, `phase.md` and
+   `topics/` for the key terms each drafted section and must-cover item rests on, outside
+   the 10 reads. What none of them states (a field's terms, a formula, outside basics the
+   reader is new to) is what step 7's closing paragraph names, and the research block's
+   `question:` lines. A request that asks for research is offered it whatever this finds.
+
    Last, draft the **plain summary** that opens the confirmation: 2–4 short sentences in
    everyday words, with no field names and no workflow terms, saying what the document (or
    the book) explains, who it is for, and what they will be able to do afterwards.
@@ -473,11 +503,14 @@ artifact.
        Why: <field — reason>; … (one clause for each value you chose; the rest are the request's words or the defaults)
        Reply yes, or change any line.
 
-   **When no phase covers the subject**, the `Built by:` line says so, and one paragraph
-   follows the `Why:` line in place of its last line. "Research first" covers both cases
-   (COVERAGE, *None covers it*): it names the sources the research would read (the
-   research block's `sources:` line, in plain words) and says that this confirmation
-   comes back by itself when the research passes. For code no phase covers:
+   **When no phase covers the subject**, when the covering phases' records lack what the
+   reader needs (step 6), or when the request asks for research, one paragraph follows the
+   `Why:` line in place of its last line, and the `Built by:` line says that no phase
+   covers it, or names the phases that do. The paragraph offers "research first" (COVERAGE,
+   *None covers it*, *Covered, but the records lack what the reader needs*): it names the
+   sources the research would read (the research block's `sources:` line, in plain words)
+   and says that this confirmation comes back by itself when the research passes. For code
+   no phase covers:
 
        No phase of this workspace built or recorded <the subject>, so the explain would have only the code to go on.
        Reply "research first" to create a research phase that reads <its sources: the code[, the web]> and records its findings
@@ -491,9 +524,19 @@ artifact.
        (you confirm it once, then it runs; when it passes, this confirmation comes back by itself, redrawn from its findings, for your yes),
        or change any line.
 
+   For a subject phases cover whose records lack what the reader needs, "yes" stays, and
+   explains from the records as they are (a request that asked for research opens the
+   paragraph with `You asked for the research first: <what it would gather>.` instead):
+
+       <The covering phases> built <the subject>, but their records do not state <what the reader needs that they lack: the field's terms, the formula, the outside basics>, so the explain would state those parts as gaps.
+       Reply "research first" to create a research phase that reads <its sources: the web[, the code]> and records its findings
+       (you confirm it once, then it runs; when it passes, this confirmation comes back by itself, redrawn from its findings, for your yes),
+       or "yes" to explain from the records as they are, those parts stated as gaps, or change any line.
+
    **A redrawn confirmation** (`from=P<N>`, step 5) is this same shape, drawn from the
    proposal the research phase recorded: its `Built by:` line names the research phase and
-   what it found, and its `Why:` line opens with what changed since that preview and why
+   what it found, beside any phase that built the code, and its `Why:` line opens with
+   what changed since that preview and why
    (`chapters — 6 → 8: the recorded ideas read more easily as 8`), or says that nothing
    changed.
 
@@ -585,14 +628,19 @@ artifact.
    their reply. Its explain route takes it as *A confirmed proposal*: it checks it,
    creates the phase, starts its worktree and runs it in `auto` to publish. Nothing else
    runs here. No Skill tool: print `/create-phase` with the request, the proposal and the
-   reply, to paste. Anything but a literal yes, a changed line or a picked shape creates
-   nothing.
+   reply, to paste. Anything but a literal yes, a changed line, a picked shape or a
+   "research first" (below) creates nothing.
 
-   **On "research first"** (no phase covers the subject: code no phase recorded, or a
-   subject with no code): invoke the same `create-phase` with the operator's request, the
-   research block of *The phases that cover the subject*, filled in, and the proposal as
-   last shown, all verbatim, and nothing else: no explain phase is created now. The
-   proposal is the explain's starting draft, kept for when the research passes. No Skill
+   **On "research first"**, whatever the coverage: offered or not, and research asked for
+   in the operator's own words ("gather the facts first", "research it, then write")
+   counts the same; it is never a reply that creates nothing. Invoke the same
+   `create-phase` with the operator's request, the research block of *The phases that
+   cover the subject*, filled in, and the proposal as last shown, all verbatim, and
+   nothing else: no explain phase is created now. A confirmation that offered no research
+   has no block yet: fill it now by COVERAGE's rules (`paths:` the subject's code, or
+   `none`; `question:` and `sources:` from what the operator asked for); create-phase's
+   research route shows it once, so the operator can still narrow it. The proposal is
+   the explain's starting draft, kept for when the research passes. No Skill
    tool: print `/create-phase` with the request, the block and the proposal, to paste.
    The explain's confirmation then comes back by itself: create-phase's
    *The research route* runs the research phase at once and, **When it passes**, invokes

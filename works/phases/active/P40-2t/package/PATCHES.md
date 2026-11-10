@@ -22,6 +22,6 @@ that commit (`checks/finds.py`). Line numbers are hints; find each edit by its q
    `changelog.d/explain-research-chained.md` fragment, the release and the verification after applying.
    Change list E6 (P40-2t.S6). 7 finds and one new file.
 
-Two files are edited by two patch files, never in the same place: `payload/claude/agents/slice-executor.md`
-(only `patches/workflow.md`) and `tests/retrofit_smoke.sh` (`patches/engine.md` 2a–2c, then
-`patches/release.md` 1a–1d).
+One file is edited by two patch files, never in the same place: `tests/retrofit_smoke.sh` (`patches/engine.md`
+2a–2c, then `patches/release.md` 1a–1d). Every other file is edited by one patch file only, among them
+`payload/claude/agents/slice-executor.md` (`patches/workflow.md`, two finds).

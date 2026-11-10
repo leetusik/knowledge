@@ -1,6 +1,6 @@
 ## The research route
 
-An explain tells only what the records say. **When no phase covers its subject** (code no phase built or recorded, or a subject with no code behind it: a field of study, a language, the operator's own words), the plugin's front door, or *The explain route*'s own confirmation, offers "research first". On that reply it hands this skill, verbatim, the operator's request, a block like this one (the plugin's §1 *Resolve the topic, the mode and the placement*, *The phases that cover the subject*), and the explain proposal as last shown:
+An explain tells only what the records say. **When the records lack what its reader needs**, the plugin's front door, or *The explain route*'s own confirmation, offers "research first": when no phase covers its subject (code no phase built or recorded, or a subject with no code behind it: a field of study, a language, the operator's own words); when phases cover it, but a drafted section or a must-cover item rests on something none of their records states (a field's terms, a formula, outside basics); or when the request asks for research. An operator's "research first", or research asked for in their own words, is honoured whatever the coverage, offered or not. On that reply it hands this skill, verbatim, the operator's request, a block like this one (the plugin's §1 *Resolve the topic, the mode and the placement*, *The phases that cover the subject*), and the explain proposal as last shown:
 
 ```
 Research: <subject>
@@ -14,8 +14,8 @@ Research: <subject>
 
 **The block's fields:**
 - **subject**: what is researched, refined from the operator's words; its plain name is what a later explain's coverage greps for;
-- **paths**: the subject's files and folders in this repository, or `none` when no code is behind it;
-- **sources**: what the research reads, one or more of `code`, `web` and `operator material` (naming which material: intent files' *Original Input*, typed chat messages, and from which repositories and hosts). Each source brings its own rules (*What that `DECOMP` will cut*, below);
+- **paths**: the subject's files and folders in this repository, or `none` when no code is behind it. A subject that phases already cover still names its code here: the paths are how a later explain's coverage finds this phase beside them;
+- **sources**: what the research reads, one or more of `code`, `web` and `operator material` (naming which material: intent files' *Original Input*, typed chat messages, and from which repositories and hosts). Each source brings its own rules (*What that `DECOMP` will cut*, below). A covered subject's block is accepted like any other: its `sources:` is usually `web` (the outside basics its records lack), plus `code` when the operator wants its code read again;
 - **question**: the reader's questions, one a line;
 - **findings-only**: always `yes`: it records findings, writes no product code and spends no money;
 - **then**: the explain the research is for, its unit and reader. It is what *When it passes* (below) acts on.

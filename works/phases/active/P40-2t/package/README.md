@@ -3,8 +3,10 @@
 This is a ready-to-apply package for the bootstrap (workflow) repo, `bootstrap_agentic_workspace.sh`. It moves
 the workspace onto the knowledge plugin **0.11.0**'s flow:
 
-- **Research first, then the explain, from one request.** When no phase covers an explain's subject, the
-  plugin's "research first" reply now creates the research phase **and runs it at once**, on one confirmation.
+- **Research first, then the explain, from one request.** Whenever the records lack what an explain's reader
+  needs (a subject no phase covers, code or not, or a covered subject that rests on outside basics no record
+  states), the plugin offers "research first", and the operator's "research first" is honoured whatever the
+  coverage. That reply now creates the research phase **and runs it at once**, on one confirmation.
   Its block names its **sources**: this repository's code, the web (a source beside each finding), or the
   operator's own material (under eight privacy rules). When it passes, the explain's confirmation, redrawn from
   the findings, comes back by itself (`/knowledge:explain <subject> from=<P>`) and waits for the literal yes.
@@ -36,7 +38,7 @@ The package was prepared in the knowledge repo by phase P40-2t, slices S2–S4 a
 
 **No skill is added or removed** (the count stays **21**), and no file is retired (`RETIRED_FILES` gains
 nothing). Neither `payload/contract.md` (12,285 of 12,288 B) nor the `do-whole-phase` / `do-next-slice`
-`SKILL.md` cores (8,185 and 8,180 of 8,192 B) is edited. The create-phase core grows from 40,523 to 50,681 B
+`SKILL.md` cores (8,185 and 8,180 of 8,192 B) is edited. The create-phase core grows from 40,523 to 53,667 B
 (no cap).
 
 ## The order to apply it
@@ -84,7 +86,7 @@ v96 is refused by the v96 explain route, which names 0.11.0; a 0.10.0 "research 
 - `checks/apply.py <scratch copy>` on a fresh `git archive` of `fdb1151`, unpacked whole: every patch applied in
   index order (`applied finds=33`, the fragment written); the patched suite's explain block (L211–L316 after
   the patch) passes; the flipped P42 pin and the `## Explain` hazard sentence hold; the skill count is 21; the
-  byte caps hold; the create-phase core is 50,681 B.
+  byte caps hold; the create-phase core is 53,667 B.
 - On that copy, `python3 installer/build.py` rebuilt the artifact, `--check` passed, and the **whole** patched
   suite, `bash tests/retrofit_smoke.sh`, passed (P40-2t.S6's `result.md` has the count).
 - `checks/cites.py <plugin 0.11.0's skills/explain/SKILL.md>` over the package's five texts: `citations

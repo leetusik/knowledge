@@ -110,16 +110,18 @@ for _n in ("do-whole-phase", "do-next-slice"):
 
 ```text
 > private. It does no research of its own: it writes from this repository's code and the phases' records,
-> a research phase's findings included. A subject no phase covers, this repository's code or a subject with
-> no code behind it, is offered a research phase first, which runs at once; when it passes, the explain's
-> confirmation comes back by itself for your yes. A book still stops for its outline sign-off and its
-> acceptance gate, then writes its chapters at once (at most 4 in flight). Plugin version 0.11.0 or later
-> is required; the writer runs on your session's
+> a research phase's findings included. Whenever the records lack what the reader needs (a subject no phase
+> covers, code or not, or a covered subject that rests on outside basics no record states), it offers a
+> research phase first, and your own "research first" is always honoured; the research runs at once, and
+> when it passes, the explain's confirmation comes back by itself for your yes. A book still stops for its
+> outline sign-off and its acceptance gate, then writes its chapters at once (at most 4 in flight). Plugin
+> version 0.11.0 or later is required; the writer runs on your session's
 ```
 
-- **Why:** "covers only this repository's code" is no longer true, the research is chained, and the floor is
-  0.11.0. The suite's pins on this block (`Every explain is its own **explain phase**`, the review pointer,
-  `merge`) are on the lines around it and stay.
+- **Why:** "covers only this repository's code" is no longer true, the research is chained and offered
+  whenever the records lack what the reader needs (P40-2t.F1), and the floor is 0.11.0. The suite's pins on
+  this block (`Every explain is its own **explain phase**`, the review pointer, `merge`) are on the lines
+  around it and stay.
 
 ## 3. `installer/payloads/doc_bodies/operations.md` (the seed operations doc)
 
@@ -135,10 +137,12 @@ phase first. A book still stops for its outline sign-off and its acceptance gate
 
 ```text
 its own: it writes from this repository's code and the phases' records, a research phase's findings
-included. A subject no phase covers, this repository's code or a subject with no code behind it, is
-offered a research phase first, which runs at once; when it passes, the explain's confirmation comes
-back by itself for your yes. A book still stops for its outline sign-off and its acceptance gate, then
-writes its chapters at once (at most 4 in flight). Plugin version 0.11.0 or later is required.
+included. Whenever the records lack what the reader needs (a subject no phase covers, code or not, or a
+covered subject that rests on outside basics no record states), it offers a research phase first, and
+your own "research first" is always honoured; the research runs at once, and when it passes, the
+explain's confirmation comes back by itself for your yes. A book still stops for its outline sign-off
+and its acceptance gate, then writes its chapters at once (at most 4 in flight). Plugin version 0.11.0
+or later is required.
 ```
 
 - **Why:** as section 2; the seed doc and the README say the same thing.
@@ -169,7 +173,7 @@ The bootstrap stamps versions only on `main` (`changelog.d/README.md`): write th
 ```markdown
 # An explain asks for its research first and comes back by itself; a book's chapters are written at once
 
-- **Research first, then the explain, from one request.** When no phase covers an explain's subject, the knowledge plugin's "research first" reply now creates the research phase **and runs it at once**, on one confirmation, as the explain's own research. Its `Research: <subject>` block gains `paths: … | none` and a `sources:` line: the research reads this repository's code, the web (each outside fact with its source beside it, an `unsourced:` line where no opened source states it, and the research review re-opening at least two sources per topic), or your own material (the typed messages of your sessions and the verbatim *Original Input* of intent files, under eight privacy rules; the confirmation names the repository the extract lands in and whether it has a git remote). When the research phase passes, `create-phase`'s *The research route*, **When it passes**, invokes `/knowledge:explain <subject> from=<P>`: the explain's confirmation, redrawn from the findings, appears by itself and still waits for your literal yes. Both `review.md` references carry that step for a research phase whose intent has a `- then: explain` line. The explain proposal it carries is written into the research phase's `intent.md` as a blockquote, so the engine never takes that phase for an explain phase.
+- **Research first, then the explain, from one request.** Whenever the records lack what an explain's reader needs (a subject no phase covers, code or not, or a subject phases cover whose reader needs outside basics, such as a field's terms or a formula, that no record states), the knowledge plugin offers "research first", and your own "research first" is honoured whatever the coverage. That reply now creates the research phase **and runs it at once**, on one confirmation, as the explain's own research; a covered subject's block names its code under `paths:` and reads the web. Its `Research: <subject>` block gains `paths: … | none` and a `sources:` line: the research reads this repository's code, the web (each outside fact with its source beside it, an `unsourced:` line where no opened source states it, and the research review re-opening at least two sources per topic), or your own material (the typed messages of your sessions and the verbatim *Original Input* of intent files, under eight privacy rules; the confirmation names the repository the extract lands in and whether it has a git remote). When the research phase passes, `create-phase`'s *The research route*, **When it passes**, invokes `/knowledge:explain <subject> from=<P>`: the explain's confirmation, redrawn from the findings with the research phase on `phases:` beside any phase that built the code, appears by itself and still waits for your literal yes. Both `review.md` references carry that step for a research phase whose intent has a `- then: explain` line. The explain proposal it carries is written into the research phase's `intent.md` as a blockquote, so the engine never takes that phase for an explain phase.
 - **A subject with no code behind it.** An explain now accepts a subject that is not this repository's code (a field of study, a language, your own words) once a research phase covers it, told from that phase's findings alone; a book of such a subject is of kind `subject` with a short label. Outside a git repository it is still declined.
 - **A book's chapters are written at once.** A book's `DECOMP` declares its chapters (`--depends-on none`; a synthesis chapter on the chapters it draws on), and after the outline gate they run as a wave, **at most 4 in flight**, each with its own critic, by `explain-chapter.md`'s new *Chapters at once (a wave)*. The outline pins each chapter's recap lines, names, running examples and link ids; span 3 records its corrections, and the review adds a consistency pass. The engine now holds an explain phase's `DECOMP` to v77's forced declaration like any other: `finish-slice` refuses it over an undeclared chapter, and `parallel-plan` prints its rounds.
 - **Migration notes.** `/update-workspace` brings it. Explain phases now need the knowledge plugin **0.11.0 or later** (`/plugin marketplace update knowledge`, then update `knowledge@knowledge` from the `/plugin` panel); a proposal from an older plugin is refused and nothing is created. Update the workspace first: plugin 0.11.0 refuses a workspace older than this release. A five-line research block from an older plugin is read as `sources: code`, with no chained explain. An explain phase whose `DECOMP` already finished is unaffected; one whose book `DECOMP` has not finished must declare its chapters (`set-slice-deps <slice> --depends-on none`) before `finish-slice` takes it. Nothing else beyond `--update`.

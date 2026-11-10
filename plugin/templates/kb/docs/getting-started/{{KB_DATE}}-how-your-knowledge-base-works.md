@@ -85,12 +85,15 @@ That is the whole loop: figure something out, run `/knowledge:explain`, and the
 explanation is written down, indexed, linked, and saved before you have moved on
 to the next thing.
 
-When nothing your workspace recorded covers the subject yet, including a subject
-with no code behind it (a field of study, a language, your own notes), the skill
-offers a research phase first. It runs at once and records its findings, each
-outside fact with its source beside it; when it passes, the explain's
-confirmation comes back by itself (`from=P<N>` names that research phase). A
-book can be about such a subject, and once you sign its outline its chapters are
+Whenever your workspace's records lack what the reader needs, the skill offers a
+research phase first: when nothing they recorded covers the subject yet, including
+a subject with no code behind it (a field of study, a language, your own notes),
+and when they cover it but the reader needs outside basics none of them states (a
+field's terms, a formula). Your own "research first" is always honoured, whatever
+the coverage. The research runs at once and records its findings, each outside
+fact with its source beside it; when it passes, the explain's confirmation comes
+back by itself (`from=P<N>` names that research phase). A book can be about a
+subject with no code behind it, and once you sign its outline its chapters are
 written at once.
 
 ## 4. Where to go next

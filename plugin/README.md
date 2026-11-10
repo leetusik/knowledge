@@ -10,10 +10,12 @@ two skills:
   sources) that the knowledge base renders itself. It is **records-only**: it
   writes only from the code and from what your workflow workspace's phases
   recorded, a research phase's findings included, does no research of its own
-  (no web search, no research agents) and brings in nothing from outside. A
-  subject no phase covers, whether it is this repo's code or a subject with no
-  code behind it, is offered a **research phase first**: it runs at once, and
-  when it passes the explain's confirmation comes back by itself. It is the
+  (no web search, no research agents) and brings in nothing from outside.
+  Whenever the records lack what the reader needs (a subject no phase covers,
+  code or not, or a covered subject that rests on outside basics no record
+  states), it offers a **research phase first**, and your own "research first"
+  is always honoured: it runs at once, and when it passes the explain's
+  confirmation comes back by itself. It is the
   front door of an **explain phase** in a workflow workspace (v96 or later): it
   suggests the reader and the shape, asks you **once**, and on your yes hands it
   to the workspace's `create-phase`, which runs it to a private publish. One writer
@@ -64,13 +66,19 @@ built the subject, then shows the proposed phase and its `## Explain` block and
 asks once. It **suggests the reader** (a concrete guess at who they are, what
 they know and what they are new to) and **the shape**: the sections as that
 reader's questions, in their order, with one or two other shapes to pick from.
-Your yes signs them, and the run writes only those. When no phase covers the
-subject, it says so and offers "research first": one more confirmation names
-what the research reads (the code, the web, with a source beside each finding,
-or your own material, under privacy rules), then the workspace creates that
-research phase and runs it at once. When it passes, the explain's confirmation
-comes back by itself, redrawn from the findings, and waits for your yes. A
-subject with no code behind it (a field of study, a language, your own notes)
+Your yes signs them, and the run writes only those. When the records lack what
+the reader needs, it says so and offers "research first": when no phase covers
+the subject, or when phases cover it but the reader needs something none of
+their records states (a field's terms, a formula, outside basics), which it
+names; there "yes" explains from the records as they are, those parts stated as
+gaps. Your own "research first", or research asked for in your own words, is
+always honoured, whatever the coverage. One more confirmation names what the
+research reads (the code, the web, with a source beside each finding, or your
+own material, under privacy rules), then the workspace creates that research
+phase and runs it at once. When it passes, the explain's confirmation comes back
+by itself, redrawn from the findings (the research phase beside any phase that
+built the code), and waits for your yes. A subject with no code behind it (a
+field of study, a language, your own notes) that no research phase covers yet
 can only go this way; outside a git repository it is declined. `from=P<N>` names
 the research phase an explain is drawn from (the chained confirmation passes it
 for you). Change any line and it shows the whole confirmation again;
@@ -145,7 +153,10 @@ leading `/` in a path rule is deliberate:
     "Read(/<ROOT>/**)", "Edit(/<ROOT>/**)", "Read(/<SKILL_DIR>/**)"
 
 The phase's writer reads the skill by path, so it also needs
-`"Bash(python3 -c *)"`, `"Read(/<UNIT>/**)"` and `"Edit(/<UNIT>/**)"`.
+`"Bash(python3 -c *)"`, `"Read(/<UNIT>/**)"` and `"Edit(/<UNIT>/**)"`. A book's
+chapter also needs `"Bash(git -C <BOOK> show HEAD:./*)"`, the critic's read of
+earlier chapters, where `<BOOK>` is the book's folder exactly as the critic's
+`draft:` path writes it (relative, not a path rule).
 
 You do not have to work them out: there is no preflight, and a denied call stops
 the run where it is made with `FAILED: permissions`, writing nothing more, and

@@ -169,8 +169,10 @@ Connect mode is then done — suggest `/knowledge:explain <topic>` to file the f
 explainer to the hosted KB. It runs as an explain phase, so the repository it is run from
 needs a workflow workspace (v96 or later): it explains that repository's code, or a
 subject a research phase covered, from the code and what its phases recorded, asks one
-confirmation, then writes, checks and publishes privately. A subject no phase covers is
-offered a research phase first.
+confirmation, then writes, checks and publishes privately. Whenever the records lack what
+the reader needs (a subject no phase covers, or a covered subject that rests on outside
+basics no record states), it offers a research phase first, and the operator's own
+"research first" is always honoured.
 
 ### Prefer the terminal? Use the standalone CLI instead
 
