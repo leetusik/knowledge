@@ -374,7 +374,7 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | [x] `P40-2t.S6` | `done` | release: plugin 0.11.0, READMEs and parity, the package README, PATCHES and checks at fdb1151 | `implementation` | `works/phases/active/P40-2t/slices/P40-2t.S6` |
 | [x] `P40-2t.F2` | `done` | critic reads sibling chapters as committed in both layouts | `fix` | `works/phases/active/P40-2t/slices/P40-2t.F2` |
 | [x] `P40-2t.F1` | `done` | offer research first whenever the records lack what the reader needs | `fix` | `works/phases/active/P40-2t/slices/P40-2t.F1` |
-| [ ] `P40-2t.REVIEW` | `changes_requested` | phase review | `review` | `works/phases/active/P40-2t/slices/P40-2t.REVIEW` |
+| [ ] `P40-2t.REVIEW` | `in_progress` | phase review | `review` | `works/phases/active/P40-2t/slices/P40-2t.REVIEW` |
 
 ## Phase P41-sr: Listen: a free AI voice reader
 

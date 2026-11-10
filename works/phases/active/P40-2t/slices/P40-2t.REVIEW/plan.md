@@ -140,3 +140,45 @@ pass_effort=yes
 attribution=Claude Opus 5.5
 explore_model=haiku
 explore_effort=xhigh
+
+## Round 2 (bounded)
+
+Round 1 returned `changes_requested` with two classes, F1 and F2. Both fix slices are done and committed:
+
+- F2 (`38980a1a`): the critic reads committed siblings with `git -C <draft folder> show HEAD:./<file>`.
+- F1 (`6a37b998`): research first is offered whenever the records lack what the reader needs, and an operator's "research first" is always honoured.
+
+This round checks the following:
+
+1. **Each fix against its case list.** Use the acceptance matrices in `slices/P40-2t.F1/plan.md` (11 cases) and `slices/P40-2t.F2/plan.md` (6 cases plus F2's case 2b), with the evidence in each `result.md`. Do not take an executor's word: re-trace F1's cases 5–9 through the texts yourself, and re-run F2's scratch-repo proof for case 3 (nested, one at a time).
+2. **Each fix's blast radius.** Check everything the two fixes touched:
+   - the plugin skill (front door, §3.2 permissions, B5 item 7), its copies and the critic agent;
+   - the package's two create-phase routes, `explain-chapter.md` and `explain-decomposition.md`;
+   - `patches/create-phase.md` and `patches/release.md`, `PATCHES.md` and the package `README.md`;
+   - the READMEs, setup, the KB template and both manifests;
+   - `content.ts` (now 2,722).
+
+   Look for any new contradiction between the plugin and the package, for example the two renamed package bold openings, **When the records lack what the reader needs**. Also check the end-to-end trace from round 1's step 2, now for the covered-plus-basics case.
+3. **The validation suite, whole:**
+   - parity;
+   - `uv run pytest -q`;
+   - web typecheck, lint, test and build (build in a scratch clone of `web/`, as round 1 did);
+   - the package checks: `finds.py`, `apply.py` on a fresh `fdb1151` archive, the artifact rebuild, the whole patched smoke suite, and `cites.py`;
+   - `validate`.
+4. **Round 1's other results are reused** wherever no fix touched them: the S2–S4 package parts, the wave and engine probes, the outline-gate probe, and the `## Explain` hazard probe.
+5. **The live check, briefly.** Run a scratch standalone build again, because `/SKILL.md` and the landing count changed. On a free port (never `:3030`), confirm with Claude in Chrome (deviceId `c14e5b18-f250-45f1-b92e-4a08a31197b5`) that:
+   - `/SKILL.md` equals the skill and carries the new trigger;
+   - the landing shows 2,722.
+
+   Stop the server when done.
+6. **Mark repeat failures.** If a class fails again, mark it `repeat of round 1 finding <k>` and propose no new fix. The orchestrator then stops for the operator.
+
+**On a pass**, do the pass-only duties from round 1's drafts (`result.md` § *Drafts for a pass*):
+
+- append any missing `## Doc impact` line. F1 and F2 each owe one, and both are already appended.
+- add the gate-section notes tagged `(gate section — written at merge)`: the qa.md *Regression Checklist* lines rewritten v94 → v96, with the new counts (2,722), plus this phase's headline checks.
+- return `doc_versions: none — deferred to post-merge consolidation (parallel mode)`.
+- return the **walkthrough**, updated from round 1's draft: the new research-first trigger, the release order, OQ2 with its recommendation, and P59-d8's status as of your run.
+- return the deferred-job candidates, re-listed. Round 1 listed four; drop any a fix resolved.
+
+Rewrite `result.md` for round 2. Round 1's findings stay recorded in this slice's history and in the phase's Decisions.
