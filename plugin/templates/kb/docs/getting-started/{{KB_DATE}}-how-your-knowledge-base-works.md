@@ -69,7 +69,7 @@ itself.
 ## 3. How a new page arrives
 
 You do not edit these files by hand. You ask the `/knowledge:explain` skill to
-explain something. From a repository with a workflow workspace (v94 or later), it
+explain something. From a repository with a workflow workspace (v96 or later), it
 confirms the plan with you once, then writes the explainer from that
 repository's code and its phases' records, checks it as an explain phase and
 sends it to the document API, which does three
@@ -84,6 +84,17 @@ things for you:
 That is the whole loop: figure something out, run `/knowledge:explain`, and the
 explanation is written down, indexed, linked, and saved before you have moved on
 to the next thing.
+
+Whenever your workspace's records lack what the reader needs, the skill offers a
+research phase first: when nothing they recorded covers the subject yet, including
+a subject with no code behind it (a field of study, a language, your own notes),
+and when they cover it but the reader needs outside basics none of them states (a
+field's terms, a formula). Your own "research first" is always honoured, whatever
+the coverage. The research runs at once and records its findings, each outside
+fact with its source beside it; when it passes, the explain's confirmation comes
+back by itself (`from=P<N>` names that research phase). A book can be about a
+subject with no code behind it, and once you sign its outline its chapters are
+written at once.
 
 ## 4. Where to go next
 

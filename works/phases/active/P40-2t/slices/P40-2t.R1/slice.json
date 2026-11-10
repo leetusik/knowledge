@@ -1,0 +1,33 @@
+{
+  "id": "P40-2t.R1",
+  "phase_id": "P40-2t",
+  "name": "study the two research-first book runs and pin the change list",
+  "kind": "research",
+  "status": "done",
+  "order": 10,
+  "depends_on": [],
+  "depends_declared": true,
+  "created_at": "2026-11-10T21:02:54+09:00",
+  "started_at": "2026-11-10T21:07:08+09:00",
+  "completed_at": "2026-11-10T21:32:27+09:00",
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "Studied P8-x9 and P58-pm→P59-d8: no confirmed point contradicted (4, 6 hold; 1, 2, 3, 5 hold with a change); pinned (a)–(e) and a five-group change list for DECOMP2; OQ1 on listing research-read works in a book's Sources",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

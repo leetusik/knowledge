@@ -1,0 +1,32 @@
+{
+  "id": "P40-2t.DECOMP2",
+  "phase_id": "P40-2t",
+  "name": "cut the edit slices from R1's change list",
+  "kind": "decomposition",
+  "status": "done",
+  "order": 20,
+  "depends_on": [],
+  "created_at": "2026-11-10T21:02:54+09:00",
+  "started_at": "2026-11-10T21:35:40+09:00",
+  "completed_at": "2026-11-10T21:47:22+09:00",
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "OQ1 resolved yes; cut six declared edit slices: wave S1 front door (high) + S2 create-phase routes + S3 references/wave (high) + S4 engine patch, then S5 evidence and critic, then S6 release",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

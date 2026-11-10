@@ -3,12 +3,12 @@
   "phase_id": "P40-2t",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-11-10T20:54:36+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-10T20:59:32+09:00",
+  "completed_at": "2026-11-10T21:06:26+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut research first: R1 studies P8-x9 and P58-pm→P59-d8, rules on the six confirmed points, answers (a)–(e) and pins the change list; DECOMP2 cuts the edits from it; the route today is mapped in topics/route-today.md",
   "validation": {
     "required": [],
     "last_run": null,

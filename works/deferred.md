@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `77`
+- Open: `81`
 - Promoted: `6`
 - Dropped: `20`
 
@@ -86,6 +86,10 @@
 | `D97-x6` | `deferred` | Show a stored quote with math as text in the notes lists | P39-hk OQ23 (operator: all as your recommendations) | the next notes-list change, or the first chapter whose highlights cross formulas | `works/deferred/open/D97-x6` |
 | `D98-mj` | `deferred` | A heading with no authored id takes a new id in each version, orphaning its marks | P39-hk.REVIEW rounds 2-3 (observation outside the boundary) | the next native-ingest change, or the first report of a lost highlight | `works/deferred/open/D98-mj` |
 | `D99-s9` | `deferred` | A place name's own name and language, everywhere the reader names a section | P39-hk.REVIEW round 3 (F7's observations; walkthrough decision 2) | the next reader-chrome or notes change, or the first VoiceOver report | `works/deferred/open/D99-s9` |
+| `D100-6q` | `deferred` | Deploy the knowledge server with plugin 0.10.0's grammar | P40-2t.REVIEW | Now: P59-d8's publish waits on it; before the next book publishes | `works/deferred/open/D100-6q` |
+| `D101-m7` | `deferred` | Re-run the explain front door under claude -p on a v96 workspace (supersedes D94-cp) | P40-2t.REVIEW | /update-workspace to v96 here, after the bootstrap release and P40-2t's merge | `works/deferred/open/D101-m7` |
+| `D102-cs` | `deferred` | Give the chained explain an on-disk trigger | P40-2t.REVIEW | The first chained research run, or a resume that misses it | `works/deferred/open/D102-cs` |
+| `D103-gz` | `deferred` | Retire regression checklist line 30, the verifier's same-model guard | P40-2t.REVIEW | The next docs or QA phase | `works/deferred/open/D103-gz` |
 | `D-pzs7` | `deferred` | Retire or redirect the orphaned document archive page | P-8jbf.DECOMP | the next reader or documents phase | `works/deferred/open/D-pzs7` |
 | `D-19n8` | `deferred` | Quiz Show answer button overflows a 390 phone at 200% root text | P-8jbf.REVIEW | the next reader or quiz phase, or a QA sweep | `works/deferred/open/D-19n8` |
 | `D-6pf9` | `deferred` | A long table's box state depends on resize history | P-8jbf.F1 | the next reader-tables phase or a QA sweep | `works/deferred/open/D-6pf9` |

@@ -1,0 +1,33 @@
+{
+  "id": "P40-2t.S4",
+  "phase_id": "P40-2t",
+  "name": "engine patch: drop the explain exemption in finish-slice and parallel-plan, flip the smoke probe",
+  "kind": "implementation",
+  "status": "done",
+  "order": 60,
+  "depends_on": [],
+  "depends_declared": true,
+  "created_at": "2026-11-10T21:43:52+09:00",
+  "started_at": "2026-11-10T21:49:14+09:00",
+  "completed_at": "2026-11-10T21:58:55+09:00",
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "Wrote the engine patch (D1–D3): finish-slice holds an explain DECOMP to the forced declaration, parallel-plan drops its explain note, Test 10d flips; whole patched suite 504 PASS on a rebuilt fdb1151 copy",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

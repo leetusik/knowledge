@@ -1,0 +1,33 @@
+{
+  "id": "P40-2t.S2",
+  "phase_id": "P40-2t",
+  "name": "create-phase routes: research sources, run at once, When it passes chains the explain, subject books",
+  "kind": "implementation",
+  "status": "done",
+  "order": 40,
+  "depends_on": [],
+  "depends_declared": true,
+  "created_at": "2026-11-10T21:43:50+09:00",
+  "started_at": "2026-11-10T21:49:13+09:00",
+  "completed_at": "2026-11-10T21:56:09+09:00",
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "Wrote the package's create-phase route texts (B1–B10) and a 5-find patch: the research route's sources field (v96 marker), eight privacy rules, the run-at-once confirmation and When it passes",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

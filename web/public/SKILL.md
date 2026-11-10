@@ -1,7 +1,7 @@
 ---
 name: explain
-description: Explain what code in the current repo does, or a code change in it, as a document in your own knowledge base (the one /knowledge:setup configured), written only from the code and from what the workflow workspace's phases recorded while building it. Codebase-only, with no research of its own: no web search, no research agents, nothing from outside the code and the records; a subject with no code in this repo is declined, and one no phase covers is offered a research phase first. /knowledge:explain suggests the reader and the shape and asks one confirmation (a standalone document by default; a book or a chapter of a book only when asked) and, on your yes, hands it to the workspace's create-phase, which runs it as an explain phase in its own worktree: one writer drafts a native chapter traced sentence by sentence to the code and the records (visuals first, next steps from what is still open in the workspace, a quiz only when the subject earns one), one critic on a second model checks it, then a private publish. Needs a workflow workspace v94 or later; without one it refuses and runs nothing. Use ONLY when the user wants an explanation persisted as a document (explain and document, write this up, document what we just changed, teach me X and save it) — NOT for ordinary questions that deserve a normal chat answer.
-argument-hint: <topic or change-ref> [book=<slug>] [lang=<xx>]
+description: Explain what code in the current repo does, a code change in it, or a subject a research phase covered, as a document in your own knowledge base (the one /knowledge:setup configured), written only from the code and from what the workflow workspace's phases recorded, a research phase's findings included. Records-only, with no research of its own: no web search, no research agents, nothing from outside the code and the records; whenever the records lack what the reader needs (a subject no phase covers, one with no code in this repo, or a covered subject whose reader needs outside basics no record states), it offers a research phase first (it reads the code, the web or your own material and records findings), it always honours your own "research first" whatever the coverage, and the explain's confirmation comes back by itself when that research passes. /knowledge:explain suggests the reader and the shape and asks one confirmation (a standalone document by default; a book or a chapter of a book only when asked) and, on your yes, hands it to the workspace's create-phase, which runs it as an explain phase in its own worktree: one writer drafts a native chapter traced sentence by sentence to the code and the records (visuals first, next steps from what is still open in the workspace, a quiz only when the subject earns one), one critic on a second model checks it, then a private publish. Needs a workflow workspace v96 or later; without one it refuses and runs nothing. Use ONLY when the user wants an explanation persisted as a document (explain and document, write this up, document what we just changed, teach me X and save it) — NOT for ordinary questions that deserve a normal chat answer.
+argument-hint: <topic or change-ref> [book=<slug>] [lang=<xx>] [from=P<N>]
 allowed-tools: Read, Grep, Glob, Write, Edit, Bash(curl -sS --max-time 5:*), Bash(curl -sS --max-time 30:*), Bash(python3 -c:*), Bash(python3 -I *knowledge-kb/explain/tools/pagetext.py *), Bash(knowledge --base-url:*), Bash(knowledge --version:*), Bash(git diff:*), Bash(git log:*), Bash(git show:*), Bash(git grep:*), Bash(git blame:*), Bash(git status:*), Bash(shasum -a 256:*), Bash(sha256sum:*), Bash(mktemp -d:*)
 ---
 
@@ -9,20 +9,23 @@ allowed-tools: Read, Grep, Glob, Write, Edit, Bash(curl -sS --max-time 5:*), Bas
 
 Produce an educational explainer — a **native chapter**: Markdown with a few typed
 blocks (figures, diagrams, SVG, quizzes, sources) that the knowledge base renders
-itself — about a topic **or a code change** in the current repository: what its code does, told
-from the code itself and from what the workspace's phases recorded while building it. It
+itself — about a topic **or a code change** in the current repository, or a **subject** a
+research phase covered: what its code does, or what the subject is, told from the code and
+from what the workspace's phases recorded, a research phase's findings included. It
 files the chapter in **your** personal knowledge base (the one `/knowledge:setup`
-created). Explain is **codebase-only**: a subject with no code in this repository is
-declined plainly, and nothing is written (§1). This skill produces a **saved
-document**: if the user only asked a question and did not ask for anything to be saved,
-answer normally in chat and write no files.
+created). Explain is **records-only**: it never researches by itself. Whenever the records
+lack what the reader needs (a subject no phase covers, code or not, or a covered subject
+that rests on outside basics no record states), a research phase is offered first, an
+operator's "research first" is always honoured, and nothing is written until the operator
+says yes (§1). This skill produces a **saved document**: if the user only asked a question
+and did not ask for anything to be saved, answer normally in chat and write no files.
 
 There is one output format everywhere: **native**. You never write HTML, and the
 knowledge base never runs your code. Everything interactive (the quiz, the collapsible
 callouts, the diagrams) is declared in the chapter's text and drawn by the reader.
 
 **Every explain is an explain phase.** It runs in the current repository's workflow
-workspace (v94 or later), one phase per publishable unit: a standalone document by
+workspace (v96 or later), one phase per publishable unit: a standalone document by
 default, a book or a chapter of a book only when asked. The workspace creates it, runs
 it in its own worktree, and its executors read the code and the phases' records, write,
 check and publish it private. This file is both the phase's front door and the method those executors
@@ -60,9 +63,12 @@ D2–D5, the research team's stages, are gone; the stages after them keep their 
 that a citation still finds them. A denied call stops the run at any stage (§3.2).
 
 **The evidence** is the code at one commit and the records of the phases that built the
-subject: their intent, decisions, notes, slice results and research findings (§3.4). You
-read it once, alone; nothing outside it is read, and nothing outside it is written. What
-the code and the records do not say is a gap, and the chapter says so.
+subject: their intent, decisions, notes, slice results and research findings (§3.4). A
+research phase's findings are records, whether they came from the web or from the
+operator's own material; a **subject** explain (§1, MODE) has no code entries and is told
+from those findings alone. You read it once, alone; nothing outside it is read, and
+nothing outside it is written: the research read its sources, and you still do no
+research. What the code and the records do not say is a gap, and the chapter says so.
 
 **The run** is one kind: there is no run choice to make (§1 offers none, and `## Explain`
 has no `run:` line). A v2 is **the prior plus the phases since** (§3.4 *A v2*): when the
@@ -112,6 +118,11 @@ order) and remember each:
   (`en`, `ko`). Without it, LANG is **`en`**: the chapter, the dossier and the report are
   in English whatever language the request is written in. Another language only when the
   operator names one (`lang=ko`, or "in Korean" in their own words).
+- `from=P<N>` → FROM: the research phase a chained explain is drawn from (`P58`,
+  `P58-pm`). create-phase's *The research route* passes it, **When it passes**, as
+  `/knowledge:explain <subject> from=<P>`; the operator may type it too. That phase covers
+  the subject (COVERAGE): it goes on `phases:`, and the explain proposal its `intent.md`
+  recorded before the research ran is the starting draft (the front door's step 5).
 
 Strip every trailing flag word before using the rest as the topic. There is no run
 choice: one writer drafts from the code and the phases' records, and one critic on a
@@ -123,8 +134,9 @@ id, is answered with the live explain phases (the front door's step 4) and
 part of the topic.
 
 **What remains after stripping is the TOPIC / change-ref.** Explain is
-**codebase-only**: every chapter explains what this repository's code does. Decide the
-MODE from the topic:
+**records-only**: every chapter is told from the records of the phases that built or
+researched its subject, and from this repository's code where the subject has some, never
+from research of its own. Decide the MODE from the topic:
 
 - **Change mode** — the arguments name or point at a code change: a diff, a branch, a
   PR, a commit or commit range, a **phase** or a **slice**, or a phrase like "what we just
@@ -133,16 +145,21 @@ MODE from the topic:
 - **Topic mode** — the arguments name a concept, tool, subsystem, or file *of this repo*
   to explain. Also topic mode when the arguments are empty and the recent conversation is
   an analysis of this repo rather than a change you just made.
-- **No code behind it** — the subject is not this repository's code (finance, history, a
-  paper, a language, a tool the repo does not use), or you are not in a git repository:
-  **decline plainly**, in one or two sentences, and write nothing: "Explain writes only
-  about this repository's code, from what its phases recorded. <The subject> is not in
-  this code, so nothing was created." An idea the code relies on (a hash, a retry policy)
+- **No code behind it: a subject** — the subject is not this repository's code (a field
+  of study, finance, history, a paper, a language, the operator's own words, a tool the
+  repo does not use). A **subject** explain is told from **records alone**: the findings of
+  a research phase that covers it, put on `phases:` like any covering phase. With one
+  (named by `from=P<N>`, or found by COVERAGE), the front door goes on as for any other.
+  With none, the confirmation offers only **"research first"** (the front door's step 7):
+  there is no explaining it from the code alone, because there is no code. **Outside a
+  git repository**, decline plainly, in one or two sentences, and write nothing: "Explain
+  runs as a phase of this repository's workflow workspace, and this folder is not a git
+  repository, so nothing was created." An idea the code relies on (a hash, a retry policy)
   is a topic-mode subject when the request is about how *this code* uses it; it is
   explained only as far as the code and the records state it.
 - **Empty and none fits** → ask the user what to explain, then continue.
 
-Both modes produce the **same kind of chapter**; only the lens differs, and §3 says how.
+All three produce the **same kind of chapter**; only the lens differs, and §3 says how.
 
 **The unit, and where it goes** (PLACEMENT). It is settled **once, at the start**, by the
 operator's yes to the one confirmation, and never asked again mid-run. Offered, never
@@ -172,12 +189,15 @@ imposed:
   names when that book exists; the default stays the standalone document.
 - **A book**, only when the operator asks for one (a book, chapters, a course, a series
   or a multi-part guide; or `book=<slug>` naming no existing book): `unit: book`,
-  `outline sign-off: on`, `depth: about <n> chapters`, kind `codebase`, its chapters
-  drawn from the phases that built the subject. Its slug and title: a **phase or slice
+  `outline sign-off: on`, `depth: about <n> chapters`, kind `codebase` or `subject`, its
+  chapters drawn from the phases that built or researched the subject. The kind is
+  `codebase` when the subject is this repository's code, even when it leans on outside
+  basics a research phase recorded, and `subject` for a subject with no code behind it
+  (MODE), with a short display label: `kind subject: <label>` (`kind subject: English
+  grammar`), which the publish carries (§5). Its slug and title: a **phase or slice
   subject** gets that phase's own book, `p<N>` (a tailed or v73 id keeps its form:
-  `P46-k2` suggests `p46-k2`), titled by the rule below; **anything else** in the repo is
-  a named book. A book about a subject with no code behind it is declined, like any such
-  request.
+  `P46-k2` suggests `p46-k2`), titled by the rule below; **anything else** is a named
+  book.
 
 **The title rule.** A book's, a chapter's or a loose document's title says what the text
 explains, never the work that produced it: "How a review publishes privately (P30)", not
@@ -229,39 +249,77 @@ book's outline gate. A new chapter of an existing book lists its own sections, a
 document does. The run writes only for the signed sections (§3.10).
 
 **The phases that cover the subject** (COVERAGE). The explain is told from what the
-workspace's phases recorded while building the subject, so the front door finds them from
-the records, and the confirmation names them:
+workspace's phases recorded while building or researching the subject, so the front door
+finds them from the records, and the confirmation names them:
 
 1. **The commits.** For the subject's files (the cheap look, step 5, names them), run
    `git log --format=%s -- <paths>` and read each subject line for a phase id, `P<N>` or
    `P<N>-<tail>`: in the scope (`merge(P39-hk): …`, `chore(P39-hk): …`) or at the head of
    the summary (`feat(web): P30.S20 …`), as the workspace's Commit Convention writes them.
-   A slice id counts for its phase.
+   A slice id counts for its phase. A subject with no code has no paths, and no commits
+   to read.
 2. **The phase records.** Grep the workspace's `phases/active/*/intent.md`,
    `phases/active/*/phase.md` and their `phases/archived/` counterparts for the subject's
    files, its key names and its plain name; a hit that is about the subject (not a passing
-   mention) counts.
+   mention) counts. A research phase is found this way: its `intent.md` records its
+   subject and its `paths:` line (`none` for a subject with no code), and its `## Decisions`
+   gists name what it found.
 3. **The covering phases** are the phases both ways find, ordered by how much of the
-   subject each built, at most 6 named (the rest counted). A phase or slice subject is
-   covered by that phase, plus any later phase the commits name for its files.
+   subject each built or researched, at most 6 named (the rest counted). A phase or slice
+   subject is covered by that phase, plus any later phase the commits name for its files.
+   `from=P<N>` names a covering phase outright.
 
-**None covers it** (the code is there, but no phase built or recorded it — older code, a
-vendored part, a commit with no phase id): the confirmation says so, and offers to
-**create a research phase first**, which reads the code and records its findings; the
-explain then runs from those findings afterwards, when the operator asks again, never
-automatically. The operator may instead say `yes` to explain from the code alone. The
-hand-off for the research phase (the front door's step 8) invokes the workspace's
-`create-phase` with the operator's request and this block, verbatim:
+**None covers it** — the code is there, but no phase built or recorded it (older code, a
+vendored part, a commit with no phase id), or the subject has no code behind it and no
+research phase covers it: the confirmation says so, and offers to **create a research
+phase first**. For code no phase covers, the operator may instead say `yes` to explain
+from the code alone; a subject with no code has no such reply.
+
+**Covered, but the records lack what the reader needs** — phases cover the subject, yet a
+drafted section or a must-cover item rests on something no covering record states: a
+field's terms, a formula, the outside basics this reader is new to (a trading rule its
+phases built, for a reader who also needs the quant basics behind it). Step 6 finds it,
+after drafting the sections. The confirmation names what the records lack and offers
+**"research first"** beside `yes`: `yes` explains from the records as they are, and the
+missing parts become stated gaps (§3.4, step 6). A v2 that asks for outside material is
+this case too; its research phase is then one of the phases since (§3.4 *A v2*).
+
+**Research first** is offered in both cases above, and whenever the request itself asks
+for research ("gather the facts first, then write"). It is **always honoured**: an
+operator's "research first", or research asked for in their own words at any
+confirmation, is handed on and the research phase created, whatever the coverage, offered
+or not (the front door's step 8; create-phase's research route confirms it once). The
+research phase is a findings-only phase that reads what its `sources:` line names (the
+code, the web, or the operator's own material) and records its findings. It runs at
+once, and when it passes, the explain's confirmation comes back by itself, redrawn from
+those findings, with the research phase on `phases:` beside any phase that built the
+code, and still waits for the operator's literal yes. The hand-off for the research phase
+(the front door's step 8) invokes the workspace's `create-phase` with the operator's
+request, this block, filled in, and the proposal as last shown, verbatim:
 
     Research: <subject>
     - subject: <subject, refined from the operator's words>
-    - paths: <the subject's files and folders, as the cheap look found them>
-    - question: what does this code do, and why is it built this way: <the reader's questions from the drafted shape, one a line>
-    - findings-only: yes — it reads the code and records findings in its phase's notebook and topics; it writes no product code
-    - then: an explain of <subject>, from these findings, only when the operator asks again (`/knowledge:explain <subject>`)
+    - paths: <the subject's files and folders> | none (no code behind it)
+    - sources: <one or more of: code · web · operator material (<which: intent files' original input, typed chat messages; which repos and hosts>)>
+    - question: <the reader's questions, one a line>
+    - findings-only: yes — it records findings in its phase's notebook and topics; it writes no product code and spends no money
+    - then: explain <subject> — <unit>, for <reader>; its confirmation, redrawn from these findings, is shown for your yes when this phase passes
 
-`create-phase` treats it as any phase request: it confirms the name and the objective with
-the operator, creates the phase and stops; the operator runs it.
+Fill `paths:` from the cheap look (`none` for a subject with no code; a covered subject's
+code all the same), `question:` from the drafted shape (for a covered subject, the parts
+its records lack), and `then:` from the proposal (its unit and reader). `sources:` names
+what the research reads: `code` when the subject has paths no phase covers, and for a
+covered subject only when the operator wants its code read again; `web` when the reader
+needs outside basics the code and the records do not state (a field's terms, a formula);
+`operator material` when the subject is the operator's own words, naming which (intent
+files' original input, typed chat messages) and the repositories and hosts it is read
+from. A "research first" the confirmation did not offer takes its `question:` and
+`sources:` from what the operator asked for, by the same rules. create-phase's
+*The research route* holds the per-source rules and the privacy rules for the operator's
+material; its one confirmation names the sources, where the operator's material is read,
+and the repository its extract lands in and whether that repository has a git remote, so
+that the operator decides before anything is read. It then creates the research phase and
+runs it at once, in `auto` on the default stream, as the explain's own research.
 
 ### The front door, step by step
 
@@ -279,22 +337,23 @@ artifact.
    `workflow/works/phases/`. One **at the root** has `scripts/workflow.py` and `works/`,
    its version in `works/.workspace-version.json` and its phases under `works/phases/`.
    Both: ambiguous: say so, never guess, and stop. None: refuse (the next step).
-2. **Check that it is ready:** `workspace_version` in that version file is **94 or
+2. **Check that it is ready:** `workspace_version` in that version file is **96 or
    later**, **and** its create-phase skill (`.claude/skills/<create-phase>/SKILL.md`) has
-   a `## The explain route` section that lists the `**phases**` field (the literal
-   `phases` line only that route writes). Refuse, and run nothing:
-   - **No workspace:** "Explain runs as an explain phase in a workflow workspace (v94 or
+   a `## The research route` section that lists the `**sources**` field (the literal
+   `sources` field line only the v96 route writes). Refuse, and run nothing:
+   - **No workspace:** "Explain runs as an explain phase in a workflow workspace (v96 or
      later), and this repository has none. Install one with the agentic workspace
      bootstrap (`bootstrap_agentic_workspace.sh`), then ask again."
-   - **Too old** (an older version, or no `phases` field): "This workspace (v<N>) cannot run
-     explain phases from the knowledge plugin: they need v94 or later, whose create-phase
-     explain route writes a `phases` line. Run `/update-workspace`, then ask again." Never
-     run it yourself.
+   - **Too old** (an older version, or no `sources` field): "This workspace (v<N>) cannot
+     run explain phases from the knowledge plugin: they need v96 or later, whose
+     create-phase research route writes a `sources` line. Run `/update-workspace`, then ask
+     again." Never run it yourself.
 3. **Refuse early** what the route would refuse (create-phase's *The explain route*, its
    refusals before anything is written), so the operator never confirms what it then
    turns down:
-   - **A subject with no code behind it** (MODE, above): decline plainly, in one or two
-     sentences, and stop.
+   - **Outside a git repository** (MODE, above): decline plainly, in one or two
+     sentences, and stop. A subject with no code behind it is not refused: it goes on,
+     told from the research phase that covers it, or offered "research first" (step 7).
    - **From inside a phase worktree** (the working folder's path runs through
      `.claude/worktrees/`, where every phase worktree lives): say "start an explain from
      the main checkout" and stop; a phase created here would land on another phase's
@@ -332,25 +391,43 @@ artifact.
    most **10 reads** in all, with no agents and no web search. Read, Glob and Grep the
    subject's files, and note their paths for the coverage; a phase or slice subject reads
    its `intent.md`, its `phase.md`'s `## Now` and `## Decisions`, and the heads of its
-   slices' `result.md`. Note what is open on the subject: the workspace's open deferred
-   jobs (`deferred/open/*/deferred.json`) and the covering phases' unanswered `## Operator
-   Questions`, for the shape's next-steps part. A prior (a v2): its `##` and `###`
-   headings, from one more KB read, §3.1's
+   slices' `result.md`. A subject with no code has no files to read: its look reads the
+   covering research phase's `## Decisions` gists and the headings of its `topics/` files,
+   and so does any `from=P<N>`, beside the subject's files. Note what is open on the
+   subject: the workspace's open deferred jobs (`deferred/open/*/deferred.json`) and the
+   covering phases' unanswered `## Operator Questions`, for the shape's next-steps part.
+   A prior (a v2): its `##` and `###` headings, from one more KB read, §3.1's
    `knowledge --base-url <KB_API_BASE_URL> read <PRIOR_REL_PATH> --source`, or without the
    CLI its `curl … -H @<KB_AUTH_HEADER>` form. The look sizes the shape; it is never
    research, and nothing it reads is evidence.
 
    **Then the coverage** (COVERAGE, above): one `git log --format=%s -- <paths>` over the
-   subject's paths, and one Grep over the phase records, outside the 10 reads. It names
-   the covering phases, or finds none.
+   subject's paths, and one Grep over the phase records, outside the 10 reads. A subject
+   with no paths runs no `git log`, and its Grep looks for the subject's plain name. It
+   names the covering phases, or finds none.
+
+   **With `from=P<N>`**, that phase is covering, whatever the Grep finds (an id that names
+   no phase of this workspace, active or archived, is said so in one line and dropped).
+   The coverage still runs over the subject's paths, so a covered subject keeps the phases
+   that built its code on `phases:` beside it, and a book of it stays kind `codebase`
+   (§1 *The unit, and where it goes*). Its `intent.md` holds, under *Original Input
+   (verbatim)*, the explain proposal as last shown before the research ran, and under
+   *Confirmed Intent* the block's `then:` line.
+   That proposal is step 6's starting draft (unit, reader, sections or chapters, project,
+   lang, must-cover), redrawn from what the research recorded: the findings may change the
+   sections or the chapters, and step 7's `Why:` says what changed. A research phase with
+   no recorded proposal (one created before the chain, or by hand) is drafted as usual,
+   with that phase on `phases:`.
 6. **Draft the proposal:** the phase name `Explain: <subject>`, a one-sentence objective
    (the unit, its reader, published private), and the sixteen lines of `## Explain`,
    each field on its own line, in this order:
-   - **unit** (above) · **subject**: a phase id (`P30`), a slice id (`P30.S4`) or the
-     topic, refined from the operator's words · **phases**: the covering phases
-     (COVERAGE), `P30, P33-n3`, or `none`;
+   - **unit** (above) · **subject**: a phase id (`P30`), a slice id (`P30.S4`), a topic of
+     this repository's code, or a subject a research phase covers, refined from the
+     operator's words · **phases**: the covering phases (COVERAGE), `P30, P33-n3`, or
+     `none`; a `from=P<N>` phase is always among them;
    - **book**: `none`; for a chapter, `<slug> — "<title>" (exists, <n> chapters, project
-     private)`; for a book, `<slug> — "<title>" (kind codebase)` ·
+     private)`; for a book, `<slug> — "<title>" (kind codebase)`, or for a subject book
+     `<slug> — "<title>" (kind subject: <label>)` ·
      **chapter**: `none`, or `<key> — "<title>" · position <n>` · **prior**: from step 5;
      a new book's or chapter's `<title>` follows §1's title rule;
    - **lang**: `<LANG> (translations: none)`, or for a translation the source it comes
@@ -370,8 +447,8 @@ artifact.
      evidence and word budgets, §3.10) before the write; for a book, the outline gate
      signs each chapter's sections (§9.2), with no stop per chapter.
 
-   There is no `run:` line and no `mode:` line: one run, and every subject is the
-   repository's code.
+   There is no `run:` line and no `mode:` line: one run, and a subject explain needs no
+   mark of its own, since its `phases:` names the research phase that covers it.
 
    Then draft the **sections** by *The shape* above; they ride in the confirmation above
    the `## Explain` block, never as a field. A document: a numbered list,
@@ -379,6 +456,13 @@ artifact.
    then the other shapes. Headings this reader understands, and each one-line answer in
    plain words. A v2 marks each prior heading `kept`, `renamed` (with its old heading) or
    `dropped`, and each addition `new`; a kept or renamed heading carries its id (§3.1).
+
+   Then check **what the records lack** (COVERAGE, *Covered, but the records lack what the
+   reader needs*): with covering phases, one Grep over their `intent.md`, `phase.md` and
+   `topics/` for the key terms each drafted section and must-cover item rests on, outside
+   the 10 reads. What none of them states (a field's terms, a formula, outside basics the
+   reader is new to) is what step 7's closing paragraph names, and the research block's
+   `question:` lines. A request that asks for research is offered it whatever this finds.
 
    Last, draft the **plain summary** that opens the confirmation: 2–4 short sentences in
    everyday words, with no field names and no workflow terms, saying what the document (or
@@ -399,7 +483,7 @@ artifact.
        Other shapes (say "shape B" to take one instead):
          B. <one line: another way to cut the same subject>
          [C. <one line>]
-       Built by: <the covering phases, each with a few words on what it built> | no phase covers this code — see below
+       Built by: <the covering phases, each with a few words on what it built or researched> | no phase covers this <code | subject> — see below
        Cost: one writer and one critic on a second model, plus the explain phase around it[ · <the clause below that applies>]
        Phase: Explain: <subject> — <the objective>
        - unit: document (standalone). Say "a chapter of <book>" or "a book" to change it
@@ -419,20 +503,51 @@ artifact.
        Why: <field — reason>; … (one clause for each value you chose; the rest are the request's words or the defaults)
        Reply yes, or change any line.
 
-   **When no phase covers the subject**, the `Built by:` line says so, and one paragraph
-   follows the `Why:` line in place of its last line:
+   **When no phase covers the subject**, when the covering phases' records lack what the
+   reader needs (step 6), or when the request asks for research, one paragraph follows the
+   `Why:` line in place of its last line, and the `Built by:` line says that no phase
+   covers it, or names the phases that do. The paragraph offers "research first" (COVERAGE,
+   *None covers it*, *Covered, but the records lack what the reader needs*): it names the
+   sources the research would read (the research block's `sources:` line, in plain words)
+   and says that this confirmation comes back by itself when the research passes. For code
+   no phase covers:
 
        No phase of this workspace built or recorded <the subject>, so the explain would have only the code to go on.
-       Reply "research first" to create a research phase that reads the code and records its findings
-       (it asks you to confirm its name, then stops; ask for the explain again once it is done),
+       Reply "research first" to create a research phase that reads <its sources: the code[, the web]> and records its findings
+       (you confirm it once, then it runs; when it passes, this confirmation comes back by itself, redrawn from its findings, for your yes),
        or "yes" to explain from the code alone, or change any line.
+
+   For a subject with no code behind it, there is no "yes from the code alone":
+
+       <The subject> has no code in this repository, and no research phase of this workspace covers it, so there is nothing yet to explain it from.
+       Reply "research first" to create a research phase that reads <its sources: the web, your own material (which, and from where), or both> and records its findings
+       (you confirm it once, then it runs; when it passes, this confirmation comes back by itself, redrawn from its findings, for your yes),
+       or change any line.
+
+   For a subject phases cover whose records lack what the reader needs, "yes" stays, and
+   explains from the records as they are (a request that asked for research opens the
+   paragraph with `You asked for the research first: <what it would gather>.` instead):
+
+       <The covering phases> built <the subject>, but their records do not state <what the reader needs that they lack: the field's terms, the formula, the outside basics>, so the explain would state those parts as gaps.
+       Reply "research first" to create a research phase that reads <its sources: the web[, the code]> and records its findings
+       (you confirm it once, then it runs; when it passes, this confirmation comes back by itself, redrawn from its findings, for your yes),
+       or "yes" to explain from the records as they are, those parts stated as gaps, or change any line.
+
+   **A redrawn confirmation** (`from=P<N>`, step 5) is this same shape, drawn from the
+   proposal the research phase recorded: its `Built by:` line names the research phase and
+   what it found, beside any phase that built the code, and its `Why:` line opens with
+   what changed since that preview and why
+   (`chapters — 6 → 8: the recorded ideas read more easily as 8`), or says that nothing
+   changed.
 
    A book's `Sections` block lists its chapters (step 6), and its stops line adds the
    outline and acceptance gates in plain words: `stops twice for your yes: once to sign
    every chapter's sections together, once to accept the finished book; otherwise only
-   if …`. A changed line, a picked shape or a dropped quiz is folded in like any other,
-   and the whole confirmation shown again. With `worktree: no` the stops line says it
-   runs here, in this folder.
+   if …`. When it offers "research first", the stops line says that the research runs
+   first and this confirmation comes back for your yes before either stop. A changed line,
+   a picked shape or a dropped quiz is folded in like any other, and the whole
+   confirmation shown again. With `worktree: no` the stops line says it runs here, in this
+   folder.
 
    **A worked example** (topic mode, a document, in this repository):
 
@@ -513,15 +628,29 @@ artifact.
    their reply. Its explain route takes it as *A confirmed proposal*: it checks it,
    creates the phase, starts its worktree and runs it in `auto` to publish. Nothing else
    runs here. No Skill tool: print `/create-phase` with the request, the proposal and the
-   reply, to paste. Anything but a literal yes, a changed line or a picked shape creates
-   nothing.
+   reply, to paste. Anything but a literal yes, a changed line, a picked shape or a
+   "research first" (below) creates nothing.
 
-   **On "research first"** (no phase covers the subject): invoke the same `create-phase`
-   with the operator's request and the research block of *The phases that cover the
-   subject*, filled in, verbatim, and nothing else: no `## Explain` block, no explain
-   phase. No Skill tool: print `/create-phase` with the request and the block, to paste.
-   The explain does not follow by itself: once the research phase is done, the operator
-   asks again, and the front door then finds that phase as covering the subject.
+   **On "research first"**, whatever the coverage: offered or not, and research asked for
+   in the operator's own words ("gather the facts first", "research it, then write")
+   counts the same; it is never a reply that creates nothing. Invoke the same
+   `create-phase` with the operator's request, the research block of *The phases that
+   cover the subject*, filled in, and the proposal as last shown, all verbatim, and
+   nothing else: no explain phase is created now. A confirmation that offered no research
+   has no block yet: fill it now by COVERAGE's rules (`paths:` the subject's code, or
+   `none`; `question:` and `sources:` from what the operator asked for); create-phase's
+   research route shows it once, so the operator can still narrow it. The proposal is
+   the explain's starting draft, kept for when the research passes. No Skill
+   tool: print `/create-phase` with the request, the block and the proposal, to paste.
+   The explain's confirmation then comes back by itself: create-phase's
+   *The research route* runs the research phase at once and, **When it passes**, invokes
+   this front door as `/knowledge:explain <subject> from=<P>`, which redraws the
+   confirmation from the findings (step 5) and shows it as step 7 does. It still waits
+   for the operator's literal yes, and only that yes hands it on as above: headless
+   prints it and creates nothing, and under `/do-whole-phases` the run's closing report
+   carries it and nothing is parked (no phase exists until the yes). A research phase
+   that does not pass shows nothing, and a "no" leaves its findings as records, which a
+   later `/knowledge:explain` finds by COVERAGE.
 
 ## 2. Resolve the knowledge base configuration
 
@@ -810,16 +939,18 @@ call shows itself where it is made.
 - **A call this skill gives, in its given form, denied** → stop with the block below, and
   write nothing more. So does a critic that returns `blocked` for a denied call in its
   brief's form (B5).
-- **A call in another form** (a `cd`, a `git -C`, a `$`, a chained `&&`) is your error, not
-  a stop: make it once more in the given form.
+- **A call in another form** (a `cd`, a `git -C` other than the critic's one read of an
+  earlier chapter, a `$`, a chained `&&`) is your error, not a stop: make it once more in
+  the given form.
 
 The block, with the real absolute paths filled in. `<ROOT>` is `<KB_EXPLAIN_STATE>`, the
 root of `<TOOLS>`, never a folder above it (with `<TOOLS>` in the dossier's `pages/`, §2,
 drop its two rules), `<SKILL_DIR>` the folder holding this file (the critic reads it), and
 `<UNIT>` the unit's folder in the phase: a document's or a chapter's `doc/`, a book's
 `book/` (§9.2); the rules' extra leading `/` makes `//…`, which Claude Code reads as the
-filesystem root. They cover the publish too (§5: the CLI, or the payload builder's `--payload`
-and `curl`):
+filesystem root. `<BOOK>` alone is relative: a book's folder exactly as its critic's
+`draft:` path writes it (B5, *Inputs* item 7). They cover the publish too (§5: the CLI, or
+the payload builder's `--payload` and `curl`):
 
     FAILED: permissions — this session denied: <the calls>. Nothing more of the run was written.
     The explain runs on the session's permissions, not on this skill's. Use auto mode
@@ -834,7 +965,8 @@ and `curl`):
       "Read(/<ROOT>/**)", "Edit(/<ROOT>/**)", "Read(/<SKILL_DIR>/**)"
     A writer that read this skill by path (an explain phase's executor) also needs
     "Bash(python3 -c *)" (it lets any inline Python run; auto mode needs none of this),
-    and for the unit's folder "Read(/<UNIT>/**)", "Edit(/<UNIT>/**)".
+    and for the unit's folder "Read(/<UNIT>/**)", "Edit(/<UNIT>/**)". A book's chapter
+    also needs "Bash(git -C <BOOK> show HEAD:./*)", the critic's read of earlier chapters.
     On another host, allow the same commands and paths in its own terms.
 
 **The payload builder.** Only §5's curl form needs it; the CLI publishes without it. Before that
@@ -892,8 +1024,13 @@ You read the evidence alone, once, and write it into `<DOSSIER>/evidence.md` as 
 built the subject.** Nothing else is evidence: no web page or search result, no other
 repository, no library's documentation, no memory of how such code usually works, and no
 earlier explain's text (a prior is read for its ids and for what it said, §3.1, never
-cited). The run writes only its own folder, so the code and the covering phases' records
-on disk stay as they were at the commit while you read.
+cited). A research phase's findings are records like any other phase's, whether its
+research read the web or the operator's own material; the outside work a finding names is
+carried on its entry as `source:` (B9) and is never read. A subject with no code
+(`paths: none` in its research block, §1) has no code entries: the records are its whole
+evidence (`code 0`), and the commit pins them. The run writes only its own folder, so the
+code and the covering phases' records on disk stay as they were at the commit while you
+read.
 
 1. **Find the records** of each phase on the brief's `phases:` line, in the workspace's
    phases folder (§1 step 1: `works/phases/`, or `workflow/works/phases/` when nested):
@@ -913,9 +1050,13 @@ on disk stay as they were at the commit while you read.
      file: its summary, files changed and deviations), and below the head only the passage
      a decision or a finding on the subject sits in;
    - the phase's `topics/` files that hold a research slice's findings, or a decision's
-     detail, on the subject.
+     detail, on the subject: for a research phase, the bulk of its evidence;
+   - a corpus a research phase extracted (a file of the operator's material, a sample of
+     records): only at the record ids a finding cites, never whole.
 
-   Read no `plan.md` (what a slice meant to do, not what it did), no `topics/breakdown.md`
+   A finding that rests on an outside work (a page, a paper, a book the research read) is
+   a record entry of kind `finding`, its `source:` copying the work as the finding names it
+   (B9); the work itself is never opened. Read no `plan.md` (what a slice meant to do, not what it did), no `topics/breakdown.md`
    (how the work was cut, never the subject), and none of the workspace's `docs/`
    (consolidated from these records later, and possibly stale). A commit message is a
    pointer to its phase, never evidence. A `trusted sources:` item among the code and the
@@ -928,7 +1069,8 @@ on disk stay as they were at the commit while you read.
    includes what its lines plainly do in their own language (a loop, a lock taken, a call
    made, a value returned); it never includes what a library, a protocol or an algorithm
    does inside, its history, its alternatives or its best practice, unless the code or a
-   record states it.
+   record states it. With `paths: none` (a subject with no code) there is no code to read:
+   skip this step, and the counts line says `code 0`.
 4. **Write each entry as you read** (B9): a code entry for each range the chapter may rest
    on, with its hash, and a record entry for each line, quoted verbatim, each naming the
    signed sections it serves. `## Read` lists every record part and code file you opened,
@@ -946,7 +1088,12 @@ on disk stay as they were at the commit while you read.
    `stated` (the chapter says openly, in plain words, that the records do not say it: "The
    records do not say why it counts code points rather than bytes.") or `dropped` (the
    section is adjusted and never asserts it). **Never fill a gap from outside:** not from
-   the web, from another project or from what such code usually does. A record and the
+   the web, from another project or from what such code usually does. **The standing
+   gap:** when an entry with a `source:` serves a section, the outside works behind those
+   findings were read by the research, not by this run; one `G` line says so, disposition
+   `stated` ("The outside works behind these findings were read by <P>, not by this
+   book."), and it covers every such entry in the sections it names. A chapter may instead
+   attribute such a fact in plain words ("the research found that …"). A record and the
    code that disagree about what the code does: the code wins, the record's entry says so
    (`disagrees:`), and the chapter may say what was planned and what was built.
 7. **Close the file** with its counts line, `- entries: code <n> · records <n> · gaps <n> ·
@@ -1152,8 +1299,9 @@ nothing in it should take a second read to follow.
   cannot show (B9's plain-words form) or it changes the reader's trust; a code location
   once, in its block's title (§4.6).
 - **The subject, not the records:** for a phase, a slice or a change, the reader wants what
-  the system now does and why. The workspace's records (a phase's intent and notebook, a
-  slice's `result.md`, a deferred job) are evidence, never the subject or the structure:
+  the system now does and why (for a subject with no code, what the subject is and how it
+  works). The workspace's records (a phase's intent and notebook, a slice's `result.md`, a
+  research phase's findings, a deferred job) are evidence, never the subject or the structure:
   sections follow the system's ideas and flow, never slice order, and no sentence takes an
   id, or a record named as a workspace artifact (a `result.md`, "the P24.S1 result", "the
   decomposition recorded"), as its subject; the change named in plain words is allowed
@@ -1533,22 +1681,29 @@ items:
 ### 4.6 Sources
 
 The chapter's sources are **the code at the run's commit and the records of the phases
-that built the subject** (§3.4), nothing else. They close the chapter as a plain-Markdown
-section, `## Sources {#sources-list}`, of two short lists drawn from the entries the trace
-uses, and nothing more:
+that built the subject** (§3.4), a research phase's findings included, nothing else. They
+close the chapter as a plain-Markdown section, `## Sources {#sources-list}`, of two short
+lists drawn from the entries the trace uses (a third only when the research read outside
+works), and nothing more:
 
 - **The code**, at the commit (its short sha in backticks): each file the chapter rests on,
   its path in backticks, with a few words on what it holds there.
 - **What the work recorded:** each covering phase the chapter rests on, named in plain
   words for what it built, its id as the trailing mark, and what of it was read (its
   decisions, the results of the slices that built the part, a research finding), and the
-  open items a Next steps part names, in plain words.
+  open items a Next steps part names, in plain words. A research phase's line names the
+  findings the chapter rests on, in plain words.
+- **What the research read**, only when an entry the trace uses carries a `source:` (B9):
+  each outside work those findings name, as its `source:` records it (title, and its URL
+  as a link when it has one), marked "read by the research, not by this book". Nothing
+  else goes here: a work no cited finding names is never listed.
 
-Inside the chapter a code location is named once, in its block's title (`title="path"`),
-and a record in plain words where it changes the reader's trust (§4, *The subject, not the
-records*); the trace, not a link, carries each sentence's evidence. The typed `sources`
-block (each of its items needs an `http(s)` `url`) is not used, since the chapter cites no
-page. A v2 whose prior had one drops it, and the heading keeps `sources-list`, the
+A subject with no code has no code list. Inside the chapter a code location is named
+once, in its block's title (`title="path"`), and a record in plain words where it changes
+the reader's trust (§4, *The subject, not the records*); the trace, not a link, carries
+each sentence's evidence. The typed `sources` block (each of its items needs an `http(s)`
+`url`) is not used, since the chapter itself read no page: a work the research read is a
+line of the third list, never a typed source. A v2 whose prior had one drops it, and the heading keeps `sources-list`, the
 id the server gives a `## Sources` heading.
 
 ````markdown
@@ -1563,6 +1718,21 @@ What the work recorded:
 
 - Highlights and notes in the reader (P30): its decisions on the anchor format, and the
   results of the two slices that built the capture
+````
+
+A subject book's chapter, told from a research phase's findings, lists no code; under
+the same heading it reads:
+
+````markdown
+What the work recorded:
+
+- Research on English verb tenses (P8): its findings on the present perfect and the
+  simple past
+
+What the research read:
+
+- [A Comprehensive Grammar of the English Language](https://example.org/grammar): read
+  by the research, not by this book
 ````
 
 ### 4.7 Images
@@ -1680,8 +1850,8 @@ Otherwise use the **curl** form further down; both send the same request.
     knowledge --base-url <KB_API_BASE_URL> save <tmp>/body.md --format native --json \
       --title "<Title>" --tag <tag> --tag <tag> --summary "<lede>" --lang <xx> \
       --project <project> --source-repo <repo> --co-authored-by "<bare attribution>" \
-      [--book <book> --book-kind codebase --book-title "<Book title>" \
-       --chapter <key> --position <n> --chapter-title "<Chapter title>" \
+      [--book <book> --book-kind <codebase|subject> --book-title "<Book title>" \
+       [--book-subject "<label>"] --chapter <key> --position <n> --chapter-title "<Chapter title>" \
        --chapter-source phase=P<N> --chapter-source slice=P<N>.S<k>] \
       [--slug <source slug>-<xx>] \
       [--translated-from <xx>@<version>] \
@@ -1691,7 +1861,10 @@ Otherwise use the **curl** form further down; both send the same request.
 - A placed chapter sends `--book` **and** `--chapter` together; `--position`,
   `--chapter-title` and `--chapter-source` matter only when the chapter is **new** (an
   existing chapter keeps its manifest entry), and the book's `--book-kind` / `--book-title`
-  only when the **book** is new. A loose document sends neither.
+  only when the **book** is new. The kind is the one the confirmation signed (§1 *The unit,
+  and where it goes*): `codebase`, or `subject` with `--book-subject "<label>"`, its short
+  display label (`--book-subject "English grammar"`); a codebase book sends no
+  `--book-subject`. A loose document sends neither.
 - `--new-version --rel-path` is for a **loose** document's re-explain (`PRIOR` from step 3).
   A chapter needs neither: re-sending the same book, key and `--lang` is its next version.
 - A **loose document's translation** is a new document, never a new version of its
@@ -1714,7 +1887,8 @@ a loose document's translation sets `slug`, below):
       "tags": ["<2–5 lowercase-kebab topic tags>"],
       "source_repo": "<absolute path to the current repo root>",
       "co_authored_by": "<bare attribution>",
-      "book": {"slug": "<book>", "kind": "codebase", "title": "<Book title>"},
+      "book": {"slug": "<book>", "kind": "codebase | subject", "title": "<Book title>",
+               "subject": "<label, a subject book only>"},
       "chapter": {"key": "<key>", "position": <n>, "title": "<Chapter title>",
                   "source": {"phase": "P<N>", "slice": "P<N>.S<k>"}},
       "translated_from": {"lang": "<xx>", "version": <n>}
@@ -1883,8 +2057,11 @@ word.
 
 ### 9.2 The evidence for a book (an explain phase)
 
-A book is a **codebase book**: its subject is this repository's code, and its chapters
-are drawn from the phases that built it. Its explain phase runs §3–§4 with these
+A book is a **codebase book** or a **subject book** (§1 *The unit, and where it goes*).
+A codebase book's subject is this repository's code, and its chapters are drawn from the
+phases that built it (a research phase that recorded outside basics included). A subject
+book's subject has no code behind it, and its chapters are drawn from the findings of the
+research phases that cover it, with no code entries (§3.4). Its explain phase runs §3–§4 with these
 differences. Its `DECOMP` executor gathers the whole book's evidence and writes the
 outline; each chapter executor reads its chapter's evidence closer and writes the draft;
 the orchestrator dispatches the critic, and the phase review publishes. Neither executor
@@ -1907,8 +2084,13 @@ rules (§3.2, its block's lines for such a writer). **The dossier** is the phase
    built its part, never one chapter per slice by default (§4, *The subject, not the
    records*); in the repo's `phases` book (§1), each chapter is its phase. The outline
    opens with `## Drawn from` (each chapter and the phases it draws from) and `## Gaps`
-   (each gap and the chapters it touches), which the outline gate shows. The gate signs
-   every chapter's sections at once: there is no stop per chapter slice.
+   (each gap and the chapters it touches), which the outline gate shows. Beside its taught
+   terms (each term and the chapter that teaches it), it pins what keeps chapters written
+   side by side consistent: each taught term's **one-line recap**, which every later
+   chapter uses when it recaps the term; the book's **one name per thing**; the **running
+   examples and their numbers**; and the **section ids** a chapter may link to in another
+   chapter. The gate signs every chapter's sections at once: there is no stop per chapter
+   slice.
 4. **The freeze:** once the operator signs the outline, `book/research/brief.md` and
    `evidence.md` are never edited again (`git log` on them shows it).
 
@@ -1928,6 +2110,16 @@ The chapter executor, for chapter `<k>` (its position), key `<key>`:
 3. **D8:** the critic (`kind: chapter`) writes `book/critique/<key>.md`; answer it once,
    in `answers-<key>.md` (§4.10 steps 2–3: the phase review decides a dispute). Nothing is
    published.
+
+**Written beside other chapters.** The workspace may run chapters at once, after the
+outline gate, so a sibling chapter may still be in flight while you write. The outline,
+not the siblings, is what you write against: recap an earlier chapter's term with the
+outline's one-line recap for it (shorten it, never contradict it), use the outline's one
+name per thing and its running examples and numbers, and link into another chapter only
+to a section id the outline names. Your return reports, for the workspace's notebook, the
+terms you taught, the link ids you used, and your **corrections**: each fact the outline or
+the frozen evidence states that your closer reading found wrong, and what the evidence
+shows instead. A correction is reported, never fixed in the frozen files.
 
 ## Part B. The critic and the record
 
@@ -2019,7 +2211,8 @@ and `Read` only their ranges.
   another repository. What they do not show, you cannot pass.
 - **Bash runs only read-only `git`** (`git show`, `git diff`, `git log`, `git grep`,
   `git blame`) and B9's hash, each as written, one to a call, in the session's working
-  folder (the repository), with repo-relative paths: never `-C`, `cd` or a `$`. Read files
+  folder (the repository), with repo-relative paths: never `cd` or a `$`, and never `-C`
+  but in *Inputs* item 7's read of an earlier chapter, in its form. Read files
   with Read; list and search them with Glob and Grep. A call in that form that is denied:
   return `blocked`, naming it.
 - **Never touch the KB key.** Never read, print or pass the writer's `auth.header` file or
@@ -2054,9 +2247,18 @@ and `Read` only their ranges.
    the code; confirm a range by its hash when unsure), a record with Read at its path (if
    the phase was archived since, Grep its quote under the archived folder).
 7. **The earlier chapters** (a chapter only), only as far as the order rule needs: their
-   `##`/`###` headings and the terms they define (`Grep` them), and the body of any chapter
-   the outline lists as this one's prerequisite: what this chapter must recap, never what
-   its reader already knows.
+   `##`/`###` headings and the terms they define, and the body of any chapter the outline
+   lists as this one's prerequisite: what this chapter must recap, never what its reader
+   already knows. Read an earlier chapter **only as committed**, never from the working
+   folder (no Read or Grep of it there), where a sibling written beside this one may be
+   half done. One command reads it, run as written:
+   `git -C <the draft's folder> show HEAD:./<its file>`, with the folder of your `draft:`
+   path exactly as that path writes it (a book's `…/book`) and the chapter's file name in
+   it (`<key>.md`, from the outline). `HEAD:./` resolves in that folder's own repository,
+   so it reads the nested one when the workspace is nested (`workflow/`, which the host
+   repository never tracks) and the host's when it sits at the root. A sibling it does not
+   find at `HEAD` is judged by the outline instead: its taught terms and their one-line
+   recap lines in `book/outline.md` are what this chapter must agree with and recap.
 8. **The explain skill** (`skill:`; otherwise the `knowledge` plugin's `installPath` in
    `~/.claude/plugins/installed_plugins.json`, plus `/skills/explain/SKILL.md`). It is the
    writer's contract and your yardstick: read §3.4 (what counts as evidence), §4's prose
@@ -2096,6 +2298,19 @@ practice, what such code usually does) is a `must-fix`, even when it is true: th
 explains only what the code does and what the phases recorded. So is a gap filled from
 outside instead of stated. A sentence that only frames, marked `framing` in the trace and
 asserting nothing checkable, is not a finding.
+- **A research finding that rests on an outside work** (its entry's `source:` names a
+  page, a paper or a book, B9) does support the sentence: it is a record. Check the record
+  line at its cited range and its `source:` field, **never the work itself** (you fetch
+  nothing; the research's own review checked the work). The sentence may say no more than
+  the finding says: a gloss beyond it (a further fact, a wider claim, an example the
+  finding does not give) is `outside`, a `must-fix`. An outside fact with no finding under
+  it is `outside` too.
+- **Attribution:** a fact resting on a `source:` entry is attributed, either by the
+  standing gap that covers its section (the skill's §3.4 step 6, a `stated` `G` line) or in
+  plain words in the sentence ("the research found …"). Neither: `should-fix` (`facts`).
+- **The Sources' outside works** (the skill's §4.6, "read by the research, not by this
+  book"): check only that each listed work appears in the `source:` of a finding the trace
+  cites. A listed work no cited finding names: `should-fix` (`facts`).
 
 **The trace**, sentence by sentence:
 1. **Untraceable:** a checkable sentence (B9's trace) with no trace line, or traced to an id
@@ -2104,7 +2319,9 @@ asserting nothing checkable, is not a finding.
    section. Otherwise `should-fix`.
 2. **Unfaithful to its entry:** the sentence says more than its code range or record line:
    certainty raised, a qualifier or scope dropped, a reason the record does not give, or a
-   builders' account stated as what the code shows. `must-fix` when load-bearing, otherwise
+   builders' account stated as what the code shows. For a `finding` entry, its record line
+   and its `source:` are the whole entry: what the outside work says beyond the finding is
+   not in it. `must-fix` when load-bearing, otherwise
    `should-fix`.
 3. **The wrong entry:** an entry that does not support the sentence it sits on, even when
    another would. `must-fix` when load-bearing.
@@ -2346,8 +2563,11 @@ A dossier from an earlier version of the explain skill (a `run.md`, a `ledger.md
 **The evidence** is the code at the run's commit and the records of the phases that built
 the subject (the skill's §3.4): a phase's `intent.md`, its `phase.md` sections, its slices'
 `result.md`, its `topics/` files, and, for open items only, the workspace's open deferred
-jobs. Nothing else: no page, no search result, no other repository, no library's
-documentation, no knowledge of how such code usually works.
+jobs. A research phase's findings are records too, whether its research read the web or
+the operator's own material; a subject with no code has records only. Nothing else, and
+nothing is read from outside the records: no page, no search result, no other repository,
+no library's documentation, no knowledge of how such code usually works. The outside work a
+finding names is carried on its entry as `source:`, never opened.
 
 **Ids** never change once given: evidence entries `E<nn>` (a chapter's overlay:
 `E-ch<k>-<nn>`), gaps `G<n>` (`G-ch<k>-<n>`), open items `O<n>` (`O-ch<k>-<n>`), and the
@@ -2380,7 +2600,12 @@ its quote finds it again, in the phase's active or archived folder.
     ### E07 · record · works/phases/active/P30/phase.md:L41-L41@88d2e95
     - phase: P30 · kind: intent | decision | note | result | finding | open
     - says: "<the line, verbatim>"
+    - source: <title, URL> | none
     - serves: <section ids> · disagrees: <the code entry that shows otherwise> | none · from: v<N> E<nn> | none
+
+The `source:` line is a `finding` entry's only: it copies the outside work the finding
+names, as the research recorded it (its title, and its URL when it has one), or `none`
+when the finding rests on the code or the operator's material. Other kinds omit it.
 
 **What an entry supports:**
 
@@ -2394,6 +2619,11 @@ its quote finds it again, in the phase's active or archived folder.
   out; attributed in plain words when it is the builders' account the code cannot show
   ("the change that built it chose this so that …", "the work's own tests show …"), its
   phase id at most a trailing mark, "(P30)".
+- **A finding entry** (kind `finding`) supports what the research recorded it found, and
+  no more. When its `source:` names an outside work, it supports the fact the finding
+  states from that work, in the chapter's own voice under the standing gap (the skill's
+  §3.4 step 6) or attributed in plain words ("the research found …"); never what else the
+  work says, and never a gloss beyond the finding. The work itself is never read.
 - **The code wins** a disagreement about what the code does: the record's entry names the
   code entry under `disagrees:`, and the chapter may say what was planned and what was
   built.

@@ -1,0 +1,35 @@
+{
+  "id": "P40-2t.S5",
+  "phase_id": "P40-2t",
+  "name": "plugin evidence and critic: research findings as records, a source: field, Sources list research-read works",
+  "kind": "implementation",
+  "status": "done",
+  "order": 70,
+  "depends_on": [
+    "P40-2t.S1"
+  ],
+  "depends_declared": true,
+  "created_at": "2026-11-10T21:43:57+09:00",
+  "started_at": "2026-11-10T22:03:02+09:00",
+  "completed_at": "2026-11-10T22:07:25+09:00",
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "Made research findings records (A3, A14–A22): a finding's source: field, the standing gap, Sources list research-read works (OQ1 yes), subject book publish flags, outline pins and HEAD-only sibling reads for the critic; parity passes",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}

@@ -9,7 +9,7 @@
 - Current slice: `P41-sr.DECOMP`
 - Next slice: `P41-sr.REVIEW`
 - Waiting on operator: `none`
-- Open deferred jobs: `77`
+- Open deferred jobs: `81`
 - Workspace version: `v89`
 
 ## Streams

@@ -67,7 +67,8 @@ and `Read` only their ranges.
   another repository. What they do not show, you cannot pass.
 - **Bash runs only read-only `git`** (`git show`, `git diff`, `git log`, `git grep`,
   `git blame`) and B9's hash, each as written, one to a call, in the session's working
-  folder (the repository), with repo-relative paths: never `-C`, `cd` or a `$`. Read files
+  folder (the repository), with repo-relative paths: never `cd` or a `$`, and never `-C`
+  but in *Inputs* item 7's read of an earlier chapter, in its form. Read files
   with Read; list and search them with Glob and Grep. A call in that form that is denied:
   return `blocked`, naming it.
 - **Never touch the KB key.** Never read, print or pass the writer's `auth.header` file or
@@ -102,9 +103,18 @@ and `Read` only their ranges.
    the code; confirm a range by its hash when unsure), a record with Read at its path (if
    the phase was archived since, Grep its quote under the archived folder).
 7. **The earlier chapters** (a chapter only), only as far as the order rule needs: their
-   `##`/`###` headings and the terms they define (`Grep` them), and the body of any chapter
-   the outline lists as this one's prerequisite: what this chapter must recap, never what
-   its reader already knows.
+   `##`/`###` headings and the terms they define, and the body of any chapter the outline
+   lists as this one's prerequisite: what this chapter must recap, never what its reader
+   already knows. Read an earlier chapter **only as committed**, never from the working
+   folder (no Read or Grep of it there), where a sibling written beside this one may be
+   half done. One command reads it, run as written:
+   `git -C <the draft's folder> show HEAD:./<its file>`, with the folder of your `draft:`
+   path exactly as that path writes it (a book's `…/book`) and the chapter's file name in
+   it (`<key>.md`, from the outline). `HEAD:./` resolves in that folder's own repository,
+   so it reads the nested one when the workspace is nested (`workflow/`, which the host
+   repository never tracks) and the host's when it sits at the root. A sibling it does not
+   find at `HEAD` is judged by the outline instead: its taught terms and their one-line
+   recap lines in `book/outline.md` are what this chapter must agree with and recap.
 8. **The explain skill** (`skill:`; otherwise the `knowledge` plugin's `installPath` in
    `~/.claude/plugins/installed_plugins.json`, plus `/skills/explain/SKILL.md`). It is the
    writer's contract and your yardstick: read §3.4 (what counts as evidence), §4's prose
@@ -144,6 +154,19 @@ practice, what such code usually does) is a `must-fix`, even when it is true: th
 explains only what the code does and what the phases recorded. So is a gap filled from
 outside instead of stated. A sentence that only frames, marked `framing` in the trace and
 asserting nothing checkable, is not a finding.
+- **A research finding that rests on an outside work** (its entry's `source:` names a
+  page, a paper or a book, B9) does support the sentence: it is a record. Check the record
+  line at its cited range and its `source:` field, **never the work itself** (you fetch
+  nothing; the research's own review checked the work). The sentence may say no more than
+  the finding says: a gloss beyond it (a further fact, a wider claim, an example the
+  finding does not give) is `outside`, a `must-fix`. An outside fact with no finding under
+  it is `outside` too.
+- **Attribution:** a fact resting on a `source:` entry is attributed, either by the
+  standing gap that covers its section (the skill's §3.4 step 6, a `stated` `G` line) or in
+  plain words in the sentence ("the research found …"). Neither: `should-fix` (`facts`).
+- **The Sources' outside works** (the skill's §4.6, "read by the research, not by this
+  book"): check only that each listed work appears in the `source:` of a finding the trace
+  cites. A listed work no cited finding names: `should-fix` (`facts`).
 
 **The trace**, sentence by sentence:
 1. **Untraceable:** a checkable sentence (B9's trace) with no trace line, or traced to an id
@@ -152,7 +175,9 @@ asserting nothing checkable, is not a finding.
    section. Otherwise `should-fix`.
 2. **Unfaithful to its entry:** the sentence says more than its code range or record line:
    certainty raised, a qualifier or scope dropped, a reason the record does not give, or a
-   builders' account stated as what the code shows. `must-fix` when load-bearing, otherwise
+   builders' account stated as what the code shows. For a `finding` entry, its record line
+   and its `source:` are the whole entry: what the outside work says beyond the finding is
+   not in it. `must-fix` when load-bearing, otherwise
    `should-fix`.
 3. **The wrong entry:** an entry that does not support the sentence it sits on, even when
    another would. `must-fix` when load-bearing.
@@ -392,8 +417,11 @@ A dossier from an earlier version of the explain skill (a `run.md`, a `ledger.md
 **The evidence** is the code at the run's commit and the records of the phases that built
 the subject (the skill's §3.4): a phase's `intent.md`, its `phase.md` sections, its slices'
 `result.md`, its `topics/` files, and, for open items only, the workspace's open deferred
-jobs. Nothing else: no page, no search result, no other repository, no library's
-documentation, no knowledge of how such code usually works.
+jobs. A research phase's findings are records too, whether its research read the web or
+the operator's own material; a subject with no code has records only. Nothing else, and
+nothing is read from outside the records: no page, no search result, no other repository,
+no library's documentation, no knowledge of how such code usually works. The outside work a
+finding names is carried on its entry as `source:`, never opened.
 
 **Ids** never change once given: evidence entries `E<nn>` (a chapter's overlay:
 `E-ch<k>-<nn>`), gaps `G<n>` (`G-ch<k>-<n>`), open items `O<n>` (`O-ch<k>-<n>`), and the
@@ -426,7 +454,12 @@ its quote finds it again, in the phase's active or archived folder.
     ### E07 · record · works/phases/active/P30/phase.md:L41-L41@88d2e95
     - phase: P30 · kind: intent | decision | note | result | finding | open
     - says: "<the line, verbatim>"
+    - source: <title, URL> | none
     - serves: <section ids> · disagrees: <the code entry that shows otherwise> | none · from: v<N> E<nn> | none
+
+The `source:` line is a `finding` entry's only: it copies the outside work the finding
+names, as the research recorded it (its title, and its URL when it has one), or `none`
+when the finding rests on the code or the operator's material. Other kinds omit it.
 
 **What an entry supports:**
 
@@ -440,6 +473,11 @@ its quote finds it again, in the phase's active or archived folder.
   out; attributed in plain words when it is the builders' account the code cannot show
   ("the change that built it chose this so that …", "the work's own tests show …"), its
   phase id at most a trailing mark, "(P30)".
+- **A finding entry** (kind `finding`) supports what the research recorded it found, and
+  no more. When its `source:` names an outside work, it supports the fact the finding
+  states from that work, in the chapter's own voice under the standing gap (the skill's
+  §3.4 step 6) or attributed in plain words ("the research found …"); never what else the
+  work says, and never a gloss beyond the finding. The work itself is never read.
 - **The code wins** a disagreement about what the code does: the record's entry names the
   code entry under `disagrees:`, and the chapter may say what was planned and what was
   built.

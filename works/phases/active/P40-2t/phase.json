@@ -2,23 +2,23 @@
   "id": "P40-2t",
   "name": "One way to explain what the records don't cover",
   "objective": "Compare the two research-first book runs (Note's P8-x9 English textbook; arb_upbit_1's P58-pm research then P59-d8 book) and build one standard route into the explain plugin and the workspace's explain route: research runs in its own findings-only phase, explain writes only from records and accepts a research-covered subject with no code, one request chains both, the explain checks stay, the result is always a real book, and a signed book's chapters are written in parallel.",
-  "status": "planned",
+  "status": "done",
   "order": 22,
   "created_at": "2026-11-10T20:54:36+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-11T05:44:54+09:00",
+  "completed_at": "2026-11-11T05:44:58+09:00",
   "review": {
-    "status": "pending",
-    "reviewed_at": null,
-    "reviewer": null,
-    "note": null
+    "status": "pass",
+    "reviewed_at": "2026-11-11T05:44:58+09:00",
+    "reviewer": "slice-executor (opus, xhigh)",
+    "note": "Round 2 passed: F1 and F2 hold on their full case lists; suite green (504 PASS patched); operator accepted the walkthrough"
   },
   "acceptance": {
-    "required": null,
-    "walkthrough": null,
-    "requested_at": null,
-    "cleared_at": null,
-    "note": null
+    "required": true,
+    "walkthrough": "P40-2t (one way to explain what the records don't cover) passed review round 2. WHAT CHANGED: (1) /knowledge:explain offers 'research first' whenever the records lack what the reader needs: no phase covers it, it has no code, or phases built it but the reader needs outside basics (rule v2 + quant basics); your own 'research first' always works. (2) One confirmation names what the research reads (code, the web with a source per fact, or your own material), then it runs at once. (3) When it passes, the explain confirmation comes back by itself (from=P<N>); you say yes. (4) A book: sign the outline once, then up to 4 chapters are written at once, each with its own critic; the synthesis chapter goes last; the review checks the chapters agree. RELEASE ORDER: your bootstrap session applies works/phases/active/P40-2t/package/ (its README), releases v96 and pushes; plugin 0.11.0 is pushed with this branch's merge; then /update-workspace here (v89), in arb_upbit_1 and in Note. TRY: plugin/skills/explain/SKILL.md section 1, 'Covered, but the records lack what the reader needs'; after merge+deploy https://knowledge.hi2vi.com/ reads '2,722-line skill' and /SKILL.md serves it (checked on a scratch production build). DECISIONS: OQ2 landing lede 'cite every line to the code' -> recommend 'trace every line to the code and its records'; P59-d8 waits for the server grammar deploy (filed as a job). Reply accept to clear the gate.",
+    "requested_at": "2026-11-10T23:38:00+09:00",
+    "cleared_at": "2026-11-11T05:44:54+09:00",
+    "note": "operator: accept"
   },
   "paths": {
     "phase_md": "phase.md",
@@ -36,5 +36,6 @@
     "worktree": "/Users/sugang/projects/personal/knowledge/.claude/worktrees/P40-2t-one_way_to_explain_what_the_records_don",
     "consolidation": "pending",
     "base_branch": "main"
-  }
+  },
+  "consolidation": "pending"
 }
