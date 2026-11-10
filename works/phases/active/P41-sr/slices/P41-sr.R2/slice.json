@@ -3,13 +3,13 @@
   "phase_id": "P41-sr",
   "name": "free voice models: run them, Korean, the box",
   "kind": "research",
-  "status": "todo",
+  "status": "done",
   "order": 20,
   "depends_on": [],
   "depends_declared": true,
   "created_at": "2026-11-11T06:16:17+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-11T06:25:22+09:00",
+  "completed_at": "2026-11-11T06:55:40+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -19,7 +19,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "3 of ~6 open voice models run before the disk stop: Supertonic 3 (EN+KO, box) and Kokoro 82M (EN, box) at CPU RTF 0.16; Qwen3-TTS 1.7B (EN+KO, Mac GPU) at RTF 0.73",
   "validation": {
     "required": [],
     "last_run": null,
