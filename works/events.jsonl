@@ -1894,3 +1894,13 @@
 {"ts": "2026-11-11T05:44:58+09:00", "type": "phase_consolidation_owed", "phase": "P40-2t", "notes": 20}
 {"ts": "2026-11-11T05:45:51+09:00", "type": "doc_version_created", "doc": "qa", "version": "v2611102045_p40-2t_gate_section_regression_checklist_moves_the_explain_front_door_to_v96_and_adds_a_no-code_subject_covered-but-lacking_the_chained_from_p_n_skill.md_with_the_landing_count_and_the_critic_s_nested_sibling_read", "source": "P40-2t.REVIEW"}
 {"ts": "2026-11-11T05:46:21+09:00", "type": "phase_parallel_torndown", "phase": "P40-2t", "branch": "phase/P40-2t-one_way_to_explain_what_the_records_don"}
+{"ts": "2026-11-11T06:12:30+09:00", "type": "slice_status_changed", "slice": "P41-sr.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-11T06:16:17+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.R1"}
+{"ts": "2026-11-11T06:16:17+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.R2"}
+{"ts": "2026-11-11T06:16:17+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.R3"}
+{"ts": "2026-11-11T06:16:18+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.S1"}
+{"ts": "2026-11-11T06:16:18+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.D1"}
+{"ts": "2026-11-11T06:16:18+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.DECOMP2"}
+{"ts": "2026-11-11T06:20:26+09:00", "type": "executor_dispatched", "slice": "P41-sr.DECOMP", "phase": "P41-sr", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-11T06:20:26+09:00", "type": "slice_status_changed", "slice": "P41-sr.DECOMP", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-11T06:20:27+09:00", "type": "acceptance_required", "phase": "P41-sr"}

@@ -59,6 +59,21 @@ document, or a whole book, in one go.
 - Q: Design style build-after, signing on the canvas? — A: "ok".
 - Q: The proposed names and objectives? — A: "whatever" (accepted as proposed).
 
+## Scope Added at Execution
+
+A. The operator, during `P41-sr.DECOMP` (2026-11-11):
+
+> I'm also thinking this mac as voice model runner. if no good from the research, consider that as well,.
+
+Read as follows (relayed to the DECOMP executor and recorded in the breakdown):
+
+- **This Mac is a fallback voice runner.** Besides the free APIs and the models the shared Oracle box
+  could run, the research also judges models that would run on this Mac, on its CPU and, through MLX
+  or MPS, its GPU. Heavier, higher-quality models therefore count too.
+- **The Mac generates, the box serves.** In that path the Mac generates the audio and uploads it to the
+  box, which serves it to the phone.
+- **The box comes first**; the Mac is used "if no good from the research".
+
 ## Design Style
 
 build-after — one small surface (a Listen control and a player); one design round lands before the build, and the build fits in this phase.

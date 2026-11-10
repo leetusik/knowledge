@@ -6,8 +6,8 @@
 ## Pointer
 
 - Current phase: `P41-sr`
-- Current slice: `P41-sr.DECOMP`
-- Next slice: `P41-sr.REVIEW`
+- Current slice: `P41-sr.R1`
+- Next slice: `P41-sr.R2`
 - Waiting on operator: `none`
 - Open deferred jobs: `81`
 - Workspace version: `v89`
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P41-sr` | planned | `P41-sr.DECOMP` | 0/2 | - | working tree |
+| `default` | `P41-sr` | planned | `P41-sr.R1` | 1/8 | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
@@ -45,7 +45,7 @@
 | [x] `P38-e1` | `done` | `pass` | Right-size explain runs (plugin 0.9.0) | `none` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
 | [x] `P39-hk` | `done` | `pass` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `none` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
 | [x] `P40-2t` | `done` | `pass` | One way to explain what the records don't cover | `none` · parallel: `phase/P40-2t-one_way_to_explain_what_the_records_don` | `works/phases/active/P40-2t` |
-| [ ] `P41-sr` | `planned` | `pending` | Listen: a free AI voice reader | `P41-sr.DECOMP` | `works/phases/active/P41-sr` |
+| [ ] `P41-sr` | `planned` | `pending` | Listen: a free AI voice reader | `P41-sr.R1` | `works/phases/active/P41-sr` |
 
 ## Phase P21: Web document deletion
 
@@ -378,5 +378,11 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
-| [ ] `P41-sr.DECOMP` | `todo` | decompose phase | `decomposition` | `works/phases/active/P41-sr/slices/P41-sr.DECOMP` |
+| [x] `P41-sr.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P41-sr/slices/P41-sr.DECOMP` |
+| [ ] `P41-sr.R1` | `todo` | free voice APIs: terms, Korean, samples | `research` | `works/phases/active/P41-sr/slices/P41-sr.R1` |
+| [ ] `P41-sr.R2` | `todo` | free voice models: run them, Korean, the box | `research` | `works/phases/active/P41-sr/slices/P41-sr.R2` |
+| [ ] `P41-sr.R3` | `todo` | phone playback with the screen off | `research` | `works/phases/active/P41-sr/slices/P41-sr.R3` |
+| [ ] `P41-sr.S1` | `todo` | the spoken script: what Listen reads | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.S1` |
+| [ ] `P41-sr.D1` | `todo` | Listen design: the control and the player | `co-work` | `works/phases/active/P41-sr/slices/P41-sr.D1` |
+| [ ] `P41-sr.DECOMP2` | `todo` | the build cut | `decomposition` | `works/phases/active/P41-sr/slices/P41-sr.DECOMP2` |
 | [ ] `P41-sr.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P41-sr/slices/P41-sr.REVIEW` |

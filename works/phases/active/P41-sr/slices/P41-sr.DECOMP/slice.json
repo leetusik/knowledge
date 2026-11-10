@@ -3,12 +3,12 @@
   "phase_id": "P41-sr",
   "name": "decompose phase",
   "kind": "decomposition",
-  "status": "todo",
+  "status": "done",
   "order": 0,
   "depends_on": [],
   "created_at": "2026-11-10T20:54:40+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-11T06:12:30+09:00",
+  "completed_at": "2026-11-11T06:20:26+09:00",
   "risk": "high",
   "source": {
     "type": "new_phase",
@@ -18,7 +18,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Cut a declared first wave (R1 voice APIs, R2 voice models, R3 screen-off playback, S1 spoken script), then D1 design and DECOMP2; Mac named as fallback runner",
   "validation": {
     "required": [],
     "last_run": null,
