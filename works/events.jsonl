@@ -1904,3 +1904,9 @@
 {"ts": "2026-11-11T06:20:26+09:00", "type": "executor_dispatched", "slice": "P41-sr.DECOMP", "phase": "P41-sr", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-11T06:20:26+09:00", "type": "slice_status_changed", "slice": "P41-sr.DECOMP", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-11-11T06:20:27+09:00", "type": "acceptance_required", "phase": "P41-sr"}
+{"ts": "2026-11-11T06:25:22+09:00", "type": "slice_status_changed", "slice": "P41-sr.R1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-11T06:25:22+09:00", "type": "slice_status_changed", "slice": "P41-sr.R2", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-11T06:25:22+09:00", "type": "slice_status_changed", "slice": "P41-sr.R3", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-11T06:25:23+09:00", "type": "slice_status_changed", "slice": "P41-sr.S1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-11T06:28:37+09:00", "type": "executor_dispatched", "slice": "P41-sr.S1", "phase": "P41-sr", "kind": "implementation", "risk": "low", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-11T06:28:48+09:00", "type": "slice_status_changed", "slice": "P41-sr.S1", "old_status": "in_progress", "new_status": "done"}

@@ -184,7 +184,10 @@
       "tests/fixtures/anchors/cases.json",
       "tests/fixtures/anchors/chapter-ko.md",
       "tests/fixtures/anchors/chapter-v1.md",
-      "tests/fixtures/anchors/chapter-v2.md"
+      "tests/fixtures/anchors/chapter-v2.md",
+      "server/spoken.py",
+      "tests/test_spoken.py",
+      "tests/fixtures/spoken/chapter.md"
     ],
     "parameterized": [
       "mkdocs.yml",

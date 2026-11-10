@@ -316,11 +316,11 @@
       "review_status": "pending",
       "current_slice": "P41-sr.R1",
       "slice_count": 8,
-      "done_slice_count": 1
+      "done_slice_count": 2
     }
   ],
   "deferred_open_count": 81,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 20,
-  "last_rebuilt_at": "2026-11-11T06:20:26+09:00"
+  "last_rebuilt_at": "2026-11-11T06:28:48+09:00"
 }
