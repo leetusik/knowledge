@@ -1831,3 +1831,9 @@
 {"ts": "2026-11-10T20:54:36+09:00", "type": "phase_created", "phase": "P40-2t"}
 {"ts": "2026-11-10T20:54:40+09:00", "type": "phase_created", "phase": "P41-sr"}
 {"ts": "2026-11-10T20:57:01+09:00", "type": "phase_parallel_started", "phase": "P40-2t", "branch": "phase/P40-2t-one_way_to_explain_what_the_records_don", "worktree": "/Users/sugang/projects/personal/knowledge/.claude/worktrees/P40-2t-one_way_to_explain_what_the_records_don"}
+{"ts": "2026-11-10T20:59:32+09:00", "type": "slice_status_changed", "slice": "P40-2t.DECOMP", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-10T21:02:54+09:00", "type": "slice_created", "phase": "P40-2t", "slice": "P40-2t.R1"}
+{"ts": "2026-11-10T21:02:54+09:00", "type": "slice_created", "phase": "P40-2t", "slice": "P40-2t.DECOMP2"}
+{"ts": "2026-11-10T21:06:26+09:00", "type": "executor_dispatched", "slice": "P40-2t.DECOMP", "phase": "P40-2t", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-10T21:06:26+09:00", "type": "slice_status_changed", "slice": "P40-2t.DECOMP", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-10T21:06:27+09:00", "type": "acceptance_required", "phase": "P40-2t"}

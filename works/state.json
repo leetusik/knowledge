@@ -1,8 +1,9 @@
 {
-  "current_phase": "P41-sr",
-  "current_slice": "P41-sr.DECOMP",
-  "next_slice": "P41-sr.REVIEW",
+  "current_phase": "P40-2t",
+  "current_slice": "P40-2t.R1",
+  "next_slice": "P40-2t.DECOMP2",
   "waiting_on_operator": null,
   "mode": "phase",
-  "updated_at": "2026-11-10T20:57:02+09:00"
+  "stream": "phase/P40-2t-one_way_to_explain_what_the_records_don",
+  "updated_at": "2026-11-10T21:06:26+09:00"
 }
