@@ -1,0 +1,33 @@
+{
+  "id": "P40-2t.S2",
+  "phase_id": "P40-2t",
+  "name": "create-phase routes: research sources, run at once, When it passes chains the explain, subject books",
+  "kind": "implementation",
+  "status": "todo",
+  "order": 40,
+  "depends_on": [],
+  "depends_declared": true,
+  "created_at": "2026-11-10T21:43:50+09:00",
+  "started_at": null,
+  "completed_at": null,
+  "risk": "low",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": null,
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}
