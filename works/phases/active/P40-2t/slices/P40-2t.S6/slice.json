@@ -3,7 +3,7 @@
   "phase_id": "P40-2t",
   "name": "release: plugin 0.11.0, READMEs and parity, the package README, PATCHES and checks at fdb1151",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 80,
   "depends_on": [
     "P40-2t.S1",
@@ -14,8 +14,8 @@
   ],
   "depends_declared": true,
   "created_at": "2026-11-10T21:43:57+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-10T22:12:10+09:00",
+  "completed_at": "2026-11-10T22:23:45+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -25,7 +25,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Released plugin 0.11.0 unpushed (metadata, setup, READMEs, KB template on v96), recounted content.ts, quoted the research route's proposal, wrote the package README/PATCHES/release patch/checks; 33/33 finds, patched suite 504 PASS, pytest and web gate pass",
   "validation": {
     "required": [],
     "last_run": null,

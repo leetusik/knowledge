@@ -4,17 +4,19 @@ Turn what you just figured out into a personal knowledge base. The plugin ships
 two skills:
 
 - `/knowledge:explain <topic or change-ref>` — explains what code in your
-  current repo does, or a **code change** in it, and publishes a **native
-  chapter** into your own knowledge base: Markdown with a few typed blocks
-  (diagrams, figures, callouts, SVG, a quiz, sources) that the knowledge base
-  renders itself. It is **codebase-only**: it writes only from the code and from
-  what your workflow workspace's phases recorded while building it, does no
-  research of its own (no web search, no research agents) and brings in nothing
-  from outside. A subject with no code in the repo is declined; one no phase
-  covers is offered a research phase first. It is the front door of an
-  **explain phase** in a workflow workspace (v94 or later): it suggests the
-  reader and the shape, asks you **once**, and on your yes hands it to the
-  workspace's `create-phase`, which runs it to a private publish. One writer
+  current repo does, a **code change** in it, or a **subject** a research phase
+  covered, and publishes a **native chapter** into your own knowledge base:
+  Markdown with a few typed blocks (diagrams, figures, callouts, SVG, a quiz,
+  sources) that the knowledge base renders itself. It is **records-only**: it
+  writes only from the code and from what your workflow workspace's phases
+  recorded, a research phase's findings included, does no research of its own
+  (no web search, no research agents) and brings in nothing from outside. A
+  subject no phase covers, whether it is this repo's code or a subject with no
+  code behind it, is offered a **research phase first**: it runs at once, and
+  when it passes the explain's confirmation comes back by itself. It is the
+  front door of an **explain phase** in a workflow workspace (v96 or later): it
+  suggests the reader and the shape, asks you **once**, and on your yes hands it
+  to the workspace's `create-phase`, which runs it to a private publish. One writer
   drafts the chapter, every sentence traced to a code range or a record line,
   visuals first; one critic on another model checks it; it is revised once and
   published. The chapter can carry a **glossary** whose terms the text links
@@ -45,14 +47,14 @@ whenever you want something explained and kept.
 
 ## Explain: flags and the one confirmation
 
-    /knowledge:explain <topic or change-ref> [book=<slug>] [lang=<xx>]
+    /knowledge:explain <topic or change-ref> [book=<slug>] [lang=<xx>] [from=P<N>]
 
-**Requirements:** a workflow workspace v94 or later in the repository you run it
+**Requirements:** a workflow workspace v96 or later in the repository you run it
 from (without one it refuses and runs nothing; an older one, or one whose
-create-phase explain route does not write the `phases` line, is told to run
-`/update-workspace`), and `/knowledge:setup` run once. Plugin 0.10.0 and workspace
-v94 need each other: v94's explain route refuses an older plugin's proposal and
-creates nothing, so update both.
+create-phase research route does not write the `sources` line, is told to run
+`/update-workspace`), and `/knowledge:setup` run once. Plugin 0.11.0 and workspace
+v96 need each other: v96's explain route refuses an older plugin's proposal and
+creates nothing, so update both (the workspace first).
 
 **The one confirmation.** `/knowledge:explain` reads, drafts and asks; it never
 researches or writes by itself. It finds the workspace and checks it is ready,
@@ -63,9 +65,15 @@ asks once. It **suggests the reader** (a concrete guess at who they are, what
 they know and what they are new to) and **the shape**: the sections as that
 reader's questions, in their order, with one or two other shapes to pick from.
 Your yes signs them, and the run writes only those. When no phase covers the
-subject, it says so and offers "research first", which creates a research phase
-that reads the code and records its findings; the explain runs from them later,
-when you ask again. Change any line and it shows the whole confirmation again;
+subject, it says so and offers "research first": one more confirmation names
+what the research reads (the code, the web, with a source beside each finding,
+or your own material, under privacy rules), then the workspace creates that
+research phase and runs it at once. When it passes, the explain's confirmation
+comes back by itself, redrawn from the findings, and waits for your yes. A
+subject with no code behind it (a field of study, a language, your own notes)
+can only go this way; outside a git repository it is declined. `from=P<N>` names
+the research phase an explain is drawn from (the chained confirmation passes it
+for you). Change any line and it shows the whole confirmation again;
 reply yes and it hands the proposal to `create-phase`, which creates the explain
 phase in its own worktree and runs it to publish. It stops only for the check,
 the critic, or a publish failure. Headless (`claude -p`), it prints the
@@ -81,7 +89,13 @@ confirmation and creates nothing.
   earlier version plus the phases since: only those phases and the code that
   changed are read. Say "from scratch" in your reply for a full rerun instead.
 - `book=<slug>` makes it a chapter of that book when the book exists, else a new
-  book of that slug (a book's chapters are drawn from the phases); `lang=<xx>`
+  book of that slug (a book's chapters are drawn from the phases). A book is of
+  kind `codebase`, or `subject` with a short label when no code is behind it
+  (`kind subject: English grammar`); its Sources also list the outside works its
+  research read, each marked "read by the research, not by this book". After you
+  sign the outline, the workspace writes its chapters **at once** (at most 4 in
+  flight, a synthesis chapter after the chapters it draws on), each checked by
+  its own critic; `lang=<xx>`
   writes it in another language (English by default, whatever language you ask
   in). Asking for a published document or chapter in another language is a
   **translation**: one write, with no critic. A chapter's translation is that

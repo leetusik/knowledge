@@ -34,8 +34,11 @@ with just a browser (no infra), or **Scaffold** to self-host your own. Scaffold
 mode needs Python 3.12+, Docker (optional — runs the local viewer + API), and a
 GitHub repository (optional — only to publish via Pages). Then run
 `/knowledge:explain <topic>` whenever you want something explained and kept.
-Explain runs as an explain phase, so it needs a workflow workspace (v94 or later)
-in the repository you run it from.
+Explain runs as an explain phase, so it needs a workflow workspace (v96 or later)
+in the repository you run it from. A subject no phase covers, even one with no
+code behind it, gets a research phase first, run at once; when it passes, the
+explain's confirmation comes back by itself (`from=P<N>` names that research).
+A book can be about such a subject, and its chapters are written at once.
 Full details in [`plugin/README.md`](plugin/README.md).
 
 ## Command-line interface
