@@ -8,7 +8,7 @@
 - Current phase: `P41-sr`
 - Current slice: `P41-sr.R1`
 - Next slice: `P41-sr.R2`
-- Waiting on operator: `none`
+- Waiting on operator: `P41-sr.R1`
 - Open deferred jobs: `81`
 - Workspace version: `v89`
 
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P41-sr` | planned | `P41-sr.R1` | 2/8 | - | working tree |
+| `default` | `P41-sr` | planned | `P41-sr.R1` | 3/8 | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
@@ -379,9 +379,9 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | Slice | Status | Name | Kind | Path |
 |---|---|---|---|---|
 | [x] `P41-sr.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P41-sr/slices/P41-sr.DECOMP` |
-| [ ] `P41-sr.R1` | `in_progress` | free voice APIs: terms, Korean, samples | `research` | `works/phases/active/P41-sr/slices/P41-sr.R1` |
+| [~] `P41-sr.R1` | `pending` | free voice APIs: terms, Korean, samples | `research` | `works/phases/active/P41-sr/slices/P41-sr.R1` |
 | [ ] `P41-sr.R2` | `in_progress` | free voice models: run them, Korean, the box | `research` | `works/phases/active/P41-sr/slices/P41-sr.R2` |
-| [ ] `P41-sr.R3` | `in_progress` | phone playback with the screen off | `research` | `works/phases/active/P41-sr/slices/P41-sr.R3` |
+| [x] `P41-sr.R3` | `done` | phone playback with the screen off | `research` | `works/phases/active/P41-sr/slices/P41-sr.R3` |
 | [x] `P41-sr.S1` | `done` | the spoken script: what Listen reads | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.S1` |
 | [ ] `P41-sr.D1` | `todo` | Listen design: the control and the player | `co-work` | `works/phases/active/P41-sr/slices/P41-sr.D1` |
 | [ ] `P41-sr.DECOMP2` | `todo` | the build cut | `decomposition` | `works/phases/active/P41-sr/slices/P41-sr.DECOMP2` |
