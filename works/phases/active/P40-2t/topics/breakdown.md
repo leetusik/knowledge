@@ -256,7 +256,8 @@ This pass: resolved OQ1 (yes), cut S1–S6, rewrote this file. Set: `works/phase
   `web/src/content/marketing/content.ts`; the four plugin-skill files only if parity regenerates them (S6 writes no
   skill prose); `works/phases/active/P40-2t/package/README.md`, `…/package/PATCHES.md`,
   `…/package/patches/release.md`, `…/package/checks/apply.py`, `…/package/checks/finds.py`,
-  `…/package/checks/cites.py`.
+  `…/package/checks/cites.py`; and, added at S1's return, `…/package/claude/skills/create-phase/research-route.md`
+  for one sentence (the `## Explain` hazard, see Decisions: the proposal as last shown is written as a blockquote).
 - **Validation:** `skills_parity.py` and `plugin_parity.py` PASS; `checks/finds.py` (every find of every patch file
   exactly once at `fdb1151`); `checks/apply.py` on a fresh scratch copy (all patches applied, the patched suite's
   explain pins pass); `checks/cites.py` against the 0.11.0 skill, missing 0; `grep -rn "v94" plugin README.md
