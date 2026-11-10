@@ -7,7 +7,7 @@
 
 - Current phase: `P40-2t`
 - Current slice: `P40-2t.S1`
-- Next slice: `P40-2t.S2`
+- Next slice: `P40-2t.S3`
 - Waiting on operator: `none`
 - Stream: `phase/P40-2t-one_way_to_explain_what_the_records_don` (parallel phase checkout; the pointer above is scoped to it)
 - Open deferred jobs: `77`
@@ -17,7 +17,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `phase/P40-2t-one_way_to_explain_what_the_records_don` | `P40-2t` | in flight 3/10 | `P40-2t.S1` | 3/10 | `.` | working tree |
+| `phase/P40-2t-one_way_to_explain_what_the_records_don` | `P40-2t` | in flight 4/10 | `P40-2t.S1` | 4/10 | `.` | working tree |
 | `default` | `P41-sr` | planned | `P41-sr.DECOMP` | 0/2 | - | branch main |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `/Users/sugang/projects/personal/knowledge/.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
@@ -366,10 +366,10 @@ _Read live from its worktree `/Users/sugang/projects/personal/knowledge/.claude/
 | [x] `P40-2t.DECOMP` | `done` | decompose phase | `decomposition` | `works/phases/active/P40-2t/slices/P40-2t.DECOMP` |
 | [x] `P40-2t.R1` | `done` | study the two research-first book runs and pin the change list | `research` | `works/phases/active/P40-2t/slices/P40-2t.R1` |
 | [x] `P40-2t.DECOMP2` | `done` | cut the edit slices from R1's change list | `decomposition` | `works/phases/active/P40-2t/slices/P40-2t.DECOMP2` |
-| [ ] `P40-2t.S1` | `todo` | plugin front door: records-only, a subject goes to research first, from=P<N>, the v96 test | `implementation` | `works/phases/active/P40-2t/slices/P40-2t.S1` |
-| [ ] `P40-2t.S2` | `todo` | create-phase routes: research sources, run at once, When it passes chains the explain, subject books | `implementation` | `works/phases/active/P40-2t/slices/P40-2t.S2` |
-| [ ] `P40-2t.S3` | `todo` | explain references: chapters at once (a wave), the outline gate, the consistency pass, the chain step | `implementation` | `works/phases/active/P40-2t/slices/P40-2t.S3` |
-| [ ] `P40-2t.S4` | `todo` | engine patch: drop the explain exemption in finish-slice and parallel-plan, flip the smoke probe | `implementation` | `works/phases/active/P40-2t/slices/P40-2t.S4` |
+| [ ] `P40-2t.S1` | `in_progress` | plugin front door: records-only, a subject goes to research first, from=P<N>, the v96 test | `implementation` | `works/phases/active/P40-2t/slices/P40-2t.S1` |
+| [x] `P40-2t.S2` | `done` | create-phase routes: research sources, run at once, When it passes chains the explain, subject books | `implementation` | `works/phases/active/P40-2t/slices/P40-2t.S2` |
+| [ ] `P40-2t.S3` | `in_progress` | explain references: chapters at once (a wave), the outline gate, the consistency pass, the chain step | `implementation` | `works/phases/active/P40-2t/slices/P40-2t.S3` |
+| [ ] `P40-2t.S4` | `in_progress` | engine patch: drop the explain exemption in finish-slice and parallel-plan, flip the smoke probe | `implementation` | `works/phases/active/P40-2t/slices/P40-2t.S4` |
 | [ ] `P40-2t.S5` | `todo` | plugin evidence and critic: research findings as records, a source: field, Sources list research-read works | `implementation` | `works/phases/active/P40-2t/slices/P40-2t.S5` |
 | [ ] `P40-2t.S6` | `todo` | release: plugin 0.11.0, READMEs and parity, the package README, PATCHES and checks at fdb1151 | `implementation` | `works/phases/active/P40-2t/slices/P40-2t.S6` |
 | [ ] `P40-2t.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P40-2t/slices/P40-2t.REVIEW` |
