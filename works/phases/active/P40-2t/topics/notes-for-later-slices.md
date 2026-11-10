@@ -39,3 +39,21 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
   - `skills_parity` and `plugin_parity` PASS.
   - The critic agent was regenerated (+36/−4).
   - The 44 headings are unchanged, and `cites.py` reports missing 0 (126 checked).
+
+## Notes for later slices 12
+
+- **(from P40-2t.S3, for P40-2t.S6)** Smoke literals: S3 changes one pin and leaves one stale.
+  - L250 `"**0.10.0 or later**" in _decomp` becomes `"**0.11.0 or later**"`.
+  - The P42 pin `"[--depends-on" not in LIVE[_rel]` (L441–442) still passes, but flip it to `"--depends-on none" in LIVE[_rel]` (checked on a scratch build).
+  - New literals to pin: `## Chapters at once (a wave)`, `**At most 4 chapters in flight.**`, `(kind subject: <label>)`, `**the consistency pass.**`, and `*The research route*, **When it passes**` in both `review.md` files.
+
+  → `patches/workflow.md` §5 and `slices/P40-2t.S3/result.md`
+
+## Notes for later slices 13
+
+- **(from P40-2t.S3, for P40-2t.REVIEW)** Three things to check beyond C7:
+  - `wave.md` is also patched in four more places: `returned=`, *Rolling starts*, *At each return* (its opening and step 6), and *Resume* step 2. Without them, a resume would finish a chapter after its span 1, or start chapters past the cap of 4.
+  - The outline gate is one `&&`-joined command: finish, gate, stop.
+  - Span 3's final verdict gains `corrections:`, which `explain-review` step 1 reads.
+
+  The orchestrator checked at S3's return: the references match the skill's §9.2 item 3 and §9.3 pins (recap lines, names, running examples, link ids, corrections). → `slices/P40-2t.S3/result.md`, *Deviations*
