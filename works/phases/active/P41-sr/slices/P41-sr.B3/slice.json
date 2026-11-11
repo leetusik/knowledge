@@ -3,7 +3,7 @@
   "phase_id": "P41-sr",
   "name": "The Mac voice runner: Ming-3.0, poll, render, upload",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 63,
   "depends_on": [
     "P41-sr.B1",
@@ -11,8 +11,8 @@
   ],
   "depends_declared": true,
   "created_at": "2026-11-11T15:26:43+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-11T16:45:32+09:00",
+  "completed_at": "2026-11-11T16:56:51+09:00",
   "risk": "low",
   "source": {
     "type": "manual",
@@ -22,7 +22,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Mac voice runner tools/listen-runner: Ming-3.0 US_Emma via mlx-audio, Korean sentence packs, B2's ffmpeg pin, lease heartbeat and finish/fail; LaunchAgent template and install script for the operator; E2E 11/11 parts made",
   "validation": {
     "required": [],
     "last_run": null,

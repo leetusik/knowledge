@@ -1,0 +1,29 @@
+[project]
+name = "kb-listen-runner"
+version = "0.1.0"
+description = "The Mac voice runner for Listen: claims jobs, renders Ming-3.0 US_Emma through mlx-audio, uploads parts"
+requires-python = "==3.12.*"
+# Pinned to the environment P41-sr.R5 measured Ming-3.0 in (.cache/p41-voices/venv-ming3).
+dependencies = [
+    "mlx-audio==0.6.5",
+    "mlx==0.32.4",
+    "numpy==2.5.4",
+    "transformers==5.22.2",
+    "huggingface_hub==2.4.0",
+]
+
+[project.scripts]
+kb-listen-runner = "listen_runner.__main__:main"
+
+[dependency-groups]
+dev = ["pytest"]
+
+[build-system]
+requires = ["uv_build>=0.8,<0.9"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "listen_runner"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

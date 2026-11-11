@@ -1,0 +1,11 @@
+{
+  "id": "D109-vn",
+  "title": "Listen claim carries each segment's section and kind",
+  "status": "deferred",
+  "source": "P41-sr.B3 result.md, deviation 2",
+  "reason": "The runner claim gives segments as {text} only, so the Mac runner guesses section changes from heading-like lines to place its longer pauses; listen_parts.segments already stores section, block and kind. The runner already prefers a section field when present (is_section_start).",
+  "trigger": "Pauses land in the wrong places in made audio, or a later voice needs the block kind",
+  "created_at": "2026-11-11T16:56:52+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

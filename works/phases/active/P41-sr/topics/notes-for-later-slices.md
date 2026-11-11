@@ -123,3 +123,7 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
 ## Notes for later slices 15 (2)
 
 - **(orchestrator, for D1's stop and DECOMP2)** The voice samples page, private: https://claude.ai/artifact/MvYx6Sqwf5fvRBvqk9yV5z. It holds 17 samples (6 API, 11 model) from both manifests, built by a scratch `build.py`. The operator's pick there decides DECOMP2's voice engine.
+
+## Notes for later slices 16 (2)
+
+- **(from P41-sr.B2, for P41-sr.W1, P41-sr.W2)** The state's `play = {list, playlist, timeline}`, as BFF paths via `web/src/lib/knowledge/listen.ts`. Load `play.playlist` once `len` is set (native HLS, else hls.js). A chapter seek is `timeline.entries[i].start`; follow along maps `currentTime` to `segments[].block`. Re-read the timeline while it is incomplete. A new `play.list` means the audio changed: never swap `src` at `ended`. Beacon: `POST /api/listen/position` → `slices/P41-sr.B2/result.md` § Contract
