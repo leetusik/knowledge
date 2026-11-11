@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P41-sr` | planned | `P41-sr.DECOMP2` | 7/9 | - | working tree |
+| `default` | `P41-sr` | planned | `P41-sr.DECOMP2` | 8/10 | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
@@ -385,5 +385,6 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | [x] `P41-sr.S1` | `done` | the spoken script: what Listen reads | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.S1` |
 | [x] `P41-sr.R4` | `done` | free voice models: the three R2 left for disk | `research` | `works/phases/active/P41-sr/slices/P41-sr.R4` |
 | [x] `P41-sr.D1` | `done` | Listen design: the control and the player | `co-work` | `works/phases/active/P41-sr/slices/P41-sr.D1` |
+| [x] `P41-sr.R5` | `done` | more Korean voice models for the Mac, community-recommended | `research` | `works/phases/active/P41-sr/slices/P41-sr.R5` |
 | [ ] `P41-sr.DECOMP2` | `todo` | the build cut | `decomposition` | `works/phases/active/P41-sr/slices/P41-sr.DECOMP2` |
 | [ ] `P41-sr.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P41-sr/slices/P41-sr.REVIEW` |

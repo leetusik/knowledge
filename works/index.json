@@ -315,12 +315,12 @@
       "path": "works/phases/active/P41-sr",
       "review_status": "pending",
       "current_slice": "P41-sr.DECOMP2",
-      "slice_count": 9,
-      "done_slice_count": 7
+      "slice_count": 10,
+      "done_slice_count": 8
     }
   ],
   "deferred_open_count": 81,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 20,
-  "last_rebuilt_at": "2026-11-11T13:31:29+09:00"
+  "last_rebuilt_at": "2026-11-11T14:51:47+09:00"
 }
