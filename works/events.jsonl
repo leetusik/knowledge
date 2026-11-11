@@ -1924,3 +1924,4 @@
 {"ts": "2026-11-11T11:14:41+09:00", "type": "executor_dispatched", "slice": "P41-sr.R4", "phase": "P41-sr", "kind": "research", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-11T11:14:41+09:00", "type": "slice_status_changed", "slice": "P41-sr.R4", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-11-11T11:16:20+09:00", "type": "slice_status_changed", "slice": "P41-sr.D1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-11T13:26:19+09:00", "type": "slice_status_changed", "slice": "P41-sr.D1", "old_status": "in_progress", "new_status": "pending", "stop_kind": "wave"}
