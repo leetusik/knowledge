@@ -3,15 +3,15 @@
   "phase_id": "P41-sr",
   "name": "A book Listen keeps to its own language: titles, kept place, counts",
   "kind": "fix",
-  "status": "todo",
+  "status": "done",
   "order": 9003,
   "depends_on": [
     "P41-sr.F2"
   ],
   "depends_declared": true,
   "created_at": "2026-11-12T01:34:57+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-12T01:59:04+09:00",
+  "completed_at": "2026-11-12T02:30:46+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -21,7 +21,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "A book Listen keeps to its own language: titles from the timeline, a place in another language reads as none (server and client, no schema change), counts are the Listen's own, landing Start over restarts the kept language; cases a-k pass headless",
   "validation": {
     "required": [],
     "last_run": null,

@@ -6,6 +6,9 @@ import type { Listen, ListenSpan, ListenUnitKey } from "./types";
 // pure parts, so they are tested in node. A book plays as one playlist; its chapters are
 // the timeline's entries, so every chapter seek and every chapter boundary comes from the
 // timeline's own `start` and `len`, never from the client's arithmetic.
+//
+// P41-sr.F3 — a book Listen keeps to its own language: its titles come from the timeline's
+// entries (the audio's), and a place saved in another language is no place.
 
 /** The unit a key names: a page compares it with the docked Listen's (F27). A book is one unit, whatever its start chapter. */
 export function unitOfKey(key: ListenUnitKey): string {
@@ -23,7 +26,7 @@ export function chapterStart(
   return e ? e.start : null;
 }
 
-/** The timeline's entries as spans on the stream's axis. */
+/** The timeline's entries as spans on the stream's axis, with the audio's own title and language. */
 export function spansOf(
   timeline: Pick<KbListenTimeline, "entries">,
 ): ListenSpan[] {
@@ -32,7 +35,48 @@ export function spansOf(
     start: e.start,
     len: e.len,
     complete: e.complete,
+    title: e.title,
+    lang: e.lang,
   }));
+}
+
+/**
+ * P41-sr.F3 — a chapter's title in the Listen's own language: the timeline's entry, which
+ * is the audio's own (B2). Before the timeline names the chapter, the page's title only
+ * when it is in the Listen's language; else null, and the chapter's place stands in.
+ * Never another language's title.
+ */
+export function chapterTitle(
+  l: Pick<Listen, "spans" | "book" | "lang">,
+  key: string | null,
+): { title: string; lang: string } | null {
+  const span = l.spans.find((s) => s.chapter === key && s.title);
+  if (span) return { title: span.title, lang: span.lang };
+  const c = l.book?.chapters.find((x) => x.key === key);
+  return c && l.lang && c.lang === l.lang
+    ? { title: c.title, lang: c.lang }
+    : null;
+}
+
+/**
+ * P41-sr.F3 — a place in another language is no place: a saved position (or a kept one)
+ * whose language is not the Listen's reads as none, so one language's seconds never
+ * resume in another language's audio.
+ */
+export function placeIn<T extends { lang: string }>(
+  place: T | null | undefined,
+  lang: string,
+): T | null {
+  return place && place.lang === lang ? place : null;
+}
+
+/** A Listen's own chapters: its listenable entries, in its language (P41-sr.F3, rule 4). */
+export function ownChapters(
+  entries: readonly { chapter: string | null; state: string }[],
+): string[] {
+  return entries
+    .filter((e) => e.state !== "unavailable" && e.chapter !== null)
+    .map((e) => e.chapter as string);
 }
 
 /**

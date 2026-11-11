@@ -1,6 +1,6 @@
 import { LISTEN } from "@/content/listen";
 
-import { chapterN, nextChapter } from "./book";
+import { chapterN, nextChapter, ownChapters } from "./book";
 import { aboutLeft, clockAt, clockPos, lengthWords } from "./format";
 import type { ListenKey, NoteKey } from "./machine";
 import type { Listen } from "./types";
@@ -32,18 +32,24 @@ function where(l: Listen): string {
   return LISTEN.dock.where(clockPos(l.pos), clockPos(l.len ?? 0), l.soFar);
 }
 
-/** A book's chapter count, and the chapters it names (P41-sr.W2). */
+/**
+ * A book's chapter count, and the chapters it names (P41-sr.W2). `total` is the book's
+ * (a chapter's place, "Chapter 2 of 5"); `own` is this Listen's own listenable chapters,
+ * in its language, for every "n chapters" count (P41-sr.F3: "all 2 chapters").
+ */
 function bookNums(l: Listen): {
   total: number;
+  own: number;
   n: number;
   next: number;
   making: number;
 } {
   const total = l.book?.chapters.length ?? 1;
+  const own = ownChapters(l.entries).length || total;
   const n = chapterN(l, l.ch) ?? 1;
   const next = nextChapter(l, l.ch)?.n ?? n + 1;
   const making = chapterN(l, l.making) ?? n;
-  return { total, n, next, making };
+  return { total, own, n, next, making };
 }
 
 /** The next chapter's own time left preparing, else the Listen's (F10 next-waiting). */
@@ -84,7 +90,7 @@ export function dockView(l: Listen): DockView {
     finished: [
       "again",
       D.finished,
-      book ? D.allChapters(B.total) : clockPos(l.len ?? l.pos),
+      book ? D.allChapters(B.own) : clockPos(l.len ?? l.pos),
       false,
       false,
     ],
@@ -118,7 +124,12 @@ export function dockView(l: Listen): DockView {
         : l.state === "next-waiting" && book
           ? D.say.nextWaiting(B.next)
           : l.state === "playing" && book
-            ? D.say.playingChapter(word, B.n, l.title)
+            ? D.say.playingChapter(
+                word,
+                B.n,
+                // The chapter's own title only (P41-sr.F3); its place is already said.
+                l.titleLang !== null ? l.title : null,
+              )
             : word;
   return {
     lead,
@@ -225,7 +236,7 @@ export function noteView(
     finished: [
       "active",
       N.finished,
-      book ? N.finishedBook(B.total) : N.finishedDoc,
+      book ? N.finishedBook(B.own) : N.finishedDoc,
       "again",
       null,
       false,

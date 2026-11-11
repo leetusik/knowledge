@@ -12,7 +12,13 @@ import {
 } from "react";
 
 import { LISTEN, READER } from "@/content";
-import { chapterN, nextChapter, prevChapter, spanAt } from "@/lib/listen/book";
+import {
+  chapterN,
+  chapterTitle,
+  nextChapter,
+  prevChapter,
+  spanAt,
+} from "@/lib/listen/book";
 import { clockPos, lengthWords } from "@/lib/listen/format";
 import { noteKey, type ListenKey, type NoteKey } from "@/lib/listen/machine";
 import {
@@ -329,7 +335,7 @@ function PlayerSheet({
               {book ? (
                 <p className="pl-meta">{P.meta(book.title, n, total)}</p>
               ) : null}
-              <h3 className="pl-title" lang={l.lang}>
+              <h3 className="pl-title" lang={l.titleLang ?? "en"}>
                 {l.title}
               </h3>
             </div>
@@ -586,9 +592,14 @@ function PlayerSheet({
                           const now = cur ? (
                             <span className="rd-ch__now">{nowWord}</span>
                           ) : null;
+                          // The audio's title (P41-sr.F3), else the chapter's place.
+                          const named = chapterTitle(l, c.key);
                           const title = (
-                            <span className="rd-ch__title" lang={c.lang}>
-                              {c.title}
+                            <span
+                              className="rd-ch__title"
+                              lang={named?.lang ?? "en"}
+                            >
+                              {named?.title ?? LISTEN.dock.chapter(c.n)}
                             </span>
                           );
                           return (

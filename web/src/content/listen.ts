@@ -56,6 +56,7 @@ export const LISTEN = {
     buffering: "Buffering…",
     chapter: (n: number): string => `Chapter ${n}`,
     finished: "Finished",
+    /** P41-sr.F3: the count is this Listen's own chapters (a Korean Listen of 2: "all 2 chapters"). */
     allChapters: (total: number): string => `all ${total} chapters`,
     preparingStopped: "Preparing stopped",
     tryAgainLower: "try again",
@@ -76,8 +77,13 @@ export const LISTEN = {
       signedOut: "Signed out. Sign in to keep listening.",
       dailyLimit: (at: string): string =>
         `Daily limit reached; preparing resumes at ${at}.`,
-      playingChapter: (word: string, n: number, title: string): string =>
-        `${word}: chapter ${n}, ${title}`,
+      /** P41-sr.F3: the title is the audio's own; until it is known, the chapter's place alone. */
+      playingChapter: (
+        word: string,
+        n: number,
+        title: string | null,
+      ): string =>
+        title ? `${word}: chapter ${n}, ${title}` : `${word}: chapter ${n}`,
     },
   },
   /** The note (F10): the trio word, its sentence, the progress line and the one action. */
@@ -107,6 +113,7 @@ export const LISTEN = {
       `Chapter ${next} is still preparing, ${left}. It plays by itself when it’s ready.`,
     finished: "Finished",
     finishedDoc: "You’ve listened to the end.",
+    /** P41-sr.F3: `total` is this Listen's own chapters, never the book's whole count. */
     finishedBook: (total: number): string =>
       `You’ve listened to all ${total} chapters.`,
     stopped: "Stopped",

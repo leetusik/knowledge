@@ -37,7 +37,9 @@ export interface ListenChapter {
   key: string;
   /** Its place in the book, 1-based. */
   n: number;
+  /** The title as the page shows it (a variant the reader opened), in `lang`. */
   title: string;
+  /** The language of `title` (P41-sr.F3: not always the Listen's; the href may differ). */
   lang: string;
   /** The chapter in the reader. */
   href: string;
@@ -55,6 +57,7 @@ export interface ListenSeed {
   key: ListenUnitKey;
   /** The document's title; a book's: the start chapter's title. */
   title: string;
+  /** The language the Listen reads (B1's `listen.lang`); a page's own language. */
   lang: string;
   /** The state read at load for this key; null = not read (the press reads it). */
   state: KbListenState | null;
@@ -83,6 +86,9 @@ export interface ListenSpan {
   start: number;
   len: number;
   complete: boolean;
+  /** P41-sr.F3: the audio's own title and language (B2: the unit's document). */
+  title: string;
+  lang: string;
 }
 
 /** The one Listen of the page (null when nothing is docked). */
@@ -91,8 +97,15 @@ export interface Listen {
   unit: string;
   key: ListenUnitKey;
   kind: "doc" | "book";
-  /** The heard unit's title: the document's, or the chapter being heard. */
+  /**
+   * The heard unit's title: the document's, or the chapter being heard. A book's comes
+   * from the audio (the timeline's entry, P41-sr.F3); until it is read, from the page only
+   * in the Listen's language, else the chapter's place (`Chapter 2`).
+   */
   title: string;
+  /** The title's language; null while the chapter's place stands in for it. */
+  titleLang: string | null;
+  /** The Listen's language: the audio's (B1's `listen.lang`). */
   lang: string;
   /** The document in the reader (Go to the text). */
   href: string;
@@ -164,5 +177,6 @@ export interface ListenKept {
   pos: number;
   /** The chapter's (or document's) length, when known. */
   len: number | null;
+  /** The Listen's language: the place is offered only where that language plays (P41-sr.F3). */
   lang: string;
 }

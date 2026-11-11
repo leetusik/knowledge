@@ -10,8 +10,10 @@
    holding it (no Postgres needed).
 4. **The preference (P41-sr.F2):** a Listen's state reads speed and follow along from
    the listener's newest row, whatever the item, never its own older one.
+5. **The language (P41-sr.F3):** a saved place in another language than the Listen's
+   reads as none (``position``, ``kept``; a book's ``resume`` the same way).
 
-1, 2 and 4 are Postgres-gated through ``tests/test_documents_api``'s harness, so they
+1, 2, 4 and 5 are Postgres-gated through ``tests/test_documents_api``'s harness, so they
 skip without a disposable ``KB_TEST_DATABASE_URL``.
 """
 
@@ -131,6 +133,15 @@ def test_claim_lease_and_requeue(listen):
             {"t": listen.tenant})
     state = c.get("/app/listen/state", headers=listen.h, params=listen.body).json()
     assert (state["speed"], state["follow"], state["position"]["seconds"]) == (1.25, False, 7)
+
+    # P41-sr.F3: a place in another language is no place. The one row of this Listen, kept,
+    # now holds another language's place (as a book's other language would leave it).
+    with listen.engine.begin() as conn:
+        conn.execute(text("UPDATE listen_positions SET lang = 'ko', kept = true "
+                          "WHERE tenant_id = :t AND item = :i"),
+                     {"t": listen.tenant, "i": listen.body["doc"]})
+    state = c.get("/app/listen/state", headers=listen.h, params=listen.body).json()
+    assert (state["position"], state["kept"], state["speed"]) == (None, False, 1.25)
 
 
 def test_upload_is_write_once_and_needs_the_lease(listen):

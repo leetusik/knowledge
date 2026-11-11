@@ -1,8 +1,13 @@
 import "server-only";
 
-import { getListenState, type KbListenState } from "@/lib/knowledge/listen";
+import {
+  getListenState,
+  type KbListenPosition,
+  type KbListenState,
+} from "@/lib/knowledge/listen";
 import type { ReaderView } from "@/lib/reader/types";
 
+import { ownChapters } from "./book";
 import type {
   ListenBook,
   ListenBookKey,
@@ -86,10 +91,53 @@ export function chapterSeed(
 
 /** The book landing's Listen: the book from its first chapter, and the place left part-way. */
 export interface BookListenSeed {
-  /** Listen and Start over: the book from chapter 1. */
+  /** Listen: the book from chapter 1, in the language the server reads it by default. */
   start: ListenSeed;
-  /** Continue listening (B1's `resume`, read for its own start chapter); null when there is none. */
+  /**
+   * P41-sr.F3: the book from chapter 1 in each language its chapters have, by language
+   * (`start`'s among them): Start over restarts the kept place's own language (rule 5).
+   */
+  langs: Record<string, ListenSeed>;
+  /** The newest place left part-way, across the languages, in its own language; null when none. */
+  place: KbListenPosition | null;
+  /** Continue listening: the book from the place's chapter, in its language; null when none. */
   resume: ListenSeed | null;
+}
+
+/**
+ * The book from chapter 1 in one language, as the landing shows it. The rows show each
+ * chapter in the variant its reader last opened; the Listen reads each chapter in the
+ * language B1 names for it (the entry's `lang`), so its pages open on that variant: the
+ * follow along is on the text that is heard (W2). A row's title stays in its own language
+ * (`lang`), so the player never shows it over another language's audio (P41-sr.F3).
+ */
+function seedIn(
+  key: ListenBookKey,
+  state: KbListenState,
+  shown: ListenBook,
+  variants: Record<string, Record<string, string>>,
+): ListenSeed {
+  const book: ListenBook = {
+    ...shown,
+    chapters: shown.chapters.map((c) => {
+      const lang = state.entries.find((e) => e.chapter === c.key)?.lang;
+      const href =
+        lang && lang !== c.lang ? variants[c.key]?.[lang] : undefined;
+      return href ? { ...c, href } : c;
+    }),
+  };
+  const firstKey = ownChapters(state.entries)[0];
+  const first =
+    book.chapters.find((c) => c.key === firstKey) ?? book.chapters[0];
+  return {
+    key,
+    title: first?.title ?? book.title,
+    lang: state.listen.lang,
+    state,
+    href: first?.href ?? book.href,
+    book,
+    chapter: null,
+  };
 }
 
 /**
@@ -97,6 +145,10 @@ export interface BookListenSeed {
  * from its first chapter (Listen, Start over, the rows' audio), and, when the newest
  * place (`resume`) is in another chapter, the book from that chapter, so Continue
  * listening sounds inside the press (R3). Any miss is "no Listen here".
+ *
+ * P41-sr.F3 — a place belongs to its language: each language's Listen is read for its own
+ * place (B1's `resume`, in that language only), and the newest of them is the landing's
+ * Continue listening, which resumes that language's audio and opens its pages.
  */
 export async function readBookSeed(
   token: string,
@@ -106,49 +158,52 @@ export async function readBookSeed(
 ): Promise<BookListenSeed | null> {
   const state = await readListenState(token, key);
   if (!state) return null;
-  // The landing's rows show each chapter in the variant its reader last opened; the Listen
-  // reads each chapter in the language B1 names for it (the entry's `lang`), so its pages
-  // open on that variant: the follow along is on the text that is heard.
-  const book: ListenBook = {
-    ...shown,
-    chapters: shown.chapters.map((c) => {
-      const lang = state.entries.find((e) => e.chapter === c.key)?.lang;
-      const href = lang ? variants[c.key]?.[lang] : undefined;
-      return lang && href && lang !== c.lang ? { ...c, lang, href } : c;
-    }),
-  };
-  const first = book.chapters[0];
-  const start: ListenSeed = {
-    key,
-    title: first?.title ?? book.title,
-    lang: first?.lang ?? "en",
-    state,
-    href: first?.href ?? book.href,
-    book,
-    chapter: null,
-  };
-  const r = state.resume;
-  if (!r || !r.chapter) return { start, resume: null };
-  const at = book.chapters.find((c) => c.key === r.chapter);
-  if (!at) return { start, resume: null };
+  const home = state.listen.lang;
+  const others = [
+    ...new Set(Object.values(variants).flatMap((v) => Object.keys(v))),
+  ].filter((lang) => lang !== home && /^[a-z]{2,3}$/.test(lang));
+  const read = await Promise.all(
+    others.map((lang) => readListenState(token, { ...key, lang })),
+  );
+  const start = seedIn(key, state, shown, variants);
+  const langs: Record<string, ListenSeed> = { [home]: start };
+  others.forEach((lang, i) => {
+    const s = read[i];
+    if (s) langs[lang] = seedIn({ ...key, lang }, s, shown, variants);
+  });
+  const place =
+    Object.values(langs)
+      .map((s) => s.state?.resume ?? null)
+      .filter((r): r is KbListenPosition => !!r && !!r.chapter)
+      .sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0] ?? null;
+  if (!place || !place.chapter)
+    return { start, langs, place: null, resume: null };
+  const of = langs[place.lang] ?? start;
+  const at = of.book?.chapters.find((c) => c.key === place.chapter);
+  if (!at) return { start, langs, place, resume: null };
   const rkey: ListenBookKey = {
     ...key,
-    from_chapter: r.chapter,
-    ...(r.lang ? { lang: r.lang } : {}),
+    from_chapter: place.chapter,
+    lang: place.lang,
   };
+  // From chapter 1 it is the language's own Listen, already read.
   const rstate =
-    at === first && !r.lang ? state : await readListenState(token, rkey);
+    place.chapter === shown.chapters[0]?.key && of.state
+      ? of.state
+      : await readListenState(token, rkey);
   return {
     start,
+    langs,
+    place,
     resume: rstate
       ? {
           key: rkey,
           title: at.title,
-          lang: r.lang || at.lang,
+          lang: place.lang,
           state: rstate,
           href: at.href,
-          book,
-          chapter: r.chapter,
+          book: of.book,
+          chapter: place.chapter,
         }
       : null,
   };

@@ -5,7 +5,13 @@ import type {
   KbListenState,
   KbListenTimeline,
 } from "@/lib/knowledge/listen";
-import { chapterStart, stallKey } from "@/lib/listen/book";
+import {
+  chapterStart,
+  chapterTitle,
+  placeIn,
+  spansOf,
+  stallKey,
+} from "@/lib/listen/book";
 import {
   initial,
   serverKey,
@@ -206,5 +212,46 @@ describe("a book (P41-sr.W2)", () => {
     expect(getKept()).toBeNull();
     setListen(null);
     setKept(null);
+  });
+});
+
+// P41-sr.F3 — a book Listen keeps to its own language: titles from the audio, places in it.
+
+describe("a book Listen's language (P41-sr.F3)", () => {
+  const book = {
+    title: "B",
+    href: "/@lab/p/books/b",
+    chapters: [
+      { key: "one", n: 1, title: "하나", lang: "ko", href: "/1" },
+      { key: "two", n: 2, title: "Two", lang: "en", href: "/2" },
+    ],
+  };
+
+  it("takes a chapter's title from the audio, never another language's", () => {
+    const timeline = {
+      entries: [
+        {
+          chapter: "one",
+          start: 0,
+          len: 9,
+          complete: true,
+          title: "One",
+          lang: "en",
+        },
+      ],
+    } as unknown as Pick<KbListenTimeline, "entries">;
+    const heard = { spans: spansOf(timeline), book, lang: "en" };
+    // The timeline's entry wins over the page's Korean title.
+    expect(chapterTitle(heard, "one")).toEqual({ title: "One", lang: "en" });
+    // Not on the timeline yet: the page's title, only in the Listen's language.
+    expect(chapterTitle(heard, "two")).toEqual({ title: "Two", lang: "en" });
+    expect(chapterTitle({ spans: [], book, lang: "en" }, "one")).toBeNull();
+  });
+
+  it("reads a place saved in another language as none", () => {
+    const at = { chapter: "one", seconds: 8, lang: "en" };
+    expect(placeIn(at, "ko")).toBeNull();
+    expect(placeIn(at, "en")).toBe(at);
+    expect(placeIn(null, "en")).toBeNull();
   });
 });

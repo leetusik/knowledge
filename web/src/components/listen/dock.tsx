@@ -90,7 +90,7 @@ export function Dock({
         </button>
       ) : null}
       <div className="lx-dock__text">
-        <p className="lx-dock__title" lang={listen.lang}>
+        <p className="lx-dock__title" lang={listen.titleLang ?? "en"}>
           {listen.title}
         </p>
         <p className="lx-dock__status">

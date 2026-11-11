@@ -6,9 +6,9 @@ import { useEffect, useState } from "react";
 import { Dock } from "@/components/listen/dock";
 import { ListenControl } from "@/components/listen/listen-control";
 import { ListenNote } from "@/components/listen/listen-note";
-import { LISTEN } from "@/content";
-import type { KbListenState } from "@/lib/knowledge/listen";
-import { unitOfKey } from "@/lib/listen/book";
+import { BOOK, LISTEN } from "@/content";
+import type { KbListenPosition, KbListenState } from "@/lib/knowledge/listen";
+import { ownChapters, unitOfKey } from "@/lib/listen/book";
 import { aboutSum, clockPos, lengthWords } from "@/lib/listen/format";
 import { noteKey, type NoteKey } from "@/lib/listen/machine";
 import { listenActions, useKept, useListen } from "@/lib/listen/store";
@@ -30,7 +30,13 @@ import { noteView } from "@/lib/listen/view";
 
 /** What the server read for the landing (`readBookSeed`). */
 export interface BookListenSeedView {
+  /** The book from chapter 1, in the language the landing reads it (the server's default). */
   start: ListenSeed;
+  /** P41-sr.F3: the book from chapter 1 in each language it has, by language (`start`'s too). */
+  langs: Record<string, ListenSeed>;
+  /** The newest place left part-way, in its own language (B1's `resume`); null when none. */
+  place: KbListenPosition | null;
+  /** Continue listening: the book from the place's chapter, in its language. */
   resume: ListenSeed | null;
 }
 
@@ -97,12 +103,8 @@ export function BookListen({
   const online = useOnline();
   const [starting, setStarting] = useState(false);
   const start = seed.start;
-  const book = start.book;
   const unit = unitOfKey(start.key);
   const L = listen && listen.unit === unit ? listen : null;
-  const chapters = book?.chapters ?? [];
-  const first = chapters[0];
-  const last = chapters[chapters.length - 1];
 
   /** Start a Listen inside the press, then open its chapter in the reader. */
   const go = (s: ListenSeed, from: number, href: string) => {
@@ -111,36 +113,48 @@ export function BookListen({
     listenActions.start(s, from);
     router.push(href);
   };
-  const startOver = () => go(start, 0, first?.href ?? start.href);
 
-  // The place to pick up from: the one Stop listening kept, else the book's newest (B1 `resume`).
+  // The place to pick up from: the one Stop listening kept, else the newest saved one. Each
+  // is in its own language, and plays only there (P41-sr.F3).
   const keptHere = kept && kept.unit === unit && kept.ch ? kept : null;
-  const r = start.state?.resume ?? null;
+  const r = seed.place;
   const place = keptHere
     ? { ch: keptHere.ch as string, pos: keptHere.pos, lang: keptHere.lang }
     : r && r.chapter
       ? { ch: r.chapter, pos: r.seconds, lang: r.lang }
       : null;
+  // The place's own Listen, the book from chapter 1 in its language: its chapters, its
+  // pages, and the Start over beside its Continue listening (F3, rule 5). No place: the landing's.
+  const home = (place && seed.langs[place.lang]) || start;
+  const chapters = home.book?.chapters ?? [];
+  const own = ownChapters(home.state?.entries ?? []);
+  const lastKey = own[own.length - 1] ?? chapters[chapters.length - 1]?.key;
   const at = place ? chapters.find((c) => c.key === place.ch) : undefined;
-  const atLen = at ? lenOf(start.state, at.key) : null;
+  const atLen = at ? lenOf(home.state, at.key) : null;
   const atEnd = !!at && atLen !== null && place!.pos >= atLen - 1;
-  const finished = !!at && at === last && atEnd;
+  const finished = !!at && at.key === lastKey && atEnd;
   const resumeOn = !!at && !atEnd && place!.pos >= 1;
+  /** Start over (chapter 1 · 0:00): the kept Listen's language, else the landing's. */
+  const startOver = () => go(home, 0, home.href);
+  /** Listen: the book from chapter 1, in the landing's language. */
+  const listenNew = () => go(start, 0, start.href);
 
   const resume = () => {
     if (!place || !at) return;
     const s =
-      seed.resume && seed.resume.chapter === place.ch
+      seed.resume &&
+      seed.resume.chapter === place.ch &&
+      seed.resume.lang === place.lang
         ? seed.resume
         : {
-            ...start,
+            ...home,
             key: {
-              ...start.key,
+              ...home.key,
               from_chapter: place.ch,
               ...(place.lang ? { lang: place.lang } : {}),
             },
             title: at.title,
-            lang: place.lang || at.lang,
+            lang: place.lang || home.lang,
             // Read by the press itself: the landing has no state for this start chapter.
             state: null,
             href: at.href,
@@ -168,8 +182,9 @@ export function BookListen({
       />
     );
   } else if (note) {
-    // No live Listen: the note's own action (Start over when finished, F10).
-    const shell = listenOf(start, chapters.length);
+    // No live Listen: the note's own action (Start over when finished, F10), counting the
+    // finished Listen's own chapters (F3).
+    const shell = listenOf(home, lastKey ?? null);
     body = (
       <ListenNote
         state={note}
@@ -188,12 +203,17 @@ export function BookListen({
     );
   } else {
     const sum = madeSum(start.state);
+    // "4 chapters": this Listen's own chapters, in its language (F3), else the book's.
+    const n = ownChapters(start.state?.entries ?? []).length;
     body = (
       <ListenControl
         form="book"
-        q={LISTEN.control.book(count, sum !== null ? aboutSum(sum) : null)}
+        q={LISTEN.control.book(
+          n > 0 ? BOOK.head.chapters(n) : count,
+          sum !== null ? aboutSum(sum) : null,
+        )}
         busy={starting || L?.state === "loading"}
-        onListen={startOver}
+        onListen={listenNew}
       />
     );
   }
@@ -204,23 +224,33 @@ export function BookListen({
   );
 }
 
-/** A stand-in Listen for a note with no live Listen behind it (finished, offline on the landing). */
-function listenOf(seed: ListenSeed, total: number): Listen {
+/**
+ * A stand-in Listen for a note with no live Listen behind it (finished, offline on the
+ * landing), on its last chapter, with its own chapters (F3: the finished count is theirs).
+ */
+function listenOf(seed: ListenSeed, last: string | null): Listen {
   return {
     unit: unitOfKey(seed.key),
     key: seed.key,
     kind: "book",
     title: seed.title,
+    titleLang: null,
     lang: seed.lang,
     href: seed.href,
     book: seed.book,
     from: null,
-    ch: seed.book?.chapters[total - 1]?.key ?? null,
+    ch: last,
     chPos: 0,
     chLen: null,
     chSoFar: false,
     making: null,
-    entries: [],
+    entries: (seed.state?.entries ?? []).map((e) => ({
+      chapter: e.chapter,
+      state: e.state,
+      len: e.len ?? null,
+      part: null,
+      left: null,
+    })),
     spans: [],
     state: "finished",
     back: null,

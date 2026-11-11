@@ -726,8 +726,9 @@ async def get_position(user_id: UUID, tenant_id: UUID, kind: str, project: str, 
 
 async def latest_position(user_id: UUID, *, tenant_id: Optional[UUID] = None,
                           kind: Optional[str] = None, project: Optional[str] = None,
-                          item: Optional[str] = None) -> Optional[Any]:
-    """The user's newest row (the speed/follow preference), optionally for one item."""
+                          item: Optional[str] = None, lang: Optional[str] = None) -> Optional[Any]:
+    """The user's newest row (the speed/follow preference), optionally for one item,
+    and optionally in one language (P41-sr.F3: a place in another language is no place)."""
 
     stmt = select(POSITIONS).where(POSITIONS.c.user_id == user_id)
     if tenant_id is not None:
@@ -735,6 +736,8 @@ async def latest_position(user_id: UUID, *, tenant_id: Optional[UUID] = None,
             POSITIONS.c.tenant_id == tenant_id, POSITIONS.c.kind == kind,
             POSITIONS.c.project == project, POSITIONS.c.item == item,
         )
+    if lang is not None:
+        stmt = stmt.where(POSITIONS.c.lang == lang)
     stmt = stmt.order_by(POSITIONS.c.updated_at.desc()).limit(1)
     async with _session() as session:
         return (await session.execute(stmt)).first()

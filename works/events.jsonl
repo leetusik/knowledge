@@ -1999,3 +1999,6 @@
 {"ts": "2026-11-12T01:49:30+09:00", "type": "slice_status_changed", "slice": "P41-sr.F2", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-11-12T01:58:23+09:00", "type": "executor_dispatched", "slice": "P41-sr.F2", "phase": "P41-sr", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-12T01:58:23+09:00", "type": "slice_status_changed", "slice": "P41-sr.F2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-12T01:59:04+09:00", "type": "slice_status_changed", "slice": "P41-sr.F3", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-12T02:30:46+09:00", "type": "executor_dispatched", "slice": "P41-sr.F3", "phase": "P41-sr", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-12T02:30:46+09:00", "type": "slice_status_changed", "slice": "P41-sr.F3", "old_status": "in_progress", "new_status": "done"}

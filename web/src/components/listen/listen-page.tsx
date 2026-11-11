@@ -10,7 +10,7 @@ import {
 } from "react";
 
 import { LISTEN } from "@/content";
-import { unitOfKey } from "@/lib/listen/book";
+import { placeIn, unitOfKey } from "@/lib/listen/book";
 import { mapSegments, readablesOf, type ReadableEl } from "@/lib/listen/follow";
 import { aboutSum, clockPos, lengthWords } from "@/lib/listen/format";
 import { noteKey, type ListenKey, type NoteKey } from "@/lib/listen/machine";
@@ -56,25 +56,28 @@ function chapterLen(seed: ListenSeed): number | null {
 /**
  * Left part-way (or kept by Stop listening, F17): where Continue listening goes on from.
  * A document: its own position. A chapter: the book's newest place when it is in this
- * chapter (B1's `resume`), or the place Stop listening kept here (W2).
+ * chapter (B1's `resume`), or the place Stop listening kept here (W2). P41-sr.F3: only a
+ * place in the language this page's Listen reads; another language's is none.
  */
 function resumeOf(
   seed: ListenSeed,
   kept: ListenKept | null,
 ): { pos: number; len: number | null } | null {
-  if (kept && kept.unit === unitOfSeed(seed) && kept.ch === seed.chapter) {
-    return { pos: kept.pos, len: kept.len ?? chapterLen(seed) };
+  const lang = seed.state?.listen.lang || seed.lang;
+  const k = placeIn(kept, lang);
+  if (k && k.unit === unitOfSeed(seed) && k.ch === seed.chapter) {
+    return { pos: k.pos, len: k.len ?? chapterLen(seed) };
   }
   const s = seed.state;
   if (!s) return null;
   if (seed.book) {
-    const r = s.resume;
+    const r = placeIn(s.resume, lang);
     const len = chapterLen(seed);
     if (!r || r.chapter !== seed.chapter || len === null) return null;
     if (r.seconds < 1 || r.seconds >= len - 1) return null;
     return { pos: r.seconds, len };
   }
-  const p = s.position;
+  const p = placeIn(s.position, lang);
   if (!p || s.len === null || s.len <= 0) return null;
   if (p.seconds < 1 || p.seconds >= s.len - 1) return null;
   return { pos: p.seconds, len: s.len };

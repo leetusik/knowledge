@@ -443,6 +443,11 @@ async def _state(listen: _Listen, ctx: AuthContext) -> dict[str, Any]:
         ctx.user.id, listen.tenant_id, listen.kind, listen.project, listen.item,
         listen.from_chapter,
     )
+    # P41-sr.F3: a place in another language is no place. One row per Listen and start
+    # chapter (0007), so a Listen in the other language from the same chapter wrote it last:
+    # it is none here, never its seconds in this language's audio. `resume` likewise.
+    if position is not None and position.lang != listen.lang:
+        position = None
     # P41-sr.F2: speed and follow along are the listener's, not the document's (F3, F33):
     # always the newest row, whatever the item. The seconds and chapter stay this Listen's.
     preference = await lj.latest_position(ctx.user.id)
@@ -450,7 +455,7 @@ async def _state(listen: _Listen, ctx: AuthContext) -> dict[str, Any]:
     if listen.kind == "book":
         resume = await lj.latest_position(
             ctx.user.id, tenant_id=listen.tenant_id, kind="book", project=listen.project,
-            item=listen.item,
+            item=listen.item, lang=listen.lang,
         )
 
     return {

@@ -1,6 +1,7 @@
 import type HlsType from "hls.js";
 import type { ErrorData } from "hls.js";
 
+import { LISTEN } from "@/content/listen";
 import type {
   KbListenPlay,
   KbListenState,
@@ -8,7 +9,15 @@ import type {
 } from "@/lib/knowledge/listen";
 
 import { listenRead, listenSave, listenStart, listenUpdate } from "./actions";
-import { chapterStart, spanAt, spansOf, stallKey, unitOfKey } from "./book";
+import {
+  chapterN,
+  chapterStart,
+  chapterTitle,
+  spanAt,
+  spansOf,
+  stallKey,
+  unitOfKey,
+} from "./book";
 import { segmentAt } from "./follow";
 import {
   polls,
@@ -51,6 +60,11 @@ import type { Listen, ListenEntry, ListenSeed } from "./types";
 // `len`. A stall at the end of a made chapter whose next chapter is not made is
 // `next-waiting`; the playlist only grows, so it plays on by itself, never a source swap.
 // The position a book saves is the chapter's (`chapter` + seconds into it, F2).
+//
+// P41-sr.F3 — a book Listen keeps to its own language (B1's `listen.lang`): the title of
+// the chapter heard (the dock, the player, the lock screen, the live region) is the
+// timeline entry's, the audio's own; before the timeline is read, the page's only in the
+// Listen's language, else the chapter's place (`Chapter 2`).
 
 const HLS_TYPE = "application/vnd.apple.mpegurl";
 const POLL_MS = 6000;
@@ -118,6 +132,7 @@ function entriesOf(s: KbListenState): ListenEntry[] {
 /**
  * Where `t` (stream seconds) is in a book: the chapter heard, the position in it and its
  * length (made, or its playable prefix). Before the timeline is read, the start chapter.
+ * Its title is the audio's (P41-sr.F3, `chapterTitle`), else the chapter's place.
  */
 function placeAt(l: Listen, t: number): Partial<Listen> {
   if (l.kind !== "book") {
@@ -134,13 +149,14 @@ function placeAt(l: Listen, t: number): Partial<Listen> {
       : i >= 0
         ? l.spans[i].len
         : (entry?.len ?? null);
-  const info = l.book?.chapters.find((c) => c.key === ch);
+  const named = chapterTitle(l, ch);
   return {
     ch,
     chPos: Math.max(0, t - start),
     chLen: len,
     chSoFar: !made,
-    ...(info ? { title: info.title, lang: info.lang } : {}),
+    title: named?.title ?? LISTEN.dock.chapter(chapterN(l, ch) ?? 1),
+    titleLang: named?.lang ?? null,
   };
 }
 
@@ -348,6 +364,7 @@ export function createEngine(
         ? { n: s.part.n, of: s.part.of }
         : l.part;
     lastState = s;
+    const before = l.title;
     const patch: Partial<Listen> = {
       old: s.old,
       updating: s.updating || (l.updating && s.old),
@@ -360,6 +377,8 @@ export function createEngine(
       seen: s.runner_last_seen,
       entries: entriesOf(s),
       making: s.part?.chapter ?? null,
+      // P41-sr.F3: the language the audio is in, as the server resolved it.
+      ...(l.kind === "book" && s.listen.lang ? { lang: s.listen.lang } : {}),
     };
     if (s.play) {
       const verdict = switchList(attached, s.play.list, "sounding");
@@ -371,8 +390,15 @@ export function createEngine(
     const now = getListen();
     if (now) {
       patchListen(placeAt(now, attached ? audio.currentTime : now.pos));
+      retitle(before);
       void readTimeline(attached ? now.play : (s.play ?? now.play), s.len);
     }
+  }
+
+  /** The lock screen follows a title the server or the timeline named (P41-sr.F3). */
+  function retitle(before: string): void {
+    const l = getListen();
+    if (l && attached && l.title !== before) metadata();
   }
 
   function schedule(): void {
@@ -440,6 +466,7 @@ export function createEngine(
       const placed = placeAt({ ...l, spans }, t);
       const segs = segsOf(placed.ch ?? null);
       patchListen({ spans, ...placed, segs, seg: segmentAt(segs, t) });
+      retitle(l.title);
     } catch {
       // the next poll reads it again
     } finally {
@@ -746,8 +773,11 @@ export function createEngine(
         unit: unitOfKey(seed.key),
         key: seed.key,
         kind: book ? "book" : "doc",
+        // A book's title is placed below (`placeAt`): the audio's, never another language's.
         title: seed.title,
-        lang: seed.lang,
+        titleLang: seed.lang,
+        // P41-sr.F3: the audio's language (the state's), else the language the seed reads.
+        lang: s.listen.lang || seed.lang,
         href: seed.href,
         book,
         from: fromCh,
@@ -792,6 +822,8 @@ export function createEngine(
       }
       // Playable now (made, or its first part): sound it inside the press (iOS, R3).
       if (s.play && s.len !== null && s.len > 0) attach(s.play, from, true);
+      // A book's titles are the timeline's (P41-sr.F3): read it now, not after the start's answer.
+      if (book && s.play) void readTimeline(s.play, s.len);
       void listenStart(seed.key).then((res) => {
         if (my !== sid) return;
         if (!res.ok) {
