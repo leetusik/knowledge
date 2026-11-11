@@ -19,6 +19,17 @@ reading, then one ``sym: means`` segment per legend entry.
 
 **Skipped**: code, rules (``hr``), quizzes, sources and the glossary.
 
+**The source list** (P41-sr.F1): a heading whose id is ``sources-list`` opens the
+source list, and the whole section is skipped, heading included, up to the next
+heading of the same or a higher level. The id decides, never the words: the explain
+skill closes every chapter with ``## Sources {#sources-list}`` (an ASCII ``## Sources``
+is assigned that id, ``server/native/ids.py``), and a translation keeps the id under
+its own words. A ``## Sources`` with another id, and the word in prose, are read.
+
+**Empty headings** (P41-sr.F1): a heading is said only when something in its section
+(up to the next heading of the same or a higher level, its subheadings included) is
+said, so a heading over only a quiz, code or a glossary is dropped.
+
 Inline content reads as ``project.inline_text`` does, except that inline math
 becomes a small language-neutral linear text (``speak_tex``, after the reader's
 ``linearText``) and an inline image reads its alt. How symbols are *spoken* is
@@ -186,6 +197,10 @@ def spoken_inline(nodes: Optional[Iterable[dict]]) -> str:
 
 _SKIPPED = {"code", "hr", "quiz", "sources", "glossary"}
 
+# The heading id that opens the source list (``ids.heading_slug`` gives an ASCII
+# ``## Sources`` this id; the explain skill writes it, and translations keep it).
+SOURCES_LIST_ID = "sources-list"
+
 
 def _paragraphs(blocks: Iterable[dict]) -> list[str]:
     """Every paragraph's text inside a quote or callout, in order."""
@@ -300,10 +315,34 @@ def spoken_script(tree: dict, *, lang: str, title: str | None = None) -> list[di
     if tree.get("summary"):
         emit(None, None, "summary", tree["summary"])
     section = None
+    # Headings not said yet, outermost first: each is said just before the first
+    # segment of its section, and dropped when its section ends with nothing said.
+    held: list[tuple[int, Optional[str], Optional[str], str]] = []
+    skip_level: Optional[int] = None  # inside the source list: its heading's level
     for block in tree["blocks"]:
         block_id = block.get("id")
         if block_id:
-            section = block_id
-        for kind, text in _block_segments(block):
+            section = block_id  # kept through a skip: the section notion is S1's
+        if block["type"] == "heading":
+            level = block["level"]
+            if skip_level is not None and level > skip_level:
+                continue
+            skip_level = None
+            while held and held[-1][0] >= level:
+                held.pop()  # its section ended with nothing said
+            if block_id == SOURCES_LIST_ID:
+                skip_level = level
+            else:
+                held.append((level, section, block_id, spoken_inline(block["content"])))
+            continue
+        if skip_level is not None:
+            continue
+        segments = [(kind, text) for kind, text in _block_segments(block) if _collapse(text or "")]
+        if not segments:
+            continue
+        for _, h_section, h_block, h_text in held:
+            emit(h_section, h_block, "heading", h_text)
+        held.clear()
+        for kind, text in segments:
             emit(section, block_id, kind, text)
     return out

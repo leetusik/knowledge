@@ -1992,3 +1992,7 @@
 {"ts": "2026-11-12T01:34:57+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.F2"}
 {"ts": "2026-11-12T01:34:57+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.F3"}
 {"ts": "2026-11-12T01:35:02+09:00", "type": "deferred_created", "deferred": "D110-g9", "source": "P41-sr.REVIEW round 1 (slices/P41-sr.W1/result.md § Chrome run)"}
+{"ts": "2026-11-12T01:35:40+09:00", "type": "slice_status_changed", "slice": "P41-sr.F1", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-12T01:48:49+09:00", "type": "executor_dispatched", "slice": "P41-sr.F1", "phase": "P41-sr", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-12T01:48:49+09:00", "type": "slice_status_changed", "slice": "P41-sr.F1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-12T01:48:58+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.F4"}

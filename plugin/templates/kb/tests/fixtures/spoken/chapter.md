@@ -24,18 +24,6 @@ The error shrinks as $`s / \sqrt{n}`$, see ![a falling curve](asset:curve.png) h
 | mean | $`\bar{x}`$ |
 | spread | |
 
-```python
-print("never read")
-```
-
-```quiz #check
-items:
-  - id: q1
-    type: recall
-    prompt: Is this read?
-    answer: No.
-```
-
 ```figure #fig
 src: chart.png
 alt: A bar chart of means
@@ -85,8 +73,6 @@ where:
     means: the sample size
 ```
 
-## Sources {#sources-list}
-
 ```sources #sources
 items:
   - id: src-one
@@ -94,9 +80,51 @@ items:
     url: https://example.com/
 ```
 
+### In code {#in-code}
+
+```python
+print("never read")
+```
+
+### Check yourself {#check-yourself}
+
+```quiz #check
+items:
+  - id: q1
+    type: recall
+    prompt: Is this read?
+    answer: No.
+```
+
+## Sources {#origins}
+
+### Where the numbers come from {#where}
+
+Two sources feed every mean here: a survey and a census.
+
+## Sources {#sources-list}
+
+The code, at commit `88d2e95`:
+
+- `server/spoken.py`: the read and skip table
+
+What the work recorded:
+
+- Listen (P41): the spoken script
+
+### Outside works {#outside}
+
+- A source title: read by the research
+
+## Terms {#terms}
+
 ```glossary #glossary
 terms:
   - id: mean
     term: Mean
     short: The average.
 ```
+
+## After the sources {#after}
+
+Read again after the source list.

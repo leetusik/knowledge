@@ -1,7 +1,8 @@
 """P41-sr.S1: the spoken script Listen reads. One fixture with one of each block
 shows the reading order, the read rules (alt texts, captions, table rows, a
 formula's legend, inline math's linear text) and the skips (code, quiz, sources,
-glossary)."""
+glossary). P41-sr.F1: the ``sources-list`` section is skipped whole, and a heading
+whose section says nothing is dropped."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -31,7 +32,6 @@ def test_spoken_script():
         ("mean", None, "callout", "A callout body."),
         ("mean", None, "table-row", "Quantity: mean; Formula: x̄"),
         ("mean", None, "table-row", "Quantity: spread"),
-        # the code block and the quiz say nothing
         ("fig", "fig", "figure", "A bar chart of means"),
         ("fig", "fig", "figure", "Means by group."),
         ("row", "row", "figure", "The first view"),
@@ -47,6 +47,51 @@ def test_spoken_script():
         ("tstat", "tstat", "formula", "How many standard errors the mean sits away."),
         ("tstat", "tstat", "formula", "x̄: the sample mean"),
         ("tstat", "tstat", "formula", "n: the sample size"),
-        # the sources and the glossary say nothing
-        ("sources-list", "sources-list", "heading", "Sources"),
+        # the typed sources block, the code and the quiz say nothing, nor do the
+        # headings over only them ("In code", "Check yourself")
+        ("origins", "origins", "heading", "Sources"),
+        ("where", "where", "heading", "Where the numbers come from"),
+        ("where", None, "text", "Two sources feed every mean here: a survey and a census."),
+        # the source list says nothing, and "Terms" holds only the glossary
+        ("after", "after", "heading", "After the sources"),
+        ("after", None, "text", "Read again after the source list."),
     ]
+
+
+def _texts(source: str) -> list[str]:
+    return [s["text"] for s in spoken_script(parse_chapter(source).tree, lang="en")]
+
+
+def test_the_source_list_is_skipped_whole():
+    """F1 cases b-e and g: the ``sources-list`` section goes, heading, paragraphs,
+    lists and subheadings, up to the next heading of its level; its id decides, so
+    an assigned id and a translated heading go too, while a ``## Sources`` with
+    another id and the word in prose are read."""
+    source = FIXTURE.read_text(encoding="utf-8")
+    texts = _texts(source)
+    assert texts.count("Sources") == 1  # the guard's heading, {#origins}
+    assert "Two sources feed every mean here: a survey and a census." in texts
+    for gone in ("The code, at commit 88d2e95:", "server/spoken.py: the read and skip table",
+                 "What the work recorded:", "Listen (P41): the spoken script",
+                 "Outside works", "A source title: read by the research"):
+        assert gone not in texts
+    assert texts[-2:] == ["After the sources", "Read again after the source list."]
+
+    assigned = source.replace("## Sources {#sources-list}", "## Sources")
+    assert [a["id"] for a in parse_chapter(assigned).assigned_ids] == ["sources-list"]
+    translated = source.replace("## Sources {#sources-list}", "## 출처 {#sources-list}")
+    assert _texts(assigned) == _texts(translated) == texts
+
+
+def test_a_heading_that_says_nothing_is_dropped():
+    """F1 case f: a heading over only code, a quiz or a glossary is not said; one
+    over a subheading that says something is, and one over a silent subheading is
+    not."""
+    source = FIXTURE.read_text(encoding="utf-8")
+    texts = _texts(source)
+    for gone in ("In code", "Check yourself", "Terms"):
+        assert gone not in texts
+    assert texts.index("Sources") + 1 == texts.index("Where the numbers come from")
+
+    silent = source.replace("Two sources feed every mean here: a survey and a census.\n", "")
+    assert "Sources" not in _texts(silent) and "Where the numbers come from" not in _texts(silent)
