@@ -3,7 +3,7 @@
   "phase_id": "P41-sr",
   "name": "Ship it: deploy, migrate, start the Mac runner, check Range on production",
   "kind": "implementation",
-  "status": "pending",
+  "status": "done",
   "order": 67,
   "depends_on": [
     "P41-sr.B3",
@@ -13,7 +13,7 @@
   "depends_declared": true,
   "created_at": "2026-11-11T15:26:44+09:00",
   "started_at": "2026-11-11T23:54:11+09:00",
-  "completed_at": null,
+  "completed_at": "2026-11-12T00:59:38+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -23,7 +23,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Listen shipped to production: deploy migrated 0006->0007, flip probes as predicted, the Mac runner installed and made a whole document (6 parts, RTF ~0.47), Range 206/416 DYNAMIC; part cap raised to 16 MiB after a part came within 3 KB of 4 MiB",
   "validation": {
     "required": [],
     "last_run": null,
@@ -33,10 +33,5 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
-  },
-  "pending": {
-    "kind": "operator-action",
-    "on_words": "Stop C: the operator pushes the committed part-cap fix and dispatches Production Deploy, and says so; the orchestrator watches the run green, then finishes X1; Try again on any document whose part was refused; df -h /opt/knowledge still owed",
-    "since": "2026-11-12T00:56:15+09:00"
   }
 }

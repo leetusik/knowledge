@@ -2,7 +2,7 @@
 
 ## Verdict
 
-- **status:** needs_operator (Stop C)
+- **status:** done (Stop C run by the operator; see § Stop C, as run)
 - **route:** high
 - **model:** opus
 - **effort:** xhigh
@@ -660,3 +660,28 @@ read), `:3030`, every `.env` file (including `tools/listen-runner/.env` and `web
 4. **`phase.md` was not written,** as in Span 1: the span's set excludes it, so the entries are under `notebook`.
    The notebook adds one `## Decisions` line beyond the plan's list (the new cap), because the review cross-checks
    each decision a `result.md` records against `## Decisions`.
+
+## Stop C, as run (recorded by the orchestrator, 2026-11-12)
+
+- **The deploy.** The operator pushed `bf75e1eb..4aba2544` and dispatched Production Deploy run `43053499415`. It went
+  green:
+  - reconcile: `HEAD now 4aba2544… on main`;
+  - all three services healthy;
+  - the edge reload complete;
+  - `Deploy completed successfully.`;
+  - the smokes OK for `/healthz` 200, `/` 200 and `/mcp` 406.
+
+  Production now runs the 16 MiB part cap.
+- **The two earlier dispatches.** Runs `43052582439` and `43052737078` came before the fix was committed. They
+  redeployed the same code (`bf75e1eb`) green and changed nothing.
+- **The rest of the document.** Parts 4–6 were made with no failure:
+
+  | Part | Audio | RTF | Bytes |
+  |---|---|---|---|
+  | 4 | 638.43 s | — | 3,953,069 |
+  | 5 | 469.18 s | 0.485 | 2,905,240 |
+  | 6 | 263.25 s | 0.474 | 1,631,141 |
+
+  Part 6 uploaded at 00:59:21 KST, after the fix deploy's api restart. No part was refused, so no Try again was
+  needed.
+- **Still owed by the operator:** `df -h /opt/knowledge`, folded into the review's walkthrough.

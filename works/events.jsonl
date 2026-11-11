@@ -1983,3 +1983,5 @@
 {"ts": "2026-11-12T00:50:17+09:00", "type": "slice_status_changed", "slice": "P41-sr.X1", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-11-12T00:56:03+09:00", "type": "executor_dispatched", "slice": "P41-sr.X1", "phase": "P41-sr", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "needs_operator", "note": null}
 {"ts": "2026-11-12T00:56:15+09:00", "type": "slice_status_changed", "slice": "P41-sr.X1", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}
+{"ts": "2026-11-12T00:59:38+09:00", "type": "slice_status_changed", "slice": "P41-sr.X1", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-11-12T00:59:38+09:00", "type": "slice_status_changed", "slice": "P41-sr.X1", "old_status": "in_progress", "new_status": "done"}

@@ -6,9 +6,9 @@
 ## Pointer
 
 - Current phase: `P41-sr`
-- Current slice: `P41-sr.X1`
-- Next slice: `P41-sr.REVIEW`
-- Waiting on operator: `P41-sr.X1`
+- Current slice: `P41-sr.REVIEW`
+- Next slice: `none`
+- Waiting on operator: `none`
 - Open deferred jobs: `87`
 - Workspace version: `v89`
 
@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P41-sr` | planned | `P41-sr.X1` | 15/17 | - | working tree |
+| `default` | `P41-sr` | planned | `P41-sr.REVIEW` | 16/17 | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
@@ -45,7 +45,7 @@
 | [x] `P38-e1` | `done` | `pass` | Right-size explain runs (plugin 0.9.0) | `none` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
 | [x] `P39-hk` | `done` | `pass` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `none` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
 | [x] `P40-2t` | `done` | `pass` | One way to explain what the records don't cover | `none` · parallel: `phase/P40-2t-one_way_to_explain_what_the_records_don` | `works/phases/active/P40-2t` |
-| [ ] `P41-sr` | `planned` | `pending` | Listen: a free AI voice reader | `P41-sr.X1` | `works/phases/active/P41-sr` |
+| [ ] `P41-sr` | `planned` | `pending` | Listen: a free AI voice reader | `P41-sr.REVIEW` | `works/phases/active/P41-sr` |
 
 ## Phase P21: Web document deletion
 
@@ -393,5 +393,5 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | [x] `P41-sr.W1` | `done` | The web player core: the persistent Listen, the dock, the note, Listen on a document | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.W1` |
 | [x] `P41-sr.G1` | `done` | Alt text that reads aloud well, and the plugin release | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.G1` |
 | [x] `P41-sr.W2` | `done` | Book playback, the opened player and the book landing | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.W2` |
-| [~] `P41-sr.X1` | `pending` | Ship it: deploy, migrate, start the Mac runner, check Range on production | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.X1` |
+| [x] `P41-sr.X1` | `done` | Ship it: deploy, migrate, start the Mac runner, check Range on production | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.X1` |
 | [ ] `P41-sr.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P41-sr/slices/P41-sr.REVIEW` |
