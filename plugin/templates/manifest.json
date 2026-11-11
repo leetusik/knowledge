@@ -187,7 +187,12 @@
       "tests/fixtures/anchors/chapter-v2.md",
       "server/spoken.py",
       "tests/test_spoken.py",
-      "tests/fixtures/spoken/chapter.md"
+      "tests/fixtures/spoken/chapter.md",
+      "server/listen.py",
+      "server/listen_jobs.py",
+      "server/listen_api.py",
+      "tests/test_listen.py",
+      "tests/fixtures/listen/doc.md"
     ],
     "parameterized": [
       "mkdocs.yml",

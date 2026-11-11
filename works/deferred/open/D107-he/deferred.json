@@ -1,0 +1,11 @@
+{
+  "id": "D107-he",
+  "title": "Listen part grouping that stays stable across edits",
+  "status": "deferred",
+  "source": "P41-sr.B1 result.md § Open edges",
+  "reason": "Parts merge sections greedily up to the ~10 min cap, so an edit that pushes one part over the cap regroups every later part of the document and re-renders them, against the intent that an edit re-renders only what changed.",
+  "trigger": "Re-rendering after edits is noticeably slow or wasteful on the Mac runner",
+  "created_at": "2026-11-11T16:03:10+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

@@ -35,6 +35,7 @@ from server import books_api
 from server import config, db
 from server import dashboard_api
 from server import documents_api
+from server import listen_api
 from server import reader_api
 from server import reader_state
 from server import usage_api
@@ -168,6 +169,13 @@ app.include_router(books_api.router)
 # profile). Every query is user-scoped and re-checks the document's readability;
 # unmetered. The document-delete paths below purge it (server/reader_state.py).
 app.include_router(reader_api.router)
+
+# Listen (P41-sr.B1): the session-only /app/listen/… reader routes (start, state,
+# position, update) and the /api/listen/… runner routes an org-level vk_ key calls
+# (claim, heartbeat, upload, finish, fail). Postgres-only: with no DATABASE_URL every
+# Listen route answers 404. Unmetered; the audio lives in each content root's .audio/.
+app.include_router(listen_api.router)
+app.include_router(listen_api.runner_router)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an

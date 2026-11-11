@@ -1,8 +1,8 @@
 {
   "current_phase": "P41-sr",
-  "current_slice": "P41-sr.B1",
-  "next_slice": "P41-sr.B2",
+  "current_slice": "P41-sr.B2",
+  "next_slice": "P41-sr.B3",
   "waiting_on_operator": null,
   "mode": "phase",
-  "updated_at": "2026-11-11T15:33:49+09:00"
+  "updated_at": "2026-11-11T16:03:21+09:00"
 }

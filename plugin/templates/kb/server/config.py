@@ -202,3 +202,82 @@ def startup_reindex_enabled() -> bool:
     """
     val = _env("KB_STARTUP_REINDEX", "true")
     return str(val).strip().lower() not in {"0", "false", "no", "off"}
+
+
+# --- Listen (P41-sr.B1): the voice reader's units, parts and job queue ---------
+
+
+def _env_number(name: str, default: float, *, integer: bool = False) -> float:
+    """A positive number from the env, else ``default`` (unparseable or <= 0 too)."""
+    raw = _env(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw) if integer else float(raw)
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
+
+
+def listen_voice() -> str:
+    """The voice every Listen unit is made in (``KB_LISTEN_VOICE``).
+
+    Part of each unit's identity and of every segment hash, so changing it makes
+    new keys (and new audio) without touching what was made before.
+    """
+    return _env("KB_LISTEN_VOICE", "ming3-us_emma") or "ming3-us_emma"
+
+
+def listen_profile() -> str:
+    """The engine and encoder profile (``KB_LISTEN_PROFILE``), part of every key.
+
+    Names what the runner renders and encodes with; a new engine version or a new
+    encoding makes new keys, so old audio is never mistaken for new.
+    """
+    default = "ming3-0.5b/aac-lc-48k-mono"
+    return _env("KB_LISTEN_PROFILE", default) or default
+
+
+def listen_part_cap_s() -> float:
+    """A part's estimated speech cap in seconds (``KB_LISTEN_PART_CAP_S``, 600)."""
+    return _env_number("KB_LISTEN_PART_CAP_S", 600.0)
+
+
+def listen_chars_per_second(lang: str) -> float:
+    """Measured speech rate used to estimate a part's length (P41-sr.R1).
+
+    ``KB_LISTEN_CPS_KO`` (7.5) for Korean; ``KB_LISTEN_CPS_EN`` (13.4) for English
+    and every other language.
+    """
+    if (lang or "").lower().startswith("ko"):
+        return _env_number("KB_LISTEN_CPS_KO", 7.5)
+    return _env_number("KB_LISTEN_CPS_EN", 13.4)
+
+
+def listen_lease_s() -> int:
+    """How long a claimed job is the runner's before it is claimable again
+    (``KB_LISTEN_LEASE_S``, 600). A heartbeat extends it by the same amount."""
+    return int(_env_number("KB_LISTEN_LEASE_S", 600, integer=True))
+
+
+def listen_max_attempts() -> int:
+    """Claims a job gets before a failure fails it for good (``KB_LISTEN_MAX_ATTEMPTS``, 3)."""
+    return int(_env_number("KB_LISTEN_MAX_ATTEMPTS", 3, integer=True))
+
+
+def listen_max_part_bytes() -> int:
+    """The largest part upload accepted (``KB_LISTEN_MAX_PART_BYTES``, 4 MiB)."""
+    return int(_env_number("KB_LISTEN_MAX_PART_BYTES", 4 * 1024 * 1024, integer=True))
+
+
+def listen_poll_s() -> float:
+    """The runner's poll interval (``KB_LISTEN_POLL_S``, 30). A Listen with work
+    queued and no runner call within twice this reads as waiting."""
+    return _env_number("KB_LISTEN_POLL_S", 30.0)
+
+
+def listen_rtf() -> float:
+    """The runner's real-time factor, render time over audio time (``KB_LISTEN_RTF``,
+    0.45: Ming-3.0 on the Mac GPU measured 0.42, R5). Turns the audio still to make
+    into the "about N min left" estimate."""
+    return _env_number("KB_LISTEN_RTF", 0.45)

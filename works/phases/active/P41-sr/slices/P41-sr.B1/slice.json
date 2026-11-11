@@ -3,13 +3,13 @@
   "phase_id": "P41-sr",
   "name": "Listen jobs, audio store and listening positions (backend core)",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 61,
   "depends_on": [],
   "depends_declared": true,
   "created_at": "2026-11-11T15:26:42+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-11T15:35:31+09:00",
+  "completed_at": "2026-11-11T16:03:21+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -19,7 +19,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Listen backend core: write-once .audio store, section-grouped manifest, 0007_listen tables with a leased job queue, /app/listen reader API and /api/listen runner API, template mirror",
   "validation": {
     "required": [],
     "last_run": null,

@@ -1,8 +1,9 @@
 """ORM models for the Postgres control plane.
 
 Ported from vocky's accounts/tenancy tables (the first six here) plus the P11
-``usage_events`` table (the 7th), and the seven P30.S8 reader-state tables (the
-only JSONB columns: a reader's anchors, quotes, snapshots and quiz responses).
+``usage_events`` table (the 7th), the seven P30.S8 reader-state tables (JSONB for
+a reader's anchors, quotes, snapshots and quiz responses), and the five P41-sr.B1
+Listen tables (units, parts, jobs, runners and listening positions).
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -488,4 +490,169 @@ class ReaderProfileModel(Base):
     new_highlights_per_day: Mapped[int] = mapped_column(
         Integer, nullable=False, default=20, server_default=text("20")
     )
+    updated_at: Mapped[datetime] = _ts()
+
+
+# -- Listen (P41-sr.B1): the voice reader's audio, its job queue and positions ------
+#
+# Five tables, created by ``alembic/versions/0007_listen.py``. A **unit** is one
+# document version in one language, voice and engine profile; its **parts** are the
+# manifest (segments grouped by section, at most ~10 min each), keyed by a hash of
+# their spoken text, so an unchanged part is shared across versions and documents.
+# A **job** asks the runner to make one part key; at most one job per key is live
+# (queued or leased) per tenant, enforced by a partial unique index. The made audio
+# lives on disk under the content root's ``.audio/`` (``server/listen.py``), never in
+# Postgres. ``listen_positions`` sits beside ``reader_positions``: one row per user
+# and Listen. Every row cascades from ``tenants`` (and positions from ``users``);
+# value checks are app-layer, the repo's convention.
+
+
+class ListenUnitModel(Base):
+    """One document version's audio in one language, voice and profile."""
+
+    __tablename__ = "listen_units"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "project", "doc", "version", "lang", "voice", "profile",
+            name="uq_listen_units_identity",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = _uuid_fk("tenants.id")
+    project: Mapped[str] = mapped_column(Text, nullable=False)
+    doc: Mapped[str] = mapped_column(Text, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    lang: Mapped[str] = mapped_column(Text, nullable=False)
+    voice: Mapped[str] = mapped_column(Text, nullable=False)
+    profile: Mapped[str] = mapped_column(Text, nullable=False)
+    state: Mapped[str] = mapped_column(Text, nullable=False, default="making")
+    part_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    parts_made: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    made_seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    total_seconds: Mapped[float] = mapped_column(Float, nullable=False)
+    chars: Mapped[int] = mapped_column(Integer, nullable=False)
+    failure: Mapped[str | None] = mapped_column(Text, nullable=True)
+    failure_kind: Mapped[str | None] = mapped_column(Text, nullable=True)
+    failure_part: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = _ts()
+    updated_at: Mapped[datetime] = _ts()
+
+
+class ListenPartModel(Base):
+    """One part of a unit's manifest; ``file``/``bytes``/``seconds`` once made."""
+
+    __tablename__ = "listen_parts"
+    __table_args__ = (Index("ix_listen_parts_key", "tenant_id", "part_key"),)
+
+    unit_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("listen_units.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    idx: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tenant_id: Mapped[UUID] = _uuid_fk("tenants.id")
+    part_key: Mapped[str] = mapped_column(Text, nullable=False)
+    seg_first: Mapped[int] = mapped_column(Integer, nullable=False)
+    seg_last: Mapped[int] = mapped_column(Integer, nullable=False)
+    seg_hashes: Mapped[list] = mapped_column(JSONB, nullable=False)
+    segments: Mapped[list] = mapped_column(JSONB, nullable=False)
+    chars: Mapped[int] = mapped_column(Integer, nullable=False)
+    est_seconds: Mapped[float] = mapped_column(Float, nullable=False)
+    file: Mapped[str | None] = mapped_column(Text, nullable=True)
+    bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    segment_seconds: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    made_at: Mapped[datetime | None] = _ts(nullable=True)
+
+
+class ListenJobModel(Base):
+    """A request to the runner to make one part key, under a lease."""
+
+    __tablename__ = "listen_jobs"
+    __table_args__ = (
+        Index(
+            "uq_listen_jobs_live_key",
+            "tenant_id", "part_key",
+            unique=True,
+            postgresql_where=text("state IN ('queued', 'leased')"),
+        ),
+        Index(
+            "ix_listen_jobs_claim",
+            "tenant_id", "priority", "created_at",
+            postgresql_where=text("state IN ('queued', 'leased')"),
+        ),
+        Index("ix_listen_jobs_unit", "unit_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    tenant_id: Mapped[UUID] = _uuid_fk("tenants.id")
+    unit_id: Mapped[UUID] = _uuid_fk("listen_units.id")
+    part_idx: Mapped[int] = mapped_column(Integer, nullable=False)
+    part_key: Mapped[str] = mapped_column(Text, nullable=False)
+    priority: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    state: Mapped[str] = mapped_column(Text, nullable=False, default="queued")
+    lease_until: Mapped[datetime | None] = _ts(nullable=True)
+    leased_by: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file: Mapped[str | None] = mapped_column(Text, nullable=True)
+    bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = _ts()
+    updated_at: Mapped[datetime] = _ts()
+
+
+class ListenRunnerModel(Base):
+    """When a runner credential last called the runner API."""
+
+    __tablename__ = "listen_runners"
+
+    tenant_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    credential_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("project_credentials.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    last_seen: Mapped[datetime] = _ts()
+
+
+class ListenPositionModel(Base):
+    """One listening position per user and Listen, with the listener's preferences.
+
+    The key is ``(user, tenant, kind, project, item, from_chapter)``: ``kind`` is
+    ``doc`` or ``book``, ``item`` the document stem or the book slug, and
+    ``from_chapter`` the chapter a book Listen started from (``''`` for a document).
+    ``speed`` and ``follow`` ride on every row; the newest row is the preference.
+    """
+
+    __tablename__ = "listen_positions"
+    __table_args__ = (
+        Index("ix_listen_positions_user_updated", "user_id", text("updated_at DESC")),
+    )
+
+    user_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    tenant_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    kind: Mapped[str] = mapped_column(Text, primary_key=True)
+    project: Mapped[str] = mapped_column(Text, primary_key=True)
+    item: Mapped[str] = mapped_column(Text, primary_key=True)
+    from_chapter: Mapped[str] = mapped_column(Text, primary_key=True)
+    lang: Mapped[str] = mapped_column(Text, nullable=False)
+    chapter: Mapped[str | None] = mapped_column(Text, nullable=True)
+    seconds: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    speed: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    follow: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    kept: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     updated_at: Mapped[datetime] = _ts()

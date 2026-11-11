@@ -67,8 +67,18 @@ def _run(args: list[str], *, root, timeout: Optional[float] = None) -> subproces
 
 
 # Chapter images are never committed (P30 A2): ``.assets/`` holds them under every
-# tenant root, and tenant #1's public repo must never carry one.
+# tenant root, and tenant #1's public repo must never carry one. Listen's audio
+# (P41-sr.B1) is the same: ``.audio/`` holds each tenant's made parts, gitignored and
+# never staged. ``add`` and ``remove`` drop a path inside either directory.
 _NEVER_STAGED_DIR = ".assets"
+_NEVER_STAGED_AUDIO_DIR = ".audio"
+_NEVER_STAGED_DIRS = (_NEVER_STAGED_DIR, _NEVER_STAGED_AUDIO_DIR)
+
+
+def _never_staged(path) -> bool:
+    """Whether a path lies inside a never-staged directory (``.assets``, ``.audio``)."""
+    parts = Path(str(path)).parts
+    return any(name in parts for name in _NEVER_STAGED_DIRS)
 
 
 # --- Private projects (P34): the managed info/exclude block + the staging guard ---
@@ -264,7 +274,7 @@ def _is_footprint_dir(rel: str) -> bool:
     return (
         bool(_PROJECT_NAME_RE.fullmatch(name))
         and ".." not in name
-        and name not in (".versions", ".books", _NEVER_STAGED_DIR)
+        and name not in (".versions", ".books", *_NEVER_STAGED_DIRS)
     )
 
 
@@ -436,14 +446,15 @@ def add(paths: Iterable[str], *, root) -> None:
 
     A path inside an ``.assets/`` tree is dropped before git sees it (P30.S4): the
     images live on the box disk only, whatever a caller passes. ``.assets/`` is also
-    gitignored, so this is the second of two guards.
+    gitignored, so this is the second of two guards. Listen's ``.audio/`` (P41-sr.B1)
+    is dropped the same way.
 
     P34: a path in a private project's footprint, or a ``docs/index.md`` that links
     into one, raises ``GitError`` before anything is staged (``_refuse_private``).
     Pathspecs are literal (``--literal-pathspecs``), so the paths checked are exactly
     the paths git stages: no glob can widen them.
     """
-    kept = [p for p in paths if _NEVER_STAGED_DIR not in Path(str(p)).parts]
+    kept = [p for p in paths if not _never_staged(p)]
     if not kept:
         return
     _refuse_private(["add", "--", *kept], kept, root=root)
@@ -458,7 +469,7 @@ def remove(paths: Iterable[str], *, root) -> None:
     removal in the same scoped commit. ``--ignore-unmatch`` keeps a never-committed
     path from failing the commit. Refuses private footprints exactly like ``add``.
     """
-    kept = [p for p in paths if _NEVER_STAGED_DIR not in Path(str(p)).parts]
+    kept = [p for p in paths if not _never_staged(p)]
     if not kept:
         return
     args = ["rm", "--cached", "--quiet", "--ignore-unmatch", "--", *kept]

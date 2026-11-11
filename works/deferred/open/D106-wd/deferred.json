@@ -1,0 +1,11 @@
+{
+  "id": "D106-wd",
+  "title": "Listen audio cleanup: orphaned rows and files",
+  "status": "deferred",
+  "source": "P41-sr.B1 result.md § Open edges",
+  "reason": "Deleting a document leaves its listen_* rows and .audio part files on the box disk, and nothing collects parts no unit references any more. Unreachable behind the readability gate, but the disk grows.",
+  "trigger": "The box disk budget tightens, or a document-delete or retention pass is planned",
+  "created_at": "2026-11-11T16:03:09+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
