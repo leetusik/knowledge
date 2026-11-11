@@ -1932,3 +1932,6 @@
 {"ts": "2026-11-11T14:51:46+09:00", "type": "executor_dispatched", "slice": "P41-sr.R5", "phase": "P41-sr", "kind": "research", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-11T14:51:46+09:00", "type": "slice_status_changed", "slice": "P41-sr.R5", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-11-11T14:52:36+09:00", "type": "slice_status_changed", "slice": "P41-sr.DECOMP2", "old_status": "todo", "new_status": "pending", "stop_kind": "decision"}
+{"ts": "2026-11-11T15:15:56+09:00", "type": "deferred_created", "deferred": "D104-vm", "source": "P41-sr (voice pick, after R5)"}
+{"ts": "2026-11-11T15:15:57+09:00", "type": "deferred_created", "deferred": "D105-y8", "source": "P41-sr.R3 OQ2, signed at D1"}
+{"ts": "2026-11-11T15:16:24+09:00", "type": "slice_status_changed", "slice": "P41-sr.DECOMP2", "old_status": "pending", "new_status": "in_progress"}

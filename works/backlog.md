@@ -8,8 +8,8 @@
 - Current phase: `P41-sr`
 - Current slice: `P41-sr.DECOMP2`
 - Next slice: `P41-sr.REVIEW`
-- Waiting on operator: `P41-sr.DECOMP2`
-- Open deferred jobs: `81`
+- Waiting on operator: `none`
+- Open deferred jobs: `83`
 - Workspace version: `v89`
 
 ## Streams
@@ -386,5 +386,5 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | [x] `P41-sr.R4` | `done` | free voice models: the three R2 left for disk | `research` | `works/phases/active/P41-sr/slices/P41-sr.R4` |
 | [x] `P41-sr.D1` | `done` | Listen design: the control and the player | `co-work` | `works/phases/active/P41-sr/slices/P41-sr.D1` |
 | [x] `P41-sr.R5` | `done` | more Korean voice models for the Mac, community-recommended | `research` | `works/phases/active/P41-sr/slices/P41-sr.R5` |
-| [~] `P41-sr.DECOMP2` | `pending` | the build cut | `decomposition` | `works/phases/active/P41-sr/slices/P41-sr.DECOMP2` |
+| [ ] `P41-sr.DECOMP2` | `in_progress` | the build cut | `decomposition` | `works/phases/active/P41-sr/slices/P41-sr.DECOMP2` |
 | [ ] `P41-sr.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P41-sr/slices/P41-sr.REVIEW` |

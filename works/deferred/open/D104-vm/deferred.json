@@ -1,0 +1,11 @@
+{
+  "id": "D104-vm",
+  "title": "Listen: choose among several voice models (per language, server or Mac)",
+  "status": "deferred",
+  "source": "P41-sr (voice pick, after R5)",
+  "reason": "The operator chose one model for now, 2026-11-11: \"only one model for now, various model selection defer.\" P41-sr ships Ming-3.0 US_Emma for both languages. The candidates heard are in P41-sr topics/voice-models.md: Fish Audio S2 Pro, the best Korean, slower than real time; Qwen3-TTS Sohee; Supertonic 3 on the server; edge-tts.",
+  "trigger": "The operator wants a different or a second voice, for example a native Korean voice, or a server-side voice so that nothing waits for the Mac.",
+  "created_at": "2026-11-11T15:15:56+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
