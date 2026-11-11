@@ -1,0 +1,35 @@
+{
+  "id": "P41-sr.R4",
+  "phase_id": "P41-sr",
+  "name": "free voice models: the three R2 left for disk",
+  "kind": "research",
+  "status": "done",
+  "order": 45,
+  "depends_on": [
+    "P41-sr.R2"
+  ],
+  "depends_declared": true,
+  "created_at": "2026-11-11T10:04:47+09:00",
+  "started_at": "2026-11-11T10:05:31+09:00",
+  "completed_at": "2026-11-11T11:14:41+09:00",
+  "risk": "high",
+  "source": {
+    "type": "manual",
+    "id": null
+  },
+  "paths": {
+    "plan": "plan.md",
+    "result": "result.md"
+  },
+  "outcome": "Ran MeloTTS (Korean box fallback), OmniVoice (light Mac option, CC-BY-NC) and Chatterbox v3 (dominated); 11 model samples; Magpie's build denied",
+  "validation": {
+    "required": [],
+    "last_run": null,
+    "last_status": "pending"
+  },
+  "archive": {
+    "archived": false,
+    "archived_at": null,
+    "archive_path": null
+  }
+}
