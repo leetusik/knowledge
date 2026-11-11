@@ -176,3 +176,29 @@
 .bk-page .rd-btn--ghost:hover { border-color: var(--kb-border-strong); color: var(--kb-ink); }
 .bk-page .bk-del { color: var(--kb-status-revoked-ink); border-color: var(--rd-control-edge); }
 .bk-page .bk-del:hover { color: var(--kb-status-revoked-ink); background: var(--kb-status-revoked-soft); border-color: var(--kb-status-revoked); }
+
+/* ======================================================================================
+   P41-sr.W2 — Listen on the landing (`11-listen` page `book`, F31; `Book.css` Part 2). The head's slot, the rows'
+   audio item, the current row's edge, and the dock on the landing's track. The canvas's sticky dock is the product's
+   fixed slot (`reader.css` `.lx-slot`), laid on the landing's own columns.
+   ====================================================================================== */
+/* The head's Listen slot (F6): the Listen control, or, once a Listen lives, its note (F10) */
+.bk-listen { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
+/* F25: beside the dock the note carries the why and the dock the one action */
+.bk-listen .lx-note[data-state="ready"] > .rd-btn { display: none; }
+/* F28: the chapter a Listen is on carries a 1px kb-accent edge in a border every row has, so nothing moves */
+.bk-row .rd-ch { border: 1px solid transparent; }
+.bk-row .rd-ch[aria-current] { border-color: var(--kb-accent); }
+/* A chapter's audio item sits in the row's existing meta line, secondary text (F11, F31) */
+.bk-ch__audio { color: var(--kb-secondary); }
+/* The dock (F7, F31): fixed kb-space-md above the window's bottom; below 64rem on the layout column's two edges, from
+   64rem on the side column's (24rem), so it never takes the Contents column */
+.bk-dock { display: grid; grid-template-columns: minmax(0, 40rem); justify-content: center; padding-inline: var(--rd-gut); }
+.bk-dock > * { grid-column: 1; min-width: 0; }
+@container rd (min-width: 64rem) {
+  .bk-dock { grid-template-columns: minmax(0, 24rem) minmax(0, 40rem); column-gap: var(--kb-space-xl); }
+}
+@container rd (min-width: 90rem) { .bk-dock { column-gap: var(--kb-space-2xl); } }
+/* The page clears the dock: its end padding grows by the dock's height plus kb-space-sm */
+.bk-page:has(.bk-dock) .bk-main { padding-bottom: calc(var(--kb-space-2xl) + var(--lx-dock-h) + var(--kb-space-sm) + env(safe-area-inset-bottom, 0px)); }
+@media print { .bk-dock, .bk-listen { display: none !important; } }

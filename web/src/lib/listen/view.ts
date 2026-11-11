@@ -1,5 +1,6 @@
 import { LISTEN } from "@/content/listen";
 
+import { chapterN, nextChapter } from "./book";
 import { aboutLeft, clockAt, clockPos, lengthWords } from "./format";
 import type { ListenKey, NoteKey } from "./machine";
 import type { Listen } from "./types";
@@ -23,9 +24,33 @@ export interface DockView {
   say: string;
 }
 
-/** `12:30 of 42:10`, `2:10 of 9:40 so far` (F2, F23). */
+/** `12:30 of 42:10`, `2:10 of 9:40 so far` (F2, F23); a book's `Chapter 2 · 12:30` (F2). */
 function where(l: Listen): string {
+  if (l.kind === "book") {
+    return LISTEN.dock.whereBook(chapterN(l, l.ch) ?? 1, clockPos(l.chPos));
+  }
   return LISTEN.dock.where(clockPos(l.pos), clockPos(l.len ?? 0), l.soFar);
+}
+
+/** A book's chapter count, and the chapters it names (P41-sr.W2). */
+function bookNums(l: Listen): {
+  total: number;
+  n: number;
+  next: number;
+  making: number;
+} {
+  const total = l.book?.chapters.length ?? 1;
+  const n = chapterN(l, l.ch) ?? 1;
+  const next = nextChapter(l, l.ch)?.n ?? n + 1;
+  const making = chapterN(l, l.making) ?? n;
+  return { total, n, next, making };
+}
+
+/** The next chapter's own time left preparing, else the Listen's (F10 next-waiting). */
+function nextLeft(l: Listen): number | null {
+  const nx = nextChapter(l, l.ch);
+  const e = nx ? l.entries.find((x) => x.chapter === nx.key) : undefined;
+  return e?.left ?? l.left;
 }
 
 function seenAt(l: Listen): string | null {
@@ -38,6 +63,8 @@ export function dockView(l: Listen): DockView {
   const part = l.part?.n ?? 1;
   const parts = l.part?.of ?? l.parts;
   const seen = seenAt(l);
+  const book = l.kind === "book";
+  const B = bookNums(l);
   const rows: Record<ListenKey, [Lead, string, string, boolean, boolean]> = {
     waiting: [
       "off",
@@ -53,8 +80,14 @@ export function dockView(l: Listen): DockView {
     playing: ["pause", l.old ? D.earlier : D.playing, where(l), false, false],
     paused: ["play", l.old ? D.earlier : D.paused, where(l), false, false],
     buffering: ["pause", D.buffering, where(l), true, false],
-    "next-waiting": ["pause", D.preparing, D.chapter(part), true, false],
-    finished: ["again", D.finished, clockPos(l.len ?? l.pos), false, false],
+    "next-waiting": ["pause", D.preparing, D.chapter(B.next), true, false],
+    finished: [
+      "again",
+      D.finished,
+      book ? D.allChapters(B.total) : clockPos(l.len ?? l.pos),
+      false,
+      false,
+    ],
     "fail-voice": ["retry", D.preparingStopped, D.tryAgainLower, false, true],
     "fail-limit": ["off", D.dailyLimit, D.resumes("09:00"), false, false],
     "fail-play": ["retry", D.playbackStopped, D.connectionLost, false, true],
@@ -82,7 +115,11 @@ export function dockView(l: Listen): DockView {
       ? D.say.signedOut
       : l.state === "fail-limit"
         ? D.say.dailyLimit("09:00")
-        : word;
+        : l.state === "next-waiting" && book
+          ? D.say.nextWaiting(B.next)
+          : l.state === "playing" && book
+            ? D.say.playingChapter(word, B.n, l.title)
+            : word;
   return {
     lead,
     word,
@@ -130,11 +167,20 @@ export function noteView(
   const parts = l.part?.of ?? l.parts;
   const left = l.left !== null ? aboutLeft(l.left) : null;
   const made = l.len !== null && l.len > 0 ? lengthWords(l.len) : null;
-  const done = parts > 0 ? l.partsMade / parts : 0;
-  const making =
-    part <= 1 || left === null
+  const book = l.kind === "book";
+  const B = bookNums(l);
+  // F9: a book's step names the chapter being made (fill: chapters done / chapters, F31).
+  const done = book
+    ? (B.making - 1) / B.total
+    : parts > 0
+      ? l.partsMade / parts
+      : 0;
+  const making = book
+    ? N.makingBook(B.making, B.total, left ?? LISTEN.time.under5)
+    : part <= 1 || left === null
       ? N.makingFirst(parts)
       : N.makingPart(part, parts, left);
+  const nl = nextLeft(l);
   const limitReady = opts.ready === undefined ? made : opts.ready;
   const rows: Record<
     NoteKey,
@@ -167,13 +213,24 @@ export function noteView(
     "next-waiting": [
       "idle",
       N.preparing,
-      N.nextWaitingText(part, left ?? LISTEN.time.under5),
+      N.nextWaitingText(
+        B.next,
+        nl !== null ? aboutLeft(nl) : LISTEN.time.under5,
+      ),
       "",
       null,
       false,
       "",
     ],
-    finished: ["active", N.finished, N.finishedDoc, "again", null, false, ""],
+    finished: [
+      "active",
+      N.finished,
+      book ? N.finishedBook(B.total) : N.finishedDoc,
+      "again",
+      null,
+      false,
+      "",
+    ],
     "fail-voice": [
       "revoked",
       N.stopped,
@@ -213,7 +270,7 @@ export function noteView(
     "fail-unreadable": [
       "revoked",
       N.unreadable,
-      N.unreadableText("document"),
+      N.unreadableText(book ? "chapter" : "document"),
       "retry",
       null,
       false,
@@ -255,7 +312,7 @@ export function noteView(
     text,
     busy,
     line: frac === null ? null : Math.round(Math.max(0.02, frac) * 100),
-    lineLabel: N.lineDoc,
+    lineLabel: book ? N.lineBook : N.lineDoc,
     ref,
     action,
   };

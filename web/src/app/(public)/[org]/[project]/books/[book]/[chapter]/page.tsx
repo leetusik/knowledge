@@ -6,6 +6,8 @@ import { LegacyReaderPage } from "@/components/reader/legacy-reader-page";
 import { ReaderPage } from "@/components/reader/reader-page";
 import { DOCUMENTS } from "@/content";
 import { optionalIdentity } from "@/lib/auth-guards";
+import { chapterSeed, readListenState } from "@/lib/listen/seed";
+import type { ListenBookKey } from "@/lib/listen/types";
 import { READER_COOKIE } from "@/lib/reader-cookie";
 import { loadChapterReaderOnce } from "@/lib/reader/load";
 
@@ -25,7 +27,12 @@ import { loadChapterReaderOnce } from "@/lib/reader/load";
 // knowledge client is `cache: "no-store"`, so the page and the metadata share ONE load
 // per request (`loadChapterReaderOnce`, React `cache`) instead of reading twice. A miss or
 // a fault falls back to the static title and leaves the page's own handling (not-found,
-// the error screen) to the page. The legacy reader's page asks for `viewport-fit=cover`
+// the error screen) to the page.
+//
+// P41-sr.W2 — Listen: a signed-in reader of a native chapter's current version gets the
+// page's Listen seed, the book from this chapter (B1's book key), read beside the page's
+// own load the way the document route reads its own (Listen's routes are session-only;
+// any miss is "no Listen here", never a failed page). The legacy reader's page asks for `viewport-fit=cover`
 // (its bars pad themselves by the safe areas); the native reader's does not.
 
 function safeDecode(value: string): string {
@@ -108,6 +115,20 @@ export async function generateViewport({
   return {};
 }
 
+/** This chapter's Listen key: the book from here, in the language asked for (else the server's default). */
+function listenKey(params: Params, query: Query): ListenBookKey | null {
+  const org = safeDecode(params.org);
+  if (!org.startsWith("@") || org.length < 2) return null;
+  const lang = first(query.lang);
+  return {
+    org: org.slice(1),
+    project: safeDecode(params.project),
+    book: safeDecode(params.book),
+    from_chapter: safeDecode(params.chapter),
+    ...(lang !== null && /^[a-z]{2,3}$/.test(lang) ? { lang } : {}),
+  };
+}
+
 export default async function ChapterPage({
   params,
   searchParams,
@@ -115,9 +136,21 @@ export default async function ChapterPage({
   params: Promise<Params>;
   searchParams: Promise<Query>;
 }) {
-  const loaded = await loadOnce(await params, await searchParams);
+  const p = await params;
+  const query = await searchParams;
+  const ctx = await optionalIdentity();
+  const key = listenKey(p, query);
+  const [loaded, listenState] = await Promise.all([
+    loadOnce(p, query),
+    ctx?.token && key ? readListenState(ctx.token, key) : Promise.resolve(null),
+  ]);
   if (loaded.kind === "legacy") {
     return <LegacyReaderPage legacy={loaded.legacy} />;
   }
-  return <ReaderPage reader={loaded.reader} />;
+  return (
+    <ReaderPage
+      reader={loaded.reader}
+      listen={key ? chapterSeed(loaded.reader.view, listenState, key) : null}
+    />
+  );
 }

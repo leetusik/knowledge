@@ -19,6 +19,17 @@ export const LISTEN = {
     pillQ: (q: string): string => `· ${q}`,
     /** Left part-way: "18:05 of 42:10". */
     resumeQ: (pos: string, len: string): string => `${pos} of ${len}`,
+    /** P41-sr.W2 — a chapter's scope (F6, OQ1): "Chapters 2–5", "· about 3 h 30 min" once all are made. */
+    chapters: (from: number, to: number, sum: string | null): string =>
+      `Chapters ${from}–${to}${sum ? ` · ${sum}` : ""}`,
+    /** The last chapter's: "Chapter 5 · 31 min" (its length once made). */
+    lastChapter: (n: number, len: string | null): string =>
+      `Chapter ${n}${len ? ` · ${len}` : ""}`,
+    /** The book landing's (F6): "5 chapters · about 4 h" once made, else "5 chapters". */
+    book: (count: string, sum: string | null): string =>
+      sum ? `${count} · ${sum}` : count,
+    /** A book left part-way (F6): "Chapter 4 · 12:30". */
+    resumeBook: (n: number, pos: string): string => `Chapter ${n} · ${pos}`,
   },
   /** The dock (F7): its region, its controls' accessible names and its short forms (F10). */
   dock: {
@@ -131,6 +142,65 @@ export const LISTEN = {
     signIn: "Sign in",
     update: "Update audio",
     updating: "Updating…",
+  },
+  /**
+   * P41-sr.W2 — the opened player (page `player`, F8, F30; the `PlayerPanel` board): the
+   * sheet's head, the transport's names, the rows and the foot.
+   */
+  player: {
+    title: "Listen",
+    goToText: "Go to the text",
+    close: "Close",
+    /** The meta line over a book chapter's title: "knowledge maintainer guide · Chapter 2 of 5". */
+    meta: (book: string, n: number, total: number): string =>
+      `${book} · Chapter ${n} of ${total}`,
+    /** The position's length: "of 1:07:10", "of 9:40 so far". */
+    of: (len: string, soFar: boolean): string =>
+      `of ${len}${soFar ? " so far" : ""}`,
+    position: "Position",
+    /** The seek bar's value text: "12:30 of 1:07:10". */
+    posText: (pos: string, len: string, soFar: boolean): string =>
+      `${pos} of ${len}${soFar ? " so far" : ""}`,
+    previous: "Previous chapter",
+    next: "Next chapter",
+    back: "Back 15 seconds",
+    fwd: "Forward 15 seconds",
+    play: "Play",
+    pause: "Pause",
+    startOver: "Start over",
+    tryAgain: "Try again",
+    /** The round button on the resume offer (player-G3). */
+    continue: "Continue listening",
+    speed: "Speed",
+    /** F2: the multiplication sign, no space. */
+    speedValue: (v: number): string => `${v}×`,
+    speeds: [0.75, 1, 1.25, 1.5, 1.75, 2] as readonly number[],
+    follow: "Follow along",
+    on: "On",
+    off: "Off",
+    chapters: "Chapters",
+    /** The Chapters row's value: "Chapter 2 of 5". */
+    where: (n: number, total: number): string => `Chapter ${n} of ${total}`,
+    /** F11 readiness in the list: a length means ready. */
+    preparing: (part: string | null): string =>
+      `Preparing…${part ? ` · ${part}` : ""}`,
+    notPrepared: "Not prepared yet",
+    stop: "Stop listening",
+    /** The trio words for the four live states (player-G2). */
+    playing: "Playing",
+    paused: "Paused",
+    loading: "Loading…",
+    buffering: "Buffering…",
+  },
+  /** P41-sr.W2 — the book landing's audio (F31, book-G3): a row's own meta item, led by "Audio". */
+  book: {
+    audioMade: (len: string): string => `Audio ${len}`,
+    audioPreparing: (part: string | null): string =>
+      `Audio preparing…${part ? ` · ${part}` : ""}`,
+    audioNone: "Audio not prepared yet",
+    audioHeld: "Audio held by the daily limit",
+    playing: "Playing",
+    paused: "Paused",
   },
   /** F2's words around a time. */
   time: {

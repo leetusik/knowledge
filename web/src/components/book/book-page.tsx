@@ -5,7 +5,10 @@ import { hangulRuns, isKorean, joinHyphens } from "@/lib/reader/hangul";
 import type { ReaderSettings } from "@/lib/reader-cookie";
 import type { BookView } from "@/lib/book/view";
 
+import { ListenPlayer } from "@/components/listen/player";
+
 import { BookFrame } from "./book-frame";
+import { BookDock, BookListen, type BookListenSeedView } from "./book-listen";
 import { BookTop } from "./book-top";
 import { ChapterRows } from "./chapter-rows";
 import { ClearData } from "./clear-data";
@@ -22,13 +25,20 @@ const HEAD_ID = "bk-head";
  * Below 64rem one column (head, Continue, notes entry, then Contents and the foot); from
  * 64rem two (head, Continue and the notes entry on the left, Contents and the foot on the
  * right). The window scrolls.
+ *
+ * P41-sr.W2 (`11-listen` page `book`, F31): Listen adds three things and reshapes nothing:
+ * the head's Listen slot (`BookListen`), each row's "Audio …" item, and the dock on the
+ * landing's track (`BookDock`), which opens the player over the landing (`ListenPlayer`).
+ * `listen` is the landing's seed (signed in), else none.
  */
 export function BookPage({
   view,
   settings,
+  listen = null,
 }: {
   view: BookView;
   settings: ReaderSettings;
+  listen?: BookListenSeedView | null;
 }) {
   const anon = view.viewer === "anon";
   return (
@@ -47,7 +57,7 @@ export function BookPage({
       <main className="bk-main" id="main-content">
         <div className="bk-layout">
           <div className="bk-side">
-            <Head view={view} />
+            <Head view={view} listen={listen} />
             <Continue view={view} />
             {view.notes ? (
               <Link
@@ -73,7 +83,7 @@ export function BookPage({
               {view.shapeNote ? (
                 <p className="bk-list__note">{view.shapeNote}</p>
               ) : null}
-              <ChapterRows rows={view.rows} />
+              <ChapterRows rows={view.rows} listen={listen} />
             </section>
             {view.signedIn ? (
               <ClearData
@@ -87,11 +97,19 @@ export function BookPage({
           </div>
         </div>
       </main>
+      <BookDock signInHref={view.signInHref} />
+      <ListenPlayer signInHref={view.signInHref} />
     </BookFrame>
   );
 }
 
-function Head({ view }: { view: BookView }) {
+function Head({
+  view,
+  listen,
+}: {
+  view: BookView;
+  listen: BookListenSeedView | null;
+}) {
   const anon = view.viewer === "anon";
   return (
     <header className="bk-head" id={HEAD_ID}>
@@ -131,6 +149,7 @@ function Head({ view }: { view: BookView }) {
           </p>
         </div>
       )}
+      {!anon && listen ? <BookListen seed={listen} count={view.count} /> : null}
     </header>
   );
 }

@@ -7,6 +7,12 @@ import { BOOK } from "@/content/book";
 import { hangulRuns, isKorean } from "@/lib/reader/hangul";
 import type { RowView } from "@/lib/book/view";
 
+import {
+  useRowAudio,
+  type BookListenSeedView,
+  type RowAudio,
+} from "./book-listen";
+
 const T = BOOK.contents;
 
 /**
@@ -14,14 +20,23 @@ const T = BOOK.contents;
  * chapter list (`rd-chs`, a hairline above and one under each row) in manifest order. One
  * row's versions panel is open at a time on the page, so the list holds that one key.
  */
-export function ChapterRows({ rows }: { rows: RowView[] }) {
+export function ChapterRows({
+  rows,
+  listen = null,
+}: {
+  rows: RowView[];
+  /** P41-sr.W2: the landing's Listen, for each row's audio item (F31); null = none. */
+  listen?: BookListenSeedView | null;
+}) {
   const [open, setOpen] = useState<string | null>(null);
+  const audio = useRowAudio(listen);
   return (
     <ol className="rd-chs" aria-label={T.listName}>
       {rows.map((row) => (
         <li key={row.key} className="rd-chs__item">
           <Row
             row={row}
+            audio={audio?.[row.key] ?? null}
             open={open === row.key}
             onVersions={() =>
               setOpen((cur) => (cur === row.key ? null : row.key))
@@ -35,10 +50,12 @@ export function ChapterRows({ rows }: { rows: RowView[] }) {
 
 function Row({
   row,
+  audio,
   open,
   onVersions,
 }: {
   row: RowView;
+  audio: RowAudio | null;
   open: boolean;
   onVersions: () => void;
 }) {
@@ -49,19 +66,34 @@ function Row({
   const showPanel = open && row.multiVer;
   return (
     <div className={hasVars ? "bk-row bk-row--vars" : "bk-row"}>
-      <Link className="rd-ch" href={row.href} prefetch={false}>
+      <Link
+        className="rd-ch"
+        href={row.href}
+        prefetch={false}
+        aria-current={audio?.now ? "true" : undefined}
+      >
         <span className="rd-ch__n">{row.n}</span>
         <span className="rd-ch__body">
           <span className="rd-ch__title" lang={row.lang}>
             {hangulRuns(row.title, !isKorean(row.lang))}
           </span>
           <span className="rd-ch__meta">
+            {audio?.now ? (
+              <span className="rd-ch__now" lang="en">
+                {audio.now}
+              </span>
+            ) : null}
             {hasLead ? (
               <span>
                 {row.slice ? (
                   <span className="bk-ch__src">{row.slice}</span>
                 ) : null}
                 {lead}
+              </span>
+            ) : null}
+            {audio?.audio ? (
+              <span className="bk-ch__audio" lang="en">
+                {audio.audio}
               </span>
             ) : null}
             {row.state === "updated" ? (

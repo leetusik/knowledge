@@ -1972,6 +1972,88 @@ div.an-li__go:hover .an-li__main { text-decoration: none; }
 .lx-follow { position: relative; }
 .lx-follow::before { content: ""; position: absolute; top: 0.25em; bottom: 0.25em; inset-inline-start: calc(-1 * var(--kb-space-sm) - var(--lx-line)); width: var(--lx-line); border-radius: var(--lx-line); background: var(--kb-accent); }
 
+/* ---------- P41-sr.W2 — the opened player (F8, F28–F30; the `PlayerPanel` board) ----------
+   The reader's sheet (bottom below 40rem, the right-hand 26rem side sheet from 40rem) over the scrim, on the page
+   the dock sits on. Its body lays every part on one column; the scroll cue shades an end only while more is there
+   (player-G13). The canvas's container queries are the viewport's media queries here. */
+.pl-sheet .rd-sheet__head { min-height: calc(var(--lx-ctl) + 2 * var(--kb-space-xs)); flex-wrap: wrap; row-gap: 0; }
+.pl-head__end { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0; min-width: 0; margin-inline-start: auto; }
+.pl-body {
+  --pl-shade: var(--kb-border-strong);
+  background:
+    linear-gradient(var(--kb-surface) 40%, transparent) top / 100% 2.5rem no-repeat local,
+    linear-gradient(transparent, var(--kb-surface) 60%) bottom / 100% 2.5rem no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--pl-shade), transparent) top / 100% 0.75rem no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--pl-shade), transparent) bottom / 100% 0.75rem no-repeat scroll,
+    var(--kb-surface);
+}
+.pl { display: flex; flex-direction: column; gap: var(--kb-space-lg); }
+.pl-id { display: flex; flex-direction: column; gap: var(--kb-space-xs); }
+.pl > *, .pl-id > *, .pl-where > * { margin: 0; }
+.pl-meta { margin: 0; font-size: var(--lx-fs-meta); line-height: 1.3; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.pl-title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--lx-fs-title); line-height: 1.25; letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word; }
+.pl-title:lang(ko) { font-family: var(--font-body); letter-spacing: 0; word-break: keep-all; }
+/* The status zone: the trio word, or the note (its button only where the round button lacks the action, F25) */
+.pl-zone { min-width: 0; }
+.pl-zone--noact .lx-note > .rd-btn { display: none; }
+/* The position: the one bold move, then the seek bar under it */
+.pl-where { display: flex; flex-direction: column; gap: var(--kb-space-xs); }
+.pl-pos { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--kb-space-sm); }
+.pl-pos__now { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--lx-fs-pos); line-height: 1; letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); font-variant-numeric: lining-nums tabular-nums; }
+.pl-pos__of { font-size: var(--lx-fs-ui); line-height: 1.2; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.pl-seek { --p: 0%; display: block; width: 100%; height: var(--lx-ctl); margin: 0; padding: 0; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; border-radius: var(--kb-radius-sm); }
+.pl-seek::-webkit-slider-runnable-track { height: 0.25rem; border-radius: var(--kb-radius-pill); background: linear-gradient(to right, var(--kb-accent) var(--p), var(--rd-control-edge) var(--p)); }
+.pl-seek::-moz-range-track { height: 0.25rem; border-radius: var(--kb-radius-pill); background: var(--rd-control-edge); }
+.pl-seek::-moz-range-progress { height: 0.25rem; border-radius: var(--kb-radius-pill); background: var(--kb-accent); }
+.pl-seek::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 1.125rem; height: 1.125rem; margin-top: calc((0.25rem - 1.125rem) / 2); border: 2px solid var(--kb-surface); border-radius: 50%; background: var(--kb-accent); box-shadow: 0 0 0 1px var(--kb-accent); }
+.pl-seek::-moz-range-thumb { width: 1.125rem; height: 1.125rem; border: 2px solid var(--kb-surface); border-radius: 50%; background: var(--kb-accent); box-shadow: 0 0 0 1px var(--kb-accent); box-sizing: border-box; }
+.pl-seek:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.pl-seek:disabled { cursor: not-allowed; }
+.pl-seek:disabled::-webkit-slider-thumb { background: var(--kb-hint); box-shadow: 0 0 0 1px var(--kb-hint); }
+/* The transport: chapters on the column's two edges, skip and play centred between them */
+.pl-transport { display: grid; grid-template-columns: minmax(var(--lx-ctl), 1fr) auto minmax(var(--lx-ctl), 1fr); align-items: center; }
+.pl-transport__mid { display: flex; align-items: center; gap: var(--kb-space-md); }
+.pl-transport__end { display: flex; justify-content: flex-end; }
+/* One disabled look in the transport (player-G10): no fill, kb-hint ink; the 64 px keeps its ring */
+.pl-transport .lx-round:disabled { background: transparent; border-color: transparent; color: var(--kb-hint); }
+.pl-transport .lx-round--l:disabled { border-color: var(--kb-border-strong); }
+/* The rows: a hairline list, label on the start edge, value on the end edge */
+.pl-rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--kb-border); }
+.pl-rows > li { border-bottom: 1px solid var(--kb-border); }
+.pl-row { display: flex; align-items: center; justify-content: space-between; gap: var(--kb-space-md); width: 100%; min-height: var(--lx-ctl); margin: 0; padding: var(--kb-space-xs) 0; border: 0; background: transparent; color: var(--kb-ink); font-family: var(--font-body); font-size: var(--lx-fs-ui); font-weight: var(--kb-weight-semibold); line-height: 1.2; text-align: start; cursor: pointer; }
+.pl-row:hover .pl-row__label { text-decoration: underline; text-underline-offset: 0.2em; }
+.pl-row__val { display: inline-flex; align-items: center; gap: var(--kb-space-sm); flex: none; font-weight: var(--kb-weight-regular); color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.pl-chev { display: inline-flex; transform: rotate(180deg); }
+.pl-row[aria-expanded="true"] .pl-chev { transform: none; }
+.pl-switch { position: relative; flex: none; width: 2.25rem; height: 1.375rem; box-sizing: border-box; border: 1.5px solid var(--rd-control-edge); border-radius: var(--kb-radius-pill); background: var(--kb-surface); }
+.pl-switch::after { content: ""; position: absolute; top: 50%; left: 0.1875rem; width: 0.75rem; height: 0.75rem; margin-top: -0.375rem; border-radius: 50%; background: var(--kb-secondary); }
+.pl-row[aria-checked="true"] .pl-switch { background: var(--kb-accent); border-color: var(--kb-accent); }
+.pl-row[aria-checked="true"] .pl-switch::after { left: auto; right: 0.1875rem; background: var(--rd-on-accent); }
+.pl-drop { padding-bottom: var(--kb-space-md); }
+/* The speed choice: the signed Display options (01-reader .rd-opt), value for value */
+.pl-speeds { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--kb-space-xs); }
+@media (max-width: 21.99rem) { .pl-speeds { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.pl-opt {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--kb-space-xs);
+  min-height: 3.25rem; padding: var(--kb-space-xs); border: 1px solid var(--rd-control-edge); border-radius: var(--kb-radius-sm);
+  background: var(--kb-surface); color: var(--kb-ink); cursor: pointer; font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 0 0 1px transparent; transition: border-color var(--rd-ease), box-shadow var(--rd-ease), background var(--rd-ease);
+}
+.pl-opt:hover { border-color: var(--kb-accent); }
+.pl-opt[aria-pressed="true"] { border-color: var(--kb-accent); box-shadow: inset 0 0 0 1px var(--kb-accent); background: var(--kb-accent-soft); }
+/* The chapter list: the signed Contents list; a chapter not yet made is a plain row (F11) */
+.pl-drop .rd-chs { border-top: 0; }
+.pl-drop .rd-chs__item:last-child { border-bottom: 0; }
+.pl-ch { background: transparent; font-family: var(--font-body); font-size: inherit; text-align: start; cursor: pointer; }
+button.pl-ch:hover { background: var(--kb-surface-sunken); }
+button.pl-ch:hover .rd-ch__title { text-decoration: underline; text-underline-offset: 0.2em; }
+.pl-ch--off { cursor: default; }
+/* The current chapter (F28): the signed accent-soft row plus a 1px accent edge, in a border every row carries */
+.pl-ch { border: 1px solid transparent; }
+.pl-ch[aria-current] { border-color: var(--kb-accent); }
+.pl-foot { display: flex; }
+@media print { .pl-sheet, .pl-scrim { display: none !important; } }
+
 /* ---------- The compact top bar on a two-language loose document (F26) ----------
    The signed compact chrome (round 03), at the widths a loose document's bar needs: with Notes in the bar, the language
    switch takes the second slot's row under 23rem (a chapter keeps the signed 21rem), and from 23rem to 26rem the logo

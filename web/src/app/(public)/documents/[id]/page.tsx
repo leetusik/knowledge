@@ -9,6 +9,8 @@ import { DOCUMENTS } from "@/content";
 import { optionalIdentity } from "@/lib/auth-guards";
 import { getDocument } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
+import { docSeed, readListenState } from "@/lib/listen/seed";
+import type { ListenSeed } from "@/lib/listen/types";
 import { loginHref } from "@/lib/next-path";
 import { parseReaderCookie, READER_COOKIE } from "@/lib/reader-cookie";
 import { chapterRedirectHref } from "@/lib/reader-href";
@@ -33,6 +35,11 @@ import type { KbDocument } from "@/lib/knowledge/types";
 // knowledge client is `cache: "no-store"`, so the page and the metadata share ONE
 // document read per request (`getDocumentOnce`, React `cache`). A miss or a fault falls
 // back to the static title; the page handles the miss itself.
+//
+// P41-sr.W2 — Listen: a signed-in member of a native document whose org the reader knows
+// (`view.write`, from its pretty path) gets the Listen seed the pretty route reads, keyed
+// the same way, after the load (the key's org comes from it). A document with no org slug
+// has no Listen key here and stays without Listen.
 const getDocumentOnce = cache(
   (token: string | undefined, id: number): Promise<KbDocument> =>
     getDocument(token, id),
@@ -142,12 +149,26 @@ export async function generateViewport({
   return {};
 }
 
-function render(loaded: ReaderLoad) {
+function render(loaded: ReaderLoad, listen: ListenSeed | null = null) {
   return loaded.kind === "reader" ? (
-    <ReaderPage reader={loaded.reader} />
+    <ReaderPage reader={loaded.reader} listen={listen} />
   ) : (
     <LegacyReaderPage legacy={loaded.legacy} />
   );
+}
+
+/** A member's Listen seed for a native document with a known org (the pretty route's key). */
+async function listenSeedOf(
+  token: string,
+  doc: KbDocument,
+  loaded: ReaderLoad,
+  id: number,
+): Promise<ListenSeed | null> {
+  if (loaded.kind !== "reader" || !doc.source) return null;
+  const write = loaded.reader.view.write;
+  if (!write) return null;
+  const state = await readListenState(token, write);
+  return docSeed(loaded.reader.view, state, write, `/documents/${id}`);
 }
 
 export default async function DocumentPage({
@@ -178,7 +199,8 @@ export default async function DocumentPage({
     // Temporary (307), like the pretty-URL redirect below; the browser keeps `#section`.
     const chapter = chapterRedirectHref(doc, { v, lang: langOf(query.lang) });
     if (chapter) redirect(chapter);
-    return render(await loadOnce(ctx.token, id, v, cookie));
+    const loaded = await loadOnce(ctx.token, id, v, cookie);
+    return render(loaded, await listenSeedOf(ctx.token, doc, loaded, id));
   }
 
   // ── Anonymous branch — public-only read, no token. A miss bounces to /login. ─

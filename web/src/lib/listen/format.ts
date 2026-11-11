@@ -82,3 +82,16 @@ export function clockAt(
   }
   return `${at.getDate()} ${MONTHS[at.getMonth()]} ${at.getFullYear()}`;
 }
+
+/**
+ * P41-sr.W2 — a sum over chapters (F2): rounded to the half hour with "about" (`about
+ * 4 h`, `about 3 h 30 min`). Under 45 minutes, where a half hour says nothing, the made
+ * length with "about" (`about 12 min`).
+ */
+export function aboutSum(seconds: number): string {
+  const mins = seconds / 60;
+  if (mins < 45) return LISTEN.time.about(lengthWords(seconds));
+  const half = Math.max(2, Math.round(mins / 30));
+  const h = Math.floor(half / 2);
+  return LISTEN.time.about(half % 2 ? `${h} h 30 min` : `${h} h`);
+}

@@ -21,6 +21,7 @@ import {
   useFollowAlong,
   type ListenPageValue,
 } from "@/components/listen/listen-page";
+import { ListenPlayer } from "@/components/listen/player";
 import { READER } from "@/content";
 import { useListen } from "@/lib/listen/store";
 import type { ListenSeed } from "@/lib/listen/types";
@@ -98,6 +99,10 @@ import "@/app/reader.css";
  * store's, which outlives the page) takes the bottom slot as the dock, grows the page's
  * end padding and lifts the slot's other pills above it; follow along marks the block
  * being read.
+ *
+ * P41-sr.W2: the opened player's sheet (`ListenPlayer`) opens from the dock over this page;
+ * a chapter's Listen is the book from that chapter, and follow along runs only on the
+ * page of the chapter being heard.
  */
 type Panel = "contents" | "notes" | "display" | "versions" | null;
 
@@ -540,7 +545,7 @@ export function ReaderFrame({
   );
   const listenPill =
     ready && !!listen && past && !topHidden && panel === null && !pillUp;
-  useFollowAlong(rootRef, ready ? listenUnit : null);
+  useFollowAlong(rootRef, ready ? listenUnit : null, listen?.chapter ?? null);
   const notesBridge = useMemo<NotesBridge>(
     () => ({
       open: panel === "notes",
@@ -668,6 +673,7 @@ export function ReaderFrame({
         <ListenPageContext.Provider value={listenPage}>
           <ListenSlot chapter={!loose} pill={listenPill} signInHref={signIn} />
         </ListenPageContext.Provider>
+        <ListenPlayer signInHref={signIn} />
 
         {hasBottom && book ? (
           <nav className="rd-bottom" aria-label={READER.bottom.navLabel}>

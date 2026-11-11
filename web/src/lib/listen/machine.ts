@@ -81,6 +81,7 @@ const SOUNDING: readonly ListenKey[] = [
   "loading",
   "playing",
   "buffering",
+  "next-waiting",
   "offline-play",
 ];
 
@@ -104,8 +105,11 @@ export type MachineEvent =
   /** Try again after a failure on our side: start remakes the unit (P41-sr.B1). */
   | { t: "remake" }
   | { t: "playing" }
-  /** The element waits for data (`waiting`). */
-  | { t: "stall" }
+  /**
+   * The element waits for data (`waiting`). `next`: at the end of a made chapter whose next
+   * chapter is not made yet (P41-sr.W2, `stallKey`), the stream waits for the making.
+   */
+  | { t: "stall"; next?: boolean }
   /** The listener paused (not the pause that ends the media). */
   | { t: "pause" }
   | { t: "ended" }
@@ -155,7 +159,9 @@ export function step(m: Machine, e: MachineEvent): Machine {
     case "playing":
       return { key: "playing", back: null };
     case "stall":
-      if (k === "playing") return { key: "buffering", back: null };
+      if (k === "playing" || k === "buffering" || k === "next-waiting") {
+        return { key: e.next ? "next-waiting" : "buffering", back: null };
+      }
       if (k === "offline-play") return { key: "offline-stopped", back: null };
       return m;
     case "pause":
@@ -169,7 +175,7 @@ export function step(m: Machine, e: MachineEvent): Machine {
     case "session":
       return { key: "fail-session", back: null };
     case "offline":
-      if (k === "playing" || k === "buffering") {
+      if (k === "playing" || k === "buffering" || k === "next-waiting") {
         return {
           key: e.loaded > 1 ? "offline-play" : "offline-stopped",
           back: null,
@@ -220,6 +226,7 @@ export function polls(
     key === "waiting" ||
     key === "making" ||
     key === "ready" ||
+    key === "next-waiting" ||
     key === "offline-start"
   );
 }

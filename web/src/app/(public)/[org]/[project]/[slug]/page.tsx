@@ -11,8 +11,7 @@ import { resolveDocument } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
 import { docStem } from "@/lib/knowledge/reader";
 import type { KbDocument } from "@/lib/knowledge/types";
-import { readListenState } from "@/lib/listen/seed";
-import type { ListenSeed } from "@/lib/listen/types";
+import { docSeed, readListenState } from "@/lib/listen/seed";
 import { parseReaderCookie, READER_COOKIE } from "@/lib/reader-cookie";
 import { chapterRedirectHref } from "@/lib/reader-href";
 import { loadLooseReader, type ReaderLoad } from "@/lib/reader/load";
@@ -230,28 +229,20 @@ export default async function PrettyDocumentPage({
   return loaded.kind === "reader" ? (
     <ReaderPage
       reader={loaded.reader}
-      listen={listenSeed(loaded.reader.view, listenState, {
-        org: orgSlug,
-        project: doc.project,
-        doc: docStem(doc.project, doc.rel_path),
-      })}
+      listen={docSeed(
+        loaded.reader.view,
+        listenState,
+        {
+          org: orgSlug,
+          project: doc.project,
+          doc: docStem(doc.project, doc.rel_path),
+        },
+        doc.canonical_path ?? `/${orgParam}/${projectParam}/${slugParam}`,
+      )}
     />
   ) : (
     <LegacyReaderPage legacy={loaded.legacy} />
   );
-}
-
-/**
- * The page's Listen seed: the state read at load, on the version Listen plays (the
- * current one; an older version's text would not be the audio's), else none.
- */
-function listenSeed(
-  view: { title: string; lang: string; version: number; newest: number },
-  state: Awaited<ReturnType<typeof readListenState>>,
-  key: ListenSeed["key"],
-): ListenSeed | null {
-  if (!state || view.version < view.newest) return null;
-  return { key, title: view.title, lang: view.lang, state };
 }
 
 /** `decodeURIComponent` that returns the input unchanged on a malformed escape. */

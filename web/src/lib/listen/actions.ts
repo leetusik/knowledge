@@ -34,7 +34,8 @@ const segment = z
   .max(200)
   .regex(/^[^/\s][^/]*$/);
 
-const keySchema = z
+// P41-sr.W2: B1's two key forms, a document or a book from a chapter, strict either way.
+const docKey = z
   .object({
     org: z.string().min(1).max(200),
     project: segment,
@@ -42,13 +43,32 @@ const keySchema = z
   })
   .strict();
 
-const positionSchema = keySchema
-  .extend({
-    seconds: z.number().min(0).max(14400),
-    speed: z.number().min(0.5).max(3).optional(),
-    follow: z.boolean().optional(),
+const bookKey = z
+  .object({
+    org: z.string().min(1).max(200),
+    project: segment,
+    book: segment,
+    from_chapter: segment.optional(),
+    lang: z
+      .string()
+      .regex(/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/)
+      .optional(),
   })
   .strict();
+
+const keySchema = z.union([docKey, bookKey]);
+
+const where = {
+  seconds: z.number().min(0).max(14400),
+  speed: z.number().min(0.5).max(3).optional(),
+  follow: z.boolean().optional(),
+  kept: z.boolean().optional(),
+};
+
+const positionSchema = z.union([
+  docKey.extend(where).strict(),
+  bookKey.extend({ ...where, chapter: segment.optional() }).strict(),
+]);
 
 export type ListenResult =
   { ok: true; state: KbListenState } | { ok: false; status: number };
