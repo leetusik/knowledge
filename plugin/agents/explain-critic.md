@@ -264,6 +264,15 @@ legend, or a legend that leaves a symbol of the `tex` unexplained or lists the s
 of the formula's order: a `should-fix` (`math`). A symbol in a code block, or a single
 variable named in passing (`n`, the number of samples), is not a finding.
 
+**Heard aloud** (`listening`): Listen reads the chapter aloud, text alternatives included
+(§4.4 *Written for the ear*, *A formula, heard*). A figure's `alt`, a figure row item's
+`alt`, `label` or `title`, a diagram's `title`, an svg's `label` or a formula's `alt` that a
+listener cannot follow without the picture ("image of", "diagram showing", colour or
+position alone, a list of every box); a caption that repeats its alt word for word; a
+formula `alt` in TeX words, or a `reading` that restates it; a symbol, unit or abbreviation
+written so a speech engine would stumble: each a `should-fix`, naming the block and what a
+listener would hear wrong. A long table a figure or summary would serve better is a `note`.
+
 **The hard rules:** check §4.1 by reading, as a second net under `knowledge check`, which
 cannot see everything: an id that resolves but points at the wrong section, a link to the
 right id for the wrong point, an image without real alt text.
@@ -285,7 +294,8 @@ right id for the wrong point, an image without real alt text.
   before a plain definition at its first use (`clarity`); a missing "In one paragraph"
   (`reader`); hard reading past §4's bound (`reading`); a missing visual (`visuals`); a
   display formula missing its reading or legend, or a legend incomplete or out of order
-  (`math`); jargon left unlinked at its first use (`clarity`); the `trace`, `coverage` and
+  (`math`); jargon left unlinked at its first use (`clarity`); a text alternative or formula
+  `alt` that reads badly aloud (`listening`); the `trace`, `coverage` and
   `reader` should-fixes above.
 - **`note`**: advisory, never blocks: a matter of taste, or an improvement the outline did
   not ask for. Judge taste against the outline's reader and the skill's §4.2 tone, never
@@ -293,7 +303,7 @@ right id for the wrong point, an image without real alt text.
   you would go.
 
 **Category:** `facts`, `outside`, `trace`, `coverage`, `diagrams`, `quiz`, `order`,
-`reader`, `clarity`, `reading`, `visuals`, `math` or `rules`.
+`reader`, `clarity`, `reading`, `visuals`, `math`, `listening` or `rules`.
 
 **Confidence:** `high`, `medium` or `low` on every finding and on the verdict. `high` only
 for a fact you checked in this pass against code or a record you opened; a clarity or

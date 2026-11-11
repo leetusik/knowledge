@@ -1450,9 +1450,28 @@ caption: The layers, *as sketched in review*.
 ```
 ````
 
+**Written for the ear.** Listen reads a chapter aloud and never shows the picture: it reads
+a figure's `alt`, a figure row item's `alt`, `label` or card `title`, a diagram's `title`
+and an svg's `label`, each followed by its caption. So that text:
+
+- is a sentence a listener can follow without the picture: what it shows and the point it
+  makes; never "image of" or "diagram showing", never colour or position alone ("the red
+  box", "on the left"), never a list of every box;
+- is not repeated word for word by the caption read after it: the caption adds;
+- is written as it is spoken where a speech engine would stumble: `≥` as "at least", `→` as
+  "to", `/` as "per" or "or", "200 ms" as "200 milliseconds", an abbreviation as it is said;
+- follows the same rules in a Korean document, in natural Korean.
+
+Bad: `alt: Diagram showing boxes A, B and C, the red one on the left.` Good: `alt: A request
+goes to the cache first and reaches the database only on a miss.` A table is read row by
+row ("header: cell; …"), so a long one is long to hear: consider whether a figure or a short
+summary paragraph serves the listener better.
+
 **Figure row** — 2–3 items side by side (stacked on a phone), each one of `image` (+ `alt`),
 `diagram` (an inline diagram body), `svg` (+ `label`) or `card` (`title`, `body` *(md)*,
-`tone`); each may have a `caption`; the row may have its own `caption`.
+`tone`); each may have a `caption`; the row may have its own `caption`. Each item is heard
+in order, its text alternative then its caption, then the row's caption (*Written for the
+ear*, above).
 
 ````markdown
 ```figures #before-after
@@ -1471,7 +1490,8 @@ items:
 
 **Diagram** — drawn by the reader from data; prefer it to ASCII art or hand-made SVG. Every
 diagram needs `kind` and `title` (the short text alternative), and may have a `caption`
-*(md)*. Tones (the only colours): `default`, `muted`, `accent`, `ok`, `warn`, `bad`,
+*(md)*. The title and caption are all a listener hears of it (its nodes and edges are not
+read), so between them they carry the point (*Written for the ear*). Tones (the only colours): `default`, `muted`, `accent`, `ok`, `warn`, `bad`,
 `store`, `series-1` … `series-6`. Kinds:
 
 - `flow` — `nodes[{id, label, sub?, at?: [row, col], shape?: box|pill|store|entity,
@@ -1506,7 +1526,7 @@ edges:
 ````
 
 **Custom SVG** — only when no diagram kind fits. Body is `label` (required text
-alternative), optional `caption`, and `svg` (one `<svg>` with a `viewBox`). **Allowed
+alternative, read aloud: *Written for the ear*), optional `caption`, and `svg` (one `<svg>` with a `viewBox`). **Allowed
 elements:** `svg g defs marker title desc rect circle ellipse line polyline polygon path
 text tspan`, and `use` with a local `#id` only. **Colour only** via `fill`/`stroke` set to
 `none` or `currentColor`, and the classes `kb-fill-<tone>` / `kb-stroke-<tone>`; no hex,
@@ -1590,6 +1610,13 @@ It carries no written spoken text: the reader derives it from the TeX.
   is the critic's check (B5).
 
 A `tex` whose top level is one `\begin{aligned}…\end{aligned}` is drawn as steps.
+
+**A formula, heard.** Listen reads its `alt`, then its `reading`, then each legend line as
+"symbol: means". So write `alt` the way a person says the formula ("x squared plus one"),
+never in TeX words ("x caret 2", "frac", "backslash mu"), with symbols and units spelled
+as spoken (*Written for the ear*); keep `reading` a sentence that does not restate `alt`;
+and write each `means` as a short clause that follows its symbol ("the sample mean"). Inline
+math needs nothing: it is read as linear text derived from its TeX.
 
 ````markdown
 ```formula #tstat
@@ -2408,6 +2435,15 @@ legend, or a legend that leaves a symbol of the `tex` unexplained or lists the s
 of the formula's order: a `should-fix` (`math`). A symbol in a code block, or a single
 variable named in passing (`n`, the number of samples), is not a finding.
 
+**Heard aloud** (`listening`): Listen reads the chapter aloud, text alternatives included
+(§4.4 *Written for the ear*, *A formula, heard*). A figure's `alt`, a figure row item's
+`alt`, `label` or `title`, a diagram's `title`, an svg's `label` or a formula's `alt` that a
+listener cannot follow without the picture ("image of", "diagram showing", colour or
+position alone, a list of every box); a caption that repeats its alt word for word; a
+formula `alt` in TeX words, or a `reading` that restates it; a symbol, unit or abbreviation
+written so a speech engine would stumble: each a `should-fix`, naming the block and what a
+listener would hear wrong. A long table a figure or summary would serve better is a `note`.
+
 **The hard rules:** check §4.1 by reading, as a second net under `knowledge check`, which
 cannot see everything: an id that resolves but points at the wrong section, a link to the
 right id for the wrong point, an image without real alt text.
@@ -2429,7 +2465,8 @@ right id for the wrong point, an image without real alt text.
   before a plain definition at its first use (`clarity`); a missing "In one paragraph"
   (`reader`); hard reading past §4's bound (`reading`); a missing visual (`visuals`); a
   display formula missing its reading or legend, or a legend incomplete or out of order
-  (`math`); jargon left unlinked at its first use (`clarity`); the `trace`, `coverage` and
+  (`math`); jargon left unlinked at its first use (`clarity`); a text alternative or formula
+  `alt` that reads badly aloud (`listening`); the `trace`, `coverage` and
   `reader` should-fixes above.
 - **`note`**: advisory, never blocks: a matter of taste, or an improvement the outline did
   not ask for. Judge taste against the outline's reader and the skill's §4.2 tone, never
@@ -2437,7 +2474,7 @@ right id for the wrong point, an image without real alt text.
   you would go.
 
 **Category:** `facts`, `outside`, `trace`, `coverage`, `diagrams`, `quiz`, `order`,
-`reader`, `clarity`, `reading`, `visuals`, `math` or `rules`.
+`reader`, `clarity`, `reading`, `visuals`, `math`, `listening` or `rules`.
 
 **Confidence:** `high`, `medium` or `low` on every finding and on the verdict. `high` only
 for a fact you checked in this pass against code or a record you opened; a clarity or

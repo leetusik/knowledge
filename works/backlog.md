@@ -16,7 +16,7 @@
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P41-sr` | planned | `P41-sr.B3` | 11/17 | - | working tree |
+| `default` | `P41-sr` | planned | `P41-sr.B3` | 12/17 | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
@@ -389,9 +389,9 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | [x] `P41-sr.DECOMP2` | `done` | the build cut | `decomposition` | `works/phases/active/P41-sr/slices/P41-sr.DECOMP2` |
 | [x] `P41-sr.B1` | `done` | Listen jobs, audio store and listening positions (backend core) | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.B1` |
 | [x] `P41-sr.B2` | `done` | Audio delivery: playlists and Range from FastAPI through the BFF and the edge | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.B2` |
-| [ ] `P41-sr.B3` | `todo` | The Mac voice runner: Ming-3.0, poll, render, upload | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.B3` |
-| [ ] `P41-sr.W1` | `todo` | The web player core: the persistent Listen, the dock, the note, Listen on a document | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.W1` |
-| [ ] `P41-sr.G1` | `todo` | Alt text that reads aloud well, and the plugin release | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.G1` |
+| [ ] `P41-sr.B3` | `in_progress` | The Mac voice runner: Ming-3.0, poll, render, upload | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.B3` |
+| [ ] `P41-sr.W1` | `in_progress` | The web player core: the persistent Listen, the dock, the note, Listen on a document | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.W1` |
+| [x] `P41-sr.G1` | `done` | Alt text that reads aloud well, and the plugin release | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.G1` |
 | [ ] `P41-sr.W2` | `todo` | Book playback, the opened player and the book landing | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.W2` |
 | [ ] `P41-sr.X1` | `todo` | Ship it: deploy, migrate, start the Mac runner, check Range on production | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.X1` |
 | [ ] `P41-sr.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P41-sr/slices/P41-sr.REVIEW` |

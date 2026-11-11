@@ -316,11 +316,11 @@
       "review_status": "pending",
       "current_slice": "P41-sr.B3",
       "slice_count": 17,
-      "done_slice_count": 11
+      "done_slice_count": 12
     }
   ],
   "deferred_open_count": 86,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 20,
-  "last_rebuilt_at": "2026-11-11T16:40:25+09:00"
+  "last_rebuilt_at": "2026-11-11T16:48:33+09:00"
 }

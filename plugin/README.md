@@ -24,7 +24,9 @@ two skills:
   published. The chapter can carry a **glossary** whose terms the text links
   with `term:` links (each opens its definition in the reader), and **typeset
   formulas**: inline `` $`…`$ `` math and a `formula` block with a plain reading
-  and a "where" legend, typeset in the reader and on paper. The default is a
+  and a "where" legend, typeset in the reader and on paper. Its alt text,
+  diagram titles and formulas are written **for the ear**, so Listen reads them
+  aloud well, and the critic checks them. The default is a
   standalone document; a chapter of a book, or a
   whole book, only when you ask for one. Skill text:
   [`skills/explain/SKILL.md`](skills/explain/SKILL.md).
@@ -54,7 +56,7 @@ whenever you want something explained and kept.
 **Requirements:** a workflow workspace v96 or later in the repository you run it
 from (without one it refuses and runs nothing; an older one, or one whose
 create-phase research route does not write the `sources` line, is told to run
-`/update-workspace`), and `/knowledge:setup` run once. Plugin 0.11.0 and workspace
+`/update-workspace`), and `/knowledge:setup` run once. Plugin 0.12.0 and workspace
 v96 need each other: v96's explain route refuses an older plugin's proposal and
 creates nothing, so update both (the workspace first).
 
@@ -172,6 +174,11 @@ list is for **scaffold** (self-hosted) mode:
   running API there is nothing to publish to, because a native chapter cannot be
   written by hand).
 - A GitHub repository (optional — only needed to publish the site via Pages).
+- **Listen** (optional): the scaffolded server carries Listen's server half —
+  the chapter's spoken script, a job queue with its reader and runner API, and
+  the audio delivery. It needs Postgres (`DATABASE_URL`) and a voice runner,
+  which the plugin does not ship, so in a plugin install the Listen routes
+  exist but make no audio.
 
 The live demo of what you get: <https://leetusik.github.io/knowledge/>.
 
