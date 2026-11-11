@@ -105,3 +105,21 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
   - **English: Ming-3.0 US_Emma.** MIT, arena Elo 1185, RTF 0.42, 4.4 GB. Ming's Korean must be pre-split, because mlx-audio's splitter ignores Hangul.
   - **The box is unchanged:** Supertonic 3, with MeloTTS as the Korean fallback.
   - → `topics/voice-models.md` § Recommendation, § Round 3 (R5)
+
+## Notes for later slices 10 (2)
+
+- **(from P41-sr.R2, for P41-sr.DECOMP2)** Supertone, Supertonic's maker, has been in liquidation since
+  2026-07. The weights run offline under OpenRAIL-M, so keep a local copy and expect no updates. See
+  `topics/voice-models.md`.
+
+## Notes for later slices 11
+
+- **(from P41-sr.R1, for P41-sr.D1, P41-sr.DECOMP2)** The free-API pick, by ear: edge-tts (keyless, unofficial; EN Andrew or Ava, KO SunHi or Hyunsu; no quota a book reaches). Only edge-tts and Google Translate TTS were heard. Gemini (official; its free tier trains on the text) and Deepgram (training opt-out; a one-time $200 credit) were surveyed, not sampled: no key. Fish Audio's free API and Cloudflare MeloTTS end this month. → `topics/voice-apis.md` § Shortlist and recommendation
+
+## Notes for later slices 12 (2)
+
+- **(from P41-sr.R1, for P41-sr.D1, P41-sr.DECOMP2)** "Preparing" is long: a book is 2.7–11.2 h of audio, and edge-tts makes it in about 1–3.5 h, one request at a time (bursts get a 403 IP block). Generate ahead per chapter, play each chapter as it lands, and keep the voice behind one adapter with a fallback. → `topics/voice-apis.md` § Risks
+
+## Notes for later slices 15 (2)
+
+- **(orchestrator, for D1's stop and DECOMP2)** The voice samples page, private: https://claude.ai/artifact/MvYx6Sqwf5fvRBvqk9yV5z. It holds 17 samples (6 API, 11 model) from both manifests, built by a scratch `build.py`. The operator's pick there decides DECOMP2's voice engine.

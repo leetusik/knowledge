@@ -21,9 +21,12 @@ module holds every query, so each state transition lives in one place:
   attempts is failed by the next claim instead of handed out.
 * **Finish and fail.** :func:`finish` records the made part on every part row with
   that key (so every unit sharing it moves), recounts those units and sets a unit
-  ``made`` when all its parts are. :func:`fail` re-queues the job until its
-  attempts reach ``config.listen_max_attempts``; then the job and every unit
-  waiting on its key are ``failed`` with the runner's message.
+  ``made`` when all its parts are. A part's ``seconds`` is measured from its stored
+  bytes (``server/listen_mp4.py``, P41-sr.B2), the same figure the playlist adds up;
+  the runner's own seconds stand in only for a file that does not index.
+  :func:`fail` re-queues the job until its attempts reach
+  ``config.listen_max_attempts``; then the job and every unit waiting on its key are
+  ``failed`` with the runner's message.
 * **Positions** (:func:`upsert_position`): one row per user and Listen, last write
   wins; ``speed`` and ``follow`` ride on each row and the user's newest row is the
   preference a new Listen starts with.
@@ -41,6 +44,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from server import config
 from server import listen as store
+from server import listen_mp4 as mp4
 from server.persistence.engine import get_session_maker
 from server.persistence.models import (
     ListenJobModel,
@@ -302,6 +306,43 @@ async def units_for_docs(
     )
     async with _session() as session:
         return list((await session.execute(stmt)).all())
+
+
+async def units_by_ids(unit_ids: Iterable[UUID]) -> list[Any]:
+    """The unit rows for these ids (P41-sr.B2's playlist; a missing id is absent)."""
+
+    ids = list(set(unit_ids))
+    if not ids:
+        return []
+    async with _session() as session:
+        return list((await session.execute(select(UNITS).where(UNITS.c.id.in_(ids)))).all())
+
+
+async def play_parts(unit_ids: Iterable[UUID], *, segments: bool = False) -> list[Any]:
+    """Every part of these units with what delivery needs (P41-sr.B2): the stored
+    file and when it was made, and, for the timeline, the segments and their seconds."""
+
+    ids = list(set(unit_ids))
+    if not ids:
+        return []
+    cols = [PARTS.c.unit_id, PARTS.c.idx, PARTS.c.file, PARTS.c.made_at]
+    if segments:
+        cols += [PARTS.c.segments, PARTS.c.segment_seconds]
+    stmt = select(*cols).where(PARTS.c.unit_id.in_(ids)).order_by(PARTS.c.unit_id, PARTS.c.idx)
+    async with _session() as session:
+        return list((await session.execute(stmt)).all())
+
+
+async def unit_part(unit_id: UUID, idx: int) -> Optional[Any]:
+    """One part with its unit's document identity (P41-sr.B2's part route), or ``None``."""
+
+    stmt = (
+        select(UNITS.c.tenant_id, UNITS.c.project, UNITS.c.doc, PARTS.c.file, PARTS.c.made_at)
+        .select_from(PARTS.join(UNITS, PARTS.c.unit_id == UNITS.c.id))
+        .where(PARTS.c.unit_id == unit_id, PARTS.c.idx == idx)
+    )
+    async with _session() as session:
+        return (await session.execute(stmt)).first()
 
 
 async def parts_for_units(unit_ids: Iterable[UUID]) -> list[Any]:
@@ -570,7 +611,16 @@ async def finish(
         if path is None or not path.is_file():
             raise JobConflict("upload the part before finishing it")
         size = job.bytes if job.bytes is not None else path.stat().st_size
-        seconds = seconds if seconds is not None else job.seconds
+        # P41-sr.B2: the stored bytes measure the part (the playlist's EXTINF sum), so
+        # the runner's own figure only stands in for a file that does not index.
+        try:
+            measured: Optional[float] = mp4.index_file(path).seconds
+        except (OSError, mp4.PackagingError):
+            measured = None
+        if measured is not None:
+            seconds = measured
+        else:
+            seconds = seconds if seconds is not None else job.seconds
         if seconds is None:
             raise ValueError("seconds is required (in the finish body or the upload header)")
         part = (

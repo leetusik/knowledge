@@ -1,0 +1,11 @@
+{
+  "id": "D108-5s",
+  "title": "Reader pagehide beacon has no edge route in production",
+  "status": "deferred",
+  "source": "P41-sr.B2 planning (orchestrator observation)",
+  "reason": "web/src/components/reader/use-reading.ts sends navigator.sendBeacon('/api/reader/position'), a Next route handler, but deploy/knowledge.conf has no location for it, so production sends it to location /api/ (FastAPI), which has no such route. The pagehide save likely 404s; the server-action saves are unaffected. Seen while planning P41-sr.B2, outside its phase.",
+  "trigger": "Next deploy-config change, or the reader's last position on leaving is found stale on production",
+  "created_at": "2026-11-11T16:40:25+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

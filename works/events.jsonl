@@ -1950,3 +1950,7 @@
 {"ts": "2026-11-11T16:03:10+09:00", "type": "deferred_created", "deferred": "D107-he", "source": "P41-sr.B1 result.md § Open edges"}
 {"ts": "2026-11-11T16:03:21+09:00", "type": "executor_dispatched", "slice": "P41-sr.B1", "phase": "P41-sr", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-11T16:03:21+09:00", "type": "slice_status_changed", "slice": "P41-sr.B1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-11T16:06:47+09:00", "type": "slice_status_changed", "slice": "P41-sr.B2", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-11T16:40:25+09:00", "type": "executor_dispatched", "slice": "P41-sr.B2", "phase": "P41-sr", "kind": "implementation", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-11T16:40:25+09:00", "type": "slice_status_changed", "slice": "P41-sr.B2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-11T16:40:25+09:00", "type": "deferred_created", "deferred": "D108-5s", "source": "P41-sr.B2 planning (orchestrator observation)"}

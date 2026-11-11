@@ -192,7 +192,11 @@
       "server/listen_jobs.py",
       "server/listen_api.py",
       "tests/test_listen.py",
-      "tests/fixtures/listen/doc.md"
+      "tests/fixtures/listen/doc.md",
+      "server/listen_mp4.py",
+      "server/listen_play.py",
+      "tests/test_listen_play.py",
+      "tests/fixtures/listen/part.m4a"
     ],
     "parameterized": [
       "mkdocs.yml",

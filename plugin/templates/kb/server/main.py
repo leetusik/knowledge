@@ -36,6 +36,7 @@ from server import config, db
 from server import dashboard_api
 from server import documents_api
 from server import listen_api
+from server import listen_play
 from server import reader_api
 from server import reader_state
 from server import usage_api
@@ -176,6 +177,10 @@ app.include_router(reader_api.router)
 # Listen route answers 404. Unmetered; the audio lives in each content root's .audio/.
 app.include_router(listen_api.router)
 app.include_router(listen_api.runner_router)
+# Listen delivery (P41-sr.B2): the session-only /app/listen/play/… family, GET and
+# HEAD only: one HLS playlist per Listen, its parts with Range, and their timeline.
+# The Next BFF relays it at /api/listen/play/… (the edge routes that path to web).
+app.include_router(listen_play.router)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an

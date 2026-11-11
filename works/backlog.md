@@ -6,17 +6,17 @@
 ## Pointer
 
 - Current phase: `P41-sr`
-- Current slice: `P41-sr.B2`
-- Next slice: `P41-sr.B3`
+- Current slice: `P41-sr.B3`
+- Next slice: `P41-sr.W1`
 - Waiting on operator: `none`
-- Open deferred jobs: `85`
+- Open deferred jobs: `86`
 - Workspace version: `v89`
 
 ## Streams
 
 | Stream | Phase | Status | Current slice | Done | Worktree | Source |
 |---|---|---|---|---|---|---|
-| `default` | `P41-sr` | planned | `P41-sr.B2` | 10/17 | - | working tree |
+| `default` | `P41-sr` | planned | `P41-sr.B3` | 11/17 | - | working tree |
 | `phase/P36-1s-hermes_a_chat_agent_beside_the_reader` | `P36-1s` | in flight 2/5 | `P36-1s.D1` | 2/5 | `.claude/worktrees/P36-1s-hermes_a_chat_agent_beside_the_reader` | worktree |
 
 ## Active Phases
@@ -45,7 +45,7 @@
 | [x] `P38-e1` | `done` | `pass` | Right-size explain runs (plugin 0.9.0) | `none` · parallel: `phase/P38-e1-right-size_explain_runs_plugin_0.9.0` | `works/phases/active/P38-e1` |
 | [x] `P39-hk` | `done` | `pass` | Explain what was built: phase-grounded, suggested shape, glossary, formulas | `none` · parallel: `phase/P39-hk-explain_what_was_built` | `works/phases/active/P39-hk` |
 | [x] `P40-2t` | `done` | `pass` | One way to explain what the records don't cover | `none` · parallel: `phase/P40-2t-one_way_to_explain_what_the_records_don` | `works/phases/active/P40-2t` |
-| [ ] `P41-sr` | `planned` | `pending` | Listen: a free AI voice reader | `P41-sr.B2` | `works/phases/active/P41-sr` |
+| [ ] `P41-sr` | `planned` | `pending` | Listen: a free AI voice reader | `P41-sr.B3` | `works/phases/active/P41-sr` |
 
 ## Phase P21: Web document deletion
 
@@ -388,7 +388,7 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | [x] `P41-sr.R5` | `done` | more Korean voice models for the Mac, community-recommended | `research` | `works/phases/active/P41-sr/slices/P41-sr.R5` |
 | [x] `P41-sr.DECOMP2` | `done` | the build cut | `decomposition` | `works/phases/active/P41-sr/slices/P41-sr.DECOMP2` |
 | [x] `P41-sr.B1` | `done` | Listen jobs, audio store and listening positions (backend core) | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.B1` |
-| [ ] `P41-sr.B2` | `todo` | Audio delivery: playlists and Range from FastAPI through the BFF and the edge | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.B2` |
+| [x] `P41-sr.B2` | `done` | Audio delivery: playlists and Range from FastAPI through the BFF and the edge | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.B2` |
 | [ ] `P41-sr.B3` | `todo` | The Mac voice runner: Ming-3.0, poll, render, upload | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.B3` |
 | [ ] `P41-sr.W1` | `todo` | The web player core: the persistent Listen, the dock, the note, Listen on a document | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.W1` |
 | [ ] `P41-sr.G1` | `todo` | Alt text that reads aloud well, and the plugin release | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.G1` |

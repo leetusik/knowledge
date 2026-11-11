@@ -26,9 +26,18 @@ any other existing file for the key is a :class:`StoreConflict` (the route's 409
 database, git), and ``.audio/`` is in none of those. The extension comes from the
 upload's media type: ``audio/mp4`` stores ``.m4a`` (or ``.mp4`` when asked),
 ``audio/aac`` stores ``.aac``.
+
+**The play identity** (P41-sr.B2). A Listen plays as one HLS playlist whose URL
+names the units that play, in reading order: :func:`play_token` packs their ids
+(16 bytes each; an all-zero id stands for a listenable document with no unit yet)
+into one base64url token, and :func:`play_units` reads it back. The URL is the
+identity, so a playlist URL keeps naming the same units: when the units that play
+change (Update audio lands, a unit is replaced), the state hands out a new URL, and
+the old one keeps serving its own units until they are gone.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import os
 import re
@@ -36,7 +45,8 @@ import tempfile
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Iterable, Optional, Sequence, Union
+from uuid import UUID
 
 from server import config
 
@@ -339,3 +349,54 @@ def store_part(root: Union[str, Path], key: str, ext: str, data: bytes) -> tuple
                 os.unlink(tmp)
             except OSError:
                 pass
+
+
+# --- the play identity (P41-sr.B2) ------------------------------------------------
+
+PLAY_PREFIX = "/app/listen/play"
+PLAY_MAX_UNITS = 256  # a token of at most ~5.5 KB, inside every hop's URL limit
+_NIL = bytes(16)
+_PLAY_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{22,%d}$" % ((PLAY_MAX_UNITS * 16 * 4 + 2) // 3))
+
+
+def play_token(units: Sequence[Optional[UUID]]) -> str:
+    """The playlist id for these units, in order (``None``: a document with no unit)."""
+
+    raw = b"".join(_NIL if u is None else u.bytes for u in units)
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
+
+
+def play_units(token: str) -> Optional[list[Optional[UUID]]]:
+    """The units a playlist id names, or ``None`` when it is not one (the 404).
+
+    Only the canonical spelling is accepted, so one list of units has one URL.
+    """
+
+    if not _PLAY_TOKEN_RE.fullmatch(token or ""):
+        return None
+    try:
+        raw = base64.urlsafe_b64decode(token + "=" * (-len(token) % 4))
+    except (ValueError, TypeError):
+        return None
+    if not raw or len(raw) % 16 or len(raw) // 16 > PLAY_MAX_UNITS:
+        return None
+    units = [None if raw[i:i + 16] == _NIL else UUID(bytes=raw[i:i + 16])
+             for i in range(0, len(raw), 16)]
+    if play_token(units) != token or all(u is None for u in units):
+        return None
+    return units
+
+
+def play_links(units: Sequence[Optional[UUID]]) -> Optional[dict[str, str]]:
+    """The state's ``play``: the playlist and timeline paths for these units, or
+    ``None`` when no document of the Listen has a unit yet."""
+
+    units = list(units)[:PLAY_MAX_UNITS]
+    if all(u is None for u in units):
+        return None
+    token = play_token(units)
+    return {
+        "list": token,
+        "playlist": f"{PLAY_PREFIX}/{token}.m3u8",
+        "timeline": f"{PLAY_PREFIX}/timeline?list={token}",
+    }

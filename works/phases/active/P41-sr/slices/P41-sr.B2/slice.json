@@ -3,15 +3,15 @@
   "phase_id": "P41-sr",
   "name": "Audio delivery: playlists and Range from FastAPI through the BFF and the edge",
   "kind": "implementation",
-  "status": "todo",
+  "status": "done",
   "order": 62,
   "depends_on": [
     "P41-sr.B1"
   ],
   "depends_declared": true,
   "created_at": "2026-11-11T15:26:43+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-11T16:06:47+09:00",
+  "completed_at": "2026-11-11T16:40:25+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -21,7 +21,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Audio delivery: fMP4 packaging pin, growing HLS playlist with Range parts and a single-sourced timeline, BFF relay and position beacon, listen.ts, edge location",
   "validation": {
     "required": [],
     "last_run": null,

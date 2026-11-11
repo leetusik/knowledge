@@ -96,18 +96,32 @@ export async function getJson<T>(
  *
  * The caller MUST consume or relay the body; on the success path nothing here
  * reads it.
+ *
+ * P41-sr.B2 (the Listen audio relay) adds three opt-ins, all off by default so
+ * every earlier caller behaves exactly as before: `method: "HEAD"`, `headers` to
+ * forward chosen request headers (`Range`, `If-Range`; the bearer always wins), and
+ * `pass`, non-2xx statuses returned as-is instead of thrown (`416`). A `206` is a
+ * 2xx, so it was never thrown.
  */
+export interface KbRawOptions extends KbRequestOptions {
+  method?: "GET" | "HEAD";
+  headers?: Record<string, string>;
+  pass?: readonly number[];
+}
+
 export async function getRaw(
   path: string,
-  options: KbRequestOptions = {},
+  options: KbRawOptions = {},
 ): Promise<Response> {
   const res = await fetch(kbUrl(path), {
-    method: "GET",
-    headers: authHeaders(options.token),
+    method: options.method ?? "GET",
+    headers: { ...options.headers, ...authHeaders(options.token) },
     cache: "no-store",
     signal: options.signal,
   });
-  if (!res.ok) throw await toError(res);
+  if (!res.ok && !(options.pass ?? []).includes(res.status)) {
+    throw await toError(res);
+  }
   return res;
 }
 

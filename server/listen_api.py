@@ -30,7 +30,11 @@ with ``state: "unavailable"``.
 ``resolve_api_write``; a project-bound key, the master bearer and a session are
 403). Every call stamps ``listen_runners.last_seen``. Claim, heartbeat, upload,
 finish and fail are ``server/listen_jobs.py``'s state transitions; the upload
-stores bytes through ``server/listen.py``.
+stores bytes through ``server/listen.py``, and only bytes in the pinned packaging
+(``server/listen_mp4.py``, P41-sr.B2: a fragmented MP4, AAC-LC mono) are stored.
+
+The state's ``play`` names the Listen's playlist and timeline, which
+``server/listen_play.py`` serves (P41-sr.B2).
 
 With no ``DATABASE_URL`` every route here answers 404 before any auth.
 """
@@ -52,6 +56,7 @@ from starlette.concurrency import run_in_threadpool
 from server import config
 from server import listen as store
 from server import listen_jobs as lj
+from server import listen_mp4 as mp4
 from server import reader_state as rs
 from server.accounts.auth import AuthContext, require_user
 from server.api_auth import ApiAuthContext, resolve_api_write
@@ -425,6 +430,11 @@ async def _state(listen: _Listen, ctx: AuthContext) -> dict[str, Any]:
     making_units = [
         u for pair in picks.values() for u in pair if u is not None and u.state == "making"
     ]
+    # P41-sr.B2: the units that play, in reading order, name the playlist.
+    playing_units = [
+        (picks[e.ref.doc][0].id if picks[e.ref.doc][0] is not None else None)
+        for e in listen.entries if e.listenable
+    ]
     failure = next(
         ({**x["failure"], "chapter": x["chapter"]} for x in listenable if x.get("failure")), None
     )
@@ -471,6 +481,7 @@ async def _state(listen: _Listen, ctx: AuthContext) -> dict[str, Any]:
         "speed": preference.speed if preference is not None else DEFAULT_SPEED,
         "follow": preference.follow if preference is not None else DEFAULT_FOLLOW,
         "kept": bool(position.kept) if position is not None else False,
+        "play": store.play_links(playing_units),
     }
 
 
@@ -666,9 +677,9 @@ async def upload_part(
     if not store.KEY_RE.fullmatch(part_key):
         raise _not_found()
     file_ext = store.media_ext(request.headers.get("content-type"), ext)
-    if file_ext is None:
+    if file_ext is None or file_ext == "aac":  # P41-sr.B2: parts are fragmented MP4 only
         raise HTTPException(
-            status_code=415, detail="Content-Type must be audio/mp4 or audio/aac (ext to match)"
+            status_code=415, detail="Content-Type must be audio/mp4 (ext m4a or mp4)"
         )
     declared = (request.headers.get("x-content-sha256") or "").strip().lower()
     if not store.KEY_RE.fullmatch(declared):
@@ -690,6 +701,13 @@ async def upload_part(
         raise _unprocessable("the body is empty")
     if hashlib.sha256(data).hexdigest() != declared:
         raise _unprocessable("the body does not match X-Content-SHA256")
+    # P41-sr.B2: only the pinned packaging is stored, so a wrong encoder fails here,
+    # not at playback; the bytes' own duration replaces the declared seconds.
+    try:
+        index = await run_in_threadpool(mp4.index_part, data)
+    except mp4.PackagingError as exc:
+        raise _unprocessable(f"not the pinned packaging: {exc}") from None
+    seconds = index.seconds
     root = await _runner_root(ctx)
     try:
         file, created = await run_in_threadpool(store.store_part, root, part_key, file_ext, data)

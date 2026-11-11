@@ -4,7 +4,7 @@
 
 ## Summary
 
-- Open: `85`
+- Open: `86`
 - Promoted: `6`
 - Dropped: `20`
 
@@ -94,6 +94,7 @@
 | `D105-y8` | `deferred` | Listen: a private podcast feed for books | P41-sr.R3 OQ2, signed at D1 | The web player fails the operator's screen-off iPhone check at P41-sr's acceptance, or the operator asks for offline listening. | `works/deferred/open/D105-y8` |
 | `D106-wd` | `deferred` | Listen audio cleanup: orphaned rows and files | P41-sr.B1 result.md § Open edges | The box disk budget tightens, or a document-delete or retention pass is planned | `works/deferred/open/D106-wd` |
 | `D107-he` | `deferred` | Listen part grouping that stays stable across edits | P41-sr.B1 result.md § Open edges | Re-rendering after edits is noticeably slow or wasteful on the Mac runner | `works/deferred/open/D107-he` |
+| `D108-5s` | `deferred` | Reader pagehide beacon has no edge route in production | P41-sr.B2 planning (orchestrator observation) | Next deploy-config change, or the reader's last position on leaving is found stale on production | `works/deferred/open/D108-5s` |
 | `D-pzs7` | `deferred` | Retire or redirect the orphaned document archive page | P-8jbf.DECOMP | the next reader or documents phase | `works/deferred/open/D-pzs7` |
 | `D-19n8` | `deferred` | Quiz Show answer button overflows a 390 phone at 200% root text | P-8jbf.REVIEW | the next reader or quiz phase, or a QA sweep | `works/deferred/open/D-19n8` |
 | `D-6pf9` | `deferred` | A long table's box state depends on resize history | P-8jbf.F1 | the next reader-tables phase or a QA sweep | `works/deferred/open/D-6pf9` |

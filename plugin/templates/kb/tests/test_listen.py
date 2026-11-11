@@ -29,6 +29,7 @@ from server.listen import manifest_for_source
 from tests.test_documents_api import _project, _signup, documents_client  # noqa: F401
 
 FIXTURE = Path(__file__).parent / "fixtures" / "listen" / "doc.md"
+PART = (Path(__file__).parent / "fixtures" / "listen" / "part.m4a").read_bytes()
 
 
 def _sha(value: str) -> str:
@@ -119,7 +120,7 @@ def test_upload_is_write_once_and_needs_the_lease(listen):
     c, r = listen.client, listen.r
     job = c.post("/api/listen/jobs/claim", headers=r).json()
     key = job["part_key"]
-    audio = b"\x00\x00\x00\x18ftypM4A " + bytes(range(64))
+    audio = PART  # P41-sr.B2: an upload must be the pinned packaging
 
     def put(part_key, data, headers=r):
         return c.put(
@@ -149,14 +150,14 @@ def test_upload_is_write_once_and_needs_the_lease(listen):
     assert stored.read_bytes() == audio
     assert (listen.root / ".audio" / ".gitignore").read_text().splitlines()[-1] == "*"
     assert put(key, audio).status_code == 200  # the same bytes: a success
-    assert put(key, audio + b"!").status_code == 409  # other bytes: refused
+    assert put(key, audio + b"\x00\x00\x00\x08free").status_code == 409  # other bytes: refused
     assert stored.read_bytes() == audio
 
-    # Finish (seconds from the upload's header): the part is made and the state moves.
+    # Finish: the part is made, measured from its bytes (P41-sr.B2), and the state moves.
     done = c.post(f"/api/listen/jobs/{job['job']}/finish", headers=r, json={})
     assert done.status_code == 200, done.text
     st = c.get("/app/listen/state", headers=listen.h, params=listen.body).json()
-    assert (st["made"]["parts"], st["len"], st["so_far"]) == (1, 3.5, True)
+    assert (st["made"]["parts"], st["len"], st["so_far"]) == (1, 7.023, True)
     assert st["part"]["n"] == 2
 
 
