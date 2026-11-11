@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The docked player</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}">
+<section class="lx-dock" aria-label="Listen" data-state="{{ state }}">
+<sc-if value="{{ leadPlay }}" hint-placeholder-val="{{ false }}"><button type="button" class="lx-round lx-round--primary lx-dock__lead" aria-label="Play" onclick="{{ play }}"><span class="lx-i lx-i--play" aria-hidden="true"></span></button></sc-if>
+<sc-if value="{{ leadPause }}" hint-placeholder-val="{{ true }}"><button type="button" class="lx-round lx-round--primary lx-dock__lead" aria-label="Pause" onclick="{{ pause }}"><span class="lx-i lx-i--pause" aria-hidden="true"></span></button></sc-if>
+<sc-if value="{{ leadAgain }}" hint-placeholder-val="{{ false }}"><button type="button" class="lx-round lx-round--primary lx-dock__lead" aria-label="Start over" onclick="{{ again }}"><span class="lx-i lx-i--again" aria-hidden="true"></span></button></sc-if>
+<sc-if value="{{ leadRetry }}" hint-placeholder-val="{{ false }}"><button type="button" class="lx-round lx-round--primary lx-dock__lead" aria-label="Try again" onclick="{{ retry }}"><span class="lx-i lx-i--retry" aria-hidden="true"></span></button></sc-if>
+<sc-if value="{{ leadOff }}" hint-placeholder-val="{{ false }}"><button type="button" class="lx-round lx-dock__lead" aria-label="Play" disabled><span class="lx-i lx-i--play" aria-hidden="true"></span></button></sc-if>
+<div class="lx-dock__text">
+<p class="lx-dock__title" lang="{{ lang }}">{{ title }}</p>
+<p class="lx-dock__status"><sc-if value="{{ busy }}" hint-placeholder-val="{{ false }}"><span class="lx-spin" aria-hidden="true"></span></sc-if><span class="lx-dock__line"><span class="{{ wordCls }}">{{ word }}</span><sc-if value="{{ hasRest }}" hint-placeholder-val="{{ true }}"> · {{ rest }}</sc-if></span></p>
+</div>
+<sc-if value="{{ hasOpen }}" hint-placeholder-val="{{ true }}"><button type="button" class="lx-round lx-dock__open" aria-label="Open the player" aria-haspopup="dialog" onclick="{{ open }}"><span class="lx-i lx-i--open" aria-hidden="true"></span></button></sc-if>
+<sc-if value="{{ hasSignIn }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--primary lx-dock__act" onclick="{{ signIn }}">Sign in</button></sc-if>
+<span class="lx-sr" role="status">{{ say }}</span>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["waiting","making","ready","tap","loading","playing","paused","buffering","next-waiting","finished","fail-voice","fail-limit","fail-play","fail-session","fail-unreadable","offline-start","offline-play","offline-stopped"],"default":"playing"},"unit":{"editor":"enum","options":["doc","book"],"default":"doc"},"old":{"editor":"boolean","default":false},"soFar":{"editor":"boolean","default":false},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"title":{"editor":null},"lang":{"editor":null},"n":{"editor":null},"total":{"editor":null},"next":{"editor":null},"pos":{"editor":null},"len":{"editor":null},"part":{"editor":null},"parts":{"editor":null},"runner":{"editor":null},"seen":{"editor":null},"reset":{"editor":null},"loaded":{"editor":null},"onPlay":{"editor":null},"onPause":{"editor":null},"onRetry":{"editor":null},"onStartOver":{"editor":null},"onOpen":{"editor":null},"onSignIn":{"editor":null},"bare":{"editor":null},"$preview":{"width":420,"height":100}}'>
+class Component extends DCLogic {
+  call(name) {
+    return (e) => {
+      const f = this.props[name];
+      if (f) { if (e && e.preventDefault) e.preventDefault(); f(); }
+    };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const book = P.unit === 'book';
+    const state = P.state || 'playing';
+    const n = P.n || 2;
+    const total = P.total || 5;
+    const pos = P.pos || '12:30';
+    const len = P.len || '42:10';
+    const title = P.title || (book ? 'System internals: the content plane, the write path and the contracts' : 'Our bar: performance rule v1');
+    const where = book ? 'Chapter ' + n + ' · ' + pos : pos + ' of ' + len + (P.soFar ? ' so far' : '');
+    const old = !!P.old;
+    // [lead, word, rest, busy, revoked]
+    const S = {
+      'waiting': ['off', 'Waiting for ' + (P.runner || 'the Mac'), 'last seen ' + (P.seen || '19:55'), false, false],
+      'making': ['off', 'Preparing…', 'part ' + (P.part || 3) + ' of ' + (P.parts || 12), true, false],
+      'ready': ['play', 'Ready to play', 'the rest is preparing', false, false],
+      'tap': ['play', 'Ready to play', '', false, false],
+      'loading': ['pause', 'Loading…', '', true, false],
+      'playing': ['pause', old ? 'Earlier version' : 'Playing', where, false, false],
+      'paused': ['play', old ? 'Earlier version' : 'Paused', where, false, false],
+      'buffering': ['pause', 'Buffering…', where, true, false],
+      'next-waiting': ['pause', 'Preparing…', 'Chapter ' + (P.next || n), true, false],
+      'finished': ['again', 'Finished', book ? 'all ' + total + ' chapters' : len, false, false],
+      'fail-voice': ['retry', 'Preparing stopped', 'try again', false, true],
+      'fail-limit': ['off', 'Daily limit', 'resumes ' + (P.reset || '09:00'), false, false],
+      'fail-play': ['retry', 'Playback stopped', 'connection lost', false, true],
+      'fail-session': ['off', 'Signed out', '', false, true],
+      'fail-unreadable': ['retry', 'Can’t be read aloud', 'try again', false, true],
+      'offline-start': ['off', 'Offline', 'starts when you’re back online', false, false],
+      'offline-play': ['pause', 'Offline', (P.loaded || '2:40') + ' loaded', false, false],
+      'offline-stopped': ['off', 'Offline', 'stopped at ' + pos, false, false],
+    };
+    const s = S[state] || S.playing;
+    const lead = s[0];
+    const SAY = { 'next-waiting': 'Chapter ' + (P.next || n) + ' is still preparing; it plays when it\u2019s ready.', 'fail-session': 'Signed out. Sign in to keep listening.', 'fail-limit': 'Daily limit reached; preparing resumes at ' + (P.reset || '09:00') + '.' };
+    const say = SAY[state] || (s[1] + (book && state === 'playing' ? ': chapter ' + n + ', ' + title : ''));
+    return {
+      state,
+      leadPlay: lead === 'play',
+      leadPause: lead === 'pause',
+      leadAgain: lead === 'again',
+      leadRetry: lead === 'retry',
+      leadOff: lead === 'off',
+      title,
+      lang: P.lang || 'en',
+      word: s[1],
+      rest: s[2],
+      hasRest: !!s[2],
+      busy: s[3],
+      wordCls: s[4] ? 'lx-dock__word lx-dock__word--revoked' : 'lx-dock__word',
+      hasOpen: state !== 'fail-session',
+      hasSignIn: state === 'fail-session',
+      say,
+      play: this.call('onPlay'),
+      pause: this.call('onPause'),
+      again: this.call('onStartOver'),
+      retry: this.call('onRetry'),
+      open: this.call('onOpen'),
+      signIn: this.call('onSignIn'),
+      wrapCls: bare ? 'rd-in' : 'rd-frame lx-alone',
+      wrapTheme: bare ? undefined : (P.theme === 'dark' ? 'dark' : 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

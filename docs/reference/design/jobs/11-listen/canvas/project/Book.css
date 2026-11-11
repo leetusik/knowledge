@@ -1,0 +1,148 @@
+/* The book landing with Listen (11-listen / 01-listen, page `book`). Every board of the page links it after
+   ds/kb/tokens.css and frame.css.
+   Part 1 is the signed book landing (job 07-book-page, round 01), copied value for value from its book.css and, for
+   the parts it borrows from the reader, its reader.css (.rd-next, .rd-end__list*, .rd-tag, .rd-btn--ghost). Only the
+   parts this page draws: no versions panel, no clear confirmation, no loading shape.
+   Part 2 is Listen on the landing (this page). Part 3 is canvas-only. */
+
+/* ======================= Part 1 · the signed book landing (copied) ======================= */
+
+/* Borrowed from the reader (07's reader.css, as built) */
+.rd-next { margin-top: var(--kb-space-lg); padding: var(--kb-space-lg) 0; border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border); display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-sm); }
+.rd-next__label { margin: 0; font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-next__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: calc(var(--rd-fs) * 1.18); line-height: 1.25; color: var(--kb-ink); text-wrap: balance; }
+.rd-next .rd-btn { margin-top: var(--kb-space-xs); max-width: 100%; white-space: normal; text-align: center; }
+.rd-end__listhead { margin: 0 0 var(--kb-space-xs); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--kb-space-xs) var(--kb-space-md); }
+.rd-end__listtitle { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--rd-fs); color: var(--kb-ink); }
+.rd-end__count { font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-btn--ghost { border-color: var(--rd-control-edge); color: var(--kb-secondary); }
+/* As built (web/src/app/book.css, P30.S23): the ghost and the clear trigger take the reader's 3:1 control edge, and the
+   landing's buttons wrap rather than run out of a narrow column */
+.rd-btn--ghost:hover { border-color: var(--kb-border-strong); color: var(--kb-ink); }
+
+/* The frame: the reader's room; the window scrolls */
+.bk-scroll { position: relative; }
+.bk-topwrap { position: sticky; top: 0; z-index: 20; }
+
+/* Top bar: logo, back to the library, the book once its head has scrolled away */
+.bk-top {
+  height: var(--rd-top-h);
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: var(--kb-space-sm);
+  padding-inline: calc(var(--rd-gut) - 0.6rem);
+  background: var(--kb-surface); border-bottom: 1px solid var(--kb-border);
+  font-size: 0.9375rem;
+}
+.bk-top__start { display: flex; align-items: center; gap: var(--kb-space-xs); min-width: 0; }
+.bk-top__mid { display: flex; flex-direction: column; justify-content: center; gap: 0.1rem; min-width: 0; line-height: 1.2; }
+.bk-top__mid[data-on="false"] { visibility: hidden; }
+.bk-top__title { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 0.9375rem; color: var(--kb-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-top__prog { font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-top__end { display: flex; align-items: center; justify-content: flex-end; gap: var(--kb-space-xs); }
+
+/* The page: one centred column, two from 64rem */
+.bk-main { padding: var(--kb-space-xl) var(--rd-gut) var(--kb-space-2xl); }
+.bk-layout { display: flex; flex-direction: column; gap: var(--kb-space-xl); max-width: 40rem; margin-inline: auto; }
+.bk-side { display: flex; flex-direction: column; gap: var(--kb-space-lg); min-width: 0; }
+.bk-body { display: flex; flex-direction: column; gap: var(--kb-space-2xl); min-width: 0; }
+@container rd (min-width: 64rem) {
+  .bk-main { padding-top: var(--kb-space-2xl); }
+  .bk-layout {
+    max-width: none; display: grid; grid-template-columns: minmax(0, 24rem) minmax(0, 40rem);
+    justify-content: center; align-items: start; column-gap: var(--kb-space-xl);
+  }
+}
+@container rd (min-width: 90rem) { .bk-layout { column-gap: var(--kb-space-2xl); } }
+
+/* The book's head */
+.bk-head { display: flex; flex-direction: column; gap: var(--kb-space-lg); container: bkhead / inline-size; }
+.bk-head__id { display: flex; flex-direction: column; gap: var(--kb-space-sm); }
+.bk-head__kind { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--kb-space-sm); font-size: 0.9375rem; color: var(--kb-secondary); }
+.bk-head__title {
+  margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold);
+  font-size: clamp(1.875rem, 1.2rem + 4cqi, 2.6rem); line-height: 1.12; letter-spacing: var(--kb-tracking-display);
+  color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word;
+}
+.bk-prog { display: flex; flex-direction: column; gap: var(--kb-space-xs); }
+.bk-prog__text { margin: 0; font-size: 0.9375rem; color: var(--kb-ink); font-variant-numeric: tabular-nums; }
+.bk-prog__text b { font-weight: var(--kb-weight-semibold); }
+.bk-prog__bar { display: block; height: var(--rd-line); background: var(--kb-border); border-radius: var(--rd-line); }
+.bk-prog__fill { display: block; height: 100%; background: var(--kb-accent); border-radius: var(--rd-line); }
+
+/* Continue reading: the reader's "Next" block, the page's one primary action */
+.bk-side .rd-next, .bk-cont.rd-next { margin-top: 0; }
+.bk-cont__at { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 34rem; text-wrap: pretty; }
+
+/* The per-book list's entry */
+.bk-notes {
+  display: flex; flex-direction: column; justify-content: center; gap: 0.15rem; align-self: flex-start;
+  min-height: var(--kb-tap); padding: var(--kb-space-xs) 0.5rem; margin-inline: -0.5rem; border-radius: var(--kb-radius-sm);
+  color: var(--kb-ink); text-decoration: none;
+}
+.bk-notes:hover { background: var(--kb-surface-sunken); }
+.bk-notes__title { display: inline-flex; align-items: baseline; gap: 0.3em; font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); }
+.bk-notes:hover .bk-notes__title { text-decoration: underline; text-underline-offset: 0.2em; }
+.bk-notes__meta { font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+
+/* Contents: the chapter list */
+.bk-list { display: flex; flex-direction: column; gap: var(--kb-space-sm); }
+.bk-list .rd-end__listhead { margin: 0; }
+.bk-row { display: flex; flex-direction: column; }
+/* The meta line is always there, one tag high, so a row is the same height signed in and signed out */
+.bk-row .rd-ch__meta { min-height: 1.125rem; }
+.bk-row :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+
+/* Your reading data */
+.bk-clear { display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-sm); }
+.bk-clear__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--rd-fs); color: var(--kb-ink); }
+.bk-clear__lead { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--kb-secondary); max-width: 34rem; text-wrap: pretty; }
+.bk-clear .rd-btn { max-width: 100%; white-space: normal; text-align: center; }
+.bk-del { color: var(--kb-status-revoked-ink); border-color: var(--rd-control-edge); }
+.bk-del:hover { color: var(--kb-status-revoked-ink); background: var(--kb-status-revoked-soft); border-color: var(--kb-status-revoked); }
+
+/* ======================= Part 2 · Listen on the landing (this page) ======================= */
+
+/* The head's Listen slot (F6): the Listen control, or, once a Listen lives, its note (F10). One slot, on the side
+   column's start edge, under the reading progress. */
+.bk-listen { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
+/* F25 (the join): beside the dock, the note carries the why and the dock the one action; the first part ready shows
+   one Play, the dock's */
+.bk-listen .lx-note[data-state="ready"] > .rd-btn { display: none; }
+/* F28 (the join): the chapter a Listen is on carries a 1px kb-accent edge in a border every row has (player-G6), so
+   the current row keeps a 3:1 boundary and nothing moves */
+.bk-row .rd-ch { border: 1px solid transparent; }
+.bk-row .rd-ch[aria-current] { border-color: var(--kb-accent); }
+
+/* A chapter's audio phrase sits in the row's existing meta line, secondary text (F11) */
+.bk-ch__audio { color: var(--kb-secondary); }
+
+/* The dock (F7) on the landing. In the product the slot is `position: fixed` at kb-space-md above the window's bottom;
+   on the canvas it is sticky at the same place, so a full-page render shows it at the page's end and Play keeps it in
+   view. Below 64rem it takes the layout column's two edges, after Contents; from 64rem the side column's, in the side
+   column's second row, so it never rides over the head, Continue or the Contents list. */
+.bk-dock { position: sticky; bottom: var(--kb-space-md); z-index: 21; min-width: 0; }
+@container rd (min-width: 64rem) {
+  .bk-layout--docked { grid-template-rows: auto 1fr; }
+  .bk-layout--docked > .bk-side { grid-column: 1; grid-row: 1; }
+  .bk-layout--docked > .bk-body { grid-column: 2; grid-row: 1 / span 2; }
+  .bk-layout--docked > .bk-dock { grid-column: 1; grid-row: 2; align-self: end; }
+}
+
+/* ======================= Part 3 · canvas only (never built) ======================= */
+
+/* The board: the page at full width, or inside a device-width frame on the paper */
+.bk-board { min-height: 100vh; background: var(--kb-paper); }
+.bk-stage { display: flex; justify-content: center; }
+.bk-stage > .rd-frame { flex: 1 1 auto; min-width: 0; }
+.bk-stage--dev { padding: var(--kb-space-lg) var(--kb-space-md) var(--kb-space-2xl); }
+.bk-stage--dev > .rd-frame { flex: 0 1 var(--bk-dev-w); border: 1px solid var(--kb-border-strong); }
+.bk-dev--820 { --bk-dev-w: 820px; }
+.bk-dev--390 { --bk-dev-w: 390px; }
+.bk-dev--320 { --bk-dev-w: 320px; }
+/* The flow opens the player over the landing (the join, critique C06 and C08): the landing becomes a window the
+   device's height that scrolls inside, the sheet and the scrim on its edges as on the reader's window. The product's
+   sheet is fixed to the viewport, so none of this is built. */
+.bk-frame--held { height: var(--bk-win-h, 900px); overflow: hidden; }
+.bk-frame--held .bk-scroll { position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; }
+.bk-frame--held .pl-scrim { cursor: default; }
+/* The rows board: a strip the width of the landing's Contents column (40rem) */
+.bk-w640 { width: 640px; }

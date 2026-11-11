@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Listen: the book, the chapter and the player, connected</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+<link rel="stylesheet" href="Book.css">
+<script src="PlayerData.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+.mn-root { display: flex; flex-direction: column; min-width: 0; background: var(--kb-paper); }
+.mn-stage { flex: 1 0 auto; min-width: 0; }
+/* Mounted here, a page is as tall as its content (its own board fills its frame) */
+.mn-stage .rx-root, .mn-stage .bk-board { min-height: 0; }
+/* The product header sits at the same place on every page of the flow: the reader's desktop window drops its top gap */
+.mn-stage .rx-stage--fill { padding-top: 0; }
+/* ... and its window at the full width takes no edge, so the reader is 1440 wide like the landing and both take the
+   wide gutter: the logo and the back link sit at the same x on every page (critique C07) */
+.mn-stage .rx-stage--fill > .lx-win { border: 0; }
+/* The scrim under the player is a surface (F29) */
+.mn-stage .pl-scrim { cursor: default; }
+[data-proto="state-bar"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0;padding:8px 16px;background:#eceef1;border-bottom:1px dashed #6b717a;color:#2f3338;font:12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+[data-proto="state-bar"] [role="group"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+[data-proto="state-bar"] button{display:inline-flex;align-items:center;box-sizing:border-box;height:24px;margin:0;padding:0 10px;border:1px solid #6b717a;border-radius:4px;background:#f7f8fa;color:#2f3338;font:inherit;line-height:1;cursor:pointer}
+[data-proto="state-bar"] button[aria-pressed="true"]{background:#ffffff;border-color:#2f3338;font-weight:600}
+[data-proto="state-bar"] button:focus-visible{outline:2px solid #2f3338;outline-offset:2px}
+/* The flow reserves the tallest page's bar: every page's group in one grid cell, the others hidden */
+.mn-groups { display: grid; flex: 1 1 0; min-width: min(100%, 16rem); }
+.mn-groups > [role="group"] { grid-area: 1 / 1; }
+.mn-groups > [data-off="true"] { visibility: hidden; }
+.mn-name { font-weight: 600; }
+/* Canvas-only foot strip: each page alone */
+[data-proto="screens"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0;padding:8px 16px;background:#eceef1;border-top:1px dashed #6b717a;color:#2f3338;font:12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+[data-proto="screens"] .mn-set{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+[data-proto="screens"] a{display:inline-flex;align-items:center;min-height:24px;color:#2f3338;text-decoration:underline;text-underline-offset:2px}
+[data-proto="screens"] a:hover{text-decoration-thickness:2px}
+[data-proto="screens"] a:focus-visible{outline:2px solid #2f3338;outline-offset:2px}
+</style>
+</helmet>
+<div class="mn-root" id="top" data-theme="{{ theme }}">
+
+<div data-proto="state-bar">
+<span>Prototype only · jump to a state:</span>
+<div class="mn-groups">
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+<div role="group" aria-label="{{ g.name }}" data-off="{{ g.off }}">
+<span class="mn-name">{{ g.name }}</span>
+<sc-for list="{{ g.presets }}" as="p" hint-placeholder-count="6"><button type="button" aria-pressed="{{ p.pressed }}" onclick="{{ p.go }}">{{ p.label }}</button></sc-for>
+<span>Window:</span>
+<sc-for list="{{ g.wins }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" onclick="{{ p.go }}">{{ p.label }}</button></sc-for>
+<span>Theme:</span>
+<sc-for list="{{ g.themes }}" as="p" hint-placeholder-count="2"><button type="button" aria-pressed="{{ p.pressed }}" onclick="{{ p.go }}">{{ p.label }}</button></sc-for>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div class="mn-stage">
+<sc-if value="{{ isBook }}" hint-placeholder-val="{{ true }}"><dc-import name="Book" book="guide" bar="off" view="{{ bookView }}" theme="{{ theme }}" audio="{{ audio }}" saved="{{ bookSaved }}" done="{{ done }}" listen="{{ listen }}" player="{{ overBook }}" on-listen="{{ onListen }}" on-open-reader="{{ onOpenReader }}" on-open-player="{{ onOpenPlayer }}" on-close="{{ onClose }}" on-go-to-text="{{ onGoToText }}" hint-size="100%,1800px"></dc-import></sc-if>
+<sc-if value="{{ isReader }}" hint-placeholder-val="{{ false }}"><dc-import name="Reader" bar="off" doc="{{ doc }}" ch="{{ ch }}" at="{{ at }}" win="{{ win }}" theme="{{ theme }}" listen="{{ listen }}" kept="{{ kept }}" player="{{ overReader }}" on-listen="{{ onListen }}" on-open-player="{{ onOpenPlayer }}" on-open-book="{{ onOpenBook }}" on-close="{{ onClose }}" on-go-to-text="{{ onGoToText }}" hint-size="100%,950px"></dc-import></sc-if>
+</div>
+
+<div data-proto="screens">
+<span>Canvas only · each page alone, with all its states:</span>
+<div class="mn-set"><a href="Book.dc.html">Book landing</a><a href="Reader.dc.html">Reader</a><a href="Player.dc.html">Player</a></div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2000}}'>
+// The entry Page (the join): Listen through its three pages, one Listen held here (frame.md F19, F20, F23, F33).
+// The flow: the book landing → Listen (or Continue listening) → the chapter in the reader with the docked player
+// playing → the dock opens the player over the page it was opened on (the landing or the chapter) → Close reveals that
+// page as it was; Go to the text goes to the Listen's chapter and the block read; the chapter's back link returns to
+// the landing. The state bar also reaches a loose document's Listen. Each page is mounted with bar "off": this board
+// draws the one bar and drives the window and the theme.
+const G = (ch, pos, state, extra) => Object.assign({ unit: 'guide', from: 1, ch, pos, state, made: 5, old: false, soFar: false, len: '', part: 3, speed: '1×', follow: true, offer: false, updating: false }, extra || {});
+const D = (unit, pos, state, extra) => Object.assign({ unit, from: 0, ch: 0, pos, state, old: false, soFar: false, len: '', part: 3, speed: '1×', follow: true, offer: false, updating: false }, extra || {});
+// Stop listening keeps the position (F17); `kept` is offered as Continue listening on the landing and the chapter
+const KEPT = { unit: 'guide', ch: 4, pos: '12:30' };
+const BASE = { page: 'book', under: 'reader', doc: 'guide', ch: 1, at: null, audio: 'made', kept: null, done: false, listen: null };
+// [group, label, the flow's complete state]
+const PRESETS = [
+  ['book', 'Never listened', { audio: 'none' }],
+  ['book', 'Audio made', {}],
+  ['book', 'Left part-way', { kept: KEPT }],
+  ['book', 'Listening, docked', { listen: G(4, '12:30', 'playing') }],
+  ['book', 'Finished', { done: true }],
+  ['reader', 'Chapter 1, preparing', { page: 'reader', audio: 'making', listen: G(1, '0:00', 'making', { part: 1, made: 1, soFar: true }) }],
+  ['reader', 'Chapter 1, playing', { page: 'reader', listen: G(1, '0:04', 'playing') }],
+  ['reader', 'Chapter 4, paused', { page: 'reader', ch: 4, listen: G(4, '12:30', 'paused') }],
+  ['reader', 'Chapter 4, left part-way', { page: 'reader', ch: 4, kept: KEPT }],
+  ['reader', 'Document', { page: 'reader', doc: 'bar' }],
+  ['reader', 'Document, playing', { page: 'reader', doc: 'bar', listen: D('bar', '12:30', 'playing') }],
+  ['reader', 'Korean document', { page: 'reader', doc: 'bar-ko' }],
+  ['player', 'Over chapter 4, playing', { page: 'player', ch: 4, listen: G(4, '12:30', 'playing') }],
+  ['player', 'Over chapter 1, preparing', { page: 'player', audio: 'making', listen: G(1, '0:00', 'making', { part: 1, made: 1, soFar: true }) }],
+  ['player', 'Over the document, paused', { page: 'player', doc: 'bar', listen: D('bar', '12:30', 'paused') }],
+  ['player', 'Over the book landing', { page: 'player', under: 'book', listen: G(4, '12:30', 'playing') }],
+];
+const NAMES = { book: 'Book landing', reader: 'Reader', player: 'Player' };
+const WINS = [['fill', 'Desktop', 'full'], ['ipad', 'iPad 820', '820'], ['p390', 'Phone 390', '390'], ['p320', 'Phone 320', '320']];
+const sig = (s) => JSON.stringify([s.page, s.page === 'player' ? s.under : '', s.doc, s.page === 'book' || (s.page === 'player' && s.under === 'book') ? 0 : s.ch,
+  s.audio, s.kept ? [s.kept.unit, s.kept.ch, s.kept.pos] : null, !!s.done,
+  s.listen ? [s.listen.unit, s.listen.ch, s.listen.pos, s.listen.state] : null]);
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = Object.assign({}, BASE, { win: 'fill', theme: 'light' });
+    this.sid = 0;
+    // F3: speed and follow along are the listener's, kept across Listens
+    this.pref = { speed: '1×', follow: true };
+  }
+  // The carried Listen, every field the pages read (F19 + F23)
+  norm(L) {
+    if (!L) return null;
+    const book = L.unit === 'guide' || L.unit === 'changple5';
+    const n = Object.assign({ from: book ? 1 : 0, ch: book ? 1 : 0, pos: '0:00', old: false, soFar: false, len: '', part: 3, offer: false, updating: false }, this.pref, L);
+    if (book && n.made === undefined) n.made = this.state.audio === 'made' ? 5 : Math.max(1, n.ch || 1);
+    this.pref = { speed: n.speed || '1×', follow: n.follow !== false };
+    return n;
+  }
+  top() { setTimeout(() => window.scrollTo(0, 0), 0); }
+  go(page, extra) {
+    this.setState(Object.assign({ page, at: null }, extra || {}));
+    this.top();
+  }
+  // Where the reader opens for a Listen: its unit and chapter (Go to the text)
+  readerAt(L) {
+    if (!L) return {};
+    if (L.unit === 'guide') return { doc: 'guide', ch: L.ch || 1 };
+    if (L.unit === 'bar' || L.unit === 'bar-ko') return { doc: L.unit };
+    return {};
+  }
+  renderVals() {
+    const s = this.state;
+    const cur = sig(s);
+    const groups = ['book', 'reader', 'player'].map((g) => ({
+      name: NAMES[g],
+      off: s.page === g ? 'false' : 'true',
+      presets: PRESETS.filter((x) => x[0] === g).map(([, label, p]) => {
+        const want = Object.assign({}, BASE, p);
+        return {
+          label,
+          pressed: sig(want) === cur ? 'true' : 'false',
+          go: () => {
+            this.sid++;
+            this.pref = { speed: '1×', follow: true };
+            this.setState(Object.assign({}, want, { listen: want.listen ? Object.assign({}, want.listen) : null }));
+            this.top();
+          },
+        };
+      }),
+      wins: WINS.map((w) => ({ label: w[1], pressed: s.win === w[0] ? 'true' : 'false', go: () => this.setState({ win: w[0] }) })),
+      themes: [['light', 'Light'], ['dark', 'Dark']].map((t) => ({ label: t[1], pressed: s.theme === t[0] ? 'true' : 'false', go: () => this.setState({ theme: t[0] }) })),
+    }));
+    const view = (WINS.find((w) => w[0] === s.win) || WINS[0])[2];
+    // The player opens over the page it was opened on (critique C06, C08): that page stays mounted underneath
+    const over = s.page === 'player';
+    const under = over ? s.under : s.page;
+    return {
+      groups,
+      theme: s.theme,
+      isBook: under === 'book',
+      isReader: under === 'reader',
+      overBook: over && under === 'book',
+      overReader: over && under === 'reader',
+      doc: s.doc,
+      ch: s.ch,
+      at: s.at,
+      win: s.win,
+      bookView: view,
+      audio: s.audio,
+      bookSaved: s.kept && s.kept.unit === 'guide' ? s.kept : false,
+      kept: s.kept,
+      done: s.done,
+      listen: s.listen,
+      // Every change of the Listen, from any page (F20 on-listen)
+      onListen: (e) => {
+        const prev = this.state.listen;
+        let raw = e ? e.listen : null;
+        // A new Listen takes the listener's speed and follow along (F3, critique C02)
+        if (raw && (!prev || prev.unit !== raw.unit)) raw = Object.assign({}, raw, this.pref);
+        const next = this.norm(raw);
+        if (!next) {
+          // Stop listening ends the Listen and keeps its position (F17, critique C01); in the player the sheet
+          // closes onto the page under it, as Close does
+          const kept = prev && !/^0:0[04]$/.test(prev.pos || '') ? { unit: prev.unit, ch: prev.ch, pos: prev.pos } : null;
+          if (this.state.page === 'player') { this.go(this.state.under, { listen: null, kept }); return; }
+          this.setState({ listen: null, kept });
+          return;
+        }
+        this.setState({ listen: next, kept: null });
+      },
+      // The landing's Listen, Continue listening, Start over and its chapter rows (F20 on-open-reader)
+      onOpenReader: (e) => {
+        const ev = e || {};
+        const was = this.state.listen;
+        let L = ev.listen || null;
+        let audio = this.state.audio;
+        if (L && L !== was) {
+          // A new Listen from the landing. On a book not yet made, nothing plays before chapter 1's first part is
+          // ready (F9, book-G6): Preparing…, then Ready with Play; a preset pressed meanwhile drops the result.
+          L = this.norm(Object.assign({}, L, { speed: this.pref.speed, follow: this.pref.follow }));
+          if (audio === 'none') {
+            audio = 'making';
+            // Nothing made yet: no length (F2) until the first part, which is 3:05 so far (F23, critique C03)
+            L = Object.assign({}, L, { state: 'making', pos: '0:00', part: 1, made: 1, soFar: true, len: '' });
+            const id = ++this.sid;
+            setTimeout(() => {
+              if (id !== this.sid) return;
+              const c = this.state.listen;
+              if (c && c.unit === 'guide' && c.state === 'making') this.setState({ listen: Object.assign({}, c, { state: 'ready', soFar: true, len: '3:05' }) });
+            }, 2500);
+          }
+          this.go('reader', { doc: 'guide', ch: ev.ch || L.ch || 1, listen: L, audio, kept: null, done: false });
+          return;
+        }
+        this.go('reader', { doc: 'guide', ch: ev.ch || 1 });
+      },
+      onOpenPlayer: (e) => {
+        const L = this.norm((e && e.listen) || this.state.listen);
+        if (!L || this.state.page === 'player') return;
+        this.go('player', { under: this.state.page === 'book' ? 'book' : 'reader', listen: L });
+      },
+      onOpenBook: () => this.go('book'),
+      // Close reveals the page under the sheet as it was (F33 as revised, critique C06)
+      onClose: () => this.go(this.state.under),
+      // Go to the text: the Listen's chapter (or document), scrolled once to the block read, or its head at the start
+      onGoToText: (e) => {
+        const L = (e && e.listen) || this.state.listen;
+        const started = L && (L.pos === '0:00' || L.pos === '0:04');
+        this.go('reader', Object.assign({ at: started ? 'head' : 'text' }, this.readerAt(L)));
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

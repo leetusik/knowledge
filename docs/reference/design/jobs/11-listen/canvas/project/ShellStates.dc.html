@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The reader's top bar and chapter bar, as signed, at each width</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<div class="lx-board" data-theme="light" id="top">
+<p class="lx-board__h">Top bar, as signed: Listen adds nothing to it (F6)</p>
+<div class="lx-board__cell"><p class="lx-board__cap">Desktop 1200 · chapter</p><div class="rd-frame lx-w1200" data-theme="light"><div class="rd-in"><dc-import name="Shell" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div></div>
+<div class="lx-board__row"></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Desktop 1200 · loose document in two languages</p><div class="rd-frame lx-w1200" data-theme="light"><div class="rd-in"><dc-import name="Shell" kind="loose" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div></div>
+<div class="lx-board__row"></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Desktop 1200 · dark, loose</p><div class="rd-frame lx-w1200" data-theme="dark"><div class="rd-in"><dc-import name="Shell" kind="loose" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div></div>
+<div class="lx-board__row"></div>
+<div class="lx-board__cell"><p class="lx-board__cap">iPad 820 · chapter</p><div class="rd-frame lx-w820" data-theme="light"><div class="rd-in"><dc-import name="Shell" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Phone 390 · chapter</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><dc-import name="Shell" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Phone 390 · loose, two languages</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><dc-import name="Shell" kind="loose" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div></div>
+<div class="lx-board__row"></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Phone 320 · chapter</p><div class="rd-frame lx-w320" data-theme="light"><div class="rd-in"><dc-import name="Shell" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Phone 320 · loose, one language</p><div class="rd-frame lx-w320" data-theme="light"><div class="rd-in"><dc-import name="Shell" kind="loose" langs="{{ one }}" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Phone 320 · dark, chapter</p><div class="rd-frame lx-w320" data-theme="dark"><div class="rd-in"><dc-import name="Shell" bare="{{ true }}" hint-size="100%,60px"></dc-import></div></div></div>
+<p class="lx-board__h">Chapter bar, as signed (Listen never moves it)</p>
+<div class="lx-board__cell"><p class="lx-board__cap">Desktop 1200 · chapter 2 of 5</p><div class="rd-frame lx-w1200" data-theme="light"><div class="rd-in"><dc-import name="ChapterBar" bare="{{ true }}" hint-size="100%,61px"></dc-import></div></div></div>
+<div class="lx-board__row"></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Phone 390 · chapter 2 of 5</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><dc-import name="ChapterBar" bare="{{ true }}" hint-size="100%,61px"></dc-import></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Phone 320 · the last chapter</p><div class="rd-frame lx-w320" data-theme="light"><div class="rd-in"><dc-import name="ChapterBar" n="{{ five }}" bare="{{ true }}" hint-size="100%,61px"></dc-import></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Phone 390 · dark</p><div class="rd-frame lx-w390" data-theme="dark"><div class="rd-in"><dc-import name="ChapterBar" bare="{{ true }}" hint-size="100%,61px"></dc-import></div></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1300,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() { return { one: ['en'], five: 5 }; }
+}
+</script>
+</body>
+</html>

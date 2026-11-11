@@ -1,0 +1,52 @@
+{
+ "ShellStates.dc.html": {
+  "w": 1300,
+  "h": 1300,
+  "title": "Component — Reader top bar with Listen, and the chapter bar"
+ },
+ "ListenStates.dc.html": {
+  "w": 1760,
+  "h": 960,
+  "title": "Component — Listen control"
+ },
+ "DockStates.dc.html": {
+  "w": 2100,
+  "h": 3000,
+  "title": "Component — Docked player"
+ },
+ "ListenNoteStates.dc.html": {
+  "w": 2100,
+  "h": 1780,
+  "title": "Component — Listen note (preparing, failed, offline, earlier version)"
+ },
+ "IconStates.dc.html": {
+  "w": 1960,
+  "h": 860,
+  "title": "Component — Media icons, round buttons and marks"
+ },
+ "Shell.dc.html": {
+  "w": 1200,
+  "h": 59,
+  "title": "Component — Shell (alone)"
+ },
+ "ChapterBar.dc.html": {
+  "w": 1200,
+  "h": 61,
+  "title": "Component — Chapter bar (alone)"
+ },
+ "Listen.dc.html": {
+  "w": 560,
+  "h": 76,
+  "title": "Component — Listen control (alone)"
+ },
+ "Dock.dc.html": {
+  "w": 420,
+  "h": 100,
+  "title": "Component — Docked player (alone)"
+ },
+ "ListenNote.dc.html": {
+  "w": 560,
+  "h": 200,
+  "title": "Component — Listen note (alone)"
+ }
+}

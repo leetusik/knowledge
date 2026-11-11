@@ -1,0 +1,20 @@
+{
+ "Player.dc.html": {
+  "w": 1440,
+  "h": 2000,
+  "title": "Page — Player (the opened player, phone and desktop)",
+  "expand": "fill",
+  "is_interactive": true
+ },
+ "PlayerPanel.dc.html": {
+  "w": 420,
+  "h": 1180,
+  "title": "Component — Opened player (alone)",
+  "is_interactive": true
+ },
+ "PlayerStates.dc.html": {
+  "w": 2100,
+  "h": 7100,
+  "title": "Component — Opened player in every state"
+ }
+}

@@ -1,0 +1,19 @@
+{
+  "schema": 2,
+  "round": "01-listen",
+  "title": "Listen",
+  "slice": "P41-sr.D1",
+  "status": "open",
+  "opened_at": "2026-11-11T11:16:26+09:00",
+  "closed_at": null,
+  "supersedes": [],
+  "signoff_words": null,
+  "canvas_version": null,
+  "critique": "critic",
+  "pages": [
+    "reader",
+    "player",
+    "book"
+  ],
+  "published": "1794371132-01bd"
+}

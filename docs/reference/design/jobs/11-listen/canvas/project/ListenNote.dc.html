@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Listen note: a state, what it means and the one thing to do</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}">
+<div class="lx-note" data-state="{{ state }}">
+<p class="{{ statusCls }}"><sc-if value="{{ busy }}" hint-placeholder-val="{{ false }}"><span class="lx-spin" aria-hidden="true"></span></sc-if>{{ word }}</p>
+<sc-if value="{{ hasText }}" hint-placeholder-val="{{ true }}"><p class="lx-note__text">{{ text }}</p></sc-if>
+<sc-if value="{{ hasLine }}" hint-placeholder-val="{{ false }}"><span class="lx-prog" role="progressbar" aria-label="{{ lineLabel }}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ linePct }}"><span class="lx-prog__fill" style="{{ lineStyle }}"></span></span></sc-if>
+<sc-if value="{{ hasRef }}" hint-placeholder-val="{{ false }}"><p class="lx-note__ref">{{ ref }}</p></sc-if>
+<sc-if value="{{ actPlay }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--primary" onclick="{{ play }}"><span class="lx-i lx-i--play lx-i--s" aria-hidden="true"></span>Play</button></sc-if>
+<sc-if value="{{ actRetry }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--primary" onclick="{{ retry }}">Try again</button></sc-if>
+<sc-if value="{{ actAgain }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--primary" onclick="{{ again }}">Start over</button></sc-if>
+<sc-if value="{{ actSignIn }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--primary" onclick="{{ signIn }}">Sign in</button></sc-if>
+<sc-if value="{{ actUpdate }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--primary" aria-busy="{{ updBusy }}" onclick="{{ update }}"><span class="lx-labels"><span class="{{ updRest }}">Update audio</span><span class="{{ updPend }}"><span class="lx-spin" aria-hidden="true"></span>Updating…</span></span></button></sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["waiting","making","ready","tap","loading","buffering","playing","paused","next-waiting","finished","fail-voice","fail-limit","fail-play","fail-session","fail-unreadable","offline-start","offline-play","offline-stopped","outdated"],"default":"making"},"unit":{"editor":"enum","options":["doc","book"],"default":"doc"},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"updating":{"editor":"boolean","default":false},"n":{"editor":null},"total":{"editor":null},"next":{"editor":null},"pos":{"editor":null},"len":{"editor":null},"part":{"editor":null},"parts":{"editor":null},"left":{"editor":null},"ready":{"editor":null},"runner":{"editor":null},"seen":{"editor":null},"reset":{"editor":null},"loaded":{"editor":null},"onPlay":{"editor":null},"onRetry":{"editor":null},"onStartOver":{"editor":null},"onSignIn":{"editor":null},"onUpdate":{"editor":null},"bare":{"editor":null},"$preview":{"width":560,"height":200}}'>
+class Component extends DCLogic {
+  call(name) {
+    return (e) => {
+      const f = this.props[name];
+      if (f) { if (e && e.preventDefault) e.preventDefault(); f(); }
+    };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const book = P.unit === 'book';
+    const state = P.state || 'making';
+    const n = P.n || 2, total = P.total || 5;
+    const part = P.part || 3, parts = P.parts || 12;
+    const pos = P.pos || '12:30', len = P.len || '42:10';
+    const left = P.left || (book ? 'about 1 h 30 min' : 'about 15 min');
+    const ready = P.ready === undefined ? '3 min' : P.ready;
+    const where = book ? 'Chapter ' + n + ' · ' + pos : pos + ' of ' + len;
+    const making = book
+      ? 'Chapter ' + n + ' of ' + total + ' · ' + left + ' left.'
+      : (part <= 1 ? 'Part 1 of ' + parts + '. You can play once this part is ready.' : 'Part ' + part + ' of ' + parts + ' · ' + left + ' left.');
+    const done = book ? (n - 1) / total : (part - 1) / parts;
+    // [trio, word, text, action, line (fraction or null), busy, ref]
+    const S = {
+      'waiting': ['idle', 'Waiting', 'Waiting for ' + (P.runner || 'the Mac') + ', last seen ' + (P.seen || '19:55') + '. Preparing starts by itself when it’s on.', '', null, false, ''],
+      'making': ['idle', 'Preparing…', making, '', done, false, ''],
+      'ready': ['active', 'Ready', 'The first ' + ready + ' are ready to play; the rest is still preparing.', 'play', done, false, ''],
+      'tap': ['active', 'Ready', 'It’s ready. Your phone needs one more tap to start playing.', 'play', null, false, ''],
+      'loading': ['idle', 'Loading…', '', '', null, true, ''],
+      'buffering': ['idle', 'Buffering…', where, '', null, true, ''],
+      'playing': ['active', 'Playing', where, '', null, false, ''],
+      'paused': ['idle', 'Paused', where, '', null, false, ''],
+      'next-waiting': ['idle', 'Preparing…', 'Chapter ' + (P.next || 3) + ' is still preparing, ' + (P.left || 'about 5 min') + '. It plays by itself when it’s ready.', '', null, false, ''],
+      'finished': ['active', 'Finished', book ? 'You’ve listened to all ' + total + ' chapters.' : 'You’ve listened to the end.', 'again', null, false, ''],
+      'fail-voice': ['revoked', 'Stopped', 'Something on our side stopped preparing this audio at part ' + part + ' of ' + parts + '.', 'retry', null, false, 'Error · 502'],
+      'fail-limit': ['idle', 'Daily limit', 'The free voice’s daily limit is reached. Preparing goes on by itself at ' + (P.reset || '09:00 tomorrow') + '.' + (ready ? ' The first ' + ready + ' are ready to play.' : ''), ready ? 'play' : '', null, false, ''],
+      'fail-play': ['revoked', 'Stopped', 'The connection dropped, so playback stopped at ' + pos + '.', 'retry', null, false, ''],
+      'fail-session': ['revoked', 'Signed out', 'Your session has expired. Sign in again to keep listening.', 'signin', null, false, ''],
+      'fail-unreadable': ['revoked', 'Can’t be read aloud', 'Something on our side couldn’t read this ' + (book ? 'chapter' : 'document') + ' aloud.', 'retry', null, false, 'Error · 422'],
+      'offline-start': ['idle', 'Offline', 'You’re offline. Listen can start once you’re back online.', '', null, false, ''],
+      'offline-play': ['idle', 'Offline', 'You’re offline. Playing what’s loaded: ' + (P.loaded || '2:40') + ' left.', '', null, false, ''],
+      'offline-stopped': ['idle', 'Offline', 'You’re offline, so playback stopped at ' + pos + '. Play again once you’re back online.', '', null, false, ''],
+      'outdated': ['idle', 'Earlier version', 'The text changed after this audio was made. Until you update it, you hear the earlier version.', 'update', null, false, ''],
+    };
+    const s = S[state] || S.making;
+    const pct = s[4] === null ? 0 : Math.round(Math.max(0.02, s[4]) * 100);
+    const upd = !!P.updating;
+    return {
+      state,
+      statusCls: 'lx-status lx-status--' + s[0] + (s[5] ? ' lx-status--busy' : ''),
+      word: s[1],
+      text: s[2],
+      hasText: !!s[2],
+      busy: s[5],
+      hasLine: s[4] !== null,
+      linePct: pct,
+      lineLabel: book ? 'Chapters prepared' : 'Audio prepared',
+      lineStyle: 'width: ' + pct + '%',
+      ref: s[6],
+      hasRef: !!s[6],
+      actPlay: s[3] === 'play',
+      actRetry: s[3] === 'retry',
+      actAgain: s[3] === 'again',
+      actSignIn: s[3] === 'signin',
+      actUpdate: s[3] === 'update',
+      updBusy: upd ? 'true' : 'false',
+      updRest: upd ? 'is-off' : '',
+      updPend: upd ? '' : 'is-off',
+      play: this.call('onPlay'),
+      retry: this.call('onRetry'),
+      again: this.call('onStartOver'),
+      signIn: this.call('onSignIn'),
+      update: this.call('onUpdate'),
+      wrapCls: bare ? 'rd-in' : 'rd-frame lx-alone',
+      wrapTheme: bare ? undefined : (P.theme === 'dark' ? 'dark' : 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

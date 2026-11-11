@@ -1,0 +1,25 @@
+{
+ "v": 1,
+ "entry": "Main.dc.html",
+ "related": ["book", "reader", "player"],
+ "unrelated": [],
+ "links": [
+  {"from": "book", "to": "reader", "how": "on-open-reader { ch, listen }: Listen, Continue listening, Start over, the note's Play, a chapter row, Continue reading"},
+  {"from": "book", "to": "player", "how": "on-open-player { listen }: the dock's open chevron"},
+  {"from": "reader", "to": "player", "how": "on-open-player { listen }: the dock's open chevron"},
+  {"from": "reader", "to": "book", "how": "on-open-book: the chapter's back link and Back to the book; alone, href Book.dc.html"},
+  {"from": "player", "to": "reader", "how": "on-close and on-go-to-text { listen }; Stop listening (on-listen null)"}
+ ],
+ "settled": {
+  "reader-G1": "F23", "player-G3": "F23", "player-G4": "F23",
+  "reader-G3": "F24",
+  "reader-G7": "F25", "player-G1": "F25", "player-G11": "F25",
+  "reader-G2": "F26",
+  "reader-G4": "F27", "reader-G5": "F27", "reader-G6": "F27",
+  "player-G6": "F28", "book-C03": "F28",
+  "player-G7": "F29",
+  "player-G2": "F30", "player-G5": "F30", "player-G8": "F30", "player-G9": "F30", "player-G10": "F30", "player-G12": "F30", "player-G13": "F30",
+  "book-G1": "F31", "book-G2": "F31", "book-G3": "F31", "book-G6": "F31",
+  "book-G4": "F32", "book-G5": "F32"
+ }
+}

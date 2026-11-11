@@ -1,0 +1,179 @@
+{
+ "v": 3,
+ "title": "Listen",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 2000,
+   "title": "01 · Page — Listen, connected (the flow: the book, the chapter, the player)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Book.dc.html": {
+   "x": 1520,
+   "y": 0,
+   "w": 1440,
+   "h": 1860,
+   "title": "02 · Page — Book landing with Listen",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Reader.dc.html": {
+   "x": 3040,
+   "y": 0,
+   "w": 1440,
+   "h": 1400,
+   "title": "03 · Page — Reader with Listen: a document and a chapter, docked player",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "Player.dc.html": {
+   "x": 4560,
+   "y": 0,
+   "w": 1440,
+   "h": 2000,
+   "title": "04 · Page — Player (the opened player, phone and desktop)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "ListenStates.dc.html": {
+   "x": 0,
+   "y": 2120,
+   "w": 1760,
+   "h": 960,
+   "title": "05 · Component — Listen control"
+  },
+  "Listen.dc.html": {
+   "x": 1840,
+   "y": 2120,
+   "w": 560,
+   "h": 76,
+   "title": "06 · Component — Listen control (alone)"
+  },
+  "DockStates.dc.html": {
+   "x": 2480,
+   "y": 2120,
+   "w": 2100,
+   "h": 3000,
+   "title": "07 · Component — Docked player"
+  },
+  "Dock.dc.html": {
+   "x": 4660,
+   "y": 2120,
+   "w": 420,
+   "h": 100,
+   "title": "08 · Component — Docked player (alone)"
+  },
+  "ListenNoteStates.dc.html": {
+   "x": 5160,
+   "y": 2120,
+   "w": 2100,
+   "h": 1780,
+   "title": "09 · Component — Listen note (preparing, failed, offline, earlier version)"
+  },
+  "ListenNote.dc.html": {
+   "x": 7340,
+   "y": 2120,
+   "w": 560,
+   "h": 200,
+   "title": "10 · Component — Listen note (alone)"
+  },
+  "PlayerStates.dc.html": {
+   "x": 7980,
+   "y": 2120,
+   "w": 2100,
+   "h": 7100,
+   "title": "11 · Component — Opened player in every state"
+  },
+  "PlayerPanel.dc.html": {
+   "x": 10160,
+   "y": 2120,
+   "w": 420,
+   "h": 1180,
+   "title": "12 · Component — Opened player (alone)",
+   "is_interactive": true
+  },
+  "BookRowStates.dc.html": {
+   "x": 10660,
+   "y": 2120,
+   "w": 2140,
+   "h": 920,
+   "title": "13 · Component — Chapter row with its audio"
+  },
+  "BookRow.dc.html": {
+   "x": 12880,
+   "y": 2120,
+   "w": 640,
+   "h": 96,
+   "title": "14 · Component — Chapter row with its audio (alone)"
+  },
+  "IconStates.dc.html": {
+   "x": 13600,
+   "y": 2120,
+   "w": 1960,
+   "h": 860,
+   "title": "15 · Component — Media icons, round buttons and marks"
+  },
+  "ShellStates.dc.html": {
+   "x": 15640,
+   "y": 2120,
+   "w": 1300,
+   "h": 1300,
+   "title": "16 · Component — Reader top bar with Listen, and the chapter bar"
+  },
+  "Shell.dc.html": {
+   "x": 17020,
+   "y": 2120,
+   "w": 1200,
+   "h": 59,
+   "title": "17 · Component — Shell (alone)"
+  },
+  "ChapterBar.dc.html": {
+   "x": 18300,
+   "y": 2120,
+   "w": 1200,
+   "h": 61,
+   "title": "18 · Component — Chapter bar (alone)"
+  }
+ },
+ "order": [
+  "ListenStates.dc.html",
+  "Listen.dc.html",
+  "DockStates.dc.html",
+  "Dock.dc.html",
+  "ListenNoteStates.dc.html",
+  "ListenNote.dc.html",
+  "PlayerStates.dc.html",
+  "PlayerPanel.dc.html",
+  "BookRowStates.dc.html",
+  "BookRow.dc.html",
+  "IconStates.dc.html",
+  "ShellStates.dc.html",
+  "Shell.dc.html",
+  "ChapterBar.dc.html",
+  "Player.dc.html",
+  "Reader.dc.html",
+  "Book.dc.html",
+  "Main.dc.html"
+ ],
+ "notes": {},
+ "designSystems": [
+  {
+   "title": "knowledge",
+   "namespace": "kb",
+   "artifact": "https://claude.ai/artifact/7qemgwHNsoPNf5kYHEJ4md",
+   "version": "1792321604-e214",
+   "copiedAt": "2026-11-11T03:38:35Z"
+  }
+ ],
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-11T03:38:35Z"
+ }
+}

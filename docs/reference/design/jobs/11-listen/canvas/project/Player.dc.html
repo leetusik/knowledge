@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Player: the opened player over the reader, on a phone and on a desktop</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+<script src="PlayerData.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+[data-proto="state-bar"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0;padding:8px 16px;background:#eceef1;border-bottom:1px dashed #6b717a;color:#2f3338;font:12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+[data-proto="state-bar"] [role="group"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+[data-proto="state-bar"] button{display:inline-flex;align-items:center;box-sizing:border-box;height:24px;margin:0;padding:0 10px;border:1px solid #6b717a;border-radius:4px;background:#f7f8fa;color:#2f3338;font:inherit;line-height:1;cursor:pointer}
+[data-proto="state-bar"] button[aria-pressed="true"]{background:#ffffff;border-color:#2f3338;font-weight:600}
+[data-proto="state-bar"] button:focus-visible{outline:2px solid #2f3338;outline-offset:2px}
+[data-proto="state-bar"] .pl-sb-name{font-weight:600}
+
+/* The page: the player drawn in three windows at once, driven by one Listen */
+.pl-page { min-width: 0; background: var(--kb-paper); color: var(--kb-ink); font-family: var(--font-body); }
+.pl-wins { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--kb-space-xl) var(--kb-space-lg); padding: var(--kb-space-lg); }
+.pl-cell--wide { flex-basis: 100%; }
+/* The scrim (kb-scrim, as signed) is a surface, not a control: a tap on it closes the sheet; Close and Escape are the
+   keyboard's way */
+.pl-scrim { cursor: default; }
+.pl-wins--flow { justify-content: center; }
+.pl-wins--flow .lx-board__cap { display: none; }
+.pl-wins--fill { padding: 0; }
+.pl-wins--fill > .lx-board__cell { flex: 1 1 100%; }
+/* F26 (the join): the signed compact top bar for a two-language loose document (01-reader round 03), as the reader
+   page draws it (reader-G2): under 23rem the language switch takes a second row; from 23rem to 26rem the logo steps
+   aside for "‹ Library"; below 14rem too */
+@container rd (max-width: 20.99rem) {
+  .pl-langs .rd-tbtn { padding-inline: 0.5rem; }
+}
+@container rd (max-width: 22.99rem) {
+  .pl-langs > .rd-in { --rd-top-h: 6.5rem; }
+  .pl-langs .rd-top { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: repeat(2, minmax(0, 1fr)); }
+  .pl-langs .rd-top__end { display: contents; }
+  .pl-langs .rd-top__start { grid-row: 1; grid-column: 1; }
+  .pl-langs .rd-top__end > .rd-tbtn { grid-row: 1; }
+  .pl-langs .rd-lang { grid-row: 2; grid-column: 1 / -1; justify-self: end; }
+}
+@container rd (min-width: 23rem) and (max-width: 25.99rem) {
+  .pl-langs .rd-logo { display: none; }
+}
+@container rd (max-width: 13.99rem) {
+  .pl-langs .rd-logo { display: none; }
+}
+.pl-wins .lx-win__page:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: calc(-1 * var(--kb-focus-w)); }
+</style>
+</helmet>
+<div class="pl-page" data-theme="{{ theme }}" id="top" ref="{{ setRoot }}">
+
+<sc-if value="{{ hasBar }}" hint-placeholder-val="{{ true }}"><div data-proto="state-bar">
+<span>Prototype only · jump to a state:</span>
+<div role="group" aria-labelledby="pl-sb-name">
+<span class="pl-sb-name" id="pl-sb-name">Player</span>
+<sc-for list="{{ presets }}" as="p" hint-placeholder-count="31"><button type="button" aria-pressed="{{ p.pressed }}" onclick="{{ p.go }}">{{ p.label }}</button></sc-for>
+</div>
+</div></sc-if>
+
+<div class="{{ winsCls }}">
+<sc-for list="{{ wins }}" as="w" hint-placeholder-count="3">
+<div class="{{ w.cellCls }}"><p class="lx-board__cap">{{ w.cap }}</p>
+<div class="{{ winCls }}" data-theme="{{ theme }}" data-win="{{ w.key }}" style="{{ w.style }}"><div class="rd-in">
+<div class="lx-win__top" data-hidden="false"><dc-import name="Shell" bare="{{ true }}" kind="{{ kind }}" lang="{{ lang }}" langs="{{ langs }}" pct="{{ pct }}" hint-size="100%,59px"></dc-import></div>
+<div class="lx-win__page" tabindex="0" aria-label="{{ pageLabel }}">
+<div class="rd-flow"><div class="rd-head">
+<p class="rd-head__book"><sc-if value="{{ isBook }}" hint-placeholder-val="{{ true }}"><span class="rd-head__n">{{ chLabel }}</span></sc-if><span>{{ place }}</span></p>
+<h1 class="rd-head__title" lang="{{ lang }}">{{ headTitle }}</h1>
+</div></div>
+<div class="rd-flow rd-prose lx-demo-prose">
+<sc-for list="{{ paras }}" as="x" hint-placeholder-count="4"><p class="{{ x.cls }}">{{ x.text }}</p></sc-for>
+</div>
+</div>
+<sc-if value="{{ isBook }}" hint-placeholder-val="{{ true }}"><div class="lx-win__bottom" data-hidden="false"><dc-import name="ChapterBar" bare="{{ true }}" n="{{ chN }}" total="{{ chTotal }}" pct="{{ pct }}" titles="{{ chTitles }}" hint-size="100%,61px"></dc-import></div></sc-if>
+<sc-if value="{{ docked }}" hint-placeholder-val="{{ true }}"><div class="{{ slotCls }}"><dc-import name="Dock" bare="{{ true }}" state="{{ d.state }}" unit="{{ d.unit }}" title="{{ d.title }}" lang="{{ d.lang }}" n="{{ d.n }}" total="{{ d.total }}" next="{{ d.next }}" pos="{{ d.pos }}" len="{{ d.len }}" so-far="{{ d.soFar }}" old="{{ d.old }}" part="{{ d.part }}" parts="{{ d.parts }}" loaded="{{ d.loaded }}" reset="{{ d.reset }}" seen="{{ d.seen }}" runner="{{ d.runner }}" on-open="{{ w.open }}" on-play="{{ dPlay }}" on-pause="{{ dPause }}" on-retry="{{ dRetry }}" on-start-over="{{ dAgain }}" on-sign-in="{{ dSignIn }}" hint-size="100%,66px"></dc-import></div></sc-if>
+<sc-if value="{{ sheet }}" hint-placeholder-val="{{ true }}"><div class="rd-scrim pl-scrim" aria-hidden="true" onclick="{{ w.close }}"></div><dc-import name="PlayerPanel" bare="{{ true }}" listen="{{ L }}" panel="{{ panel }}" uid="{{ w.key }}" on-listen="{{ setListen }}" on-panel="{{ setPanel }}" on-close="{{ w.close }}" on-go-to-text="{{ w.goText }}" hint-size="100%,600px"></dc-import></sc-if>
+</div></div>
+</div>
+</sc-for>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"listen":{"editor":null},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"onClose":{"editor":null},"onGoToText":{"editor":null},"onListen":{"editor":null},"bar":{"editor":null},"win":{"editor":null},"$preview":{"width":1440,"height":2000}}'>
+// The player page (frame.md F8, F20): takes the current Listen and the theme; emits on-close and on-go-to-text (to the
+// reader at listen.ch) and on-listen for every change. Alone it keeps its own Listen and shows the reader behind as a
+// stand-in, so Close, Go to the text and the dock's chevron work in place.
+const PLP_PARAS = [
+  'knowledge is a hosted library for the documents coding agents write about a codebase. An agent explains a change, publishes the explanation, and the people who own the code read it on the web or ask for it over MCP.',
+  'A document is one file: a title, a date, tags, a body in markdown or HTML, and a version that only goes up. It belongs to a project, and the project belongs to an org.',
+  'The same files are reached four ways, and each door has its own contract: the write door, the setup door, the terminal door and the agent door.',
+  'knowledge is a hosted library for the documents coding agents write about a codebase. An agent explains a change, publishes the explanation, and the people who own the code read it on the web or ask for it over MCP.',
+];
+const PLP_DOC = { unit: 'bar', from: 0, ch: 0 };
+// [label, the Listen (over BASE), the open panel, the theme]
+const PLP_PRESETS = [
+  ['Playing', {}, null, 'light'],
+  ['Paused', { state: 'paused' }, null, 'light'],
+  ['Loading', { state: 'loading', pos: '0:00' }, null, 'light'],
+  ['Buffering', { state: 'buffering' }, null, 'light'],
+  ['Speed choice', {}, 'speed', 'light'],
+  ['Chapters', {}, 'chapters', 'light'],
+  ['Next chapter preparing', { state: 'next-waiting', ch: 4, pos: '0:00' }, null, 'light'],
+  ['Finished', { state: 'finished', ch: 5, made: 5, pos: '31:15' }, null, 'light'],
+  ['Resume offered', { state: 'paused', ch: 4, made: 4, offer: true }, null, 'light'],
+  ['Long title', { ch: 4, made: 4 }, null, 'light'],
+  ['20 chapters', { unit: 'changple5', from: 1, ch: 6, made: 6 }, 'chapters', 'light'],
+  ['A document', Object.assign({}, PLP_DOC), null, 'light'],
+  ['Korean', Object.assign({}, PLP_DOC, { unit: 'bar-ko' }), null, 'light'],
+  ['Waiting for the Mac', Object.assign({}, PLP_DOC, { state: 'waiting', pos: '0:00' }), null, 'light'],
+  ['Preparing', Object.assign({}, PLP_DOC, { state: 'making', pos: '0:00' }), null, 'light'],
+  ['First part ready', Object.assign({}, PLP_DOC, { state: 'ready', pos: '0:00', soFar: true, len: '3:05' }), null, 'light'],
+  ['Tap to play', Object.assign({}, PLP_DOC, { state: 'tap', pos: '0:00' }), null, 'light'],
+  ['Playing, still preparing', Object.assign({}, PLP_DOC, { pos: '2:10', soFar: true, len: '9:40' }), null, 'light'],
+  ['Finished document', Object.assign({}, PLP_DOC, { state: 'finished', pos: '42:10' }), null, 'light'],
+  ['Preparing stopped', Object.assign({}, PLP_DOC, { state: 'fail-voice', pos: '0:00' }), null, 'light'],
+  ['Daily limit', Object.assign({}, PLP_DOC, { state: 'fail-limit', pos: '0:00', soFar: true, len: '14:05' }), null, 'light'],
+  ['Playback stopped', { state: 'fail-play' }, null, 'light'],
+  ['Signed out', { state: 'fail-session' }, null, 'light'],
+  ['Can’t be read aloud', Object.assign({}, PLP_DOC, { state: 'fail-unreadable', pos: '0:00' }), null, 'light'],
+  ['Offline, can’t start', Object.assign({}, PLP_DOC, { state: 'offline-start', pos: '0:00' }), null, 'light'],
+  ['Offline, playing what’s loaded', { state: 'offline-play' }, null, 'light'],
+  ['Offline, stopped', { state: 'offline-stopped', pos: '15:10' }, null, 'light'],
+  ['Earlier version', Object.assign({}, PLP_DOC, { old: true }), null, 'light'],
+  ['Dark, playing', {}, null, 'dark'],
+  ['Dark, signed out', { state: 'fail-session' }, null, 'dark'],
+  ['Dark, chapters', {}, 'chapters', 'dark'],
+];
+// Mounted in the flow (bar "off"), the entry picks one window, the reader's (Reader.dc.html RX_WINS)
+const PLP_FLOW = {
+  fill: { key: 'fill', cap: 'Desktop', style: '--lx-win-w: 100%; --lx-win-h: 900px;', wide: true },
+  ipad: { key: 'ipad', cap: 'iPad 820 × 1180', style: '--lx-win-w: 820px; --lx-win-h: 1180px;', wide: false },
+  p390: { key: 'p390', cap: 'Phone 390 × 844', style: '--lx-win-w: 390px; --lx-win-h: 844px;', wide: false },
+  p320: { key: 'p320', cap: 'Phone 320 × 844', style: '--lx-win-w: 320px; --lx-win-h: 844px;', wide: false },
+};
+const PLP_WINS = [
+  { key: 'p390', cap: 'Phone 390 × 844', style: '--lx-win-w: 390px; --lx-win-h: 844px;', wide: false },
+  { key: 'p320', cap: 'Phone 320 × 568', style: '--lx-win-w: 320px; --lx-win-h: 568px;', wide: false },
+  { key: 'desk', cap: 'Desktop 1440 × 900 (drawn at the page width)', style: '--lx-win-w: 100%; --lx-win-h: 900px;', wide: true },
+];
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    const base = window.PL ? window.PL.BASE : {};
+    this.state = { listen: Object.assign({}, base, p.listen || {}), panel: null, open: true, theme: p.theme === 'dark' ? 'dark' : 'light', reading: null };
+    this.root = null;
+  }
+  L() {
+    const PL = window.PL;
+    if (this.props.onListen) return this.props.listen ? Object.assign({}, PL.BASE, this.props.listen) : null;
+    return this.state.listen ? Object.assign({}, PL.BASE, this.state.listen) : null;
+  }
+  setListen(next) {
+    // Stop listening keeps the reader on what was being read (the unit and chapter), never the book's first chapter
+    const was = this.L();
+    const reading = next ? null : (was ? { unit: was.unit, ch: was.ch } : this.state.reading);
+    if (this.props.onListen) { this.setState({ reading }); this.props.onListen({ listen: next }); }
+    else this.setState({ listen: next, reading, open: next ? this.state.open : false, panel: next ? this.state.panel : null });
+  }
+  patch(p) { const L = this.L(); if (L) this.setListen(Object.assign({}, L, p)); }
+  focusIn(key, sel) {
+    setTimeout(() => {
+      const el = this.root && this.root.querySelector('[data-win="' + key + '"] ' + sel);
+      if (el) el.focus({ preventScroll: true });
+    }, 0);
+  }
+  close(key) {
+    const L = this.L();
+    if (this.props.onClose) { this.props.onClose({ listen: L }); return; }
+    this.setState({ open: false, panel: null });
+    this.focusIn(key, '.lx-dock__open, .lx-dock__act');
+  }
+  goText(key) {
+    const L = this.L();
+    if (this.props.onGoToText) { this.props.onGoToText({ listen: L }); return; }
+    this.setState({ open: false, panel: null }, () => {
+      const win = this.root && this.root.querySelector('[data-win="' + key + '"]');
+      const page = win && win.querySelector('.lx-win__page');
+      const block = page && (page.querySelector('.lx-follow') || page.querySelector('.rd-p'));
+      if (page && block) page.scrollTop = Math.max(0, block.offsetTop - page.clientHeight / 3);
+      this.focusIn(key, '.lx-dock__open, .lx-dock__act');
+    });
+  }
+  renderVals() {
+    const PL = window.PL;
+    const s = this.state;
+    const L = this.L();
+    const theme = this.props.onListen ? (this.props.theme === 'dark' ? 'dark' : 'light') : s.theme;
+    const at = L || s.reading || PL.BASE;
+    const u = PL.unit(at), book = u.kind === 'book';
+    const cur = JSON.stringify([L ? Object.assign({}, PL.BASE, L) : null, s.panel || null, theme, !!s.open]);
+    const presets = PLP_PRESETS.map(([label, p, panel, th]) => {
+      const want = JSON.stringify([Object.assign({}, PL.BASE, p), panel || null, th, true]);
+      return {
+        label, pressed: want === cur ? 'true' : 'false',
+        go: () => {
+          const next = Object.assign({}, PL.BASE, p);
+          if (this.props.onListen) this.props.onListen({ listen: next });
+          this.setState({ listen: next, panel, theme: th, open: true, reading: null });
+        },
+      };
+    });
+    const ch = book ? (at.ch || 1) : 1;
+    const d = L ? PL.dock(L) : {};
+    const flow = this.props.bar === 'off';
+    const flowWin = PLP_FLOW[this.props.win] || PLP_FLOW.fill;
+    const docked = !!L;
+    const follow = !!(L && L.follow);
+    return {
+      theme,
+      presets,
+      setRoot: (el) => { this.root = el; },
+      hasBar: !flow,
+      winsCls: 'pl-wins' + (flow ? ' pl-wins--flow' + (flowWin.key === 'fill' ? ' pl-wins--fill' : '') : ''),
+      wins: (flow ? [flowWin] : PLP_WINS).map((w) => ({
+        key: w.key, cap: w.cap, style: w.style,
+        cellCls: 'lx-board__cell' + (w.wide ? ' pl-cell--wide' : ''),
+        open: () => { this.setState({ open: true }); this.focusIn(w.key, '.pl-sheet .rd-sheet__close'); },
+        close: () => this.close(w.key),
+        goText: () => this.goText(w.key),
+      })),
+      winCls: 'rd-frame lx-win' + (book ? ' lx-win--chapter' : ' pl-langs') + (docked ? ' lx-win--docked' : ''),
+      kind: book ? 'chapter' : 'loose',
+      lang: u.lang,
+      langs: book ? ['en'] : ['en', 'ko'],
+      pct: 12,
+      pageLabel: book ? 'Chapter text' : 'Document text',
+      isBook: book,
+      chLabel: 'Chapter ' + ch,
+      place: book ? u.title : '[PROJECT]',
+      headTitle: book ? u.chapters[ch - 1][0] : u.title,
+      paras: PLP_PARAS.map((t, i) => ({ text: t, cls: 'rd-p' + (i === 1 && follow ? ' lx-follow' : '') })),
+      chN: ch,
+      chTotal: book ? u.chapters.length : 1,
+      chTitles: book ? u.chapters.map((c) => c[0]) : [],
+      docked,
+      slotCls: 'lx-slot rd-flow' + (book ? ' lx-slot--chapter' : ''),
+      d,
+      dPlay: () => this.patch({ state: 'playing', offer: false }),
+      dPause: () => this.patch({ state: (L && L.state === 'offline-play') ? 'offline-stopped' : 'paused' }),
+      dRetry: () => this.patch({ state: (L && L.state === 'fail-play') ? 'playing' : 'making' }),
+      dAgain: () => this.patch({ ch: (L && L.from) || 1, pos: '0:00', state: 'playing', offer: false }),
+      dSignIn: () => this.patch({ state: 'paused' }),
+      sheet: docked && !!s.open,
+      L,
+      panel: s.panel,
+      setListen: (e) => this.setListen(e ? e.listen : null),
+      setPanel: (v) => this.setState({ panel: v }),
+    };
+  }
+}
+</script>
+</body>
+</html>

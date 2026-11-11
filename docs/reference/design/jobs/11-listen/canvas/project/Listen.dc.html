@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Listen control</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}">
+<sc-if value="{{ isPill }}" hint-placeholder-val="{{ false }}"><button type="button" class="lx-pill" onclick="{{ listen }}"><span class="lx-i lx-i--play lx-i--s" aria-hidden="true"></span><span>Listen</span><sc-if value="{{ hasQ }}" hint-placeholder-val="{{ true }}"><span class="lx-pill__q">· {{ q }}</span></sc-if></button></sc-if>
+<sc-if value="{{ isBlock }}" hint-placeholder-val="{{ true }}"><div class="lx-listen">
+<sc-if value="{{ isStart }}" hint-placeholder-val="{{ true }}">
+<button type="button" class="rd-btn rd-btn--secondary" aria-busy="{{ busyAttr }}" aria-describedby="{{ qId }}" onclick="{{ listen }}"><span class="lx-labels"><span class="{{ restCls }}"><span class="lx-i lx-i--play lx-i--s" aria-hidden="true"></span>Listen</span><span class="{{ busyCls }}" aria-hidden="{{ busyHidden }}"><span class="lx-spin" aria-hidden="true"></span>Starting…</span></span></button>
+</sc-if>
+<sc-if value="{{ isResume }}" hint-placeholder-val="{{ false }}">
+<button type="button" class="rd-btn rd-btn--secondary" aria-describedby="{{ qId }}" onclick="{{ listen }}"><span class="lx-i lx-i--play lx-i--s" aria-hidden="true"></span>Continue listening</button>
+</sc-if>
+<sc-if value="{{ hasQ }}" hint-placeholder-val="{{ true }}"><span class="lx-listen__q" id="{{ qId }}">{{ q }}</span></sc-if>
+<sc-if value="{{ isResume }}" hint-placeholder-val="{{ false }}"><span class="lx-listen__over"><button type="button" class="lx-over" onclick="{{ startOver }}">Start over</button></span></sc-if>
+</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"form":{"editor":"enum","options":["doc","chapter","book","resume"],"default":"doc"},"q":{"editor":null},"busy":{"editor":"boolean","default":false},"slot":{"editor":"boolean","default":false},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"onListen":{"editor":null},"onStartOver":{"editor":null},"bare":{"editor":null},"$preview":{"width":560,"height":76}}'>
+class Component extends DCLogic {
+  call(name) {
+    return (e) => {
+      const f = this.props[name];
+      if (f) { if (e && e.preventDefault) e.preventDefault(); f(); }
+    };
+  }
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    if (!this._id) this._id = 'lxq-' + Math.random().toString(36).slice(2, 8);
+    const form = ['doc', 'chapter', 'book', 'resume'].indexOf(P.form) >= 0 ? P.form : 'doc';
+    const DEF = { doc: '42 min', chapter: 'Chapters 2–5', book: '5 chapters · about 4 h', resume: 'Chapter 4 · 12:30' };
+    const q = P.q === undefined ? DEF[form] : P.q;
+    const busy = !!P.busy;
+    return {
+      isPill: !!P.slot,
+      isBlock: !P.slot,
+      isStart: form !== 'resume',
+      isResume: form === 'resume',
+      hasQ: !!q,
+      q,
+      qId: q ? this._id : undefined,
+      busyAttr: busy ? 'true' : 'false',
+      restCls: busy ? 'is-off' : '',
+      busyCls: busy ? '' : 'is-off',
+      busyHidden: busy ? 'false' : 'true',
+      listen: this.call('onListen'),
+      startOver: this.call('onStartOver'),
+      wrapCls: bare ? 'rd-in' : 'rd-frame lx-alone',
+      wrapTheme: bare ? undefined : (P.theme === 'dark' ? 'dark' : 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>
