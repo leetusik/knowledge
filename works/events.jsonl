@@ -1935,3 +1935,13 @@
 {"ts": "2026-11-11T15:15:56+09:00", "type": "deferred_created", "deferred": "D104-vm", "source": "P41-sr (voice pick, after R5)"}
 {"ts": "2026-11-11T15:15:57+09:00", "type": "deferred_created", "deferred": "D105-y8", "source": "P41-sr.R3 OQ2, signed at D1"}
 {"ts": "2026-11-11T15:16:24+09:00", "type": "slice_status_changed", "slice": "P41-sr.DECOMP2", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-11-11T15:26:42+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.B1"}
+{"ts": "2026-11-11T15:26:43+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.B2"}
+{"ts": "2026-11-11T15:26:43+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.B3"}
+{"ts": "2026-11-11T15:26:43+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.W1"}
+{"ts": "2026-11-11T15:26:43+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.G1"}
+{"ts": "2026-11-11T15:26:44+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.W2"}
+{"ts": "2026-11-11T15:26:44+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.X1"}
+{"ts": "2026-11-11T15:30:36+09:00", "type": "slice_declared", "slice": "P41-sr.B3", "depends_on": ["P41-sr.B1", "P41-sr.B2"]}
+{"ts": "2026-11-11T15:33:48+09:00", "type": "executor_dispatched", "slice": "P41-sr.DECOMP2", "phase": "P41-sr", "kind": "decomposition", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-11T15:33:48+09:00", "type": "slice_status_changed", "slice": "P41-sr.DECOMP2", "old_status": "in_progress", "new_status": "done"}

@@ -89,3 +89,19 @@ _Entries moved here from phase.md by `phase-section --to-topic`, byte for byte, 
   - **Not run:** Chatterbox Multilingual v3, OmniVoice, MeloTTS.
   - **Cleanup:** R2's cleanup list is in `slices/P41-sr.R2/result.md`: about 9.4 GB of Hugging Face
     cache, 6.4 GB of venvs, and the uv cache's growth. It waits on the operator's word.
+
+## Notes for later slices 13 (2)
+
+- **(from P41-sr.R4, for P41-sr.D1, P41-sr.DECOMP2)** Six free voice models now heard, in 11 samples. MeloTTS KR (MIT; CPU RTF 0.23 on 1 thread; 3–3.5 GB RAM) is the **box fallback for Korean**, not a replacement for Supertonic 3. OmniVoice is a light Mac option (MLX RTF 0.41, about 4 GB, CC-BY-NC); its designed Korean voice garbled 3 of 8 renders, so it needs an ASR gate. Chatterbox v3 is out: slower than real time on MPS, watermarked, unmaintained. R2's disk-stop note is consumed (operator, 2026-11-11: room again). → `topics/voice-models.md`
+
+## Notes for later slices 14
+
+- **(from P41-sr.D1, for DECOMP2, REVIEW)** The Listen design: job `docs/reference/design/jobs/11-listen/`, round `01-listen`. The canvas is https://claude.ai/artifact/EKyuGvWVWFKmgFuk71xKaG, with its entry Page `Main.dc.html`: the book landing → Listen → the chapter with the docked player → the opened player. The build spec is the round's `result.md` `## Build` plus `frame.md` F1–F33. The `kb` system was installed from the local cache: this login cannot open the system Artifact (same as P39-hk.D1). **Job-number collision:** P36-1s's branch plans its jobs as `10-`…`12-` by `design-open`, which collide with main's `10-reading-aids` and this `11-listen`. Neither phase renumbers the other's; settle it at P36-1s's merge.
+
+## Notes for later slices 16
+
+- **(from P41-sr.R5, for P41-sr.DECOMP2)** The new Mac first picks, on machine evidence (the operator confirms by ear):
+  - **Korean: Fish Audio S2 Pro, 8-bit MLX.** Whisper CER 0.20 and voice proxy 0.87, against Sohee's 0.29 and 0.74. RTF 1.9, so about 9 h per 130k characters; 15–17 GB; non-commercial. It needs one conversation per section (at most about 20 min of audio), each opened with a fixed, discarded warm-up sentence.
+  - **English: Ming-3.0 US_Emma.** MIT, arena Elo 1185, RTF 0.42, 4.4 GB. Ming's Korean must be pre-split, because mlx-audio's splitter ignores Hangul.
+  - **The box is unchanged:** Supertonic 3, with MeloTTS as the Korean fallback.
+  - → `topics/voice-models.md` § Recommendation, § Round 3 (R5)
