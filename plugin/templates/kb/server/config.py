@@ -266,8 +266,11 @@ def listen_max_attempts() -> int:
 
 
 def listen_max_part_bytes() -> int:
-    """The largest part upload accepted (``KB_LISTEN_MAX_PART_BYTES``, 4 MiB)."""
-    return int(_env_number("KB_LISTEN_MAX_PART_BYTES", 4 * 1024 * 1024, integer=True))
+    """The largest part upload accepted (``KB_LISTEN_MAX_PART_BYTES``, 16 MiB). A
+    10-minute part is about 4 MB (AAC 48 kbps), and speech ran up to 19 % past its
+    length estimate on production, so 4 MiB was too tight (P41-sr.X1). 16 MiB stays
+    under the edge's ``client_max_body_size 20m``, and the upload is read capped."""
+    return int(_env_number("KB_LISTEN_MAX_PART_BYTES", 16 * 1024 * 1024, integer=True))
 
 
 def listen_poll_s() -> float:

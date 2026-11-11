@@ -8,7 +8,7 @@
 - Current phase: `P41-sr`
 - Current slice: `P41-sr.X1`
 - Next slice: `P41-sr.REVIEW`
-- Waiting on operator: `none`
+- Waiting on operator: `P41-sr.X1`
 - Open deferred jobs: `87`
 - Workspace version: `v89`
 
@@ -393,5 +393,5 @@ _Read live from its worktree `.claude/worktrees/P36-1s-hermes_a_chat_agent_besid
 | [x] `P41-sr.W1` | `done` | The web player core: the persistent Listen, the dock, the note, Listen on a document | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.W1` |
 | [x] `P41-sr.G1` | `done` | Alt text that reads aloud well, and the plugin release | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.G1` |
 | [x] `P41-sr.W2` | `done` | Book playback, the opened player and the book landing | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.W2` |
-| [ ] `P41-sr.X1` | `todo` | Ship it: deploy, migrate, start the Mac runner, check Range on production | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.X1` |
+| [~] `P41-sr.X1` | `pending` | Ship it: deploy, migrate, start the Mac runner, check Range on production | `implementation` | `works/phases/active/P41-sr/slices/P41-sr.X1` |
 | [ ] `P41-sr.REVIEW` | `todo` | phase review | `review` | `works/phases/active/P41-sr/slices/P41-sr.REVIEW` |
