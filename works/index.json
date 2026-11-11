@@ -314,13 +314,13 @@
       "order": 23,
       "path": "works/phases/active/P41-sr",
       "review_status": "pending",
-      "current_slice": "P41-sr.R1",
-      "slice_count": 8,
-      "done_slice_count": 4
+      "current_slice": "P41-sr.R4",
+      "slice_count": 9,
+      "done_slice_count": 5
     }
   ],
   "deferred_open_count": 81,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 20,
-  "last_rebuilt_at": "2026-11-11T06:55:40+09:00"
+  "last_rebuilt_at": "2026-11-11T10:08:11+09:00"
 }

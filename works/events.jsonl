@@ -1916,3 +1916,8 @@
 {"ts": "2026-11-11T06:48:28+09:00", "type": "slice_status_changed", "slice": "P41-sr.R3", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-11-11T06:55:40+09:00", "type": "executor_dispatched", "slice": "P41-sr.R2", "phase": "P41-sr", "kind": "research", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-11T06:55:40+09:00", "type": "slice_status_changed", "slice": "P41-sr.R2", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-11T10:04:47+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.R4"}
+{"ts": "2026-11-11T10:04:47+09:00", "type": "slice_status_changed", "slice": "P41-sr.R1", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-11-11T10:05:31+09:00", "type": "slice_status_changed", "slice": "P41-sr.R4", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-11T10:08:11+09:00", "type": "executor_dispatched", "slice": "P41-sr.R1", "phase": "P41-sr", "kind": "research", "risk": "high", "attempt": 2, "verdict": "done", "note": null}
+{"ts": "2026-11-11T10:08:11+09:00", "type": "slice_status_changed", "slice": "P41-sr.R1", "old_status": "in_progress", "new_status": "done"}
