@@ -8,8 +8,10 @@
    is refused.
 3. **The manifest:** editing one section's text changes only the key of the part
    holding it (no Postgres needed).
+4. **The preference (P41-sr.F2):** a Listen's state reads speed and follow along from
+   the listener's newest row, whatever the item, never its own older one.
 
-1 and 2 are Postgres-gated through ``tests/test_documents_api``'s harness, so they
+1, 2 and 4 are Postgres-gated through ``tests/test_documents_api``'s harness, so they
 skip without a disposable ``KB_TEST_DATABASE_URL``.
 """
 
@@ -114,6 +116,21 @@ def test_claim_lease_and_requeue(listen):
     assert state["state"] == "failed" and state["runner_last_seen"] is not None
     assert state["failure"] == {"kind": "voice", "part": {"n": 2, "of": 4}, "message": "boom 3",
                                 "chapter": None}
+
+    # P41-sr.F2 (F3): speed and follow along are the listener's. This Listen's own row (1.5x)
+    # is older than the listener's row for another item: the state reads that one; the
+    # seconds stay this Listen's own.
+    c.put("/app/listen/position", headers=listen.h,
+          json={**listen.body, "seconds": 7, "speed": 1.5})
+    with listen.engine.begin() as conn:
+        conn.execute(text(
+            "INSERT INTO listen_positions (user_id, tenant_id, kind, project, item, from_chapter, "
+            "lang, seconds, speed, follow, kept, updated_at) SELECT user_id, tenant_id, kind, "
+            "project, 'heard-later', from_chapter, lang, 3, 1.25, false, false, "
+            "updated_at + interval '1 minute' FROM listen_positions WHERE tenant_id = :t"),
+            {"t": listen.tenant})
+    state = c.get("/app/listen/state", headers=listen.h, params=listen.body).json()
+    assert (state["speed"], state["follow"], state["position"]["seconds"]) == (1.25, False, 7)
 
 
 def test_upload_is_write_once_and_needs_the_lease(listen):

@@ -443,7 +443,9 @@ async def _state(listen: _Listen, ctx: AuthContext) -> dict[str, Any]:
         ctx.user.id, listen.tenant_id, listen.kind, listen.project, listen.item,
         listen.from_chapter,
     )
-    preference = position or await lj.latest_position(ctx.user.id)
+    # P41-sr.F2: speed and follow along are the listener's, not the document's (F3, F33):
+    # always the newest row, whatever the item. The seconds and chapter stay this Listen's.
+    preference = await lj.latest_position(ctx.user.id)
     resume = None
     if listen.kind == "book":
         resume = await lj.latest_position(

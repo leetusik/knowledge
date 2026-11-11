@@ -3,15 +3,15 @@
   "phase_id": "P41-sr",
   "name": "Speed and follow along kept per listener, not per document",
   "kind": "fix",
-  "status": "todo",
+  "status": "done",
   "order": 9002,
   "depends_on": [
     "P41-sr.F1"
   ],
   "depends_declared": true,
   "created_at": "2026-11-12T01:34:57+09:00",
-  "started_at": null,
-  "completed_at": null,
+  "started_at": "2026-11-12T01:49:30+09:00",
+  "completed_at": "2026-11-12T01:58:23+09:00",
   "risk": "high",
   "source": {
     "type": "manual",
@@ -21,7 +21,7 @@
     "plan": "plan.md",
     "result": "result.md"
   },
-  "outcome": null,
+  "outcome": "Speed and follow along come from the listener's newest position row whatever the item (state route, one line + mirror); W2 already saved changes while paused; cases a-g pass",
   "validation": {
     "required": [],
     "last_run": null,
