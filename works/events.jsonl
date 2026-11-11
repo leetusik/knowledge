@@ -2002,3 +2002,7 @@
 {"ts": "2026-11-12T01:59:04+09:00", "type": "slice_status_changed", "slice": "P41-sr.F3", "old_status": "todo", "new_status": "in_progress"}
 {"ts": "2026-11-12T02:30:46+09:00", "type": "executor_dispatched", "slice": "P41-sr.F3", "phase": "P41-sr", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-12T02:30:46+09:00", "type": "slice_status_changed", "slice": "P41-sr.F3", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-12T02:31:15+09:00", "type": "slice_status_changed", "slice": "P41-sr.F4", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-12T03:09:42+09:00", "type": "executor_dispatched", "slice": "P41-sr.F4", "phase": "P41-sr", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
+{"ts": "2026-11-12T03:09:42+09:00", "type": "slice_status_changed", "slice": "P41-sr.F4", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-12T03:10:06+09:00", "type": "slice_status_changed", "slice": "P41-sr.REVIEW", "old_status": "changes_requested", "new_status": "pending", "stop_kind": "decision"}

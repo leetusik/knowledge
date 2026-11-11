@@ -14,6 +14,7 @@ import {
 } from "@/lib/listen/book";
 import {
   initial,
+  replaced,
   serverKey,
   step,
   switchList,
@@ -133,6 +134,43 @@ describe("a new play.list (the audio changed)", () => {
     expect(switchList("A", "B", "press")).toBe("now");
     expect(switchList("A", "A", "press")).toBe("same");
     expect(switchList(null, "B", "sounding")).toBe("now");
+  });
+
+  // P41-sr.F4 — start's answer replaced the unit the press attached (its URLs 404).
+  it("takes a replaced unit's list at start's answer, never a newer version's", () => {
+    const at = (doc: string, unit: string, version: number, update?: string) =>
+      ({
+        doc,
+        unit,
+        version,
+        update: update ? { unit: update, version: version + 1 } : null,
+      }) as unknown as KbListenEntry;
+    const was = { entries: [at("d", "u1", 3)] };
+    // The same version under another id: replaced, so the press takes it now.
+    expect(replaced(was, { entries: [at("d", "u2", 3)] })).toBe(true);
+    // An earlier version plays meanwhile; the replacement is the update.
+    expect(
+      replaced(was, {
+        entries: [
+          {
+            ...at("d", "u0", 2),
+            update: { unit: "u2", version: 3 },
+          } as KbListenEntry,
+        ],
+      }),
+    ).toBe(true);
+    // A newer version's unit, or the same unit: it waits for a press (R3).
+    expect(replaced(was, { entries: [at("d", "u2", 4)] })).toBe(false);
+    expect(replaced(was, { entries: [at("d", "u1", 3)] })).toBe(false);
+    // A book: one chapter's unit replaced is enough.
+    const book = { entries: [at("c1", "a", 1), at("c2", "b", 1)] };
+    expect(
+      replaced(book, { entries: [at("c1", "a", 1), at("c2", "b2", 1)] }),
+    ).toBe(true);
+    // WebKit refusing the new list's play() outside the gesture reads tap, never a fault.
+    expect(run(initial("playing"), { t: "press" }, { t: "rejected" }).key).toBe(
+      "tap",
+    );
   });
 });
 

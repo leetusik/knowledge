@@ -3,7 +3,7 @@
   "phase_id": "P41-sr",
   "name": "phase review",
   "kind": "review",
-  "status": "changes_requested",
+  "status": "pending",
   "order": 9999,
   "depends_on": [],
   "created_at": "2026-11-10T20:54:40+09:00",
@@ -28,5 +28,10 @@
     "archived": false,
     "archived_at": null,
     "archive_path": null
+  },
+  "pending": {
+    "kind": "decision",
+    "on_words": "OQ4: 'now' cuts F5 (a short first part, risk high) before round 2, 'defer' files it as a deferred job; OQ5: the operator signs the agent's Chrome out of production (or says it is intended), so round 2 can run its owed Claude in Chrome checks; OQ6: 'document copy' cuts a small copy fix for a one-chapter book Listen, 'as drawn' keeps it; then REVIEW round 2 runs",
+    "since": "2026-11-12T03:10:06+09:00"
   }
 }

@@ -246,3 +246,24 @@ export function switchList(
   if (attached === null) return "now";
   return at === "press" || at === "idle" ? "now" : "later";
 }
+
+/**
+ * P41-sr.F4 — whether `after` (start's answer) replaced a unit that `before` (the state
+ * whose list the press attached) plays: the same document version under another id. A
+ * version has one unit (B1's identity), so the one `before` names is gone, and its
+ * playlist and parts answer 404 (B2): the press takes the new list at once, never a
+ * false stop. A newer version's unit is no replacement: the earlier one still plays, and
+ * its list waits for a press (R3, `switchList`).
+ */
+export function replaced(
+  before: Pick<KbListenState, "entries">,
+  after: Pick<KbListenState, "entries">,
+): boolean {
+  return before.entries.some((b) => {
+    if (!b.unit || b.version == null) return false;
+    const a = after.entries.find((x) => x.doc === b.doc);
+    return [a, a?.update].some(
+      (u) => !!u?.unit && u.version === b.version && u.unit !== b.unit,
+    );
+  });
+}

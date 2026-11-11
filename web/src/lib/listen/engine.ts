@@ -21,6 +21,7 @@ import {
 import { segmentAt } from "./follow";
 import {
   polls,
+  replaced,
   serverKey,
   step,
   switchList,
@@ -65,6 +66,12 @@ import type { Listen, ListenEntry, ListenSeed } from "./types";
 // the chapter heard (the dock, the player, the lock screen, the live region) is the
 // timeline entry's, the audio's own; before the timeline is read, the page's only in the
 // Listen's language, else the chapter's place (`Chapter 2`).
+//
+// P41-sr.F4 — the press that replaces a stale unit: the press attaches the page's list
+// inside its gesture, and start (B1's `ensure_unit`) may replace a unit that list names,
+// whose URLs then answer 404 (B2). Start's answer then takes the new list at once, where
+// the listener is (`replaced`); a fault met while start is out waits for that answer.
+// Every other new list still waits for a press (R3).
 
 const HLS_TYPE = "application/vnd.apple.mpegurl";
 const POLL_MS = 6000;
@@ -181,6 +188,9 @@ export function createEngine(
   let lastPositionState = 0;
   /** A send id: an answer lands only if no newer press was made since. */
   let sid = 0;
+  /** The press whose start is out (its send id, else 0), and a fault met meanwhile (F4). */
+  let starting = 0;
+  let held = false;
   /** The last state read (the chapters' making, for next-waiting). */
   let lastState: KbListenState | null = null;
   /** The last press's seed, for a press made offline. */
@@ -323,6 +333,11 @@ export function createEngine(
     broken = true;
     if (!navigator.onLine) {
       offline();
+      return;
+    }
+    // P41-sr.F4: start's answer decides it; it may have replaced the unit just attached.
+    if (starting !== 0 && starting === sid) {
+      held = true;
       return;
     }
     const unit = l.unit;
@@ -471,6 +486,12 @@ export function createEngine(
       // the next poll reads it again
     } finally {
       timelineBusy = false;
+      // P41-sr.F4: the Listen took another list while this read was out (a replaced
+      // unit's): read that one's, since a made list is not polled again.
+      const cur = getListen();
+      if (cur?.play && cur.play.list !== play.list) {
+        void readTimeline(cur.play, cur.len);
+      }
     }
   }
 
@@ -751,6 +772,8 @@ export function createEngine(
     start(seed: ListenSeed, from: number) {
       sid += 1;
       const my = sid;
+      starting = my;
+      held = false;
       lastSeed = { seed, from };
       const prev = getListen();
       if (prev && attached) save(true);
@@ -824,31 +847,66 @@ export function createEngine(
       if (s.play && s.len !== null && s.len > 0) attach(s.play, from, true);
       // A book's titles are the timeline's (P41-sr.F3): read it now, not after the start's answer.
       if (book && s.play) void readTimeline(s.play, s.len);
-      void listenStart(seed.key).then((res) => {
-        if (my !== sid) return;
-        if (!res.ok) {
-          if (res.status === 401) mach({ t: "session" });
-          else if (!attached) mach({ t: "error" });
-          return;
-        }
-        absorb(res.state);
-        mach({
-          t: "started",
-          key: serverKey(res.state),
-          attached: attached !== null,
-        });
-        const cur = getListen();
-        if (
-          cur &&
-          cur.state === "loading" &&
-          !attached &&
-          cur.play &&
-          (cur.len ?? 0) > 0
-        ) {
-          attach(cur.play, cur.pos, true);
-        }
-        schedule();
-      });
+      void listenStart(seed.key).then(
+        (res) => {
+          if (my !== sid) return;
+          starting = 0;
+          const faulted = held;
+          held = false;
+          if (!res.ok) {
+            if (res.status === 401) mach({ t: "session" });
+            else if (faulted) void fault();
+            else if (!attached) mach({ t: "error" });
+            return;
+          }
+          // P41-sr.F4: start replaced a unit the attached list names (its URLs now 404):
+          // drop that list and go on as if nothing was attached at the press, from where the
+          // listener is (nothing heard yet: the press's own place). The answer's list then
+          // plays at once, its made prefix, or the making shows; a paused Listen takes it
+          // at the next press. Never a false "connection dropped".
+          const swap =
+            attached !== null &&
+            attached === s.play?.list &&
+            replaced(s, res.state);
+          if (swap) {
+            const l = getListen();
+            const at = l && l.state !== "loading" ? audio.currentTime : from;
+            const sound = !!l && SOUNDING.includes(l.state);
+            detach();
+            timeline = null;
+            patchListen({ pos: at, stoppedAt: null, segs: [], seg: -1 });
+            if (sound) mach({ t: "press" });
+          }
+          absorb(res.state);
+          mach({
+            t: "started",
+            key: serverKey(res.state),
+            attached: attached !== null,
+          });
+          const cur = getListen();
+          if (
+            cur &&
+            cur.state === "loading" &&
+            !attached &&
+            cur.play &&
+            (cur.len ?? 0) > 0
+          ) {
+            attach(cur.play, cur.pos, true);
+          } else if (faulted && !swap) {
+            void fault();
+          }
+          schedule();
+        },
+        () => {
+          // No answer at all (the call failed): a fault it held is decided now (F4).
+          if (my !== sid) return;
+          starting = 0;
+          if (held) {
+            held = false;
+            void fault();
+          }
+        },
+      );
     },
 
     play() {
