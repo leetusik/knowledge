@@ -1807,3 +1807,189 @@ div.an-li__go:hover .an-li__main { text-decoration: none; }
 @media print {
   .an-rail, .an-rows, .an-tag { display: none !important; }
 }
+
+/* ======================================================================================
+   P41-sr.W1 — Listen on the reader, transcribed from the signed `11-listen` round `01-listen`
+   (`frame.css` Part 3, the `Reader` board's head slot; `frame.md` F5–F7, F10, F12, F14, F15,
+   F26, F27). Class names stay as drawn (`lx-*`, the head's `rx-listen`). Product
+   adaptations: the frame's tokens sit on the reader root; the slot is `position: fixed` to
+   the viewport (the canvas's window stands in for it) with the safe area under it; the
+   icons are inline `<svg>` (the canvas masks the same paths); the canvas's container
+   queries are the reader's viewport media queries.
+   ====================================================================================== */
+
+/* Frame tokens (F15): two control heights, the dock's box, the Listen type steps, the line */
+.rd-root {
+  --lx-ctl: var(--kb-tap);
+  --lx-ctl-l: 4rem;
+  --lx-dock-pad: var(--kb-space-sm);
+  --lx-dock-h: calc(var(--lx-ctl) + 2 * var(--lx-dock-pad) + 2px);
+  --lx-fs-meta: 0.8125rem;
+  --lx-fs-ui: 0.9375rem;
+  --lx-fs-title: 1.375rem;
+  --lx-fs-pos: 2.125rem;
+  --lx-line: 3px;
+}
+
+/* ---------- The media icons (F5): 24 px, stroke 1.75, round; play and pause solid ---------- */
+.lx-i { display: inline-block; flex: none; width: 1.5rem; height: 1.5rem; }
+.lx-i--s { width: 1.25rem; height: 1.25rem; }
+.lx-i--l { width: 2rem; height: 2rem; }
+
+/* The busy ring (README States, kb-appbtn__spin as built): the text's own colour, still under reduced motion */
+.lx-spin { display: inline-block; flex: none; width: 0.85em; height: 0.85em; border: 1.5px solid currentColor; border-top-color: transparent; border-radius: 50%; }
+@media (prefers-reduced-motion: no-preference) { .lx-spin { animation: lx-spin 0.7s linear infinite; } }
+@keyframes lx-spin { to { transform: rotate(360deg); } }
+
+/* Visually hidden (the live region) */
+.lx-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---------- Round media buttons (F5, F15): 44 px; the opened player's play 64 px ---------- */
+.lx-round {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; position: relative;
+  width: var(--lx-ctl); height: var(--lx-ctl); padding: 0; border: 1px solid transparent; border-radius: 50%;
+  background: transparent; color: var(--kb-ink); cursor: pointer; font-family: var(--font-body);
+  transition: background var(--rd-ease), color var(--rd-ease), border-color var(--rd-ease);
+}
+.lx-round:hover { background: var(--kb-surface-sunken); }
+.lx-round:active:not(:disabled) { transform: translateY(1px); }
+.lx-round--primary { background: var(--kb-accent); color: var(--rd-on-accent); }
+.lx-round--primary:hover { background: var(--kb-accent-strong); }
+.lx-round--l { width: var(--lx-ctl-l); height: var(--lx-ctl-l); }
+/* Not yet playable (preparing, waiting, offline): the library's disabled button, as built (lib-btn:disabled) */
+.lx-round:disabled { cursor: not-allowed; background: var(--kb-surface-sunken); border-color: var(--kb-border-strong); color: var(--kb-secondary); }
+.lx-skip__n { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; font-weight: var(--kb-weight-bold); line-height: 1; font-variant-numeric: tabular-nums; pointer-events: none; }
+
+/* ---------- The status word (F10): the README's trio, a dot and its word, never colour alone ---------- */
+.lx-status { display: inline-flex; align-items: center; gap: var(--kb-space-xs); margin: 0; font-family: var(--font-body); font-size: var(--lx-fs-meta); font-weight: var(--kb-weight-semibold); line-height: 1.2; }
+.lx-status::before { content: ""; flex: none; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--lx-dot); }
+.lx-status--active { color: var(--kb-status-active-ink); --lx-dot: var(--kb-status-active); }
+.lx-status--idle { color: var(--kb-status-idle-ink); --lx-dot: var(--kb-status-idle); }
+.lx-status--revoked { color: var(--kb-status-revoked-ink); --lx-dot: var(--kb-status-revoked); }
+.lx-status--busy::before { display: none; }
+
+/* ---------- The progress line (F9): the reading line's look, a 3 px track and an accent fill ---------- */
+.lx-prog { display: block; position: relative; height: var(--lx-line); border-radius: var(--lx-line); background: var(--kb-border); overflow: hidden; }
+.lx-prog__fill { display: block; height: 100%; border-radius: inherit; background: var(--kb-accent); }
+
+/* ---------- The Listen control (F6) ---------- */
+.lx-listen { display: flex; flex-wrap: wrap; align-items: center; gap: var(--kb-space-xs) var(--kb-space-sm); font-family: var(--font-body); }
+.lx-listen .rd-btn { gap: var(--kb-space-xs); }
+.lx-listen .rd-btn--secondary .lx-i { color: var(--kb-accent); }
+.lx-listen .rd-btn--secondary:hover .lx-i { color: var(--kb-accent-strong); }
+.lx-listen__q { font-size: var(--lx-fs-meta); line-height: 1.3; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+/* A busy button keeps its rest width: both labels share one grid cell (the library's lib-btn__labels, as built) */
+.lx-labels { display: inline-grid; }
+.lx-labels > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: var(--kb-space-xs); }
+.lx-labels > .is-off { visibility: hidden; }
+
+/* ---------- The slot's Listen (F6): with the reader's chrome, a pill in the bottom slot where the dock will sit ---------- */
+.lx-pill {
+  display: inline-flex; align-items: center; gap: var(--kb-space-xs); min-height: var(--kb-tap); max-width: 100%; padding: 0 1rem 0 0.75rem;
+  border: 1px solid var(--rd-control-edge); border-radius: var(--kb-radius-pill); background: var(--kb-surface); box-shadow: var(--kb-shadow-raise);
+  font-family: var(--font-body); font-size: var(--lx-fs-ui); font-weight: var(--kb-weight-semibold); line-height: 1.2; color: var(--kb-ink); cursor: pointer;
+  transition: background var(--rd-ease), border-color var(--rd-ease);
+}
+.lx-pill .lx-i { color: var(--kb-accent); }
+.lx-pill:hover { border-color: var(--kb-accent); }
+.lx-pill__q { font-weight: var(--kb-weight-regular); color: var(--kb-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lx-slot--pill { display: flex; justify-content: center; }
+/* The pill hides with the top bar, as the resume pill does (F6) */
+.rd-top-hidden .lx-slot--pill { visibility: hidden; opacity: 0; transition: opacity var(--rd-ease), visibility 0s linear 0.15s; }
+/* Start over, under Continue listening: a text action on the column's edge, 44 px tall */
+.lx-listen__over { flex-basis: 100%; display: flex; }
+.lx-over { display: inline-flex; align-items: center; min-height: var(--kb-tap); padding: 0; border: 0; background: transparent; cursor: pointer; font-family: var(--font-body); font-size: var(--lx-fs-ui); font-weight: var(--kb-weight-semibold); color: var(--kb-secondary); }
+.lx-over:hover { color: var(--kb-ink); text-decoration: underline; text-underline-offset: 0.2em; }
+
+/* ---------- The dock (F7): a capsule in the reader's bottom slot, on the column's two edges ---------- */
+/* The slot is fixed to the viewport. Its grid is the reader's one track (`rd-flow`), so the dock takes the text
+   column's edges at every width; it never hides with the chrome, and sits over the page, under the scrim (35) and
+   every sheet (40). */
+.lx-slot {
+  position: fixed; left: 0; right: 0; z-index: 21; pointer-events: none;
+  --lx-slot-b: var(--kb-space-md);
+  bottom: calc(var(--lx-slot-b) + var(--rd-safe-bottom));
+}
+.lx-slot--chapter { --lx-slot-b: calc(var(--rd-bot-h) + var(--kb-space-sm)); }
+.lx-slot > * { pointer-events: auto; }
+@media screen and (min-width: 100rem) { .lx-slot { --rd-measure: 44rem; } }
+.lx-dock {
+  position: relative; display: grid; grid-template-columns: var(--lx-ctl) minmax(0, 1fr) auto; align-items: center; column-gap: var(--kb-space-sm);
+  padding: var(--lx-dock-pad); border: 1px solid var(--kb-border); border-radius: var(--kb-radius-pill);
+  background: var(--kb-surface); box-shadow: var(--kb-shadow-raise);
+  font-family: var(--font-body); color: var(--kb-ink); transition: background var(--rd-ease);
+}
+.lx-dock__lead { z-index: 1; }
+.lx-dock__text { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.lx-dock__title { margin: 0; font-size: var(--lx-fs-ui); font-weight: var(--kb-weight-semibold); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lx-dock__status { margin: 0; display: flex; align-items: center; gap: var(--kb-space-xs); min-width: 0; font-size: var(--lx-fs-meta); line-height: 1.3; color: var(--kb-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lx-dock__line { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lx-dock__word { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+.lx-dock__word--revoked { color: var(--kb-status-revoked-ink); }
+/* Open the player: a 44 px chevron whose hit area stretches over the whole capsule (the lead button sits above it) */
+.lx-dock__open { position: static; width: var(--lx-ctl); height: var(--lx-ctl); color: var(--kb-secondary); }
+.lx-dock__open::after { content: ""; position: absolute; inset: 0; border-radius: var(--kb-radius-pill); }
+.lx-dock__open:hover { background: transparent; }
+.lx-dock:has(.lx-dock__open:hover) { background: color-mix(in srgb, var(--kb-surface-sunken) 55%, var(--kb-surface)); }
+.lx-dock:has(.lx-dock__open:hover) .lx-dock__open { color: var(--kb-ink); }
+.rd-root .lx-dock__open:focus-visible { outline: none; }
+.lx-dock__open:focus-visible::after { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+/* The one text action a dock can carry (Sign in), a pill concentric with the capsule */
+.lx-dock__act { border-radius: var(--kb-radius-pill); }
+
+/* The page clears the dock: while docked, its end padding grows by the dock's height plus kb-space-sm */
+.lx-docked .rd-page { padding-bottom: calc(var(--rd-bot-h) + var(--kb-space-sm) + var(--lx-dock-h) + var(--kb-space-sm) + var(--rd-safe-bottom)); }
+.rd-loose.lx-docked .rd-page { padding-bottom: calc(var(--kb-space-md) + var(--lx-dock-h) + var(--kb-space-sm) + var(--rd-safe-bottom)); }
+/* The bottom slot stacks: with the dock up, the resume pill, the undo toast and the save prompt sit above it */
+.lx-docked .rd-resume, .lx-docked .an-slot, .lx-docked .an-save {
+  bottom: calc(var(--rd-bot-h) + var(--kb-space-sm) + var(--lx-dock-h) + var(--kb-space-xs) + var(--rd-safe-bottom));
+}
+.rd-loose.lx-docked .rd-resume, .rd-loose.lx-docked .an-slot, .rd-loose.lx-docked .an-save {
+  bottom: calc(var(--kb-space-md) + var(--lx-dock-h) + var(--kb-space-xs) + var(--rd-safe-bottom));
+}
+
+/* ---------- The note (F10): the state word, one sentence, the line where it applies, the one action ---------- */
+.lx-note { display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-sm); min-width: 0; font-family: var(--font-body); }
+.lx-note__text { margin: 0; max-width: 34rem; font-size: var(--lx-fs-ui); line-height: 1.45; color: var(--kb-ink); text-wrap: pretty; font-variant-numeric: tabular-nums; }
+.lx-note__text :lang(ko) { word-break: keep-all; }
+.lx-note .lx-prog { align-self: stretch; max-width: 34rem; }
+.lx-note__ref { margin: 0; font-family: var(--font-mono); font-size: 0.75rem; line-height: 1.3; color: var(--kb-secondary); }
+.lx-note__busy { display: inline-flex; align-items: center; gap: var(--kb-space-xs); color: var(--kb-secondary); }
+
+/* ---------- Listen in the chapter opening (F6, F27): under the meta line, on the column's start edge ---------- */
+.rx-listen { margin-top: calc(var(--kb-space-md) * var(--rd-k)); }
+/* Once this unit's Listen exists, the slot holds the height of its tallest note (hidden copies in the same grid
+   cell), so no state change the reader did not ask for moves the text under it (reader-G4). */
+.rx-listen--held { display: grid; }
+.rx-listen--held > *, .rx-listen__hold > * { grid-area: 1 / 1; min-width: 0; }
+.rx-listen__hold { display: grid; visibility: hidden; }
+/* A Korean title in the dock keeps its words whole (F14) */
+.lx-dock__title:lang(ko) { word-break: keep-all; }
+
+/* ---------- Follow along (F12): a 3 px accent rule in the column's start margin beside the block being read ---------- */
+/* Not the highlight (paint inside the text, 05-annotations) and not the term marker (a dotted line under a word,
+   10-reading-aids): a rule outside the text, which moves nothing and never scrolls the page. It jumps, never slides. */
+.lx-follow { position: relative; }
+.lx-follow::before { content: ""; position: absolute; top: 0.25em; bottom: 0.25em; inset-inline-start: calc(-1 * var(--kb-space-sm) - var(--lx-line)); width: var(--lx-line); border-radius: var(--lx-line); background: var(--kb-accent); }
+
+/* ---------- The compact top bar on a two-language loose document (F26) ----------
+   The signed compact chrome (round 03), at the widths a loose document's bar needs: with Notes in the bar, the language
+   switch takes the second slot's row under 23rem (a chapter keeps the signed 21rem), and from 23rem to 26rem the logo
+   steps aside for "‹ Library" (under 14rem it does at every count, above). Tab order follows the rows. */
+@media (max-width: 22.99rem) {
+  .rd-root.rd-loose.rd-langs { --rd-top-h: 6.5rem; }
+  .rd-loose.rd-langs .rd-top { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: repeat(2, minmax(0, 1fr)); }
+  .rd-loose.rd-langs .rd-top__end { display: contents; }
+  .rd-loose.rd-langs .rd-top__start { grid-row: 1; grid-column: 1; }
+  .rd-loose.rd-langs .rd-lang--bar { display: none; }
+  .rd-loose.rd-langs .rd-lang--row { display: inline-flex; grid-row: 2; grid-column: 1 / -1; justify-self: end; }
+  .rd-loose.rd-langs .rd-top__end > .rd-tbtn { grid-row: 1; grid-column: auto; }
+}
+@media (min-width: 23rem) and (max-width: 25.99rem) {
+  .rd-loose.rd-langs .rd-logo { display: none; }
+}
+
+@media print {
+  .lx-slot, .rx-listen { display: none !important; }
+  .lx-follow::before { content: none; }
+}

@@ -73,3 +73,7 @@ export { READER } from "./reader";
 // the shelves, the cards and rows, Your reading data and the five states.
 export { LIBRARY } from "./library";
 export { BOOK } from "./book";
+
+// Listen (P41-sr.W1) — the `11-listen` round's words: the Listen control, the dock's short
+// forms and live region, the note's state words and sentences (F1, F6, F7, F10).
+export { LISTEN } from "./listen";

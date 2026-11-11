@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ListenHead } from "@/components/listen/listen-page";
 import { READER } from "@/content";
 import { publishedDate } from "@/lib/reader/date";
 import { hangulRuns, isKorean, joinHyphens } from "@/lib/reader/hangul";
@@ -16,6 +17,9 @@ import { VersionsButton } from "./versions-button";
  * Hangul runs inside other-language text are wrapped (§6a): the title, the lede, the
  * contents entries and the book title (which carries no language of its own, so it
  * is always wrapped). A Korean variant is `lang="ko"` already.
+ *
+ * P41-sr.W1: Listen's head slot sits under the meta line, on the column's start edge
+ * (`11-listen` F6): a client island that renders only when the page has a Listen seed.
  */
 export function ChapterHead({ view }: { view: ReaderView }) {
   const loose = view.kind === "loose" || view.book === null;
@@ -65,6 +69,7 @@ export function ChapterHead({ view }: { view: ReaderView }) {
           </>
         ) : null}
       </p>
+      <ListenHead />
       {older ? (
         <div className="rd-notice">
           <p className="rd-notice__text">
@@ -139,11 +144,7 @@ function Toc({
       <ol className="rd-toc__list" aria-label={label}>
         {groups.map(({ h2, subs }) => (
           <li key={h2.id} className="rd-toc__group">
-            <a
-              className="rd-toc__a"
-              href={`#${h2.id}`}
-              lang={h2.lang ?? lang}
-            >
+            <a className="rd-toc__a" href={`#${h2.id}`} lang={h2.lang ?? lang}>
               {hangulRuns(h2.text, h2.lang ? !isKorean(h2.lang) : wrap)}
             </a>
             {subs.length ? (

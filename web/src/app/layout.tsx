@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { ListenRoot } from "@/components/listen/listen-root";
 import { SITE } from "@/content";
 import { fraunces, jetbrains, pretendard, source } from "@/lib/fonts";
 import "./globals.css";
@@ -26,6 +27,10 @@ export const metadata: Metadata = {
 // on its own stage, while the `(app)` shell carries `default` on its `.kb-app`
 // root. The body is scheme-neutral (bg-canvas / text-ink resolve to --kb-* per
 // the active scheme).
+//
+// P41-sr.W1: `ListenRoot` is Listen's persistent player, above every route so a Listen
+// survives moving between reader pages. It renders and loads nothing off a reader or
+// book path, and reads no request data, so no page here becomes dynamic.
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,6 +44,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-dvh flex-col bg-canvas font-sans text-ink antialiased">
         {children}
+        <ListenRoot />
       </body>
     </html>
   );

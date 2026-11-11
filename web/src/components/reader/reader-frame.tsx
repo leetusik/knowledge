@@ -14,7 +14,16 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  ListenPageContext,
+  ListenSlot,
+  unitOfSeed,
+  useFollowAlong,
+  type ListenPageValue,
+} from "@/components/listen/listen-page";
 import { READER } from "@/content";
+import { useListen } from "@/lib/listen/store";
+import type { ListenSeed } from "@/lib/listen/types";
 import {
   readerCookieString,
   schemeFor,
@@ -82,6 +91,13 @@ import "@/app/reader.css";
  *    to the server.
  * `state` other than `ready` is the loading / not found / failed screen: the line and
  * top bar stay, the chapter bar appears only once the chapter is ready.
+ *
+ * P41-sr.W1 (`11-listen`): Listen on the page. `listen` (the page's seed) puts the Listen
+ * control in the opening's head slot (`ListenHead`, through `ListenPageContext`) and the
+ * pill in the bottom slot once that control is under the top bar; a docked Listen (the
+ * store's, which outlives the page) takes the bottom slot as the dock, grows the page's
+ * end padding and lifts the slot's other pills above it; follow along marks the block
+ * being read.
  */
 type Panel = "contents" | "notes" | "display" | "versions" | null;
 
@@ -89,6 +105,7 @@ export function ReaderFrame({
   view,
   state = "ready",
   notes = false,
+  listen = null,
   children,
 }: {
   view: ReaderView;
@@ -98,6 +115,8 @@ export function ReaderFrame({
    * (and a loose document's top bar its Notes button).
    */
   notes?: boolean;
+  /** P41-sr.W1: the page's Listen seed; null = no Listen control here. */
+  listen?: ListenSeed | null;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -114,6 +133,14 @@ export function ReaderFrame({
   const [os, setOs] = useState<"light" | "dark">("light");
   const [notesCount, setNotesCount] = useState(0);
   const [notesHost, setNotesHost] = useState<HTMLElement | null>(null);
+  // P41-sr.W1: the head's Listen has scrolled under the top bar (the pill may show, reader-G5).
+  const [past, setPast] = useState(false);
+  const listenHeadRef = useRef<HTMLDivElement | null>(null);
+  const setListenHead = useCallback((el: HTMLDivElement | null) => {
+    listenHeadRef.current = el;
+  }, []);
+  const docked = useListen() !== null;
+  const listenUnit = listen ? unitOfSeed(listen) : null;
 
   const rootRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLElement>(null);
@@ -176,6 +203,11 @@ export function ReaderFrame({
         if (h.getBoundingClientRect().top <= line) found = h.id;
       });
       setSection((prev) => (prev === found ? prev : found));
+      const head = listenHeadRef.current;
+      const isPast = head
+        ? head.getBoundingClientRect().bottom <= bottom
+        : false;
+      setPast((prev) => (prev === isPast ? prev : isPast));
 
       const now = Date.now();
       const step = stepChrome(scrollRef.current, top, atEnd(top, max), now);
@@ -381,6 +413,7 @@ export function ReaderFrame({
     hasLangs ? "rd-langs" : "",
     topHidden ? "rd-top-hidden" : "",
     botHidden ? "rd-bot-hidden" : "",
+    docked ? "lx-docked" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -496,6 +529,18 @@ export function ReaderFrame({
         })
       : null;
   const pillUp = ready && !!rd.pill && !topHidden && panel === null;
+  // P41-sr.W1: the page's Listen. The pill shows with the chrome, once the head's Listen is
+  // under the top bar, never over a sheet, and gives way to the resume pill (F6).
+  const listenPage = useMemo<ListenPageValue | null>(
+    () =>
+      listen && listenUnit
+        ? { seed: listen, unit: listenUnit, setHead: setListenHead }
+        : null,
+    [listen, listenUnit, setListenHead],
+  );
+  const listenPill =
+    ready && !!listen && past && !topHidden && panel === null && !pillUp;
+  useFollowAlong(rootRef, ready ? listenUnit : null);
   const notesBridge = useMemo<NotesBridge>(
     () => ({
       open: panel === "notes",
@@ -592,7 +637,9 @@ export function ReaderFrame({
           <div className="rd-article" onClick={onTap}>
             <ReaderProgressContext.Provider value={progressValue}>
               <NotesBridgeContext.Provider value={notesBridge}>
-                {children}
+                <ListenPageContext.Provider value={listenPage}>
+                  {children}
+                </ListenPageContext.Provider>
               </NotesBridgeContext.Provider>
             </ReaderProgressContext.Provider>
           </div>
@@ -617,6 +664,10 @@ export function ReaderFrame({
             </button>
           </div>
         ) : null}
+
+        <ListenPageContext.Provider value={listenPage}>
+          <ListenSlot chapter={!loose} pill={listenPill} signInHref={signIn} />
+        </ListenPageContext.Provider>
 
         {hasBottom && book ? (
           <nav className="rd-bottom" aria-label={READER.bottom.navLabel}>

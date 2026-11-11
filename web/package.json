@@ -19,6 +19,7 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "hls.js": "1.7.4",
     "lucide-react": "^1.21.0",
     "mdast-util-gfm-autolink-literal": "2.0.1",
     "mdast-util-gfm-strikethrough": "2.0.0",

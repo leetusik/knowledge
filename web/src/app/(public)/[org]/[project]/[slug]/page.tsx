@@ -9,7 +9,10 @@ import { DOCUMENTS } from "@/content";
 import { optionalIdentity } from "@/lib/auth-guards";
 import { resolveDocument } from "@/lib/knowledge/app";
 import { ApiError } from "@/lib/knowledge/client";
+import { docStem } from "@/lib/knowledge/reader";
 import type { KbDocument } from "@/lib/knowledge/types";
+import { readListenState } from "@/lib/listen/seed";
+import type { ListenSeed } from "@/lib/listen/types";
 import { parseReaderCookie, READER_COOKIE } from "@/lib/reader-cookie";
 import { chapterRedirectHref } from "@/lib/reader-href";
 import { loadLooseReader, type ReaderLoad } from "@/lib/reader/load";
@@ -39,6 +42,10 @@ import { loadLooseReader, type ReaderLoad } from "@/lib/reader/load";
 // P30.S13 — a native or md document opens in the READER here too (the loose-document
 // variant, `01-reader`); `?v=N` reads an older version. P30.S25 — an html explainer (or
 // an html version) opens in the LEGACY READER (`09-legacy-and-print`), with no app shell.
+//
+// P41-sr.W1 — Listen: a signed-in reader of a native document's current version gets the
+// page's Listen seed, read beside the page's own load (Listen's routes are session-only;
+// any miss is "no Listen here", never a failed page).
 //
 // The <title> is the document's title (P30.S15), through `generateMetadata`. The
 // knowledge client is `cache: "no-store"`, so the page and the metadata share ONE
@@ -209,12 +216,42 @@ export default async function PrettyDocumentPage({
   // Temporary (307), outside any try; the browser keeps `#section`.
   const chapter = chapterRedirectHref(doc, { v, lang: langOf(query.lang) });
   if (chapter) redirect(chapter);
-  const loaded = await loadOnce(ctx?.token, orgSlug, project, slug, v, cookie);
+  const token = ctx?.token;
+  const [loaded, listenState] = await Promise.all([
+    loadOnce(token, orgSlug, project, slug, v, cookie),
+    token && doc.source
+      ? readListenState(token, {
+          org: orgSlug,
+          project: doc.project,
+          doc: docStem(doc.project, doc.rel_path),
+        })
+      : Promise.resolve(null),
+  ]);
   return loaded.kind === "reader" ? (
-    <ReaderPage reader={loaded.reader} />
+    <ReaderPage
+      reader={loaded.reader}
+      listen={listenSeed(loaded.reader.view, listenState, {
+        org: orgSlug,
+        project: doc.project,
+        doc: docStem(doc.project, doc.rel_path),
+      })}
+    />
   ) : (
     <LegacyReaderPage legacy={loaded.legacy} />
   );
+}
+
+/**
+ * The page's Listen seed: the state read at load, on the version Listen plays (the
+ * current one; an older version's text would not be the audio's), else none.
+ */
+function listenSeed(
+  view: { title: string; lang: string; version: number; newest: number },
+  state: Awaited<ReturnType<typeof readListenState>>,
+  key: ListenSeed["key"],
+): ListenSeed | null {
+  if (!state || view.version < view.newest) return null;
+  return { key, title: view.title, lang: view.lang, state };
 }
 
 /** `decodeURIComponent` that returns the input unchanged on a malformed escape. */
