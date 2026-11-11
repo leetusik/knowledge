@@ -1985,3 +1985,10 @@
 {"ts": "2026-11-12T00:56:15+09:00", "type": "slice_status_changed", "slice": "P41-sr.X1", "old_status": "in_progress", "new_status": "pending", "stop_kind": "operator-action"}
 {"ts": "2026-11-12T00:59:38+09:00", "type": "slice_status_changed", "slice": "P41-sr.X1", "old_status": "pending", "new_status": "in_progress"}
 {"ts": "2026-11-12T00:59:38+09:00", "type": "slice_status_changed", "slice": "P41-sr.X1", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-12T00:59:43+09:00", "type": "slice_status_changed", "slice": "P41-sr.REVIEW", "old_status": "todo", "new_status": "in_progress"}
+{"ts": "2026-11-12T01:34:51+09:00", "type": "slice_status_changed", "slice": "P41-sr.REVIEW", "old_status": "in_progress", "new_status": "changes_requested"}
+{"ts": "2026-11-12T01:34:51+09:00", "type": "phase_reviewed", "phase": "P41-sr", "verdict": "changes_requested", "reviewer": "slice-executor"}
+{"ts": "2026-11-12T01:34:57+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.F1"}
+{"ts": "2026-11-12T01:34:57+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.F2"}
+{"ts": "2026-11-12T01:34:57+09:00", "type": "slice_created", "phase": "P41-sr", "slice": "P41-sr.F3"}
+{"ts": "2026-11-12T01:35:02+09:00", "type": "deferred_created", "deferred": "D110-g9", "source": "P41-sr.REVIEW round 1 (slices/P41-sr.W1/result.md § Chrome run)"}

@@ -1,0 +1,11 @@
+{
+  "id": "D110-g9",
+  "title": "Listen: a reload shows the position the pagehide beacon saved",
+  "status": "deferred",
+  "source": "P41-sr.REVIEW round 1 (slices/P41-sr.W1/result.md § Chrome run)",
+  "reason": "The reader route reads the Listen seed before the pagehide beacon lands, so a reload while playing can show up to 15 s back (seen 0:37 against 0:40; the next load showed 0:40). Accepted as built at P41-sr's review round 1.",
+  "trigger": "a replayed stretch is noticed after a reload, or the next Listen position work",
+  "created_at": "2026-11-12T01:35:02+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}
