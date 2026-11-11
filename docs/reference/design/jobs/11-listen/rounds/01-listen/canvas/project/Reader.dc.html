@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The reader with Listen</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+[data-proto="state-bar"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0;padding:8px 16px;background:#eceef1;border-bottom:1px dashed #6b717a;color:#2f3338;font:12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+[data-proto="state-bar"] [role="group"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+[data-proto="state-bar"] button{display:inline-flex;align-items:center;box-sizing:border-box;height:24px;margin:0;padding:0 10px;border:1px solid #6b717a;border-radius:4px;background:#f7f8fa;color:#2f3338;font:inherit;line-height:1;cursor:pointer}
+[data-proto="state-bar"] button[aria-pressed="true"]{background:#ffffff;border-color:#2f3338;font-weight:600}
+[data-proto="state-bar"] button:focus-visible{outline:2px solid #2f3338;outline-offset:2px}
+[data-proto="state-bar"] .rx-sb-name{font-weight:600}
+
+/* ---- The stage (canvas only): the device window the reader is drawn in, centred on the paper ---- */
+.rx-root { min-width: 0; min-height: 100vh; display: flex; flex-direction: column; background: var(--kb-paper); }
+.rx-stage { flex: 1 0 auto; display: flex; justify-content: center; align-items: flex-start; padding: var(--kb-space-lg) var(--kb-space-md); background: var(--kb-paper); }
+/* Desktop fills the board's width; the window's top edge stays where the device windows start */
+.rx-stage--fill { padding-inline: 0; padding-bottom: 0; }
+.rx-stage .lx-win { flex: none; }
+
+/* ---- The signed chapter opening's parts the frame does not carry (01-reader round 03 reader.css, as built) ---- */
+.rd-linkbtn {
+  display: inline-flex; align-items: center; min-height: var(--kb-tap); padding: 0; border: 0; background: none; cursor: pointer;
+  font-family: var(--font-body); font-size: inherit; font-weight: var(--kb-weight-semibold); color: var(--kb-accent); text-decoration: none;
+}
+.rd-linkbtn:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-head__meta .rd-linkbtn { font-size: 0.8125rem; }
+.rd-toc { margin-top: calc(var(--kb-space-xl) * var(--rd-k)); padding-block: var(--kb-space-md); border-top: 1px solid var(--kb-border); border-bottom: 1px solid var(--kb-border); }
+.rd-toc__label { margin: 0 0 var(--kb-space-xs); font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-toc__list, .rd-toc__sub { list-style: none; margin: 0; padding: 0; }
+.rd-toc__group { break-inside: avoid; }
+.rd-toc__sub { padding-left: var(--kb-space-md); }
+.rd-toc__a {
+  display: flex; align-items: flex-start; min-height: var(--kb-tap); padding-block: calc((var(--kb-tap) - 1.3em) / 2);
+  font-size: 0.9375rem; line-height: 1.3; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-decoration: none; text-wrap: pretty;
+}
+.rd-toc__sub .rd-toc__a { font-weight: var(--kb-weight-regular); color: var(--kb-secondary); font-size: 0.9375rem; }
+.rd-toc__a:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-toc__a:lang(ko) { word-break: keep-all; }
+@container rd (min-width: 40rem) { .rd-toc__list { columns: 2; column-gap: var(--kb-space-xl); } }
+
+/* ---- The signed compact top bar (01-reader round 03 reader.css, "Compact chrome"), which the frame's Shell does not
+   carry: on a narrow phone or under large text a two-language document's bar takes a second row for the language
+   switch, Display's sides tighten, and below 14rem the logo steps aside for "‹ Library". CSS-only here (the signed
+   bar moves the switch into a second slot after Display; frame gap logged). ---- */
+@container rd (max-width: 20.99rem) {
+  .rd-tbtn { padding-inline: 0.5rem; }
+}
+/* Where one row would cut "‹ Library" (critique C06): under 23rem the switch takes the second row (signed: 21rem);
+   from 23rem to 26rem the logo steps aside for "‹ Library", the signed rule's own trade, at the width that needs it. */
+@container rd (max-width: 22.99rem) {
+  .rx-langs > .rd-in { --rd-top-h: 6.5rem; }
+  .rx-langs .rd-top { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-rows: repeat(2, minmax(0, 1fr)); }
+  .rx-langs .rd-top__end { display: contents; }
+  .rx-langs .rd-top__start { grid-row: 1; grid-column: 1; }
+  .rx-langs .rd-top__end > .rd-tbtn { grid-row: 1; }
+  .rx-langs .rd-lang { grid-row: 2; grid-column: 1 / -1; justify-self: end; }
+}
+@container rd (min-width: 23rem) and (max-width: 25.99rem) {
+  .rx-loose.rx-langs .rd-logo { display: none; }
+}
+@container rd (max-width: 13.99rem) {
+  .rx-loose .rd-logo { display: none; }
+}
+
+/* ---- Listen in the chapter opening (F6): under the meta line, on the column's start edge ---- */
+.rx-listen { margin-top: calc(var(--kb-space-md) * var(--rd-k)); }
+/* Once this unit's Listen exists, the slot holds the height of its tallest note (hidden copies in the same grid cell),
+   so no state change the reader did not ask for moves the text under it (critique C02). */
+.rx-listen--held { display: grid; }
+.rx-listen--held > *, .rx-listen__hold > * { grid-area: 1 / 1; min-width: 0; }
+.rx-listen__hold { display: grid; visibility: hidden; }
+/* Beside the dock, the note carries the why; the dock carries the one action (critique C05). Update audio, which the
+   dock has not, stays. */
+.rx-listen .lx-note:not([data-state="outdated"]):not([data-state="fail-limit"]) > .rd-btn { display: none; }
+/* The stand-ins for surfaces drawn elsewhere (canvas only) */
+.rx-else { margin: 0; max-width: 34rem; font-family: var(--font-body); font-size: var(--lx-fs-ui); line-height: 1.45; color: var(--kb-ink); text-wrap: pretty; }
+.rx-sheet__body { display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-md); }
+</style>
+</helmet>
+<div class="rx-root" id="top">
+
+<sc-if value="{{ hasBar }}" hint-placeholder-val="{{ true }}"><div data-proto="state-bar">
+<span>Prototype only · jump to a state:</span>
+<div role="group" aria-labelledby="rx-sb-name">
+<span class="rx-sb-name" id="rx-sb-name">Reader</span>
+<span>Window:</span>
+<sc-for list="{{ wins }}" as="p" hint-placeholder-count="4"><button type="button" aria-pressed="{{ p.pressed }}" onclick="{{ p.go }}">{{ p.label }}</button></sc-for>
+<span>Theme:</span>
+<sc-for list="{{ themes }}" as="p" hint-placeholder-count="2"><button type="button" aria-pressed="{{ p.pressed }}" onclick="{{ p.go }}">{{ p.label }}</button></sc-for>
+<span>Document:</span>
+<sc-for list="{{ docPresets }}" as="p" hint-placeholder-count="24"><button type="button" aria-pressed="{{ p.pressed }}" onclick="{{ p.go }}">{{ p.label }}</button></sc-for>
+<span>Chapter:</span>
+<sc-for list="{{ chPresets }}" as="p" hint-placeholder-count="11"><button type="button" aria-pressed="{{ p.pressed }}" onclick="{{ p.go }}">{{ p.label }}</button></sc-for>
+</div>
+</div></sc-if>
+
+<div class="{{ stageCls }}" data-theme="{{ theme }}">
+<div class="{{ winCls }}" data-theme="{{ theme }}" style="{{ winStyle }}"><div class="rd-in">
+
+<div class="lx-win__top" data-hidden="{{ hiddenAttr }}"><dc-import name="Shell" bare="{{ true }}" kind="{{ shellKind }}" lang="{{ docLang }}" langs="{{ langs }}" pct="{{ pct }}" back-href="{{ backHref }}" on-back="{{ back }}" on-lang="{{ setLang }}" hint-size="100%,59px"></dc-import></div>
+
+<div class="lx-win__page" tabindex="0" aria-label="{{ pageLabel }}" ref="{{ setPage }}" onscroll="{{ scroll }}">
+<main lang="{{ docLang }}">
+<div class="rd-flow">
+<div class="rd-head">
+<p class="rd-head__book"><span class="rd-head__n">{{ placeLabel }}</span><span>{{ placeName }}</span></p>
+<h1 class="{{ titleCls }}">{{ title }}</h1>
+<sc-if value="{{ hasLede }}" hint-placeholder-val="{{ true }}"><p class="rd-head__lede">{{ lede }}</p></sc-if>
+<p class="rd-head__meta" lang="en"><span>v{{ version }} · Published {{ date }}</span><span aria-hidden="true">·</span><button type="button" class="rd-linkbtn" aria-haspopup="dialog">Version history</button></p>
+<div class="{{ listenCls }}" lang="en" ref="{{ setListenEl }}">
+<div class="rx-listen__live">
+<sc-if value="{{ showListen }}" hint-placeholder-val="{{ true }}"><dc-import name="Listen" bare="{{ true }}" form="{{ listenForm }}" q="{{ listenQ }}" busy="{{ listenBusy }}" on-listen="{{ listenPress }}" on-start-over="{{ startOver }}" hint-size="100%,44px"></dc-import></sc-if>
+<sc-if value="{{ showNote }}" hint-placeholder-val="{{ false }}"><dc-import name="ListenNote" bare="{{ true }}" state="{{ noteState }}" unit="{{ unitKind }}" n="{{ lCh }}" total="{{ five }}" next="{{ lNext }}" pos="{{ lPos }}" len="{{ noteLen }}" part="{{ lPart }}" parts="{{ parts }}" left="{{ noteLeft }}" ready="{{ noteReady }}" loaded="{{ loaded }}" updating="{{ updating }}" on-play="{{ play }}" on-retry="{{ retry }}" on-start-over="{{ again }}" on-sign-in="{{ signIn }}" on-update="{{ update }}" hint-size="100%,80px"></dc-import></sc-if>
+</div>
+<sc-if value="{{ held }}" hint-placeholder-val="{{ false }}"><div class="rx-listen__hold" aria-hidden="true">
+<dc-import name="ListenNote" bare="{{ true }}" state="fail-voice" unit="{{ unitKind }}" n="{{ lCh }}" total="{{ five }}" part="{{ lPart }}" parts="{{ parts }}" hint-size="100%,80px"></dc-import>
+<dc-import name="ListenNote" bare="{{ true }}" state="fail-limit" unit="{{ unitKind }}" ready="{{ noReady }}" hint-size="100%,80px"></dc-import>
+<dc-import name="ListenNote" bare="{{ true }}" state="{{ holdThird }}" unit="{{ unitKind }}" n="{{ lCh }}" next="{{ lNext }}" total="{{ five }}" pos="{{ lPos }}" hint-size="100%,80px"></dc-import>
+</div></sc-if>
+</div>
+<div class="rd-toc"><p class="rd-toc__label" lang="en">In this {{ noun }}</p><ol class="rd-toc__list" aria-label="In this {{ noun }}"><sc-for list="{{ toc }}" as="e" hint-placeholder-count="2"><li class="rd-toc__group"><a class="rd-toc__a" href="{{ e.href }}">{{ e.text }}</a><sc-if value="{{ e.hasSubs }}" hint-placeholder-val="{{ false }}"><ol class="rd-toc__sub"><sc-for list="{{ e.subs }}" as="s" hint-placeholder-count="2"><li><a class="rd-toc__a" href="{{ s.href }}">{{ s.text }}</a></li></sc-for></ol></sc-if></li></sc-for></ol></div>
+</div>
+</div>
+<div class="rd-flow rd-prose">
+<sc-for list="{{ blocks }}" as="b" hint-placeholder-count="6">
+<sc-if value="{{ b.isH2 }}" hint-placeholder-val="{{ false }}"><h2 class="rd-h rd-h2" id="{{ b.id }}">{{ b.text }}</h2></sc-if>
+<sc-if value="{{ b.isH3 }}" hint-placeholder-val="{{ false }}"><h3 class="rd-h rd-h3" id="{{ b.id }}">{{ b.text }}</h3></sc-if>
+<sc-if value="{{ b.isP }}" hint-placeholder-val="{{ true }}"><p class="{{ b.cls }}" data-rx-target="{{ b.target }}">{{ b.text }}</p></sc-if>
+</sc-for>
+</div>
+</main>
+</div>
+
+<sc-if value="{{ isBook }}" hint-placeholder-val="{{ false }}"><div class="lx-win__bottom" data-hidden="{{ hiddenAttr }}"><dc-import name="ChapterBar" bare="{{ true }}" n="{{ ch }}" total="{{ five }}" pct="{{ pct }}" book-href="Book.dc.html" on-prev="{{ prevCh }}" on-next="{{ nextCh }}" on-book="{{ back }}" hint-size="100%,61px"></dc-import></div></sc-if>
+
+<sc-if value="{{ showPill }}" hint-placeholder-val="{{ true }}"><div class="{{ pillSlotCls }}"><dc-import name="Listen" bare="{{ true }}" slot="{{ true }}" form="{{ listenForm }}" q="{{ pillQ }}" on-listen="{{ listenPress }}" hint-size="160px,46px"></dc-import></div></sc-if>
+<sc-if value="{{ showResumePill }}" hint-placeholder-val="{{ false }}"><div class="{{ pillSlotCls }}"><div class="rd-in"><button type="button" class="lx-pill" onclick="{{ listenPress }}"><span class="lx-i lx-i--play lx-i--s" aria-hidden="true"></span><span>Continue listening</span><span class="lx-pill__q">· {{ resumeAt }}</span></button></div></div></sc-if>
+
+<sc-if value="{{ docked }}" hint-placeholder-val="{{ false }}"><div class="{{ dockSlotCls }}"><dc-import name="Dock" bare="{{ true }}" state="{{ dState }}" unit="{{ dUnit }}" title="{{ dTitle }}" lang="{{ dLang }}" n="{{ dCh }}" total="{{ five }}" next="{{ dNext }}" pos="{{ dPos }}" len="{{ dLen }}" so-far="{{ dSoFar }}" old="{{ dOld }}" part="{{ dPart }}" parts="{{ dParts }}" loaded="{{ loaded }}" on-play="{{ play }}" on-pause="{{ pause }}" on-retry="{{ retry }}" on-start-over="{{ again }}" on-open="{{ open }}" on-sign-in="{{ signIn }}" hint-size="100%,66px"></dc-import></div></sc-if>
+
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+<div class="rd-scrim" aria-hidden="true" onclick="{{ closeSheet }}"></div>
+<div class="rd-sheet rd-sheet--right" role="dialog" aria-modal="true" aria-labelledby="rx-sheet-title" lang="en">
+<div class="rd-sheet__head"><h2 class="rd-sheet__title" id="rx-sheet-title">{{ sheetTitle }}</h2><button type="button" class="rd-btn rd-btn--quiet rd-sheet__close" onclick="{{ closeSheet }}">Close</button></div>
+<div class="rd-sheet__body rx-sheet__body">
+<p class="rx-else">{{ sheetText }}</p>
+<sc-if value="{{ isSignIn }}" hint-placeholder-val="{{ false }}"><button type="button" class="rd-btn rd-btn--primary" onclick="{{ backSignedIn }}">Come back signed in</button></sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ playerOpen }}" hint-placeholder-val="{{ false }}"><div class="rd-scrim pl-scrim" aria-hidden="true" onclick="{{ closePlayer }}"></div><dc-import name="PlayerPanel" bare="{{ true }}" listen="{{ playerL }}" panel="{{ pPanel }}" uid="rx-pl" on-listen="{{ panelListen }}" on-panel="{{ setPPanel }}" on-close="{{ closePlayer }}" on-go-to-text="{{ playerGoText }}" hint-size="100%,600px"></dc-import></sc-if>
+
+</div></div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"doc":{"editor":"enum","options":["bar","bar-ko","guide"],"default":"bar"},"ch":{"editor":"int","min":1,"max":5,"default":2},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"listen":{"editor":null},"onListen":{"editor":null},"onOpenPlayer":{"editor":null},"onOpenBook":{"editor":null},"bar":{"editor":null},"win":{"editor":null},"at":{"editor":null},"player":{"editor":null},"kept":{"editor":null},"onClose":{"editor":null},"onGoToText":{"editor":null},"$preview":{"width":1440,"height":1400}}'>
+/* The shared fixture (frame.md F18). The chapter text is the signed reader's fixture (01-reader, reader.js); the
+   loose document's paragraphs are made up (its real text stays off the canvas). */
+const RX_UNITS = {
+  'bar': { kind: 'doc', title: 'Our bar: performance rule v1', lang: 'en', len: '42:10', mins: '42 min', parts: 12 },
+  'bar-ko': { kind: 'doc', title: '우리의 기준: 성과 규칙 v1', lang: 'ko', len: '50:25', mins: '50 min', parts: 14 },
+  'guide': { kind: 'book', title: 'knowledge maintainer guide', lang: 'en', parts: 9 },
+};
+const RX_DOCS = {
+  'bar': {
+    v: 1, d: '3 Nov 2026', s: 'How a strategy’s runs are scored, and when a result is allowed to count.', follow: 'rx-b-5',
+    b: [
+      ['h2', 'rx-b-1', 'Scoring a run'],
+      ['p', 'rx-b-2', 'Every run is scored by the same rule, so two strategies can be compared without asking who ran them. A run counts only when its average gain stands clear of its noise.'],
+      ['p', 'rx-b-3', 'The score is read from all of a run’s events, never from its best day. One large win can carry a short record, so the rule asks for enough events before it reads the score at all.'],
+      ['h2', 'rx-b-4', 'Decay'],
+      ['p', 'rx-b-5', 'A result that held last quarter is not assumed to hold now. Each score loses weight as its events age, and a strategy whose recent events no longer clear the bar falls below it, whatever its record says.'],
+      ['p', 'rx-b-6', 'The thresholds differ by market, and the table that follows lists them.'],
+    ],
+  },
+  'bar-ko': {
+    v: 1, d: '3 Nov 2026', s: '전략의 실행 결과를 하나의 규칙으로 평가하는 방법과, 결과가 인정되는 조건을 정리합니다.', follow: 'rx-b-5',
+    b: [
+      ['h2', 'rx-b-1', '실행 평가'],
+      ['p', 'rx-b-2', '모든 실행은 같은 규칙으로 평가합니다. 그래서 누가 실행했는지와 상관없이 두 전략을 비교할 수 있습니다. 평균 수익이 잡음보다 분명히 클 때만 결과로 인정합니다.'],
+      ['p', 'rx-b-3', '점수는 가장 좋았던 하루가 아니라 실행의 모든 이벤트로 계산합니다. 큰 수익 한 번이 짧은 기록을 끌어올릴 수 있으므로, 점수를 읽기 전에 이벤트 수가 충분한지 먼저 확인합니다.'],
+      ['h2', 'rx-b-4', '감쇠'],
+      ['p', 'rx-b-5', '지난 분기에 통과한 결과가 지금도 유효하다고 보지 않습니다. 이벤트가 오래될수록 점수의 비중이 줄고, 최근 이벤트가 기준을 넘지 못하면 기록과 상관없이 기준 아래로 내려갑니다.'],
+      ['p', 'rx-b-6', '기준값은 시장마다 다르며, 이어지는 표에 정리되어 있습니다.'],
+    ],
+  },
+};
+const RX_CH = [
+  { t: 'knowledge: what it is and how it is used', len: '38:20', sec: 2300, v: 1, d: '8 Aug 2026', s: 'What a document is, who owns it, and the four doors that lead to the same files.', follow: 'rx-b-2',
+    b: [['h2', 'rx-b-1', 'Background'], ['p', 'rx-b-2', 'knowledge is a hosted library for the documents coding agents write about a codebase. An agent explains a change, publishes the explanation, and the people who own the code read it on the web or ask for it over MCP.'], ['h3', 'rx-b-3', 'What a document is here'], ['p', 'rx-b-4', 'A document is one file: a title, a date, tags, a body in markdown or HTML, and a version that only goes up. It belongs to a project, and the project belongs to an org.'], ['h2', 'rx-b-5', 'One corpus, four doors'], ['p', 'rx-b-6', 'The same files are reached four ways, and each door has its own contract: the write door, the setup door, the terminal door and the agent door.']] },
+  { t: 'System internals: the content plane, the write path and the contracts', len: '1:07:10', sec: 4030, v: 2, d: '12 Oct 2026', s: 'Where a document actually lives, what happens in the milliseconds after an agent publishes one, and which contracts you may extend but must not break.', follow: 'rx-b-4',
+    b: [['h2', 'rx-b-1', 'Background'], ['p', 'rx-b-2', 'Physically, this is a small system: one FastAPI process, one SQLite file, one Postgres database and a git repository. What makes it worth a chapter is one decision made early and honoured everywhere since. Everything below is downstream of it, so it is worth meeting before any code.'], ['h3', 'rx-b-3', 'The two planes'], ['p', 'rx-b-4', 'The process runs two planes at once, and knowing which one you are looking at is the first skill to acquire. The content plane holds documents, the search index and version rows; the accounts plane holds users, orgs, projects, keys and sessions.'], ['h3', 'rx-b-5', 'Two deployments, one codebase'], ['p', 'rx-b-6', 'There is no hosted fork and no production mode. The whole difference between a laptop and the hosted service is a handful of flags, each defaulting to the local behaviour.']] },
+  { t: 'knowledge’s read surfaces: two front ends, one corpus', len: '44:05', sec: 2645, v: 1, d: '8 Aug 2026', s: '', follow: 'rx-b-4',
+    b: [['h2', 'rx-b-1', 'Background'], ['p', 'rx-b-2', 'knowledge has two front ends over one corpus: the public reading site and the console. They look alike on purpose and share nothing at run time except the API.'], ['h2', 'rx-b-3', 'The public site never calls the API directly'], ['p', 'rx-b-4', 'Every request from the browser goes through the web app’s own server, which holds the session and adds the credentials. The browser never sees a token, so a leaked page can never leak a key.'], ['h3', 'rx-b-5', 'The sealed cookie'], ['p', 'rx-b-6', 'The session lives in one sealed cookie. The server opens it, calls the API with the key it finds, and answers the page.']] },
+  { t: 'Shipping and running knowledge: distribution, the edge, security and the gates', len: '58:40', sec: 3520, v: 1, d: '8 Aug 2026', s: 'How one repository becomes four release channels, and the gates that keep them in step.', follow: 'rx-b-4',
+    b: [['h2', 'rx-b-1', 'Four channels, one repository'], ['p', 'rx-b-2', 'knowledge ships four ways from one repository, and each channel reads the same tagged commit.'], ['h3', 'rx-b-3', 'The scaffold is a snapshot'], ['p', 'rx-b-4', 'The scaffold is copied, not linked, so a self-hosted copy never changes under its owner. A parity gate checks that every file the scaffold names still exists in the repository before a release goes out.'], ['h3', 'rx-b-5', 'Deploy order is not arbitrary'], ['p', 'rx-b-6', 'The API goes first, then the web app, then the MCP server. Each new version reads the old one’s responses, so a half-finished deploy still answers every request.']] },
+  { t: 'Why knowledge is this way, and how to change it', len: '31:15', sec: 1875, v: 3, d: '14 Oct 2026', s: 'The decisions behind the first four chapters, the roads not taken, and the way to change one safely.', follow: 'rx-b-4',
+    b: [['h2', 'rx-b-1', 'Background'], ['p', 'rx-b-2', 'The first four chapters describe what the system does. This one keeps the reasons: the roads not taken, and how to change a decision without breaking the readers who depend on it.'], ['h2', 'rx-b-3', 'The honest inventory'], ['p', 'rx-b-4', 'Three choices still carry known costs: one writer, a SQLite content plane, and HTML explainers that cannot be measured from outside their frame. Each is the right call at today’s size, and each has a written trigger for revisiting it.'], ['h2', 'rx-b-5', 'How to change something'], ['p', 'rx-b-6', 'Open a phase, state the intent in your own words, and let the decomposition slice cut the work. A change that touches a contract carries its own version note.']] },
+];
+const RX_WINS = [['fill', 'Desktop 1440', '100%', '900px'], ['ipad', 'iPad 820', '820px', '1180px'], ['p390', 'Phone 390', '390px', '844px'], ['p320', 'Phone 320', '320px', '844px']];
+
+/* The carried Listen (frame.md F19), plus `part` (the part being prepared) and `len` (the length made so far). */
+function rxL(unit, ch, state, extra) {
+  return Object.assign({ unit: unit, from: ch, ch: ch, pos: '12:30', state: state, old: false, soFar: false, speed: '1×', follow: true, part: 3, len: '' }, extra || {});
+}
+const RX_D = (state, extra) => rxL('bar', 0, state, extra);
+const RX_B = (ch, state, extra) => rxL('guide', ch, state, extra);
+const RX_PRESETS_DOC = [
+  ['Ready, idle', {}],
+  ['Not yet made', { made: false }],
+  ['Left part-way', { resume: true }],
+  ['Reading on, idle', { scrolled: true }],
+  ['Left part-way, reading on', { resume: true, scrolled: true }],
+  ['Waiting for the Mac', { made: false, listen: RX_D('waiting', { pos: '0:00' }) }],
+  ['Preparing', { made: false, listen: RX_D('making', { pos: '0:00' }) }],
+  ['First part ready', { made: false, listen: RX_D('ready', { pos: '0:00', soFar: true, len: '3:05' }) }],
+  ['Tap to play', { listen: RX_D('tap', { pos: '0:00' }) }],
+  ['Loading', { listen: RX_D('loading', { pos: '0:00' }) }],
+  ['Playing', { listen: RX_D('playing') }],
+  ['Buffering', { listen: RX_D('buffering') }],
+  ['Finished', { listen: RX_D('finished', { pos: '42:10' }) }],
+  ['Voice failed', { made: false, listen: RX_D('fail-voice', { pos: '0:00', part: 4 }) }],
+  ['Daily limit', { made: false, listen: RX_D('fail-limit', { pos: '0:00', len: '14:05' }) }],
+  ['Connection lost', { listen: RX_D('fail-play') }],
+  ['Signed out', { listen: RX_D('fail-session') }],
+  ['Can’t be read', { listen: RX_D('fail-unreadable', { pos: '0:00' }) }],
+  ['Offline, before', { listen: RX_D('offline-start', { pos: '0:00' }) }],
+  ['Offline, playing', { listen: RX_D('offline-play') }],
+  ['Offline, stopped', { listen: RX_D('offline-stopped', { pos: '15:10' }) }],
+  ['Earlier version', { listen: RX_D('playing', { old: true }) }],
+  ['Korean, idle', { doc: 'bar-ko' }],
+  ['Korean, playing', { doc: 'bar-ko', listen: rxL('bar-ko', 0, 'playing') }],
+];
+const RX_PRESETS_CH = [
+  ['Idle', { doc: 'guide', ch: 2 }],
+  ['Idle, reading on', { doc: 'guide', ch: 2, scrolled: true }],
+  ['Playing', { doc: 'guide', ch: 2, listen: RX_B(2, 'playing') }],
+  ['Reading on, bars hidden', { doc: 'guide', ch: 2, hidden: true, scrolled: true, listen: RX_B(2, 'playing') }],
+  ['Paused', { doc: 'guide', ch: 2, listen: RX_B(2, 'paused') }],
+  ['Follow along off', { doc: 'guide', ch: 2, hidden: true, scrolled: true, listen: RX_B(2, 'playing', { follow: false }) }],
+  ['Next chapter starts', { doc: 'guide', ch: 2, hidden: true, scrolled: true, listen: RX_B(2, 'playing', { ch: 3, pos: '0:04' }) }],
+  ['Next chapter preparing', { doc: 'guide', ch: 2, listen: RX_B(2, 'next-waiting', { pos: '1:07:10' }) }],
+  ['Preparing the book', { doc: 'guide', ch: 2, listen: RX_B(2, 'making', { pos: '0:00' }) }],
+  ['Longest title', { doc: 'guide', ch: 4, listen: RX_B(4, 'playing') }],
+  ['Book finished', { doc: 'guide', ch: 5, listen: RX_B(5, 'finished', { from: 2, pos: '31:15' }) }],
+];
+const RX_PLAYING = ['playing', 'paused', 'buffering', 'offline-play'];
+
+function rxClock(sec) {
+  const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+  return h ? h + ' h' + (m ? ' ' + m + ' min' : '') : m + ' min';
+}
+/* A sum over chapters (F2): rounded to the half hour, with "about" */
+function rxAbout(sec) {
+  const half = Math.max(1, Math.round(sec / 1800));
+  const h = Math.floor(half / 2), m = half % 2 ? 30 : 0;
+  return 'about ' + (h ? h + ' h' + (m ? ' ' + m + ' min' : '') : m + ' min');
+}
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    const doc = p.doc || 'bar';
+    this.state = { doc: doc, ch: p.ch || 2, made: true, resume: false, hidden: false, scrolled: false, sheet: null, updating: false, past: false, win: 'fill', theme: p.theme === 'dark' ? 'dark' : 'light', listen: null };
+    this._sid = 0;
+    this._y = 0;
+    /* Go to the text (the player, through the flow): open scrolled once to the block being read (F12) */
+    if (p.at === 'text') { this._want = 'follow'; this.state.scrolled = true; this.state.past = true; }
+  }
+  componentDidMount() { if (this._want) this.forceUpdate(); }
+  /* The flow opens the player over this page (critique C06, C08): focus to Close on open, back to the dock on close */
+  winEl() { return this._page ? this._page.closest('.lx-win') : null; }
+  focusLater(sel) { setTimeout(() => { const w = this.winEl(); const el = w && w.querySelector(sel); if (el) el.focus({ preventScroll: true }); }, 0); }
+  componentDidUpdate(prev) {
+    const P = this.props;
+    if (!prev.player && P.player) this.focusLater('.pl-sheet .rd-sheet__close');
+    if (prev.player && !P.player) { if (this.state.pPanel) this.setState({ pPanel: null }); this.focusLater('.lx-dock__open, .lx-dock__act'); }
+    if (prev.doc !== P.doc || prev.ch !== P.ch) {
+      const text = P.at === 'text';
+      this._want = text ? 'follow' : 'top';
+      this.setState({ doc: P.doc || 'bar', ch: P.ch || 2, hidden: false, scrolled: text, past: text, resume: false, sheet: null });
+      return;
+    }
+    /* Go to the text from the player over this page: once to the block read, or to the head at the start (F12) */
+    if (P.at && P.at !== prev.at) {
+      const text = P.at === 'text';
+      this._want = text ? 'follow' : 'top';
+      this.setState({ hidden: false, scrolled: text, past: text });
+      return;
+    }
+    if (this._want && this._page) {
+      const pg = this._page;
+      let y = 0;
+      if (this._want === 'follow') {
+        const el = pg.querySelector('[data-rx-target="1"]');
+        if (el) y = Math.max(0, el.offsetTop - 140);
+      }
+      this._want = null;
+      if (Math.abs(pg.scrollTop - y) > 1) { this._skipUntil = Date.now() + 400; pg.scrollTop = y; }
+      this._y = y;
+      setTimeout(() => this.measurePast(), 0);
+    }
+  }
+  /* The slot's Listen shows only once the head's Listen has scrolled under the top bar (reader-G5). */
+  measurePast() {
+    const pg = this._page, el = this._listenEl;
+    if (!pg || !el) return;
+    const top = pg.getBoundingClientRect().top + (parseFloat(getComputedStyle(pg).paddingTop) || 0);
+    const past = el.getBoundingClientRect().bottom <= top;
+    if (past !== !!this.state.past) this.setState({ past });
+  }
+  /* The one Listen: the join's when mounted with listen + on-listen, else this page's own. */
+  ctl() { return !!this.props.onListen && this.props.listen !== undefined; }
+  L() { return this.ctl() ? this.props.listen : this.state.listen; }
+  setL(next) {
+    if (this.ctl()) this.props.onListen({ listen: next });
+    else this.setState({ listen: next });
+  }
+  /* A send: its result lands only if nothing else happened since (a preset, another press). */
+  later(ms, fn) {
+    const id = ++this._sid;
+    setTimeout(() => { if (id !== this._sid) return; fn(); }, ms);
+  }
+  start(l) {
+    this.setL(Object.assign({}, l, { state: 'loading' }));
+    this.later(1100, () => {
+      const c = this.L();
+      if (c && c.state === 'loading') this.setL(Object.assign({}, c, { state: 'playing' }));
+    });
+  }
+  applyPreset(p) {
+    this._sid++;
+    const s = Object.assign({ doc: 'bar', ch: 2, made: true, resume: false, hidden: false, scrolled: false, listen: null }, p);
+    this._want = s.scrolled ? 'follow' : 'top';
+    this.setState({ doc: s.doc, ch: s.ch, made: s.made, resume: s.resume, hidden: s.hidden, scrolled: s.scrolled, past: !!s.scrolled, sheet: null, updating: false });
+    this.setL(s.listen);
+  }
+  sig(s, l) {
+    const k = l ? [l.unit, l.from, l.ch, l.pos, l.state, l.old, l.soFar, l.follow, l.part, l.len].join(',') : 'none';
+    return [s.doc, s.doc === 'guide' ? s.ch : 0, s.made, s.resume, s.hidden, s.scrolled, k].join('|');
+  }
+  renderVals() {
+    const S = this.state;
+    const P = this.props;
+    const L = this.L();
+    const doc = S.doc;
+    const isBook = doc === 'guide';
+    const ch = Math.max(1, Math.min(5, S.ch || 2));
+    const u = RX_UNITS[doc];
+    const c = isBook ? RX_CH[ch - 1] : RX_DOCS[doc];
+    const mine = !!L && L.unit === doc;
+    const docked = !!L;
+    const lu = L ? RX_UNITS[L.unit] : null;
+    const lBook = !!lu && lu.kind === 'book';
+
+    /* The state bar */
+    const cur = this.sig(S, L);
+    const mk = (list) => list.map(([label, p]) => {
+      const s = Object.assign({ doc: 'bar', ch: 2, made: true, resume: false, hidden: false, scrolled: false, listen: null }, p);
+      return { label, pressed: this.sig(s, s.listen) === cur && !S.sheet ? 'true' : 'false', go: () => this.applyPreset(p) };
+    });
+    /* Mounted in the flow (bar "off"), the entry drives the window and the theme (the join) */
+    const flow = P.bar === 'off';
+    const winKey = flow && P.win ? P.win : S.win;
+    const themeKey = flow && P.theme ? P.theme : S.theme;
+    const win = RX_WINS.find((w) => w[0] === winKey) || RX_WINS[0];
+
+    /* The head */
+    let listenForm = 'doc', listenQ = '';
+    /* Stop listening keeps the position (F17): the flow passes it as `kept`; on its unit (and chapter) the head offers
+       Continue listening from there (critique C01) */
+    const kp = P.kept && P.kept.unit === doc && (!isBook || P.kept.ch === ch) ? P.kept : null;
+    const resumeOn = !!S.resume || !!kp;
+    const resumePos = kp ? kp.pos : '18:05';
+    if (kp) {
+      listenForm = 'resume';
+      listenQ = kp.pos + ' of ' + (isBook ? RX_CH[ch - 1].len : u.len);
+    } else if (isBook) {
+      listenForm = 'chapter';
+      const rest = RX_CH.slice(ch - 1);
+      const sum = rest.reduce((a, x) => a + x.sec, 0);
+      listenQ = ch === 5 ? 'Chapter 5 · ' + rxClock(RX_CH[4].sec) : 'Chapters ' + ch + '–5 · ' + rxAbout(sum);
+    } else if (S.resume) {
+      listenForm = 'resume';
+      listenQ = '18:05 of ' + u.len;
+    } else {
+      listenQ = S.made ? u.mins : '';
+    }
+    const toc = [];
+    c.b.forEach(([k, id, text]) => {
+      if (k === 'h2') toc.push({ href: '#' + id, text, subs: [], hasSubs: false });
+      else if (k === 'h3' && toc.length) { const g = toc[toc.length - 1]; g.subs.push({ href: '#' + id, text }); g.hasSubs = true; }
+    });
+    const followOn = mine && L.follow && RX_PLAYING.indexOf(L.state) >= 0 && (!isBook || L.ch === ch);
+    /* At the start the voice reads the title (the spoken script opens with it), so the mark sits there (critique C03). */
+    const atStart = mine && (L.pos === '0:04' || L.pos === '0:00');
+    const blocks = c.b.map(([k, id, text]) => ({
+      id, text, isH2: k === 'h2', isH3: k === 'h3', isP: k === 'p',
+      cls: 'rd-p' + (followOn && !atStart && id === c.follow ? ' lx-follow' : ''),
+      target: id === c.follow ? '1' : '0',
+    }));
+
+    /* The note (F10) for this unit's Listen */
+    const lCh = L ? (L.ch || 1) : 1;
+    const noteState = !mine ? 'making' : (L.old && (L.state === 'playing' || L.state === 'paused') ? 'outdated' : L.state);
+    const lenOf = (l) => !l ? '' : (l.soFar && l.len ? l.len : (RX_UNITS[l.unit].kind === 'book' ? RX_CH[(l.ch || 1) - 1].len : RX_UNITS[l.unit].len));
+    const sheet = S.sheet;
+
+    return {
+      docPresets: mk(RX_PRESETS_DOC),
+      chPresets: mk(RX_PRESETS_CH),
+      wins: RX_WINS.map((w) => ({ label: w[1], pressed: w[0] === S.win ? 'true' : 'false', go: () => this.setState({ win: w[0] }) })),
+      themes: [['light', 'Light'], ['dark', 'Dark']].map((t) => ({ label: t[1], pressed: t[0] === S.theme ? 'true' : 'false', go: () => this.setState({ theme: t[0] }) })),
+      hasBar: !flow,
+      theme: themeKey,
+      stageCls: 'rx-stage' + (win[0] === 'fill' ? ' rx-stage--fill' : ''),
+      winCls: 'rd-frame lx-win' + (isBook ? ' lx-win--chapter' : ' rx-loose rx-langs') + (docked ? ' lx-win--docked' : ''),
+      winStyle: '--lx-win-w: ' + win[2] + '; --lx-win-h: ' + win[3] + ';',
+      hiddenAttr: S.hidden ? 'true' : 'false',
+      shellKind: isBook ? 'chapter' : 'loose',
+      docLang: u.lang,
+      langs: isBook ? ['en'] : ['en', 'ko'],
+      pct: S.scrolled ? 46 : 12,
+      backHref: isBook ? 'Book.dc.html' : '#top',
+      back: isBook && P.onOpenBook ? () => P.onOpenBook() : undefined,
+      setLang: (code) => { if (!isBook) { this._want = 'top'; this.setState({ doc: code === 'ko' ? 'bar-ko' : 'bar', hidden: false, scrolled: false, past: false, resume: false }); } },
+      pageLabel: isBook ? 'Chapter text' : 'Document text',
+      setPage: (el) => { this._page = el; },
+      setListenEl: (el) => { this._listenEl = el; },
+      scroll: (e) => {
+        const el = e.currentTarget;
+        const y = el.scrollTop;
+        if (this._skipUntil && Date.now() < this._skipUntil) { this._y = y; this.measurePast(); return; }
+        this.measurePast();
+        const d = y - this._y;
+        this._y = y;
+        if (d > 6 && y > 48 && !this.state.hidden) this.setState({ hidden: true });
+        else if (d < -6 && this.state.hidden) this.setState({ hidden: false });
+      },
+      placeLabel: isBook ? 'Chapter ' + ch + ' of 5' : 'Document',
+      placeName: isBook ? 'knowledge maintainer guide' : '[PROJECT]',
+      title: isBook ? c.t : u.title,
+      titleCls: 'rd-head__title' + (followOn && atStart ? ' lx-follow' : ''),
+      lede: c.s,
+      hasLede: !!c.s,
+      version: c.v,
+      date: c.d,
+      noun: isBook ? 'chapter' : 'document',
+      toc,
+      blocks,
+      isBook,
+      ch,
+      five: 5,
+
+      /* Listen in the head and the pill */
+      showListen: !mine || L.state === 'loading',
+      listenForm,
+      listenQ,
+      pillQ: listenQ,
+      listenBusy: mine && L.state === 'loading',
+      showPill: !docked && !S.hidden && !sheet && !!S.past && !resumeOn,
+      showResumePill: !docked && !S.hidden && !sheet && !!S.past && resumeOn,
+      resumeAt: resumePos,
+      listenCls: 'rx-listen' + (mine ? ' rx-listen--held' : ''),
+      held: mine,
+      noReady: '14 min',
+      holdThird: lBook ? 'next-waiting' : 'offline-stopped',
+      pillSlotCls: 'lx-slot lx-slot--pill' + (isBook ? ' lx-slot--chapter' : ''),
+      listenPress: () => {
+        if (kp) { this.start(isBook ? RX_B(ch, 'loading', { pos: kp.pos }) : rxL(doc, 0, 'loading', { pos: kp.pos })); return; }
+        if (isBook) { this.start(RX_B(ch, 'loading', { pos: '0:04' })); return; }
+        if (S.resume) { this.setState({ resume: false }); this.start(rxL(doc, 0, 'loading', { pos: '18:05' })); return; }
+        if (S.made) { this.start(rxL(doc, 0, 'loading', { pos: '0:04' })); return; }
+        this._sid++;
+        this.setL(rxL(doc, 0, 'making', { pos: '0:00', part: 1 }));
+      },
+      startOver: () => { this.setState({ resume: false }); this.start(isBook ? RX_B(ch, 'loading', { pos: '0:04' }) : rxL(doc, 0, 'loading', { pos: '0:04' })); },
+
+      /* The note */
+      showNote: mine && L.state !== 'loading',
+      noteState,
+      unitKind: lBook ? 'book' : 'doc',
+      lCh,
+      lNext: lCh + 1,
+      lPos: L ? L.pos : '',
+      noteLen: L ? (L.soFar && L.len ? L.len + ' so far' : lenOf(L)) : '',
+      lPart: L ? L.part : 3,
+      parts: lu ? lu.parts : 12,
+      noteLeft: !L ? '' : (lBook ? (L.state === 'next-waiting' ? 'about 5 min' : (lCh === 1 ? 'about 2 h' : 'about 1 h 30 min')) : 'about 15 min'),
+      /* F24 (the join): on the daily limit the dock's Play stays off (F7) and the note offers the ready part (F10) */
+      noteReady: L && L.state === 'fail-limit' ? '14 min' : '3 min',
+      loaded: '2:40',
+      updating: !!S.updating,
+
+      /* The dock */
+      docked,
+      dockSlotCls: 'lx-slot rd-flow' + (isBook ? ' lx-slot--chapter' : ''),
+      dState: L ? L.state : 'playing',
+      dUnit: lBook ? 'book' : 'doc',
+      dTitle: !L ? '' : (lBook ? RX_CH[lCh - 1].t : lu.title),
+      dLang: lu ? lu.lang : 'en',
+      dCh: lCh,
+      dNext: lCh + 1,
+      dPos: L ? L.pos : '',
+      dLen: lenOf(L),
+      dSoFar: !!(L && L.soFar && L.len),
+      dOld: !!(L && L.old),
+      dPart: L ? L.part : 3,
+      dParts: lu ? lu.parts : 12,
+
+      play: () => {
+        const l = this.L(); if (!l) return;
+        this._sid++;
+        const soFar = l.soFar || l.state === 'ready' || l.state === 'fail-limit';
+        this.setL(Object.assign({}, l, { state: 'playing', pos: l.pos === '0:00' ? '0:04' : l.pos, soFar, len: l.state === 'fail-limit' ? '14:05' : (l.len || '3:05') }));
+      },
+      pause: () => { const l = this.L(); if (!l) return; this._sid++; this.setL(Object.assign({}, l, { state: 'paused' })); },
+      retry: () => {
+        const l = this.L(); if (!l) return;
+        if (l.state === 'fail-play') { this.start(l); return; }
+        this._sid++;
+        this.setL(Object.assign({}, l, { state: 'making', part: l.state === 'fail-voice' ? 4 : 1 }));
+      },
+      again: () => { const l = this.L(); if (!l) return; this.start(Object.assign({}, l, { ch: l.from || l.ch, pos: '0:04', old: false, soFar: false })); },
+      open: () => { const l = this.L(); if (P.onOpenPlayer) P.onOpenPlayer({ listen: l }); else this.setState({ sheet: 'player' }); },
+      signIn: () => this.setState({ sheet: 'signin' }),
+      update: () => {
+        this.setState({ updating: true });
+        this.later(1400, () => {
+          this.setState({ updating: false });
+          const l = this.L(); if (l) this.setL(Object.assign({}, l, { old: false }));
+        });
+      },
+      prevCh: () => { if (ch > 1) { this._want = 'top'; this.setState({ ch: ch - 1, hidden: false, scrolled: false, past: false }); } },
+      nextCh: () => { if (ch < 5) { this._want = 'top'; this.setState({ ch: ch + 1, hidden: false, scrolled: false, past: false }); } },
+
+      /* The stand-ins for what is drawn elsewhere */
+      sheetOpen: !!sheet,
+      isSignIn: sheet === 'signin',
+      sheetTitle: sheet === 'signin' ? 'Sign in' : 'Listen',
+      sheetText: sheet === 'signin'
+        ? 'Drawn elsewhere: the product’s sign-in page. It brings you back here, signed in, and Listen goes on from ' + (L ? L.pos : '12:30') + '.'
+        : 'Drawn on its own page: the opened player, with every control and the chapters.',
+      closeSheet: () => this.setState({ sheet: null }),
+      playerOpen: !!P.player && docked,
+      playerL: L,
+      pPanel: S.pPanel || null,
+      setPPanel: (v) => this.setState({ pPanel: v }),
+      panelListen: (e) => this.setL(e ? e.listen : null),
+      closePlayer: () => { if (P.onClose) P.onClose({ listen: this.L() }); },
+      playerGoText: () => { if (P.onGoToText) P.onGoToText({ listen: this.L() }); },
+      backSignedIn: () => { const l = this.L(); this.setState({ sheet: null }); if (l) this.start(l); },
+    };
+  }
+}
+</script>
+</body>
+</html>

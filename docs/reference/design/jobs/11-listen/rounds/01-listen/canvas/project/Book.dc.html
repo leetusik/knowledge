@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Book landing with Listen</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+<link rel="stylesheet" href="Book.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+[data-proto="state-bar"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0;padding:8px 16px;background:#eceef1;border-bottom:1px dashed #6b717a;color:#2f3338;font:12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+[data-proto="state-bar"] [role="group"]{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+[data-proto="state-bar"] button{display:inline-flex;align-items:center;box-sizing:border-box;height:24px;margin:0;padding:0 10px;border:1px solid #6b717a;border-radius:4px;background:#f7f8fa;color:#2f3338;font:inherit;line-height:1;cursor:pointer}
+[data-proto="state-bar"] button[aria-pressed="true"]{background:#ffffff;border-color:#2f3338;font-weight:600}
+[data-proto="state-bar"] button:focus-visible{outline:2px solid #2f3338;outline-offset:2px}
+</style>
+</helmet>
+<div class="bk-board" id="top" data-theme="{{ theme }}">
+<sc-if value="{{ hasBar }}" hint-placeholder-val="{{ true }}"><div data-proto="state-bar"><span>Prototype only · jump to a state:</span><div role="group" aria-label="Book landing"><span>Book landing</span><sc-for list="{{ presets }}" as="p" hint-placeholder-count="9"><button type="button" aria-pressed="{{ p.pressed }}" onclick="{{ p.pick }}">{{ p.label }}</button></sc-for><span>View:</span><sc-for list="{{ views }}" as="v" hint-placeholder-count="6"><button type="button" aria-pressed="{{ v.pressed }}" onclick="{{ v.pick }}">{{ v.label }}</button></sc-for></div></div></sc-if>
+<div class="{{ stageCls }}">
+<div class="{{ frameCls }}" data-theme="{{ theme }}" style="{{ frameStyle }}" ref="{{ setFrame }}"><div class="rd-in">
+<div class="bk-scroll">
+<div class="bk-topwrap" ref="{{ setTop }}"><header class="bk-top">
+<div class="bk-top__start"><a class="rd-logo" href="#top" aria-label="knowledge library"><img src="assets/logo.svg" alt="" width="22" height="22"></a><a class="rd-back" href="#top"><span class="rd-back__chev" aria-hidden="true">‹</span><span class="rd-back__long">Library</span><span class="rd-back__short">Library</span></a></div>
+<div class="bk-top__mid" data-on="{{ compactOn }}" aria-hidden="{{ midHidden }}"><span class="bk-top__title">{{ b.title }}</span><span class="bk-top__prog">{{ b.done }} of {{ b.total }} finished</span></div>
+<div class="bk-top__end"></div>
+</header></div>
+<main class="bk-main">
+<div class="{{ layoutCls }}">
+<div class="bk-side">
+<header class="bk-head" ref="{{ setHead }}">
+<div class="bk-head__id"><p class="bk-head__kind"><span class="rd-head__n">{{ b.kind }}</span><span>{{ b.place }}</span></p><h1 class="bk-head__title">{{ b.title }}</h1></div>
+<div class="bk-prog"><p class="bk-prog__text"><b>{{ b.done }} of {{ b.total }}</b> finished</p><span class="bk-prog__bar" aria-hidden="true"><span class="bk-prog__fill" style="{{ progFill }}"></span></span></div>
+<div class="bk-listen" aria-live="polite">
+<sc-if value="{{ showControl }}" hint-placeholder-val="{{ true }}"><dc-import name="Listen" bare="{{ true }}" form="{{ lForm }}" q="{{ lQ }}" busy="{{ lBusy }}" on-listen="{{ pressListen }}" on-start-over="{{ startOver }}" hint-size="100%,44px"></dc-import></sc-if>
+<sc-if value="{{ showNote }}" hint-placeholder-val="{{ false }}"><dc-import name="ListenNote" bare="{{ true }}" state="{{ nState }}" unit="book" n="{{ nN }}" total="{{ b.total }}" next="{{ nN }}" pos="{{ nPos }}" left="{{ nLeft }}" ready="{{ nReady }}" reset="09:00 tomorrow" on-play="{{ notePlay }}" on-start-over="{{ startOver }}" hint-size="100%,120px"></dc-import></sc-if>
+</div>
+</header>
+<section class="rd-next bk-cont" aria-labelledby="bk-cont-label">
+<h2 class="rd-next__label" id="bk-cont-label">Continue · Chapter {{ b.cont.n }}</h2>
+<p class="rd-next__title">{{ contTitle }}</p>
+<p class="bk-cont__at">You stopped {{ b.cont.pct }}% of the way in.</p>
+<a class="rd-btn rd-btn--primary" href="#top" onclick="{{ contRead }}">Continue reading <span aria-hidden="true">→</span></a>
+</section>
+<sc-if value="{{ hasNotes }}" hint-placeholder-val="{{ true }}"><a class="bk-notes" href="#top"><span class="bk-notes__title">Notes in this book <span aria-hidden="true">→</span></span><span class="bk-notes__meta">{{ b.notes }}</span></a></sc-if>
+</div>
+<div class="bk-body">
+<section class="bk-list" aria-labelledby="bk-contents">
+<div class="rd-end__listhead"><h2 class="rd-end__listtitle" id="bk-contents">Contents</h2><span class="rd-end__count">{{ b.count }}</span></div>
+<ol class="rd-chs" aria-label="Chapters"><sc-for list="{{ rows }}" as="r" hint-placeholder-count="5"><li class="rd-chs__item"><dc-import name="BookRow" bare="{{ true }}" row="{{ r.row }}" on-open="{{ r.open }}" hint-size="100%,64px"></dc-import></li></sc-for></ol>
+</section>
+<section class="bk-clear" aria-labelledby="bk-data">
+<h2 class="bk-clear__title" id="bk-data">Your reading data</h2>
+<p class="bk-clear__lead">Your place, progress, bookmarks, highlights and notes in this book are kept for you alone.</p>
+<button type="button" class="rd-btn rd-btn--ghost bk-del">Clear this book's reading data</button>
+</section>
+</div>
+<sc-if value="{{ hasDock }}" hint-placeholder-val="{{ false }}"><div class="bk-dock"><dc-import name="Dock" bare="{{ true }}" state="{{ dState }}" unit="book" title="{{ dTitle }}" n="{{ dN }}" total="{{ b.total }}" next="{{ nN }}" pos="{{ dPos }}" part="{{ dPart }}" parts="{{ dParts }}" on-play="{{ dockPlay }}" on-pause="{{ dockPause }}" on-retry="{{ dockPlay }}" on-start-over="{{ startOver }}" on-open="{{ openPlayer }}" hint-size="100%,66px"></dc-import></div></sc-if>
+</div>
+</main>
+</div>
+<sc-if value="{{ playerOpen }}" hint-placeholder-val="{{ false }}"><div class="rd-scrim pl-scrim" aria-hidden="true" onclick="{{ closePlayer }}"></div><dc-import name="PlayerPanel" bare="{{ true }}" listen="{{ L0 }}" panel="{{ pPanel }}" uid="bk-pl" on-listen="{{ panelListen }}" on-panel="{{ setPPanel }}" on-close="{{ closePlayer }}" on-go-to-text="{{ playerGoText }}" hint-size="100%,600px"></dc-import></sc-if>
+</div></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"book":{"editor":"enum","options":["guide","changple5"],"default":"guide"},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"listen":{"editor":null},"scene":{"editor":null},"bar":{"editor":null},"dock":{"editor":null},"view":{"editor":null},"audio":{"editor":null},"saved":{"editor":null},"done":{"editor":null},"onListen":{"editor":null},"onOpenReader":{"editor":null},"onOpenPlayer":{"editor":null},"player":{"editor":null},"onClose":{"editor":null},"onGoToText":{"editor":null},"$preview":{"width":1440,"height":1860}}'>
+/* The book landing with Listen (page `book`, frame.md F20). Alone it holds its own Listen in state; mounted with
+   `listen` and `on-listen` it is controlled (the join holds the one Listen). Canvas-only props for the join:
+   `scene` (a preset key, applied when it changes), `bar` ("off" hides this page's own state bar), `dock` (false
+   when the join draws the one dock itself). */
+const CH_GUIDE = [
+  ['knowledge: what it is and how it is used', 'Finished', '38 min'],
+  ['System internals: the content plane, the write path and the contracts', 'Finished', '1 h 7 min'],
+  ['knowledge’s read surfaces: two front ends, one corpus', 'Started · 40%', '44 min'],
+  ['Shipping and running knowledge: distribution, the edge, security and the gates', 'Not started', '59 min'],
+  ['Why knowledge is this way, and how to change it', 'Not started', '31 min'],
+];
+const MIN_CP5 = [24, 31, 28, 36, 22, 40, 33, 27, 45, 30, 26, 38, 29, 34, 25, 41, 32, 28, 35, 23];
+const BOOKS = {
+  guide: {
+    key: 'guide', title: 'knowledge maintainer guide', kind: 'Codebase', place: '@quillwork / knowledge',
+    done: 2, total: 5, pct: 40, count: '5 chapters', notes: '33 items in 4 chapters',
+    q: '5 chapters', qMade: '5 chapters · about 4 h', cont: { n: 3, pct: 40 },
+    chapters: CH_GUIDE.map((c, i) => ({ n: i + 1, title: c[0], read: c[1], len: c[2] })),
+    makeN: 2, makeLeft: 'about 1 h 30 min', makePart: 'part 2 of 9', firstLeft: 'about 2 h', firstParts: 9,
+  },
+  changple5: {
+    key: 'changple5', title: 'changple5 curriculum', kind: 'Codebase', place: '@quillwork / changple5',
+    done: 2, total: 20, pct: 10, count: '20 chapters', notes: '',
+    q: '20 chapters', qMade: '20 chapters · about 10 h 30 min', cont: { n: 3, pct: 65 },
+    chapters: MIN_CP5.map((m, i) => ({ n: i + 1, title: '[Chapter ' + (i + 1) + ' title]', read: i < 2 ? 'Finished' : (i === 2 ? 'Started · 65%' : 'Not started'), len: m + ' min' })),
+    makeN: 7, makeLeft: 'about 3 h 30 min', makePart: 'part 2 of 9', firstLeft: 'about 5 h', firstParts: 7,
+  },
+};
+/* The presets: each sets the page's complete state (frame.md F18, F19). `audio` is the book's audio:
+   none (never made) · made · making (chapters made ahead in order, F13 OQ4) · limit (held by the daily limit). */
+const live = (unit, ch, pos, state) => ({ unit, from: 1, ch, pos, state, old: false, soFar: false, speed: '1×', follow: true });
+const SCENES = [
+  ['new', 'Never listened', { book: 'guide', audio: 'none', saved: false, done: false, net: true, listen: null }],
+  ['new-made', 'Never listened · audio made', { book: 'guide', audio: 'made', saved: false, done: false, net: true, listen: null }],
+  ['first', 'Listen pressed · first part preparing', { book: 'guide', audio: 'making', mk: 1, saved: false, done: false, net: true, listen: live('guide', 1, '0:00', 'making') }],
+  ['first-ready', 'First part ready', { book: 'guide', audio: 'making', mk: 1, saved: false, done: false, net: true, listen: live('guide', 1, '0:00', 'ready') }],
+  ['preparing', 'Preparing the book', { book: 'guide', audio: 'making', saved: false, done: false, net: true, listen: live('guide', 1, '12:30', 'playing') }],
+  ['resume', 'Left part-way', { book: 'guide', audio: 'made', saved: true, done: false, net: true, listen: null }],
+  ['listening', 'Listening (docked)', { book: 'guide', audio: 'made', saved: false, done: false, net: true, listen: live('guide', 4, '12:30', 'playing') }],
+  ['finished', 'Finished', { book: 'guide', audio: 'made', saved: false, done: true, net: true, listen: null }],
+  ['limit', 'Daily limit', { book: 'guide', audio: 'limit', saved: false, done: false, net: true, listen: null }],
+  ['offline', 'Offline', { book: 'guide', audio: 'made', saved: false, done: false, net: false, listen: null }],
+  ['long', '20 chapters, preparing', { book: 'changple5', audio: 'making', saved: false, done: false, net: true, listen: live('changple5', 3, '12:30', 'playing') }],
+];
+const VIEWS = [['full', 'Desktop'], ['820', 'iPad 820'], ['390', 'Phone 390'], ['320', 'Phone 320']];
+const key = (s) => JSON.stringify([s.book, s.audio, s.mk || 0, !!s.saved, !!s.done, !!s.net, s.listen ? [s.listen.unit, s.listen.ch, s.listen.pos, s.listen.state] : null]);
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    const base = SCENES[0][2];
+    this.state = { ...base, book: p.book === 'changple5' ? 'changple5' : 'guide', listen: null, mk: null, starting: false, width: 'full', theme: p.theme === 'dark' ? 'dark' : 'light', compact: false };
+    /* Mounted in the flow (bar "off"), the entry carries the book's audio, the saved position and finished across
+       pages (the join), so coming back from the reader shows the same landing */
+    if (p.bar === 'off') Object.assign(this.state, this.flowState(p));
+    this.send = 0;
+    this.top = null;
+    this.head = null;
+    this.onWin = () => this.measure();
+  }
+  setTop = (el) => { this.top = el; };
+  setFrame = (el) => { this.frame = el; };
+  focusLater(sel) { setTimeout(() => { const el = this.frame && this.frame.querySelector(sel); if (el) el.focus({ preventScroll: true }); }, 0); }
+  setHead = (el) => { this.head = el; };
+  /* The signed top bar shows the book once its head has scrolled under the bar: visibility only, nothing moves. */
+  measure() {
+    let on = false;
+    if (this.head && this.top) on = this.head.getBoundingClientRect().bottom < this.top.getBoundingClientRect().bottom;
+    if (on !== this.state.compact) this.setState({ compact: on });
+  }
+  componentDidMount() {
+    window.addEventListener('scroll', this.onWin, { passive: true });
+    if (this.props.scene) this.apply(this.props.scene);
+    this.scene = this.props.scene;
+  }
+  componentDidUpdate(prev) {
+    if (this.props.scene && this.props.scene !== this.scene) { this.scene = this.props.scene; this.apply(this.props.scene); }
+    const P = this.props;
+    /* The flow opens the player over the landing (critique C06, C08): focus to Close on open, back to the dock on close */
+    if (prev && !prev.player && P.player) this.focusLater('.pl-sheet .rd-sheet__close');
+    if (prev && prev.player && !P.player) { if (this.state.pPanel) this.setState({ pPanel: null }); this.focusLater('.lx-dock__open, .lx-dock__act'); }
+    if (P.bar === 'off' && prev && (prev.audio !== P.audio || prev.saved !== P.saved || prev.done !== P.done)) { this.send++; this.setState(this.flowState(P)); }
+  }
+  /* The saved listening position: the flow passes the one Stop listening kept (F17, critique C01); alone, the fixture */
+  svd() { const v = this.state.saved; return v && typeof v === 'object' ? v : { ch: 4, pos: '12:30' }; }
+  flowState(p) { return { audio: p.audio || 'made', saved: p.saved || false, done: !!p.done, net: true, mk: p.audio === 'making' ? 1 : null, starting: false }; }
+  componentWillUnmount() { window.removeEventListener('scroll', this.onWin); this.gone = true; }
+  controlled() { return this.props.listen !== undefined && typeof this.props.onListen === 'function'; }
+  current() { return this.controlled() ? (this.props.listen || null) : this.state.listen; }
+  setListen(L) {
+    if (this.controlled()) this.props.onListen({ listen: L });
+    else this.setState({ listen: L });
+  }
+  apply(k) {
+    const s = SCENES.find((x) => x[0] === k);
+    if (!s) return;
+    this.send++;
+    const v = s[2];
+    this.setState({ book: v.book, audio: v.audio, mk: v.mk || null, saved: v.saved, done: v.done, net: v.net, starting: false });
+    this.setListen(v.listen ? { ...v.listen } : null);
+  }
+  /* Listen, Continue listening, Start over and the note's Play: to the reader at the starting chapter, playing
+     (frame.md F20 on-open-reader). Alone, the landing shows the Listen it started (the dock), as on coming back. */
+  go(ch, pos, extra) {
+    const b = BOOKS[this.state.book];
+    const L = live(b.key, ch, pos, 'playing');
+    const P = this.props;
+    if (typeof P.onOpenReader === 'function') { P.onOpenReader({ ch, listen: L }); return; }
+    this.setState({ saved: false, done: false, starting: false, ...(extra || {}) });
+    this.setListen(L);
+  }
+  pressListen = () => {
+    if (this.state.starting) return;
+    if (this.state.saved) { const sv = this.svd(); this.go(sv.ch, sv.pos); return; }
+    const id = ++this.send;
+    const made = this.state.audio === 'made';
+    this.setState({ starting: true });
+    setTimeout(() => {
+      if (this.gone || id !== this.send) return;
+      if (made || typeof this.props.onOpenReader === 'function') { this.go(1, '0:00'); return; }
+      /* Not made yet, alone (critique C01): the making starts at chapter 1 and runs ahead in order (F13 OQ4).
+         Nothing plays before chapter 1's first part is ready (F9): Preparing… first, then Ready with Play (F10). */
+      this.setState({ audio: 'making', mk: 1, saved: false, done: false, starting: false });
+      this.setListen(live(BOOKS[this.state.book].key, 1, '0:00', 'making'));
+      setTimeout(() => {
+        if (this.gone || id !== this.send) return;
+        const L = this.current();
+        if (L && L.state === 'making') this.setListen({ ...L, state: 'ready' });
+      }, 2500);
+    }, 900);
+  };
+  startOver = () => { this.send++; this.go(1, '0:00'); };
+  notePlay = () => { this.send++; this.go(1, '0:00'); };
+  dockPlay = () => { const L = this.current(); if (L) this.setListen({ ...L, state: 'playing' }); };
+  dockPause = () => { const L = this.current(); if (L) this.setListen({ ...L, state: 'paused' }); };
+  renderVals() {
+    const P = this.props, S = this.state;
+    const b = BOOKS[S.book] || BOOKS.guide;
+    const L0 = this.current();
+    const L = L0 && L0.unit === b.key ? L0 : null;
+    const audio = S.audio;
+    /* The head's Listen slot (F6, F10): the note once a Listen lives or something stands in its way; else the control. */
+    /* The chapter being prepared: the book's fixture figure, or chapter 1 right after Listen (mk 1). */
+    const mkN = S.mk || b.makeN;
+    const first = mkN === 1;
+    let note = null, nN = mkN, nReady = '', nPos = '12:30', nLeft = first ? b.firstLeft : b.makeLeft;
+    if (L) {
+      if (L.state === 'ready') { note = 'ready'; nReady = '3 min'; }
+      else if (audio === 'making') note = 'making';
+      else if (audio === 'limit') note = 'fail-limit';
+      else note = L.state;
+      nPos = L.pos;
+      nN = audio === 'making' ? mkN : L.ch;
+    } else if (!S.net) note = 'offline-start';
+    else if (audio === 'limit') { note = 'fail-limit'; nReady = '14 min'; }
+    else if (S.done) note = 'finished';
+    const showNote = !!note && !S.starting;
+    const rows = b.chapters.map((c) => {
+      let a = '';
+      if (audio === 'made') a = 'made';
+      else if (audio === 'making') a = c.n < mkN ? 'made' : (c.n === mkN ? 'making' : 'none');
+      else if (audio === 'limit') a = c.n === 1 ? 'held' : 'none';
+      const now = L && L.ch === c.n && (L.state === 'playing' || L.state === 'paused') ? (L.state === 'paused' ? 'Paused' : 'Playing') : '';
+      const part = c.n !== mkN ? '' : (first ? 'part ' + (L && L.state === 'making' ? 1 : 2) + ' of ' + b.firstParts : b.makePart);
+      const row = { n: c.n, title: c.title, lang: 'en', read: c.read, audio: a, len: c.len, part, now };
+      return { row, open: () => { if (typeof P.onOpenReader === 'function') P.onOpenReader({ ch: c.n, listen: L0 }); } };
+    });
+    const ownDock = P.dock !== false;
+    const hasDock = ownDock && !!L;
+    const dCh = L ? b.chapters[L.ch - 1] : null;
+    const cur = key({ book: S.book, audio, mk: S.mk, saved: S.saved, done: S.done, net: S.net, listen: L });
+    const presets = SCENES.map((s) => ({ label: s[1], pressed: !S.starting && key(s[2]) === cur ? 'true' : 'false', pick: () => this.apply(s[0]) }));
+    const views = VIEWS.map((v) => ({ label: v[1], pressed: S.width === v[0] ? 'true' : 'false', pick: () => this.setState({ width: v[0] }) }))
+      .concat([['light', 'Light'], ['dark', 'Dark']].map((t) => ({ label: t[1], pressed: S.theme === t[0] ? 'true' : 'false', pick: () => this.setState({ theme: t[0] }) })));
+    /* In the flow the entry drives the view and the theme (the join) */
+    const flow = P.bar === 'off';
+    const width = flow && P.view ? P.view : S.width;
+    const theme = flow && P.theme ? P.theme : S.theme;
+    return {
+      b,
+      theme,
+      hasBar: !flow,
+      presets, views,
+      stageCls: width === 'full' ? 'bk-stage' : 'bk-stage bk-stage--dev bk-dev--' + width,
+      /* The flow's player over the landing: the landing becomes a window the device's height (canvas only) */
+      frameCls: 'rd-frame bk-frame' + (P.player && L0 ? ' bk-frame--held' : ''),
+      frameStyle: '--bk-win-h: ' + (width === 'full' ? '900px' : (width === '820' ? '1180px' : '844px')) + ';',
+      setFrame: this.setFrame,
+      playerOpen: !!P.player && !!L0,
+      L0,
+      pPanel: S.pPanel || null,
+      setPPanel: (v) => this.setState({ pPanel: v }),
+      panelListen: (e) => this.setListen(e ? e.listen : null),
+      closePlayer: () => { if (typeof P.onClose === 'function') P.onClose({ listen: L0 }); },
+      playerGoText: () => { if (typeof P.onGoToText === 'function') P.onGoToText({ listen: L0 }); },
+      layoutCls: hasDock ? 'bk-layout bk-layout--docked' : 'bk-layout',
+      compactOn: S.compact ? 'true' : 'false',
+      midHidden: S.compact ? 'false' : 'true',
+      progFill: 'width: ' + Math.round(b.done / b.total * 100) + '%',
+      showControl: !showNote,
+      lForm: S.saved && !L ? 'resume' : 'book',
+      lQ: S.saved && !L ? 'Chapter ' + this.svd().ch + ' · ' + this.svd().pos : (audio === 'made' ? b.qMade : b.q),
+      lBusy: !!S.starting,
+      showNote,
+      nState: note || 'making',
+      nN, nPos, nLeft, nReady,
+      contTitle: b.chapters[b.cont.n - 1].title,
+      hasNotes: !!b.notes,
+      rows,
+      hasDock,
+      dState: L ? L.state : 'playing',
+      dTitle: dCh ? dCh.title : '',
+      dN: L ? L.ch : 1,
+      dPos: L ? L.pos : '0:00',
+      dPart: 1,
+      dParts: b.firstParts,
+      contRead: (e) => { if (e && e.preventDefault) e.preventDefault(); if (typeof P.onOpenReader === 'function') P.onOpenReader({ ch: b.cont.n, listen: L0 }); },
+      openPlayer: () => { if (typeof P.onOpenPlayer === 'function' && L0) P.onOpenPlayer({ listen: L0 }); },
+      pressListen: this.pressListen,
+      startOver: this.startOver,
+      notePlay: this.notePlay,
+      dockPlay: this.dockPlay,
+      dockPause: this.dockPause,
+      setTop: this.setTop,
+      setHead: this.setHead,
+    };
+  }
+}
+</script>
+</body>
+</html>

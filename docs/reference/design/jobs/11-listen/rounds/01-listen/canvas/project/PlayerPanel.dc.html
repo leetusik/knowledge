@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The opened player</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+<script src="PlayerData.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+/* The opened player (frame.md F8): the signed sheet's head and body; the body lays every part on one column. */
+.pl-sheet .rd-sheet__head { min-height: calc(var(--lx-ctl) + 2 * var(--kb-space-xs)); }
+.pl-sheet .rd-sheet__head { flex-wrap: wrap; row-gap: 0; }
+.pl-head__end { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0; min-width: 0; margin-inline-start: auto; }
+.rd-sheet.pl-sheet--inline { position: relative; inset: auto; z-index: auto; max-height: none; box-shadow: none; border: 1px solid var(--kb-border); }
+.rd-sheet.pl-sheet--inline .rd-sheet__body { overflow: visible; }
+@container rd (min-width: 40rem) { .rd-sheet.pl-sheet--inline { width: 26rem; margin-inline-start: auto; } }
+/* (only where the body scrolls: the modal sheet; the inline board shows the whole body) */
+.pl-sheet:not(.pl-sheet--inline) .pl-body {
+  --pl-shade: var(--kb-border-strong);
+  background:
+    linear-gradient(var(--kb-surface) 40%, transparent) top / 100% 2.5rem no-repeat local,
+    linear-gradient(transparent, var(--kb-surface) 60%) bottom / 100% 2.5rem no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--pl-shade), transparent) top / 100% 0.75rem no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--pl-shade), transparent) bottom / 100% 0.75rem no-repeat scroll,
+    var(--kb-surface);
+}
+.pl { --f-gap: var(--kb-space-lg); }
+.pl-id { --f-gap: var(--kb-space-xs); }
+.pl-meta { margin: 0; font-size: var(--lx-fs-meta); line-height: 1.3; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.pl-title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--lx-fs-title); line-height: 1.25; letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word; }
+.pl-title:lang(ko) { font-family: var(--font-body); letter-spacing: 0; word-break: keep-all; }
+/* The status zone: a status word, the note, or the resume offer */
+.pl-zone { min-width: 0; }
+.pl-zone--noact .lx-note > .rd-btn { display: none; }
+.pl-zone--second .lx-note > .rd-btn--primary { background: var(--kb-surface); border-color: var(--rd-control-edge); color: var(--kb-ink); }
+.pl-zone--second .lx-note > .rd-btn--primary:hover { background: var(--kb-surface); border-color: var(--kb-accent); color: var(--kb-accent-strong); }
+.pl-resume { --f-gap: var(--kb-space-xs) var(--kb-space-md); }
+.pl-resume { align-items: center; }
+/* The position: the one bold move, then the seek bar under it */
+.pl-where { --f-gap: var(--kb-space-xs); }
+.pl-pos { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--kb-space-sm); }
+.pl-pos__now { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: var(--lx-fs-pos); line-height: 1; letter-spacing: var(--kb-tracking-display); color: var(--kb-ink); font-variant-numeric: lining-nums tabular-nums; }
+.pl-pos__of { font-size: var(--lx-fs-ui); line-height: 1.2; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.pl-seek { --p: 0%; display: block; width: 100%; height: var(--lx-ctl); margin: 0; padding: 0; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; border-radius: var(--kb-radius-sm); }
+.pl-seek::-webkit-slider-runnable-track { height: 0.25rem; border-radius: var(--kb-radius-pill); background: linear-gradient(to right, var(--kb-accent) var(--p), var(--rd-control-edge) var(--p)); }
+.pl-seek::-moz-range-track { height: 0.25rem; border-radius: var(--kb-radius-pill); background: var(--rd-control-edge); }
+.pl-seek::-moz-range-progress { height: 0.25rem; border-radius: var(--kb-radius-pill); background: var(--kb-accent); }
+.pl-seek::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 1.125rem; height: 1.125rem; margin-top: calc((0.25rem - 1.125rem) / 2); border: 2px solid var(--kb-surface); border-radius: 50%; background: var(--kb-accent); box-shadow: 0 0 0 1px var(--kb-accent); }
+.pl-seek::-moz-range-thumb { width: 1.125rem; height: 1.125rem; border: 2px solid var(--kb-surface); border-radius: 50%; background: var(--kb-accent); box-shadow: 0 0 0 1px var(--kb-accent); box-sizing: border-box; }
+.pl-seek:focus-visible { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+.pl-seek:disabled { cursor: not-allowed; }
+.pl-seek:disabled::-webkit-slider-thumb { background: var(--kb-hint); box-shadow: 0 0 0 1px var(--kb-hint); }
+/* The transport: chapters on the column's two edges, skip and play centred between them */
+.pl-transport { display: grid; grid-template-columns: minmax(var(--lx-ctl), 1fr) auto minmax(var(--lx-ctl), 1fr); align-items: center; }
+.pl-transport__mid { display: flex; align-items: center; gap: var(--kb-space-md); }
+.pl-transport__end { display: flex; justify-content: flex-end; }
+.pl-transport .lx-round:disabled { background: transparent; border-color: transparent; color: var(--kb-hint); }
+.pl-transport .lx-round--l:disabled { border-color: var(--kb-border-strong); }
+/* The rows: a hairline list, label on the start edge, value on the end edge */
+.pl-rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--kb-border); }
+.pl-rows > li { border-bottom: 1px solid var(--kb-border); }
+.pl-row { display: flex; align-items: center; justify-content: space-between; gap: var(--kb-space-md); width: 100%; min-height: var(--lx-ctl); margin: 0; padding: var(--kb-space-xs) 0; border: 0; background: transparent; color: var(--kb-ink); font-family: var(--font-body); font-size: var(--lx-fs-ui); font-weight: var(--kb-weight-semibold); line-height: 1.2; text-align: start; cursor: pointer; }
+.pl-row:hover .pl-row__label { text-decoration: underline; text-underline-offset: 0.2em; }
+.pl-row__val { display: inline-flex; align-items: center; gap: var(--kb-space-sm); flex: none; font-weight: var(--kb-weight-regular); color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.pl-chev { transform: rotate(180deg); }
+.pl-row[aria-expanded="true"] .pl-chev { transform: none; }
+.pl-switch { position: relative; flex: none; width: 2.25rem; height: 1.375rem; box-sizing: border-box; border: 1.5px solid var(--rd-control-edge); border-radius: var(--kb-radius-pill); background: var(--kb-surface); }
+.pl-switch::after { content: ""; position: absolute; top: 50%; left: 0.1875rem; width: 0.75rem; height: 0.75rem; margin-top: -0.375rem; border-radius: 50%; background: var(--kb-secondary); }
+.pl-row[aria-checked="true"] .pl-switch { background: var(--kb-accent); border-color: var(--kb-accent); }
+.pl-row[aria-checked="true"] .pl-switch::after { left: auto; right: 0.1875rem; background: var(--rd-on-accent); }
+.pl-drop { padding-bottom: var(--kb-space-md); }
+/* The speed choice: the signed Display options (01-reader reader.css .rd-opt), copied value for value */
+.pl-speeds { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--kb-space-xs); }
+@container rd (max-width: 21.99rem) { .pl-speeds { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.pl-opt {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--kb-space-xs);
+  min-height: 3.25rem; padding: var(--kb-space-xs); border: 1px solid var(--rd-control-edge); border-radius: var(--kb-radius-sm);
+  background: var(--kb-surface); color: var(--kb-ink); cursor: pointer; font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 0 0 1px transparent; transition: border-color var(--rd-ease), box-shadow var(--rd-ease), background var(--rd-ease);
+}
+.pl-opt:hover { border-color: var(--kb-accent); }
+.pl-opt[aria-pressed="true"] { border-color: var(--kb-accent); box-shadow: inset 0 0 0 1px var(--kb-accent); background: var(--kb-accent-soft); }
+/* The chapter list: the signed Contents list; a chapter not yet made is a plain row */
+.pl-drop .rd-chs { border-top: 0; }
+.pl-drop .rd-chs__item:last-child { border-bottom: 0; }
+.pl-ch { background: transparent; font-family: var(--font-body); text-align: start; cursor: pointer; }
+.pl-ch--off { cursor: default; }
+.pl-foot { display: flex; }
+/* The current chapter: the signed accent-soft row plus a 1px accent edge (the round-03 language switch's rule), in a
+   border every row carries, so the current row has a 3:1 boundary and nothing moves */
+.pl-ch { border: 1px solid transparent; }
+.pl-ch[aria-current] { border-color: var(--kb-accent); }
+</style>
+</helmet>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="{{ sheetCls }}" role="dialog" aria-modal="{{ modal }}" aria-label="Listen" ref="{{ setRoot }}" onkeydown="{{ keys }}">
+<div class="rd-sheet__head"><h2 class="rd-sheet__title">Listen</h2><div class="pl-head__end"><button type="button" class="rd-btn rd-btn--quiet" onclick="{{ goText }}">Go to the text</button><button type="button" class="rd-btn rd-btn--quiet rd-sheet__close" onclick="{{ close }}">Close</button></div></div>
+<div class="rd-sheet__body pl-body">
+<div class="f-stack pl">
+
+<div class="f-stack pl-id">
+<sc-if value="{{ hasMeta }}" hint-placeholder-val="{{ true }}"><p class="pl-meta">{{ meta }}</p></sc-if>
+<h3 class="pl-title" lang="{{ lang }}">{{ title }}</h3>
+</div>
+
+<sc-if value="{{ zStatus }}" hint-placeholder-val="{{ true }}"><div class="pl-zone"><p class="{{ statusCls }}"><sc-if value="{{ busy }}" hint-placeholder-val="{{ false }}"><span class="lx-spin" aria-hidden="true"></span></sc-if>{{ word }}</p></div></sc-if>
+<sc-if value="{{ zNote }}" hint-placeholder-val="{{ false }}"><div class="{{ noteCls }}" id="{{ noteId }}"><dc-import name="ListenNote" bare="{{ true }}" state="{{ noteState }}" unit="{{ unitKind }}" n="{{ n }}" total="{{ total }}" next="{{ n }}" pos="{{ pos }}" len="{{ lenText }}" part="{{ part }}" parts="{{ parts }}" left="{{ left }}" ready="{{ readyText }}" reset="09:00 tomorrow" updating="{{ updating }}" on-sign-in="{{ signIn }}" on-update="{{ update }}" hint-size="100%,96px"></dc-import></div></sc-if>
+<sc-if value="{{ zResume }}" hint-placeholder-val="{{ false }}"><div class="pl-zone f-cluster f-cluster--between pl-resume"><p class="lx-status lx-status--idle" id="{{ resumeId }}">Paused</p><button type="button" class="lx-over" onclick="{{ startOver }}">Start over</button></div></sc-if>
+
+<sc-if value="{{ hasPos }}" hint-placeholder-val="{{ true }}"><div class="f-stack pl-where">
+<p class="pl-pos"><span class="pl-pos__now">{{ pos }}</span><span class="pl-pos__of">{{ posOf }}</span></p>
+<input type="range" class="pl-seek" aria-label="Position" min="0" max="{{ lenSecs }}" step="5" value="{{ posSecs }}" aria-valuetext="{{ posText }}" style="{{ seekStyle }}" disabled="{{ seekOff }}" onchange="{{ seek }}">
+</div></sc-if>
+
+<div class="pl-transport">
+<div><sc-if value="{{ isBook }}" hint-placeholder-val="{{ true }}"><button type="button" class="lx-round" aria-label="Previous chapter" disabled="{{ prevOff }}" onclick="{{ prev }}"><span class="lx-i lx-i--prev" aria-hidden="true"></span></button></sc-if></div>
+<div class="pl-transport__mid">
+<button type="button" class="lx-round" aria-label="Back 15 seconds" disabled="{{ skipOff }}" onclick="{{ back }}"><span class="lx-i lx-i--back" aria-hidden="true"></span><span class="lx-skip__n" aria-hidden="true">15</span></button>
+<sc-if value="{{ leadPlay }}" hint-placeholder-val="{{ false }}"><button type="button" class="lx-round lx-round--primary lx-round--l pl-lead" aria-label="{{ playName }}" aria-describedby="{{ playDesc }}" onclick="{{ play }}"><span class="lx-i lx-i--play lx-i--l" aria-hidden="true"></span></button></sc-if>
+<sc-if value="{{ leadPause }}" hint-placeholder-val="{{ true }}"><button type="button" class="lx-round lx-round--primary lx-round--l pl-lead" aria-label="Pause" onclick="{{ pause }}"><span class="lx-i lx-i--pause lx-i--l" aria-hidden="true"></span></button></sc-if>
+<sc-if value="{{ leadAgain }}" hint-placeholder-val="{{ false }}"><button type="button" class="lx-round lx-round--primary lx-round--l pl-lead" aria-label="Start over" onclick="{{ again }}"><span class="lx-i lx-i--again lx-i--l" aria-hidden="true"></span></button></sc-if>
+<sc-if value="{{ leadRetry }}" hint-placeholder-val="{{ false }}"><button type="button" class="lx-round lx-round--primary lx-round--l pl-lead" aria-label="Try again" onclick="{{ retry }}"><span class="lx-i lx-i--retry lx-i--l" aria-hidden="true"></span></button></sc-if>
+<sc-if value="{{ leadOff }}" hint-placeholder-val="{{ false }}"><button type="button" class="lx-round lx-round--l pl-lead" aria-label="Play" aria-describedby="{{ offDesc }}" disabled><span class="lx-i lx-i--play lx-i--l" aria-hidden="true"></span></button></sc-if>
+<button type="button" class="lx-round" aria-label="Forward 15 seconds" disabled="{{ skipOff }}" onclick="{{ fwd }}"><span class="lx-i lx-i--fwd" aria-hidden="true"></span><span class="lx-skip__n" aria-hidden="true">15</span></button>
+</div>
+<div class="pl-transport__end"><sc-if value="{{ isBook }}" hint-placeholder-val="{{ true }}"><button type="button" class="lx-round" aria-label="Next chapter" disabled="{{ nextOff }}" onclick="{{ next }}"><span class="lx-i lx-i--next" aria-hidden="true"></span></button></sc-if></div>
+</div>
+
+<ul class="pl-rows">
+<li>
+<button type="button" class="pl-row" data-row="speed" aria-expanded="{{ speedOpen }}" aria-controls="{{ speedId }}" onclick="{{ toggleSpeed }}"><span class="pl-row__label">Speed</span><span class="pl-row__val">{{ speed }}<span class="lx-i lx-i--open lx-i--s pl-chev" aria-hidden="true"></span></span></button>
+<sc-if value="{{ isSpeed }}" hint-placeholder-val="{{ false }}"><div class="pl-drop" id="{{ speedId }}"><div class="pl-speeds" role="group" aria-label="Speed"><sc-for list="{{ speeds }}" as="v" hint-placeholder-count="6"><button type="button" class="pl-opt" aria-pressed="{{ v.pressed }}" onclick="{{ v.pick }}">{{ v.label }}</button></sc-for></div></div></sc-if>
+</li>
+<li>
+<button type="button" class="pl-row" role="switch" aria-checked="{{ followOn }}" onclick="{{ toggleFollow }}"><span class="pl-row__label">Follow along</span><span class="pl-row__val">{{ followWord }}<span class="pl-switch" aria-hidden="true"></span></span></button>
+</li>
+<sc-if value="{{ isBook }}" hint-placeholder-val="{{ true }}"><li>
+<button type="button" class="pl-row" data-row="chapters" aria-expanded="{{ chOpen }}" aria-controls="{{ chId }}" onclick="{{ toggleCh }}"><span class="pl-row__label">Chapters</span><span class="pl-row__val">{{ chWhere }}<span class="lx-i lx-i--open lx-i--s pl-chev" aria-hidden="true"></span></span></button>
+<sc-if value="{{ isCh }}" hint-placeholder-val="{{ false }}"><div class="pl-drop" id="{{ chId }}"><ol class="rd-chs" aria-label="Chapters">
+<sc-for list="{{ chapters }}" as="c" hint-placeholder-count="5"><li class="rd-chs__item">
+<sc-if value="{{ c.made }}" hint-placeholder-val="{{ true }}"><button type="button" class="rd-ch pl-ch" aria-current="{{ c.cur }}" onclick="{{ c.pick }}"><span class="rd-ch__n">{{ c.n }}</span><span class="rd-ch__body"><span class="rd-ch__title">{{ c.title }}</span><span class="rd-ch__meta"><sc-if value="{{ c.isNow }}" hint-placeholder-val="{{ false }}"><span class="rd-ch__now">{{ c.now }}</span></sc-if><span>{{ c.len }}</span></span></span></button></sc-if>
+<sc-if value="{{ c.off }}" hint-placeholder-val="{{ false }}"><div class="rd-ch pl-ch pl-ch--off" aria-current="{{ c.cur }}"><span class="rd-ch__n">{{ c.n }}</span><span class="rd-ch__body"><span class="rd-ch__title">{{ c.title }}</span><span class="rd-ch__meta"><sc-if value="{{ c.isNow }}" hint-placeholder-val="{{ false }}"><span class="rd-ch__now">{{ c.now }}</span></sc-if><span>{{ c.word }}</span></span></span></div></sc-if>
+</li></sc-for>
+</ol></div></sc-if>
+</li></sc-if>
+</ul>
+
+<div class="pl-foot"><button type="button" class="lx-over" onclick="{{ stop }}">Stop listening</button></div>
+</div>
+</div>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"listen":{"editor":null},"panel":{"editor":null},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"inline":{"editor":null},"uid":{"editor":null},"onListen":{"editor":null},"onPanel":{"editor":null},"onClose":{"editor":null},"onGoToText":{"editor":null},"bare":{"editor":null},"$preview":{"width":420,"height":1180}}'>
+// The opened player (frame.md F8; page contract F20): takes the current Listen, emits on-listen for every change
+// (play, pause, seek, skip, speed, follow, chapter, Stop listening -> null), on-close and on-go-to-text. Alone, it
+// keeps its own Listen and open panel.
+const PL_T = {
+  // state: [lead, zone, has a position]
+  'waiting': ['off', 'note', false], 'making': ['off', 'note', false], 'ready': ['play', 'note', true], 'tap': ['play', 'note', true],
+  'loading': ['pause', 'status', true], 'playing': ['pause', 'status', true], 'paused': ['play', 'status', true], 'buffering': ['pause', 'status', true],
+  'next-waiting': ['pause', 'note', false], 'finished': ['again', 'note', true],
+  'fail-voice': ['retry', 'note', false], 'fail-limit': ['play', 'note', true], 'fail-play': ['retry', 'note', true],
+  'fail-session': ['off', 'act', true], 'fail-unreadable': ['retry', 'note', false],
+  'offline-start': ['off', 'note', false], 'offline-play': ['pause', 'note', true], 'offline-stopped': ['off', 'note', true],
+};
+const PL_WORD = { playing: ['active', 'Playing', false], paused: ['idle', 'Paused', false], loading: ['idle', 'Loading…', true], buffering: ['idle', 'Buffering…', true] };
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { listen: null, panel: p.panel || null };
+    this.root = null;
+  }
+  L() {
+    const PL = window.PL;
+    const own = this.props.onListen ? this.props.listen : (this.state.listen || this.props.listen);
+    return Object.assign({}, PL.BASE, own || {});
+  }
+  set(patch) {
+    const next = patch === null ? null : Object.assign({}, this.L(), patch);
+    if (this.props.onListen) this.props.onListen({ listen: next });
+    else if (next) this.setState({ listen: next });
+  }
+  panel() { return this.props.onPanel ? (this.props.panel || null) : this.state.panel; }
+  setPanel(v, focusRow) {
+    if (this.props.onPanel) this.props.onPanel(v); else this.setState({ panel: v });
+    if (focusRow) setTimeout(() => { const b = this.root && this.root.querySelector('[data-row="' + focusRow + '"]'); if (b) b.focus({ preventScroll: true }); }, 0);
+  }
+  renderVals() {
+    const PL = window.PL, P = this.props;
+    const L = this.L();
+    const u = PL.unit(L), book = u.kind === 'book';
+    const total = book ? u.chapters.length : 1;
+    const st = PL_T[L.state] ? L.state : 'playing';
+    const t = PL_T[st];
+    let zone = t[1];
+    const live = st === 'playing' || st === 'paused' || st === 'loading' || st === 'buffering';
+    if (L.old && live) zone = 'outdated';
+    if (L.offer && st === 'paused') zone = 'resume';
+    const lead = t[0];
+    const lenS = PL.lenSecs(L);
+    const lenText = PL.clock(lenS);
+    const posS = Math.min(PL.secs(L.pos), lenS);
+    const pos = PL.clock(posS);
+    const playable = lead === 'play' || lead === 'pause' || lead === 'again';
+    const rows = PL.chapterRows(L);
+    const madeTo = book ? PL.madeTo(L) : 0;
+    const pnl = this.panel();
+    const uid = P.uid || 'pl';
+    const w = PL_WORD[st] || PL_WORD.playing;
+    const nowWord = st === 'paused' ? 'Paused' : (st === 'playing' ? 'Playing' : (PL_WORD[st] ? PL_WORD[st][1] : 'Reading now'));
+    const go = (patch) => () => this.set(patch);
+    const chapter = (n) => {
+      const keep = L.state === 'paused' ? 'paused' : 'playing';
+      if (n >= (L.from || 1) && n <= madeTo) return { ch: n, pos: '0:00', state: keep, offer: false, soFar: false };
+      return { ch: n, pos: '0:00', state: 'next-waiting', offer: false, soFar: false };
+    };
+    const chapters = rows.map((c) => ({
+      n: c.n, title: c.title, len: c.len,
+      made: c.made, off: !c.made,
+      word: c.preparing ? 'Preparing… · part 2 of 9' : 'Not prepared yet',
+      cur: c.current ? 'true' : undefined,
+      isNow: c.current, now: nowWord,
+      pick: () => { this.set(chapter(c.n)); this.setPanel(null, 'chapters'); },
+    }));
+    const noteState = zone === 'outdated' ? 'outdated' : st;
+    return {
+      wrapCls: P.bare ? 'rd-in' : 'rd-frame lx-alone',
+      wrapTheme: P.bare ? undefined : (P.theme === 'dark' ? 'dark' : 'light'),
+      sheetCls: 'rd-sheet rd-sheet--right pl-sheet' + (P.inline || !P.bare ? ' pl-sheet--inline' : ''),
+      modal: P.inline || !P.bare ? 'false' : 'true',
+      setRoot: (el) => { this.root = el; },
+      keys: (e) => {
+        if (e.key !== 'Escape') return;
+        if (pnl) { e.preventDefault(); this.setPanel(null, pnl); }
+        else if (P.onClose) { e.preventDefault(); P.onClose({ listen: L }); }
+      },
+      close: () => { if (P.onClose) P.onClose({ listen: L }); },
+      goText: () => { if (P.onGoToText) P.onGoToText({ listen: L }); },
+      hasMeta: book,
+      meta: book ? u.title + ' · Chapter ' + L.ch + ' of ' + total : '',
+      title: PL.title(L),
+      lang: u.lang,
+      zStatus: zone === 'status',
+      statusCls: 'lx-status lx-status--' + w[0] + (w[2] ? ' lx-status--busy' : ''),
+      busy: w[2],
+      word: w[1],
+      zNote: zone === 'note' || zone === 'act' || zone === 'outdated',
+      noteCls: 'pl-zone' + (zone === 'note' ? ' pl-zone--noact' : '') + (zone === 'outdated' ? ' pl-zone--second' : ''),
+      noteId: uid + '-note',
+      offDesc: zone === 'note' || zone === 'act' ? uid + '-note' : undefined,
+      noteState,
+      unitKind: book ? 'book' : 'doc',
+      n: L.ch || 1, total,
+      pos, lenText,
+      part: st === 'fail-voice' ? 4 : (L.part || 3),
+      parts: u.parts || 12,
+      // F31: a book's first step (chapter 1) has about 2 h left; F18's chapter 2 about 1 h 30 min (critique C04)
+      left: st === 'next-waiting' ? 'about 5 min' : (book && (L.ch || 1) === 1 ? 'about 2 h' : undefined),
+      readyText: st === 'fail-limit' ? '14 min' : '3 min',
+      updating: !!L.updating,
+      signIn: go({ state: 'paused' }),
+      update: go({ updating: true }),
+      zResume: zone === 'resume',
+      resumeId: uid + '-resume',
+      startOver: () => { this.set({ ch: L.from || 1, pos: '0:00', state: 'playing', offer: false }); },
+      hasPos: t[2],
+      posOf: 'of ' + lenText + (L.soFar ? ' so far' : ''),
+      posText: pos + ' of ' + lenText + (L.soFar ? ' so far' : ''),
+      posSecs: posS, lenSecs: lenS,
+      seekStyle: '--p: ' + (lenS ? Math.round((posS / lenS) * 1000) / 10 : 0) + '%',
+      seekOff: !playable,
+      seek: (e) => { const v = Number(e.target.value); if (PL.clock(v) !== L.pos) this.set({ pos: PL.clock(v) }); },
+      isBook: book,
+      prevOff: !playable,
+      nextOff: !playable || L.ch >= total,
+      prev: () => {
+        if (L.ch > (L.from || 1) && posS < 5) this.set(chapter(L.ch - 1));
+        else this.set({ pos: '0:00', state: L.state === 'finished' ? 'paused' : L.state, offer: false });
+      },
+      next: () => this.set(chapter(L.ch + 1)),
+      skipOff: !playable,
+      back: () => this.set({ pos: PL.clock(Math.max(0, posS - 15)), state: L.state === 'finished' ? 'paused' : L.state }),
+      fwd: () => this.set({ pos: PL.clock(Math.min(lenS, posS + 15)) }),
+      leadPlay: lead === 'play',
+      leadPause: lead === 'pause',
+      leadAgain: lead === 'again',
+      leadRetry: lead === 'retry',
+      leadOff: lead === 'off',
+      playName: zone === 'resume' ? 'Continue listening' : 'Play',
+      playDesc: zone === 'resume' ? uid + '-resume' : undefined,
+      play: go({ state: 'playing', offer: false }),
+      pause: () => {
+        if (st === 'offline-play') this.set({ state: 'offline-stopped' });
+        else if (st === 'next-waiting') { const prevLen = u.chapters[L.ch - 2][1]; this.set({ ch: L.ch - 1, pos: PL.clock(prevLen), state: 'paused' }); }
+        else this.set({ state: 'paused' });
+      },
+      again: () => this.set({ ch: L.from || 1, pos: '0:00', state: 'playing', offer: false }),
+      retry: () => this.set({ state: st === 'fail-play' ? 'playing' : 'making' }),
+      speed: L.speed,
+      speedOpen: pnl === 'speed' ? 'true' : 'false',
+      isSpeed: pnl === 'speed',
+      speedId: uid + '-speed',
+      toggleSpeed: () => this.setPanel(pnl === 'speed' ? null : 'speed'),
+      speeds: PL.SPEEDS.map((v) => ({ label: v, pressed: v === L.speed ? 'true' : 'false', pick: () => { this.set({ speed: v }); this.setPanel(null, 'speed'); } })),
+      followOn: L.follow ? 'true' : 'false',
+      followWord: L.follow ? 'On' : 'Off',
+      toggleFollow: () => this.set({ follow: !L.follow }),
+      chOpen: pnl === 'chapters' ? 'true' : 'false',
+      isCh: pnl === 'chapters',
+      chId: uid + '-chapters',
+      chWhere: 'Chapter ' + L.ch + ' of ' + total,
+      toggleCh: () => {
+        const opening = pnl !== 'chapters';
+        this.setPanel(opening ? 'chapters' : null);
+        // Opening the list brings its row to the top of the sheet (a scroll inside the player, on request)
+        if (opening) setTimeout(() => {
+          const body = this.root && this.root.querySelector('.rd-sheet__body');
+          const row = this.root && this.root.querySelector('[data-row="chapters"]');
+          if (body && row && body.scrollHeight > body.clientHeight) body.scrollTop += row.getBoundingClientRect().top - body.getBoundingClientRect().top;
+        }, 0);
+      },
+      chapters,
+      stop: () => this.set(null),
+    };
+  }
+}
+</script>
+</body>
+</html>

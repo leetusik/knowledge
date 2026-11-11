@@ -3,17 +3,25 @@
   "round": "01-listen",
   "title": "Listen",
   "slice": "P41-sr.D1",
-  "status": "open",
+  "status": "signed",
   "opened_at": "2026-11-11T11:16:26+09:00",
-  "closed_at": null,
+  "closed_at": "2026-11-11T13:31:28+09:00",
   "supersedes": [],
-  "signoff_words": null,
-  "canvas_version": null,
+  "signoff_words": "accept for the design.",
+  "canvas_version": "1794371132-01bd",
   "critique": "critic",
   "pages": [
     "reader",
     "player",
     "book"
   ],
-  "published": "1794371132-01bd"
+  "published": "1794371132-01bd",
+  "readback": {
+    "version": "1794371132-01bd",
+    "base": "1794371132-01bd",
+    "result": "unchanged",
+    "files": [],
+    "removed": [],
+    "at": "2026-11-11T13:31:18+09:00"
+  }
 }

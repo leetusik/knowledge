@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Listen control in each form</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<div class="lx-board" data-theme="light" id="top">
+<div class="lx-board__cell"><p class="lx-board__cap">Document, audio ready</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="doc" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Document, not yet made: no length</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="doc" q="" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Pressed, before the dock answers</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="doc" busy="{{ true }}" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Korean document, audio ready</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="doc" q="50 min" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__row"></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Chapter 2: the book from here on</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="chapter" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Chapter 2, every chapter made</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="chapter" q="Chapters 2–5 · about 3 h 30 min" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Book landing, never listened</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="book" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Book landing, not yet made</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="book" q="5 chapters" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__row"></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Left part-way: continue, or start over</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="resume" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Left part-way, a document</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="resume" q="18:05 of 42:10" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Phone 320 · chapter</p><div class="rd-frame lx-w320" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="chapter" q="Chapters 2–5 · about 3 h 30 min" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Phone 320 · left part-way</p><div class="rd-frame lx-w320" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="resume" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__row"></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Dark · document</p><div class="rd-frame lx-w390" data-theme="dark"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="doc" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Dark · left part-way</p><div class="rd-frame lx-w390" data-theme="dark"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="Listen" form="resume" bare="{{ true }}" hint-size="100%,44px"></dc-import></div></div></div></div>
+<div class="lx-board__row"></div>
+<div class="lx-board__cell"><p class="lx-board__cap">In the slot, with the chrome: a document</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="lx-pad lx-pillcell"><dc-import name="Listen" slot="{{ true }}" form="doc" bare="{{ true }}" hint-size="160px,46px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">In the slot: a chapter</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="lx-pad lx-pillcell"><dc-import name="Listen" slot="{{ true }}" form="chapter" bare="{{ true }}" hint-size="160px,46px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">In the slot: not yet made</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="lx-pad lx-pillcell"><dc-import name="Listen" slot="{{ true }}" form="doc" q="" bare="{{ true }}" hint-size="160px,46px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">In the slot · dark</p><div class="rd-frame lx-w390" data-theme="dark"><div class="rd-in"><div class="lx-pad lx-pillcell"><dc-import name="Listen" slot="{{ true }}" form="doc" bare="{{ true }}" hint-size="160px,46px"></dc-import></div></div></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1760,"height":960}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

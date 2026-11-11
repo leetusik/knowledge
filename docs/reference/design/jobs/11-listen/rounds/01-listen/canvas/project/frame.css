@@ -1,0 +1,452 @@
+@import url("https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..700&family=Noto+Serif+KR:wght@200..900&display=swap");
+
+/* The frame of 11-listen / 01-listen. Every board links it after ds/kb/tokens.css.
+   Part 1 is the signed reader Listen joins, copied value for value from the signed canvases and the product's
+   web/src/app/reader.css (job 10's frame Part 1, plus the chapter bar, the sheets, the chapter opening and the chapter
+   list): never restyled here. The product's viewport media queries are written as container queries on the reader
+   (`rd`), so a phone window drawn on a wide board answers to its own width.
+   Part 2 is the frame's five layout primitives. Part 3 is Listen (this job): the media icons, the Listen control,
+   the dock, the notes, the progress line, the follow-along mark and the window a page draws a screen in.
+   Part 4 is canvas-only board layout. The ledger that explains each choice is rounds/01-listen/frame.md (F1 ...). */
+
+/* ======================= Part 1 · the signed reader (copied) ======================= */
+
+/* Pretendard, the product's Hangul face (web/src/lib/fonts.ts: PretendardVariable.woff2, v1.3.9, weights 45-920),
+   loaded from its published source so Korean titles render in the face the product ships (frame.md F14). */
+@font-face { font-family: "Pretendard"; src: url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/woff2/PretendardVariable.woff2") format("woff2-variations"); font-weight: 45 920; font-display: swap; }
+
+[data-theme="light"], .rd-frame:not([data-theme]) {
+  --rd-on-accent: #fbfaf5;
+  --an-mark: #f5dc8a; --an-mark-2: #eccb66; --an-edge: #8a6a2a;
+}
+[data-theme="dark"] {
+  --rd-on-accent: #16130f;
+  --an-mark: #4a3c17; --an-mark-2: #574720; --an-edge: #c8a15e;
+}
+
+html, body { margin: 0; }
+
+.rd-frame {
+  --font-reading: "Literata", "Noto Serif KR", "Nanum Myeongjo", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", Georgia, serif;
+  --font-display: "Fraunces", "Noto Serif KR", "Nanum Myeongjo", "Pretendard", Georgia, serif;
+  --rd-fs: 1.125rem;
+  --rd-k: 1.125;
+  --rd-lead: 1.65;
+  --rd-fs-s: calc(var(--rd-fs) * 0.8333);
+  --rd-measure: 36rem;
+  --rd-top-h: 3.5rem;
+  --rd-line: 3px;
+  --rd-gut: var(--kb-app-gutter-phone);
+  --rd-ease: 0.15s ease;
+  position: relative;
+  container: rd / inline-size;
+  box-sizing: border-box;
+  background: var(--kb-surface);
+  color: var(--kb-ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+.rd-frame *, .rd-frame *::before, .rd-frame *::after { box-sizing: border-box; }
+.rd-in { display: contents; }
+@container rd (min-width: 40rem) { .rd-in { --rd-gut: var(--kb-app-gutter); } }
+@container rd (min-width: 90rem) { .rd-in { --rd-gut: var(--kb-app-gutter-wide); } }
+/* The wide screen (P-8jbf): from a 1600 px window the column is 44rem and the text 20 px. */
+@media screen and (min-width: 100rem) {
+  .rd-article { --rd-measure: 44rem; --rd-fs: 1.25rem; --rd-k: 1.25; --rd-fs-s: calc(var(--rd-fs) * 0.8333); }
+}
+
+.rd-frame :is(a, button, summary, [tabindex]):focus-visible {
+  outline: var(--kb-focus-w) solid var(--kb-accent);
+  outline-offset: var(--kb-focus-offset);
+}
+
+/* Buttons (kb-appbtn values) */
+.rd-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--kb-space-xs);
+  min-height: var(--kb-tap); padding: 0.55rem 1rem;
+  border: 1px solid transparent; border-radius: var(--kb-radius-sm);
+  font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.2;
+  white-space: nowrap; cursor: pointer; text-decoration: none; background: transparent; color: var(--kb-ink);
+  transition: color var(--rd-ease), background var(--rd-ease), border-color var(--rd-ease);
+}
+.rd-btn--quiet { color: var(--kb-secondary); padding-inline: 0.75rem; }
+.rd-btn--quiet:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+.rd-btn:active { transform: translateY(1px); }
+
+/* The progress line and the top bar (in flow on the canvas: a Page scrolls as a document) */
+.rd-line { position: relative; height: var(--rd-line); background: var(--kb-border); }
+.rd-line__fill { display: block; height: 100%; background: var(--kb-accent); }
+.rd-top {
+  height: var(--rd-top-h);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--kb-space-xs);
+  padding-inline: calc(var(--rd-gut) - 0.6rem);
+  background: var(--kb-surface); border-bottom: 1px solid var(--kb-border);
+  font-size: 0.9375rem;
+}
+.rd-top__start { display: flex; align-items: center; gap: var(--kb-space-xs); min-width: 0; }
+.rd-top__end { display: flex; align-items: center; gap: var(--kb-space-xs); }
+.rd-logo { display: inline-flex; align-items: center; justify-content: center; width: var(--kb-tap); height: var(--kb-tap); border-radius: var(--kb-radius-sm); flex: none; }
+.rd-logo img { width: 22px; height: 22px; display: block; }
+.rd-logo:hover { background: var(--kb-surface-sunken); }
+.rd-back {
+  display: inline-flex; align-items: center; gap: 0.3rem; min-height: var(--kb-tap); min-width: 0; max-width: 100%;
+  padding-inline: 0.4rem; border-radius: var(--kb-radius-sm);
+  color: var(--kb-ink); text-decoration: none; font-weight: var(--kb-weight-medium);
+}
+.rd-back__chev { color: var(--kb-secondary); flex: none; }
+.rd-back__long, .rd-back__short { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-back__long { display: none; }
+.rd-back:hover .rd-back__long, .rd-back:hover .rd-back__short { text-decoration: underline; text-underline-offset: 0.2em; }
+.rd-tbtn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: var(--kb-tap); padding-inline: 0.7rem;
+  border: 0; border-radius: var(--kb-radius-sm); background: transparent; cursor: pointer; white-space: nowrap;
+  font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-decoration: none;
+}
+.rd-tbtn:hover { background: var(--kb-surface-sunken); }
+.rd-lang { display: inline-flex; align-items: stretch; border: 1px solid var(--rd-control-edge); border-radius: var(--kb-radius-sm); padding: 1px; gap: 1px; }
+.rd-lang__opt {
+  min-height: var(--kb-tap); padding-inline: calc(0.6rem - 1px); border: 1px solid transparent; border-radius: calc(var(--kb-radius-sm) - 1px);
+  background: transparent; color: var(--kb-secondary); font-family: var(--font-body); font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); cursor: pointer;
+}
+.rd-lang__opt:hover { color: var(--kb-ink); background: var(--kb-surface-sunken); }
+/* Round 03 (as built): the chosen language also takes a 1px accent edge, in a border the option always carries */
+.rd-lang__opt[aria-pressed="true"] { background: var(--kb-accent-soft); color: var(--kb-accent-strong); border-color: var(--kb-accent); }
+@container rd (min-width: 40rem) {
+  .rd-back__long { display: inline; }
+  .rd-back__short { display: none; }
+  .rd-top { column-gap: var(--kb-space-sm); }
+}
+
+/* One track: everything shares the text column's two edges, at every width */
+.rd-flow {
+  display: grid;
+  grid-template-columns:
+    [full-start] minmax(var(--rd-gut), 1fr)
+    [text-start] min(100% - 2 * var(--rd-gut), var(--rd-measure))
+    [text-end] minmax(var(--rd-gut), 1fr) [full-end];
+}
+.rd-flow > * { grid-column: text; min-width: 0; }
+
+/* The prose kit */
+.rd-prose { font-family: var(--font-reading); font-size: var(--rd-fs); line-height: var(--rd-lead); color: var(--kb-ink); padding-bottom: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rd-prose:lang(ko), .rd-prose :lang(ko) { word-break: keep-all; overflow-wrap: anywhere; line-break: strict; }
+.rd-prose > :first-child { margin-top: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rd-h { font-family: var(--font-display); font-weight: var(--kb-weight-semibold); color: var(--kb-ink); text-wrap: pretty; overflow-wrap: break-word; scroll-margin-top: calc(var(--rd-top-h) + var(--kb-space-md)); }
+.rd-h2 { margin: calc(var(--kb-space-2xl) * var(--rd-k)) 0 calc(var(--kb-space-md) * var(--rd-k)); padding-bottom: calc(var(--kb-space-sm) * var(--rd-k)); border-bottom: 1px solid var(--kb-border); font-size: 1.45em; line-height: 1.2; letter-spacing: var(--kb-tracking-display); }
+.rd-h3 { margin: calc(var(--kb-space-xl) * var(--rd-k)) 0 calc(var(--kb-space-sm) * var(--rd-k)); font-size: 1.18em; line-height: 1.25; }
+.rd-h:lang(ko) { word-break: keep-all; }
+.rd-p { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; text-wrap: pretty; hanging-punctuation: first; }
+.rd-prose strong { font-weight: 650; }
+.rd-prose em { font-style: italic; }
+.rd-prose em:lang(ko), .rd-prose em :lang(ko) { font-style: normal; font-weight: var(--kb-weight-semibold); }
+
+/* Links: accent, always underlined */
+.rd-a { color: var(--kb-accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; text-decoration-color: color-mix(in srgb, var(--kb-accent) 55%, transparent); }
+.rd-a:hover { color: var(--kb-accent-strong); text-decoration-color: var(--kb-accent-strong); text-decoration-thickness: 2px; }
+
+/* The highlight (05-annotations, as signed): a member's own paint, never changed by this job */
+mark.an-m {
+  background: var(--an-mark); color: var(--kb-ink); padding: 0; border-radius: 0;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
+  box-shadow: inset 0 -1px 0 var(--an-edge);
+}
+
+/* The way back (the sources list's, 02-figures as built): a chevron, a word, 44 px tall */
+.fg-back { display: inline-flex; align-items: center; justify-content: center; gap: 0.3em; min-height: var(--kb-tap); min-width: var(--kb-tap); font-family: var(--font-body); font-weight: var(--kb-weight-semibold); color: var(--kb-accent); text-decoration: none; }
+.fg-back:hover { color: var(--kb-accent-strong); text-decoration: underline; text-underline-offset: 0.2em; }
+.fg-back__chev { color: var(--kb-secondary); }
+
+/* ---------- Added from the product's reader.css (the signed reader; container queries for the canvas) ---------- */
+.rd-frame { --rd-bot-h: 3.75rem; --rd-control-edge: var(--kb-hint); }
+.rd-btn--primary { background: var(--kb-accent); color: var(--rd-on-accent); }
+.rd-btn--primary:hover { background: var(--kb-accent-strong); }
+.rd-btn--secondary { background: var(--kb-surface); border-color: var(--rd-control-edge); color: var(--kb-ink); }
+.rd-btn--secondary:hover { border-color: var(--kb-accent); color: var(--kb-accent-strong); }
+.rd-btn[aria-busy="true"] { cursor: progress; }
+.rd-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* The chapter bar (01-reader round 03, as built). Fixed to the window's bottom in the product; in flow here, placed by
+   the window (Part 3) when a page draws one. */
+.rd-bottom {
+  height: var(--rd-bot-h);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 9.5rem) minmax(0, 1fr); align-items: center; column-gap: var(--kb-space-xs);
+  padding-inline: calc(var(--rd-gut) - 0.6rem);
+  background: var(--kb-surface); border-top: 1px solid var(--kb-border);
+}
+.rd-bnav {
+  display: flex; flex-direction: column; justify-content: center; gap: 1px; min-height: var(--kb-tap); width: 100%; max-width: 22rem; min-width: 0;
+  padding: 0.25rem 0.6rem; border: 0; border-radius: var(--kb-radius-sm); background: transparent; cursor: pointer;
+  font-family: var(--font-body); color: var(--kb-ink); text-decoration: none; text-align: left;
+}
+.rd-bnav:hover { background: var(--kb-surface-sunken); }
+.rd-bnav--next { justify-self: end; text-align: right; align-items: flex-end; }
+.rd-bnav--mid { justify-self: center; align-items: center; text-align: center; max-width: 13rem; }
+.rd-bottom__cell { display: flex; min-width: 0; }
+.rd-bottom__cell--end { justify-content: flex-end; }
+.rd-bnav__long { display: none; }
+.rd-bnav__short { display: inline; }
+.rd-bnav[aria-expanded="true"] { background: var(--kb-accent-soft); }
+.rd-bnav__dir { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); white-space: nowrap; }
+.rd-bnav__sub { display: none; font-size: 0.8125rem; color: var(--kb-secondary); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rd-bnav--mid .rd-bnav__sub { display: block; }
+.rd-bnav__chev { color: var(--kb-secondary); }
+.rd-bnav__mark, .rd-bnav__count { display: none; }
+@container rd (min-width: 40rem) {
+  .rd-bnav__sub { display: block; }
+  .rd-bnav__long { display: inline; }
+  .rd-bnav__short { display: none; }
+  .rd-bottom { grid-template-columns: minmax(0, 1fr) minmax(0, 13rem) minmax(0, 1fr); }
+}
+@container rd (max-width: 19.99rem) {
+  .rd-bottom { grid-template-columns: var(--kb-tap) minmax(0, 1fr) var(--kb-tap); }
+  .rd-bnav--prev, .rd-bnav--next { padding-inline: 0; align-items: center; }
+  .rd-bnav--mid { max-width: none; padding-inline: var(--kb-space-xs); }
+  .rd-bnav--prev .rd-bnav__dir, .rd-bnav--next .rd-bnav__dir, .rd-bnav--mid .rd-bnav__sub {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; clip-path: inset(50%);
+  }
+  .rd-bnav__mark { display: block; font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1; color: var(--kb-ink); }
+  .rd-bnav--prev .rd-bnav__mark { font-size: calc(0.9375rem * 1.35); }
+  .rd-bnav__count { display: block; font-size: 0.8125rem; color: var(--kb-secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+}
+
+/* The chapter opening (01-reader §5, as built) */
+.rd-head { padding-top: calc(var(--kb-space-2xl) * var(--rd-k)); padding-bottom: calc(var(--kb-space-xl) * var(--rd-k)); }
+.rd-head__book { margin: 0 0 var(--kb-space-md); display: flex; flex-wrap: wrap; gap: 0 var(--kb-space-sm); align-items: baseline; font-size: 0.9375rem; color: var(--kb-secondary); }
+.rd-head__n { font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--kb-tracking-label); text-transform: uppercase; color: var(--kb-secondary); }
+.rd-head__title {
+  margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold);
+  font-size: calc(var(--rd-fs) * 1.75); line-height: 1.14; letter-spacing: var(--kb-tracking-display);
+  color: var(--kb-ink); text-wrap: balance; overflow-wrap: break-word;
+}
+.rd-head__lede { margin: calc(var(--kb-space-md) * var(--rd-k)) 0 0; font-family: var(--font-reading); font-size: calc(var(--rd-fs) * 1.18); line-height: 1.5; color: var(--kb-secondary); text-wrap: pretty; }
+.rd-head__meta { margin: calc(var(--kb-space-lg) * var(--rd-k)) 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--kb-space-sm); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-head :lang(ko), .rd-head__title:lang(ko) { word-break: keep-all; }
+@container rd (min-width: 40rem) { .rd-head__title { font-size: calc(var(--rd-fs) * 2.1); line-height: 1.1; } }
+@container rd (min-width: 64rem) { .rd-head { padding-top: calc(var(--kb-space-2xl) * 1.5 * var(--rd-k)); } .rd-head__title { font-size: calc(var(--rd-fs) * 2.4); } }
+
+/* The chapter list (the Contents sheet's, as built) */
+.rd-chs { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--kb-border); }
+.rd-chs__item { border-bottom: 1px solid var(--kb-border); }
+.rd-ch {
+  display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); column-gap: var(--kb-space-sm); align-items: baseline;
+  min-height: var(--kb-tap); padding: 0.7rem 0.5rem; width: 100%;
+  color: var(--kb-ink); text-decoration: none; border-radius: var(--kb-radius-sm);
+}
+a.rd-ch:hover, button.rd-ch:hover { background: var(--kb-surface-sunken); }
+.rd-ch[aria-current] { background: var(--kb-accent-soft); }
+.rd-ch__n { font-family: var(--font-mono); font-size: 0.8125rem; font-weight: 600; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-ch__body { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.rd-ch__title { font-size: 0.9375rem; font-weight: var(--kb-weight-semibold); line-height: 1.35; overflow-wrap: break-word; text-wrap: pretty; }
+.rd-ch__title:lang(ko) { word-break: keep-all; }
+.rd-ch__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem var(--kb-space-sm); font-size: 0.8125rem; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+.rd-ch__now { font-weight: var(--kb-weight-semibold); color: var(--kb-accent-strong); }
+
+/* The sheets and the scrim (as built). Fixed in the product; absolute inside a window here (Part 3). */
+.rd-scrim { position: absolute; inset: 0; z-index: 35; border: 0; padding: 0; margin: 0; background: var(--kb-scrim); cursor: pointer; }
+.rd-sheet {
+  position: absolute; z-index: 40; left: 0; right: 0; bottom: 0; max-height: min(88%, calc(100% - var(--rd-line)));
+  display: flex; flex-direction: column;
+  background: var(--kb-surface); color: var(--kb-ink); box-shadow: var(--kb-shadow-overlay);
+  border-radius: var(--kb-radius) var(--kb-radius) 0 0; border-top: 1px solid var(--kb-border);
+  font-family: var(--font-body);
+}
+.rd-sheet__head { display: flex; align-items: center; justify-content: space-between; gap: var(--kb-space-md); padding: var(--kb-space-xs) calc(var(--rd-gut) - 0.4rem) var(--kb-space-xs) var(--rd-gut); border-bottom: 1px solid var(--kb-border); flex: none; }
+.rd-sheet__title { margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; color: var(--kb-ink); }
+.rd-sheet__body { overflow-y: auto; overscroll-behavior: contain; padding: var(--kb-space-md) var(--rd-gut) var(--kb-space-xl); }
+.rd-sheet__close { flex: none; }
+@container rd (min-width: 40rem) {
+  .rd-sheet { top: var(--rd-line); bottom: 0; max-height: none; width: min(26rem, 88%); border-radius: 0; border-top: 0; }
+  .rd-sheet--left { left: 0; right: auto; border-right: 1px solid var(--kb-border); }
+  .rd-sheet--right { right: 0; left: auto; border-left: 1px solid var(--kb-border); }
+  .rd-sheet__body { padding-inline: var(--kb-space-lg); }
+  .rd-sheet__head { padding-left: var(--kb-space-lg); padding-right: var(--kb-space-sm); }
+}
+
+
+/* ======================= Part 2 · the five primitives ======================= */
+/* Every page arranges with these; the gap is a kb-space step, set by --f-gap (default md). */
+.f-stack { display: flex; flex-direction: column; gap: var(--f-gap, var(--kb-space-md)); }
+.f-stack > * { margin: 0; }
+.f-cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--f-gap, var(--kb-space-sm)); }
+.f-cluster--between { justify-content: space-between; }
+.f-cluster--end { justify-content: flex-end; }
+.f-cluster--base { align-items: baseline; }
+/* sidebar: the side holds its width, the main takes the rest and wraps under it below --f-main */
+.f-sidebar { display: flex; flex-wrap: wrap; gap: var(--f-gap, var(--kb-space-lg)); }
+.f-sidebar > :first-child { flex: 1 1 var(--f-side, 16rem); }
+.f-sidebar > :last-child { flex: 999 1 var(--f-main, 30rem); min-width: 0; }
+.f-center { box-sizing: content-box; max-width: var(--f-max, var(--kb-app-max-w)); margin-inline: auto; padding-inline: var(--f-pad, var(--kb-app-gutter)); }
+.f-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(var(--f-min, 18rem), 100%), 1fr)); gap: var(--f-gap, var(--kb-space-lg)); align-items: start; }
+
+/* ======================= Part 3 · Listen ======================= */
+
+/* Frame tokens (frame.md F15): two control heights, the dock's box, the Listen type steps, the line */
+.rd-frame {
+  --lx-ctl: var(--kb-tap);
+  --lx-ctl-l: 4rem;
+  --lx-dock-pad: var(--kb-space-sm);
+  --lx-dock-h: calc(var(--lx-ctl) + 2 * var(--lx-dock-pad) + 2px);
+  --lx-fs-meta: 0.8125rem;
+  --lx-fs-ui: 0.9375rem;
+  --lx-fs-title: 1.375rem;
+  --lx-fs-pos: 2.125rem;
+  --lx-line: 3px;
+}
+
+/* ---------- The media icons (F5): one set, 24 px, stroke 1.75, round; play and pause solid ---------- */
+/* Drawn as masks in currentColor on the canvas; the build inlines the same paths as <svg aria-hidden="true">. */
+.lx-i { display: inline-block; flex: none; width: 1.5rem; height: 1.5rem; background: currentColor; -webkit-mask: var(--lx-i) center / contain no-repeat; mask: var(--lx-i) center / contain no-repeat; }
+.lx-i--s { width: 1.25rem; height: 1.25rem; }
+.lx-i--l { width: 2rem; height: 2rem; }
+.lx-i--play { --lx-i: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath fill='black' stroke='black' stroke-width='1.5' stroke-linejoin='round' d='M8 5.6v12.8a.6.6 0 0 0 .9.5l10-6.4a.6.6 0 0 0 0-1L8.9 5.1a.6.6 0 0 0-.9.5z'/%3E%3C/svg%3E"); }
+.lx-i--pause { --lx-i: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Crect fill='black' stroke='black' stroke-width='1.5' stroke-linejoin='round' x='6.5' y='5.5' width='3.5' height='13' rx='.8'/%3E%3Crect fill='black' stroke='black' stroke-width='1.5' stroke-linejoin='round' x='14' y='5.5' width='3.5' height='13' rx='.8'/%3E%3C/svg%3E"); }
+.lx-i--back { --lx-i: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M12 3.4A8.6 8.6 0 1 1 3.4 12'/%3E%3Cpath fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M14.4 1.2L12 3.4l2.4 2.2'/%3E%3C/svg%3E"); }
+.lx-i--fwd { --lx-i: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M12 3.4A8.6 8.6 0 1 0 20.6 12'/%3E%3Cpath fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M9.6 1.2L12 3.4 9.6 5.6'/%3E%3C/svg%3E"); }
+.lx-i--prev { --lx-i: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M6 5.5v13'/%3E%3Cpath fill='black' stroke='black' stroke-width='1.5' stroke-linejoin='round' d='M18 6.2v11.6a.5.5 0 0 1-.8.4l-8.4-5.8a.5.5 0 0 1 0-.8l8.4-5.8a.5.5 0 0 1 .8.4z'/%3E%3C/svg%3E"); }
+.lx-i--next { --lx-i: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M18 5.5v13'/%3E%3Cpath fill='black' stroke='black' stroke-width='1.5' stroke-linejoin='round' d='M6 6.2v11.6a.5.5 0 0 0 .8.4l8.4-5.8a.5.5 0 0 0 0-.8L6.8 5.8a.5.5 0 0 0-.8.4z'/%3E%3C/svg%3E"); }
+.lx-i--open { --lx-i: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M6 14.5l6-6 6 6'/%3E%3C/svg%3E"); }
+.lx-i--retry { --lx-i: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M19.2 12a7.2 7.2 0 1 1-2.1-5.1'/%3E%3Cpath fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M19.2 4.6v4.6h-4.6'/%3E%3C/svg%3E"); }
+.lx-i--again { --lx-i: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M4.8 12a7.2 7.2 0 1 0 2.1-5.1'/%3E%3Cpath fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' d='M4.8 4.6v4.6h4.6'/%3E%3Cpath fill='black' stroke='black' stroke-width='1.5' stroke-linejoin='round' d='M10.5 9.6v4.8l4-2.4z'/%3E%3C/svg%3E"); }
+
+/* The busy ring (README States, kb-appbtn__spin as built): the text's own colour, still under reduced motion */
+.lx-spin { display: inline-block; flex: none; width: 0.85em; height: 0.85em; border: 1.5px solid currentColor; border-top-color: transparent; border-radius: 50%; }
+@media (prefers-reduced-motion: no-preference) { .lx-spin { animation: lx-spin 0.7s linear infinite; } }
+@keyframes lx-spin { to { transform: rotate(360deg); } }
+
+/* Visually hidden (the live region, a label kept for the accessible name) */
+.lx-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---------- Round media buttons (F5, F15): 44 px; the opened player's play 64 px ---------- */
+.lx-round {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; position: relative;
+  width: var(--lx-ctl); height: var(--lx-ctl); padding: 0; border: 1px solid transparent; border-radius: 50%;
+  background: transparent; color: var(--kb-ink); cursor: pointer; font-family: var(--font-body);
+  transition: background var(--rd-ease), color var(--rd-ease), border-color var(--rd-ease);
+}
+.lx-round:hover { background: var(--kb-surface-sunken); }
+.lx-round:active:not(:disabled) { transform: translateY(1px); }
+.lx-round--primary { background: var(--kb-accent); color: var(--rd-on-accent); }
+.lx-round--primary:hover { background: var(--kb-accent-strong); }
+.lx-round--l { width: var(--lx-ctl-l); height: var(--lx-ctl-l); }
+/* Not yet playable (preparing, waiting, offline): the library's disabled button, as built (lib-btn:disabled) */
+.lx-round:disabled { cursor: not-allowed; background: var(--kb-surface-sunken); border-color: var(--kb-border-strong); color: var(--kb-secondary); }
+/* The skip buttons carry their seconds inside the arrow */
+.lx-skip__n { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; font-weight: var(--kb-weight-bold); line-height: 1; font-variant-numeric: tabular-nums; pointer-events: none; }
+
+/* ---------- The status word (F10): the README's trio, a dot and its word, never colour alone ---------- */
+.lx-status { display: inline-flex; align-items: center; gap: var(--kb-space-xs); margin: 0; font-family: var(--font-body); font-size: var(--lx-fs-meta); font-weight: var(--kb-weight-semibold); line-height: 1.2; }
+.lx-status::before { content: ""; flex: none; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--lx-dot); }
+.lx-status--active { color: var(--kb-status-active-ink); --lx-dot: var(--kb-status-active); }
+.lx-status--idle { color: var(--kb-status-idle-ink); --lx-dot: var(--kb-status-idle); }
+.lx-status--revoked { color: var(--kb-status-revoked-ink); --lx-dot: var(--kb-status-revoked); }
+/* A pending status shows the busy ring in place of its dot */
+.lx-status--busy::before { display: none; }
+
+/* ---------- The progress line (F9): the reading line's look, a 3 px track and an accent fill ---------- */
+.lx-prog { display: block; position: relative; height: var(--lx-line); border-radius: var(--lx-line); background: var(--kb-border); overflow: hidden; }
+.lx-prog__fill { display: block; height: 100%; border-radius: inherit; background: var(--kb-accent); }
+
+/* ---------- The Listen control (F6) ---------- */
+.lx-listen { display: flex; flex-wrap: wrap; align-items: center; gap: var(--kb-space-xs) var(--kb-space-sm); font-family: var(--font-body); }
+.lx-listen .rd-btn { gap: var(--kb-space-xs); }
+.lx-listen .rd-btn--secondary .lx-i { color: var(--kb-accent); }
+.lx-listen .rd-btn--secondary:hover .lx-i { color: var(--kb-accent-strong); }
+.lx-listen__q { font-size: var(--lx-fs-meta); line-height: 1.3; color: var(--kb-secondary); font-variant-numeric: tabular-nums; }
+/* A busy button keeps its rest width: both labels share one grid cell (the library's lib-btn__labels, as built) */
+.lx-labels { display: inline-grid; }
+.lx-labels > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: var(--kb-space-xs); }
+.lx-labels > .is-off { visibility: hidden; }
+
+/* ---------- The slot's Listen (F6): with the reader's chrome, a pill in the bottom slot where the dock will sit ---------- */
+/* The resume pill's look (rd-resume, as built), as one button: the play mark, the word, the length */
+.lx-pill {
+  display: inline-flex; align-items: center; gap: var(--kb-space-xs); min-height: var(--kb-tap); max-width: 100%; padding: 0 1rem 0 0.75rem;
+  border: 1px solid var(--rd-control-edge); border-radius: var(--kb-radius-pill); background: var(--kb-surface); box-shadow: var(--kb-shadow-raise);
+  font-family: var(--font-body); font-size: var(--lx-fs-ui); font-weight: var(--kb-weight-semibold); line-height: 1.2; color: var(--kb-ink); cursor: pointer;
+  transition: background var(--rd-ease), border-color var(--rd-ease);
+}
+.lx-pill .lx-i { color: var(--kb-accent); }
+.lx-pill:hover { border-color: var(--kb-accent); }
+.lx-pill__q { font-weight: var(--kb-weight-regular); color: var(--kb-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lx-slot--pill { display: flex; justify-content: center; }
+/* Start over, under Continue listening: a text action on the column's edge, 44 px tall */
+.lx-listen__over { flex-basis: 100%; display: flex; }
+.lx-over { display: inline-flex; align-items: center; min-height: var(--kb-tap); padding: 0; border: 0; background: transparent; cursor: pointer; font-family: var(--font-body); font-size: var(--lx-fs-ui); font-weight: var(--kb-weight-semibold); color: var(--kb-secondary); }
+.lx-over:hover { color: var(--kb-ink); text-decoration: underline; text-underline-offset: 0.2em; }
+
+/* ---------- The dock (F7): a capsule in the reader's bottom slot, on the column's two edges ---------- */
+/* The slot: in the product `position: fixed`; here absolute inside a window. Its grid is the reader's one track, so
+   the dock takes the text column's edges at every width, and moves with the column beside a side panel (F23). */
+.lx-slot { position: absolute; left: 0; right: 0; bottom: var(--lx-slot-b); z-index: 21; pointer-events: none; --lx-slot-b: var(--kb-space-md); }
+.lx-slot--chapter { --lx-slot-b: calc(var(--rd-bot-h) + var(--kb-space-sm)); }
+.lx-slot > * { pointer-events: auto; }
+.lx-dock {
+  position: relative; display: grid; grid-template-columns: var(--lx-ctl) minmax(0, 1fr) auto; align-items: center; column-gap: var(--kb-space-sm);
+  padding: var(--lx-dock-pad); border: 1px solid var(--kb-border); border-radius: var(--kb-radius-pill);
+  background: var(--kb-surface); box-shadow: var(--kb-shadow-raise);
+  font-family: var(--font-body); color: var(--kb-ink); transition: background var(--rd-ease);
+}
+.lx-dock__lead { z-index: 1; }
+.lx-dock__text { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.lx-dock__title { margin: 0; font-size: var(--lx-fs-ui); font-weight: var(--kb-weight-semibold); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lx-dock__status { margin: 0; display: flex; align-items: center; gap: var(--kb-space-xs); min-width: 0; font-size: var(--lx-fs-meta); line-height: 1.3; color: var(--kb-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lx-dock__line { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lx-dock__word { color: var(--kb-ink); font-weight: var(--kb-weight-semibold); }
+.lx-dock__word--revoked { color: var(--kb-status-revoked-ink); }
+/* Open the player: a 44 px chevron whose hit area stretches over the whole capsule (the lead button sits above it) */
+.lx-dock__open { position: static; width: var(--lx-ctl); height: var(--lx-ctl); color: var(--kb-secondary); }
+.lx-dock__open::after { content: ""; position: absolute; inset: 0; border-radius: var(--kb-radius-pill); }
+.lx-dock__open:hover { background: transparent; }
+.lx-dock:has(.lx-dock__open:hover) { background: color-mix(in srgb, var(--kb-surface-sunken) 55%, var(--kb-surface)); }
+.lx-dock:has(.lx-dock__open:hover) .lx-dock__open { color: var(--kb-ink); }
+.lx-dock__open:focus-visible { outline: none; }
+.lx-dock__open:focus-visible::after { outline: var(--kb-focus-w) solid var(--kb-accent); outline-offset: var(--kb-focus-offset); }
+/* The one text action a dock can carry (Sign in), a pill concentric with the capsule */
+.lx-dock__act { border-radius: var(--kb-radius-pill); }
+
+/* ---------- The note (F10): the state word, one sentence, the line where it applies, the one action ---------- */
+.lx-note { display: flex; flex-direction: column; align-items: flex-start; gap: var(--kb-space-sm); min-width: 0; font-family: var(--font-body); }
+.lx-note__text { margin: 0; max-width: 34rem; font-size: var(--lx-fs-ui); line-height: 1.45; color: var(--kb-ink); text-wrap: pretty; font-variant-numeric: tabular-nums; }
+.lx-note__text :lang(ko) { word-break: keep-all; }
+.lx-note .lx-prog { align-self: stretch; max-width: 34rem; }
+.lx-note__ref { margin: 0; font-family: var(--font-mono); font-size: 0.75rem; line-height: 1.3; color: var(--kb-secondary); }
+.lx-note__busy { display: inline-flex; align-items: center; gap: var(--kb-space-xs); color: var(--kb-secondary); }
+
+/* ---------- Follow along (F12): a 3 px accent rule in the column's start margin beside the block being read ---------- */
+/* Not the highlight (paint inside the text, 05-annotations) and not the term marker (a dotted line under a word,
+   10-reading-aids): a rule outside the text, which moves nothing and never scrolls the page. */
+.lx-follow { position: relative; }
+.lx-follow::before { content: ""; position: absolute; top: 0.25em; bottom: 0.25em; inset-inline-start: calc(-1 * var(--kb-space-sm) - var(--lx-line)); width: var(--lx-line); border-radius: var(--lx-line); background: var(--kb-accent); }
+
+/* ---------- The window (F15): a screen drawn at a device width, its chrome placed as the product fixes it ---------- */
+/* `.rd-frame.lx-win`: the page scrolls inside; the top bar, the chapter bar, the dock and a sheet sit on its edges. */
+.lx-win { position: relative; overflow: hidden; width: var(--lx-win-w, 100%); height: var(--lx-win-h, 52.75rem); max-width: 100%; border: 1px solid var(--kb-border-strong); }
+.lx-win__top { position: absolute; top: 0; left: 0; right: 0; z-index: 20; }
+.lx-win__top[data-hidden="true"] .rd-top { visibility: hidden; opacity: 0; }
+.lx-win__page { position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; padding-top: calc(var(--rd-line) + var(--rd-top-h)); padding-bottom: var(--lx-page-b, 0px); }
+.lx-win--chapter { --lx-page-b: var(--rd-bot-h); }
+.lx-win--docked { --lx-page-b: calc(var(--kb-space-md) + var(--lx-dock-h) + var(--kb-space-sm)); }
+.lx-win--chapter.lx-win--docked { --lx-page-b: calc(var(--rd-bot-h) + var(--kb-space-sm) + var(--lx-dock-h) + var(--kb-space-sm)); }
+.lx-win__bottom { position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; }
+.lx-win__bottom[data-hidden="true"] .rd-bottom { visibility: hidden; opacity: 0; }
+
+
+/* ======================= Part 4 · Components boards (canvas layout; never built) ======================= */
+.lx-board { padding: var(--kb-space-lg); display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--kb-space-xl) var(--kb-space-lg); background: var(--kb-paper); font-family: var(--font-body); color: var(--kb-ink); }
+.lx-board__cell { display: flex; flex-direction: column; gap: var(--kb-space-xs); min-width: 0; }
+.lx-board__cap { margin: 0; font-family: var(--font-body); font-size: 0.8125rem; line-height: 1.4; color: var(--kb-secondary); }
+.lx-board__row { flex-basis: 100%; height: 0; }
+.lx-board__h { flex-basis: 100%; margin: 0; font-family: var(--font-display); font-weight: var(--kb-weight-semibold); font-size: 1.125rem; color: var(--kb-ink); }
+/* A strip the width of a device's text column, on the reader's surface, to show a part at that width */
+.lx-strip { box-sizing: border-box; padding: var(--kb-space-md) var(--rd-gut); background: var(--kb-surface); border: 1px solid var(--kb-border); }
+.lx-w1440 { width: 1440px; } .lx-w1200 { width: 1200px; } .lx-w820 { width: 820px; } .lx-w390 { width: 390px; } .lx-w320 { width: 320px; }
+/* A part shown alone on its own board */
+.lx-alone { padding: var(--kb-space-md); }
+/* A cell that lays a part on the reader's one track at a device width */
+.lx-pad { padding-block: var(--kb-space-md); }
+/* Board windows: the page behind does not scroll on a Components board */
+.lx-demo .lx-win__page { overflow: hidden; }
+.lx-demo-prose { padding-bottom: 0; }
+.lx-pillcell { display: flex; justify-content: center; }

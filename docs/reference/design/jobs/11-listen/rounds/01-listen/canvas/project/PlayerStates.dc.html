@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The opened player in every state</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+<script src="PlayerData.js"></script>
+</head>
+<body>
+<x-dc>
+<div class="lx-board" data-theme="light" id="top">
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+<p class="lx-board__h">{{ g.head }}</p>
+<sc-for list="{{ g.cells }}" as="c" hint-placeholder-count="5"><div class="lx-board__cell"><p class="lx-board__cap">{{ c.cap }}</p><div class="rd-frame" data-theme="{{ c.theme }}" style="{{ c.style }}"><div class="rd-in"><dc-import name="PlayerPanel" bare="{{ true }}" inline="{{ true }}" listen="{{ c.listen }}" panel="{{ c.panel }}" uid="{{ c.uid }}" hint-size="100%,640px"></dc-import></div></div></div></sc-for>
+<div class="lx-board__row"></div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2100,"height":7100}}'>
+const PLS_DOC = { unit: 'bar', from: 0, ch: 0 };
+const PLS = [
+  ['A book, phone 390', [
+    ['Playing, chapter 2', {}],
+    ['Paused', { state: 'paused' }],
+    ['Buffering', { state: 'buffering' }],
+    ['Speed choice open', {}, 'speed'],
+    ['Chapter list', {}, 'chapters'],
+  ]],
+  ['A book: moving on, the end, resume, failures', [
+    ['Chapter 4 still preparing', { state: 'next-waiting', ch: 4, pos: '0:00' }],
+    ['Finished the book', { state: 'finished', ch: 5, made: 5, pos: '31:15' }],
+    ['Resume offered', { state: 'paused', ch: 4, made: 4, offer: true }],
+    ['Playback stopped', { state: 'fail-play' }],
+    ['Signed out', { state: 'fail-session' }],
+    ['Offline, playing what’s loaded', { state: 'offline-play' }],
+    ['Offline, stopped', { state: 'offline-stopped', pos: '15:10' }],
+    ['20 chapters', { unit: 'changple5', from: 1, ch: 6, made: 6 }, 'chapters'],
+  ]],
+  ['A document, phone 390: no chapter controls', [
+    ['Playing', Object.assign({}, PLS_DOC)],
+    ['Preparing, part 3 of 12', Object.assign({}, PLS_DOC, { state: 'making', pos: '0:00' })],
+    ['Playing, the rest still preparing', Object.assign({}, PLS_DOC, { pos: '2:10', soFar: true, len: '9:40' })],
+    ['Daily limit', Object.assign({}, PLS_DOC, { state: 'fail-limit', pos: '0:00', soFar: true, len: '14:00' })],
+    ['Preparing stopped', Object.assign({}, PLS_DOC, { state: 'fail-voice', pos: '0:00' })],
+    ['Can’t be read aloud', Object.assign({}, PLS_DOC, { state: 'fail-unreadable', pos: '0:00' })],
+    ['Offline, can’t start', Object.assign({}, PLS_DOC, { state: 'offline-start', pos: '0:00' })],
+    ['Earlier version', Object.assign({}, PLS_DOC, { old: true })],
+    ['Korean', Object.assign({}, PLS_DOC, { unit: 'bar-ko' })],
+  ]],
+  ['Phone 320 and dark', [
+    ['320 · the longest chapter title', { ch: 4, made: 4 }, null, 'light', 320],
+    ['320 · speed choice open', {}, 'speed', 'light', 320],
+    ['Dark · playing', {}, null, 'dark'],
+    ['Dark · chapter list', {}, 'chapters', 'dark'],
+    ['Dark · signed out', { state: 'fail-session' }, null, 'dark'],
+  ]],
+];
+class Component extends DCLogic {
+  renderVals() {
+    const PL = window.PL;
+    let k = 0;
+    return {
+      groups: PLS.map(([head, cells]) => ({
+        head,
+        cells: cells.map(([cap, p, panel, theme, w]) => ({
+          cap, panel: panel || null, theme: theme || 'light', uid: 'pls' + (k++),
+          listen: Object.assign({}, PL.BASE, p),
+          style: 'width: ' + (w || 390) + 'px;',
+        })),
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

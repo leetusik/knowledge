@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Listen note in every state</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+</head>
+<body>
+<x-dc>
+<div class="lx-board" data-theme="light" id="top">
+<p class="lx-board__h">Preparing and ready</p>
+<div class="lx-board__cell"><p class="lx-board__cap">Waiting for the voice runner</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="waiting" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Preparing, the first part</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="making" part="{{ one }}" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Preparing, part 3 of 12</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="making" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Preparing a book, chapter 2 of 5</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" unit="book" state="making" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">First part ready, the rest preparing</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="ready" part="{{ two }}" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__row"></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Ready: the phone needs a tap</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="tap" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Loading</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="loading" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Buffering</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="buffering" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">The next chapter still preparing</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" unit="book" state="next-waiting" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Finished a document</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="finished" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__row"></div>
+<p class="lx-board__h">Failed, offline, an earlier version, the end of a book</p>
+<div class="lx-board__cell"><p class="lx-board__cap">The voice stopped preparing</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="fail-voice" part="{{ four }}" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Daily limit, part ready</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="fail-limit" ready="14 min" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Daily limit, nothing ready yet</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="fail-limit" ready="" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Playback error: the connection</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="fail-play" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Playback error: signed out</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="fail-session" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__row"></div>
+<div class="lx-board__cell"><p class="lx-board__cap">The document can’t be read</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="fail-unreadable" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Offline: can’t start</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="offline-start" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Offline mid-play</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="offline-play" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Offline: stopped</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="offline-stopped" pos="15:10" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Earlier version</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="outdated" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__row"></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Earlier version, updating</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="outdated" updating="{{ true }}" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Finished the book</p><div class="rd-frame lx-w390" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" unit="book" state="finished" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Phone 320 · daily limit</p><div class="rd-frame lx-w320" data-theme="light"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="fail-limit" ready="14 min" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__row"></div>
+<p class="lx-board__h">Dark</p>
+<div class="lx-board__cell"><p class="lx-board__cap">Preparing</p><div class="rd-frame lx-w390" data-theme="dark"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="making" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Ready</p><div class="rd-frame lx-w390" data-theme="dark"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="ready" part="{{ two }}" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">The voice stopped preparing</p><div class="rd-frame lx-w390" data-theme="dark"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="fail-voice" part="{{ four }}" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Offline mid-play</p><div class="rd-frame lx-w390" data-theme="dark"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="offline-play" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+<div class="lx-board__cell"><p class="lx-board__cap">Earlier version</p><div class="rd-frame lx-w390" data-theme="dark"><div class="rd-in"><div class="rd-flow lx-pad"><dc-import name="ListenNote" state="outdated" bare="{{ true }}" hint-size="100%,160px"></dc-import></div></div></div></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2100,"height":1780}}'>
+class Component extends DCLogic {
+  renderVals() { return { one: 1, two: 2, four: 4 }; }
+}
+</script>
+</body>
+</html>

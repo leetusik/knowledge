@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chapter row with its audio</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+<link rel="stylesheet" href="Book.css">
+</head>
+<body>
+<x-dc>
+<div class="{{ wrapCls }}" data-theme="{{ wrapTheme }}"><div class="rd-in">
+<div class="bk-row">
+<a class="rd-ch" href="#top" aria-current="{{ cur }}" onclick="{{ open }}"><span class="rd-ch__n">{{ r.n }}</span><span class="rd-ch__body"><span class="rd-ch__title" lang="{{ r.lang }}">{{ r.title }}</span><span class="rd-ch__meta"><sc-if value="{{ hasNow }}" hint-placeholder-val="{{ false }}"><span class="rd-ch__now">{{ r.now }}</span></sc-if><span>{{ read }}</span><sc-if value="{{ hasAudio }}" hint-placeholder-val="{{ true }}"><span class="bk-ch__audio">{{ audio }}</span></sc-if></span></span></a>
+</div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"row":{"editor":null},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"onOpen":{"editor":null},"bare":{"editor":null},"$preview":{"width":640,"height":96}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = this.props;
+    const bare = !!P.bare;
+    const r = P.row || { n: 4, title: 'Shipping and running knowledge: distribution, the edge, security and the gates', lang: 'en', read: 'Not started', audio: 'made', len: '59 min', part: '', now: '' };
+    /* The audio phrase (frame.md F11, book-G3 after critique C02): its own item in the meta line, apart from the
+       reading word, and led by "Audio" so it never reads as the chapter's reading time or readiness. A length once
+       made; else one readiness word. Never written before a Listen exists for the book (audio ''). */
+    const A = { made: 'Audio ' + r.len, making: 'Audio preparing…' + (r.part ? ' · ' + r.part : ''), none: 'Audio not prepared yet', held: 'Audio held by the daily limit' };
+    const audio = A[r.audio] || '';
+    return {
+      r,
+      read: r.read,
+      audio,
+      hasAudio: !!audio,
+      hasNow: !!r.now,
+      cur: r.now ? 'true' : undefined,
+      open: (e) => { if (e && e.preventDefault) e.preventDefault(); if (P.onOpen) P.onOpen(r.n); },
+      wrapCls: bare ? 'rd-in' : 'rd-frame lx-alone',
+      wrapTheme: bare ? undefined : (P.theme === 'dark' ? 'dark' : 'light'),
+    };
+  }
+}
+</script>
+</body>
+</html>

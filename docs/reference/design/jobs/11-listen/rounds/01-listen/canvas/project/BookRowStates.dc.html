@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chapter row with its audio, every state</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/kb/tokens.css">
+<link rel="stylesheet" href="frame.css">
+<link rel="stylesheet" href="Book.css">
+</head>
+<body>
+<x-dc>
+<div class="lx-board" data-theme="light" id="top">
+<sc-for list="{{ cells }}" as="c" hint-placeholder-count="12"><div class="lx-board__cell"><p class="lx-board__cap">{{ c.cap }}</p><div class="{{ c.cls }}" data-theme="{{ c.theme }}"><div class="rd-in"><ol class="rd-chs" aria-label="{{ c.cap }}"><li class="rd-chs__item"><dc-import name="BookRow" bare="{{ true }}" row="{{ c.row }}" hint-size="100%,64px"></dc-import></li></ol></div></div></div></sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2140,"height":920}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const T2 = 'System internals: the content plane, the write path and the contracts';
+    const T4 = 'Shipping and running knowledge: distribution, the edge, security and the gates';
+    const row = (n, title, read, audio, len, part, now, lang) => ({ n, title, lang: lang || 'en', read, audio, len: len || '', part: part || '', now: now || '' });
+    const W = 'rd-frame lx-strip bk-w640', N = 'rd-frame lx-strip lx-w320';
+    const cells = [
+      ['Never listened: the signed row, no audio phrase', W, 'light', row(3, 'knowledge’s read surfaces: two front ends, one corpus', 'Started · 40%', '')],
+      ['Audio made: its length', W, 'light', row(2, T2, 'Finished', 'made', '1 h 7 min')],
+      ['Being prepared', W, 'light', row(2, T2, 'Finished', 'making')],
+      ['Being prepared, a part count known (changple5)', W, 'light', row(7, '[Chapter 7 title]', 'Not started', 'making', '', 'part 2 of 9')],
+      ['Not prepared yet', W, 'light', row(4, T4, 'Not started', 'none')],
+      ['Held by the daily limit', W, 'light', row(1, 'knowledge: what it is and how it is used', 'Finished', 'held')],
+      ['The chapter playing (aria-current)', W, 'light', row(4, T4, 'Not started', 'made', '59 min', '', 'Playing')],
+      ['The chapter paused (aria-current)', W, 'light', row(4, T4, 'Not started', 'made', '59 min', '', 'Paused')],
+      ['320 · the longest title, playing', N, 'light', row(4, T4, 'Not started', 'made', '59 min', '', 'Playing')],
+      ['320 · being prepared, a part count known', N, 'light', row(7, '[Chapter 7 title]', 'Not started', 'making', '', 'part 2 of 9')],
+      ['320 · a Korean title, made', N, 'light', row(1, '우리의 기준: 성과 규칙 v1', 'Not started', 'made', '50 min', '', '', 'ko')],
+      ['Dark · audio made', W, 'dark', row(2, T2, 'Finished', 'made', '1 h 7 min')],
+      ['Dark · being prepared', W, 'dark', row(7, '[Chapter 7 title]', 'Not started', 'making', '', 'part 2 of 9')],
+      ['Dark · the chapter playing', W, 'dark', row(4, T4, 'Not started', 'made', '59 min', '', 'Playing')],
+      ['Dark · 320 · not prepared yet', N, 'dark', row(4, T4, 'Not started', 'none')],
+    ].map((c) => ({ cap: c[0], cls: c[1], theme: c[2], row: c[3] }));
+    return { cells };
+  }
+}
+</script>
+</body>
+</html>
