@@ -34,7 +34,7 @@ title, version, format, markdown, source), never the additive book fields.
 Modes::
 
     # dry run (the default): the plan, every PUT body, the diff, and the pre-flight
-    uv run python scripts/migrate_books.py --api-base https://knowledge.hi2vi.com
+    uv run python scripts/migrate_books.py --api-base https://hi2vi.com
 
     # apply: make the PUTs, then verify books and every URL
     uv run python scripts/migrate_books.py --api-base ... --apply --report out.json
@@ -469,7 +469,7 @@ def run(api: Api, data: dict, *, apply: bool, app_checks: bool, out=print) -> di
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--api-base", default=os.environ.get("KB_API_BASE_URL"),
-                    help="API origin (default $KB_API_BASE_URL), e.g. https://knowledge.hi2vi.com")
+                    help="API origin (default $KB_API_BASE_URL), e.g. https://hi2vi.com")
     ap.add_argument("--map", type=Path, default=DEFAULT_MAP, help="the binding map")
     ap.add_argument("--apply", action="store_true", help="make the PUTs (default: dry run)")
     ap.add_argument("--skip-app-checks", action="store_true",

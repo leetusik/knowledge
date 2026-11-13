@@ -52,7 +52,7 @@ describe("attemptCopy", () => {
 describe("locked snippet payloads", () => {
   it("keeps the ~/.zshenv copy byte-exact (two export lines, 8-space trailing comment)", () => {
     expect(ZSHENV_COPY).toBe(
-      'export KB_API_BASE_URL="https://knowledge.hi2vi.com"\n' +
+      'export KB_API_BASE_URL="https://hi2vi.com"\n' +
         'export KB_API_TOKEN="vk_..."        # org-level key: Dashboard → Org API keys → New key',
     );
   });

@@ -16,7 +16,7 @@ import stat
 
 import pytest
 
-from knowledge_cli import config
+from knowledge_cli import auth, config
 
 
 @pytest.fixture
@@ -69,10 +69,10 @@ def test_config_file_is_authoritative_and_never_falls_through_to_legacy(home):
     """
 
     make_legacy(home)  # exists, and must be ignored entirely
-    write_cfg(home, {"api": {"base_url": "https://knowledge.hi2vi.com", "token": None}})
+    write_cfg(home, {"api": {"base_url": "https://hi2vi.com", "token": None}})
     resolved = config.resolve()
     assert resolved.kb_root == ""
-    assert resolved.api_base_url == "https://knowledge.hi2vi.com"
+    assert resolved.api_base_url == "https://hi2vi.com"
     assert resolved.api_token == ""  # JSON null -> "", never None
     assert resolved.site_base_url == "http://localhost:8765"  # default, not legacy
     assert resolved.local_fallback is False
@@ -130,11 +130,38 @@ def test_save_preserves_unknown_keys_deep_merges_and_is_0600(home):
 
 
 def test_save_creates_a_0600_file_when_absent(home):
-    config.save({"api": {"base_url": "https://knowledge.hi2vi.com", "token": "vk_new"}})
+    config.save({"api": {"base_url": "https://hi2vi.com", "token": "vk_new"}})
     resolved = config.resolve()
     assert stat.S_IMODE(os.stat(resolved.path).st_mode) == 0o600
     assert resolved.api_token == "vk_new"  # round-trips through the resolver
-    assert resolved.api_base_url == "https://knowledge.hi2vi.com"
+    assert resolved.api_base_url == "https://hi2vi.com"
+
+
+def test_cli_default_base_url_is_the_apex(home):
+    assert auth.resolve_base_url(None) == "https://hi2vi.com"
+
+
+@pytest.mark.parametrize("source", ["config", "env"])
+def test_old_hosted_host_resolves_to_the_apex(home, monkeypatch, source):
+    """The old host only 308s to the apex and the client never follows redirects."""
+
+    old = "https://" + config.OLD_HOSTED_HOST
+    if source == "config":
+        path = write_cfg(home, {"api": {"base_url": old, "token": "vk_x"}})
+    else:
+        monkeypatch.setenv(config.ENV_API_BASE_URL, old + "/")
+    assert config.resolve().api_base_url == "https://hi2vi.com"
+    assert auth.resolve_base_url(None) == "https://hi2vi.com"
+    if source == "config":  # the file on disk is not rewritten
+        assert json.loads(path.read_text())["api"]["base_url"] == old
+
+
+def test_other_hosts_are_never_rewritten(home, monkeypatch):
+    write_cfg(home, {"api": {"base_url": "https://kb.example.com", "token": "vk_x"}})
+    assert config.resolve().api_base_url == "https://kb.example.com"
+    assert auth.resolve_base_url(None) == "https://kb.example.com"
+    monkeypatch.setenv(config.ENV_API_BASE_URL, "https://notknowledge.hi2vi.com.example")
+    assert auth.resolve_base_url(None) == "https://notknowledge.hi2vi.com.example"
 
 
 def test_save_refuses_to_clobber_an_unreadable_config(home):

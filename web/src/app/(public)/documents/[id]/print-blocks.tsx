@@ -39,7 +39,7 @@ function serverDate(): string {
 
 /**
  * The absolute address of what is on the paper, without its scheme — §4.5's own
- * specimen reads `knowledge.hi2vi.com/@leetusik/knowledge/frontend`. A printed
+ * specimen reads `hi2vi.com/@leetusik/knowledge/frontend`. A printed
  * URL is typed by hand or read aloud, and `https://` is four syllables nobody
  * needs; the host and path are the part that identifies the document.
  */

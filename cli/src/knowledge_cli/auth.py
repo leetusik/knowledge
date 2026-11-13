@@ -48,7 +48,7 @@ from .errors import CliError
 # all); this is the *onboarding target* for a fresh one. It lives here, beside
 # `resolve_base_url()`, because `main` imports this module and so cannot be
 # imported back.
-DEFAULT_BASE_URL = "https://knowledge.hi2vi.com"
+DEFAULT_BASE_URL = config.HOSTED_BASE_URL
 
 # The pragmatic agent path: a coding agent sets an env var more naturally than it
 # pipes stdin. Deliberately *weaker* than --password-stdin (env is visible in
@@ -275,16 +275,19 @@ def resolve_base_url(explicit: str | None) -> str:
     anyone who happens to have `~/projects/personal/knowledge/mkdocs.yml`, and
     silently onboarding them to their own laptop instead of the hosted service is
     precisely the trap this avoids.
+
+    Whatever the source, the old hosted host reads as the apex
+    (`config.apex_base_url`).
     """
 
     if explicit:
-        return explicit.rstrip("/")
+        return config.apex_base_url(explicit.rstrip("/"))
     env = os.environ.get(config.ENV_API_BASE_URL)
     if env:
-        return env.rstrip("/")
+        return config.apex_base_url(env.rstrip("/"))
     configured = _section(_stored(), "api").get("base_url")
     if configured:
-        return str(configured).rstrip("/")
+        return config.apex_base_url(str(configured).rstrip("/"))
     return DEFAULT_BASE_URL
 
 

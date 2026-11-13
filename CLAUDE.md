@@ -1,14 +1,15 @@
 # CLAUDE.md — the hi2vi platform
 
-The Library at <https://knowledge.hi2vi.com>: a document API, a web app, a CLI, an MCP retrieval server, a Claude Code plugin, and a Mac voice runner for Listen. This file holds only what the code does not say.
+The Library and Feedback at <https://hi2vi.com>: a document API, a web app, a CLI, an MCP server, a Claude Code plugin, and a Mac voice runner for Listen. This file holds only what the code does not say.
 
 ## Layout
 
 - `server/`: the FastAPI document and accounts API (`server.main:app`). `alembic/`: its accounts-plane migrations. `tests/`: its pytest suite.
+- `server/feedback_api.py` serves the Feedback REST surfaces over `server/feedback/` (domain, storage, the owner alert); dormant without `DATABASE_URL`.
 - `web/`: the Next.js web app (pnpm). `web/public/SKILL.md` is the explain skill served at `/SKILL.md`.
-- `cli/` (the `knowledge` CLI), `mcp-server/` (MCP over HTTP at `/mcp`), `tools/listen-runner/` (the Mac Listen runner, a LaunchAgent): each its own uv project with its own tests.
+- `cli/` (the `knowledge` CLI), `mcp-server/` (MCP over HTTP: `/mcp` for Library retrieval, `/feedback/mcp` for write-only Feedback capture), `tools/listen-runner/` (the Mac Listen runner, a LaunchAgent): each its own uv project with its own tests.
 - `plugin/`: the Claude Code plugin (`skills/explain`, `skills/setup`, `agents/explain-critic.md`) and `templates/kb/`, the self-host scaffold. `.claude-plugin/marketplace.json` is its marketplace; `.agents/skills/explain/SKILL.md` is the portable explain copy.
-- `deploy/`: the box's deploy scripts and nginx vhost. `compose.prod.yml` is production; `compose.yml` is local.
+- `deploy/`: the box's deploy scripts and nginx vhosts (the apex `hi2vi.conf`; `knowledge.conf` and `vocky.conf` redirect only). `compose.prod.yml` is production; `compose.yml` is local.
 - `docs/`: the library's content root (the box writes tenant #1's projects under `docs/<project>/`), plus the MkDocs site sources the scaffold ships (`index.md`, `tags.md`, `graph.md`, `assets/`, `javascripts/`, `stylesheets/`, `mkdocs.yml`).
 - `scripts/`: the parity guards, the smokes and the book migration.
 - `archive/workspace/`: the frozen records of the workspace that built this repo up to 2026-11-13.
