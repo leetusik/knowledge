@@ -194,6 +194,28 @@ class AccountsRepository:
         model = (await self._session.execute(statement)).scalars().first()
         return self._to_project_record(model) if model is not None else None
 
+    async def get_owner_email_for_project(self, project_id: UUID) -> str | None:
+        """Return the email of the owner of the project's org, or None.
+
+        One query anchored on ``project_id`` (project -> its tenant's ``owner``
+        membership -> the user), so a project never resolves to another org's owner.
+        Oldest owner wins by ``(created_at, id)``. None when the project is missing
+        or its org has no owner. Ported from vocky (the Feedback owner alert).
+        """
+
+        statement = (
+            select(UserModel.email)
+            .join(TenantMemberModel, TenantMemberModel.user_id == UserModel.id)
+            .join(ProjectModel, ProjectModel.tenant_id == TenantMemberModel.tenant_id)
+            .where(
+                ProjectModel.id == project_id,
+                TenantMemberModel.role == "owner",
+            )
+            .order_by(TenantMemberModel.created_at, TenantMemberModel.id)
+            .limit(1)
+        )
+        return (await self._session.execute(statement)).scalars().first()
+
     async def set_project_visibility(
         self,
         project_id: UUID,

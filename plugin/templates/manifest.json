@@ -204,7 +204,10 @@
       "server/feedback/service.py",
       "server/feedback/storage.py",
       "tests/test_feedback_model.py",
-      "tests/test_feedback_storage.py"
+      "tests/test_feedback_storage.py",
+      "server/feedback/notify.py",
+      "server/feedback_api.py",
+      "tests/test_feedback_api.py"
     ],
     "parameterized": [
       "mkdocs.yml",
