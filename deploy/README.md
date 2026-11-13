@@ -1,8 +1,9 @@
-# Production deploy runbook — knowledge.hi2vi.com
+# Production deploy runbook — hi2vi.com (formerly knowledge.hi2vi.com)
 
 Operator-facing runbook for hosting the **whole knowledge product — the Next.js web
-app *and* the machine API** — publicly at `https://knowledge.hi2vi.com`, as a co-tenant
-on the OCI box (the same box + edge that serves hi2vi.com). As of **P14** the box serves
+app *and* the machine API** — publicly at `https://hi2vi.com` (`knowledge.hi2vi.com` and
+`vocky.hi2vi.com` redirect there, §3), as a co-tenant on the OCI box and its shared
+edge. As of **P14** the box serves
 the **Next.js app** at `/` (the public landing + the authenticated UI + the `/api/auth/*`
 BFF); the old **mkdocs `site` viewer is RETIRED** (its content lives on as tenant #1's
 knowledge in the app + api). A **manual-dispatch `Production Deploy` GitHub Action**
@@ -16,10 +17,18 @@ Artifacts this runbook applies:
   built from `web/Dockerfile`), and **`postgres`** (`knowledge-postgres`, the P10
   control-plane store). The mkdocs `site` service was **removed** in P14.S3. All are
   unpublished-port, edge-only.
-- **`deploy/knowledge.conf`** — the nginx vhost. Two upstreams: the CLI control plane
-  (`/api/*`, `/auth/*`, `/app/*`, `= /healthz` → `knowledge-api`, the P13 contract,
-  unchanged) and the Next app (`/api/auth/*` — the BFF, more specific than `/api/` — and
-  everything else, incl. `/`, → `knowledge-web:3000`). Dropped onto the box's edge.
+- **The three edge vhosts** (§3), landed through the edge repo by the operator:
+  - **`deploy/hi2vi.conf`** — the serving vhost, on the apex `hi2vi.com`. Three
+    upstreams: the control plane (`/api/*`, `/auth/*`, `/app/*`, `= /healthz` →
+    `knowledge-api:8000`, Feedback's `/api/feedback*`, `/api/project/*` and
+    `/app/feedback*` included), the Next app (`/api/auth/*`, the BFF relays, and
+    everything else, incl. `/` and `/feedback` → `knowledge-web:3000`) and the MCP
+    server (`/mcp` and `/feedback/mcp` → `knowledge-mcp:9000`). It replaces the edge's
+    old `hi2vi.conf` (the retired hi2vi-web site).
+  - **`deploy/knowledge.conf`** — `knowledge.hi2vi.com`, now **redirect-only**: every
+    path → the same path and query on `https://hi2vi.com`, 308.
+  - **`deploy/vocky.conf`** — `vocky.hi2vi.com`, **redirect-only**: Feedback's old
+    host, mapped onto the apex (its header carries the map), 308; `/admin/*` 404.
 - **`deploy/deploy.sh`** + **`deploy/oracle-production-deploy-remote.sh`** +
   **`deploy/github-actions-production-deploy.sh`** — the P9 three-script deploy chain the
   `Production Deploy` Action runs (§6).
@@ -42,9 +51,11 @@ placement path only.
 - **The edge's config is declarative host state.** `/home/opc/edge/conf.d` and
   `/home/opc/edge/certs` are **read-only bind mounts** into the container, so a
   config change is a **file drop on the host + a reload** — and a co-tenant deploy
-  can no longer wipe it. Current vhosts: `00-default.conf` (owns the
-  `default_server` catch-all → `444`), `changple5.conf`, `changple-web.conf`,
-  `hi2vi.conf`; we add `knowledge.conf`.
+  can no longer wipe it. Vhosts: `00-default.conf` (owns the `default_server`
+  catch-all → `444`), the other tenants' sites, and this repo's three:
+  `hi2vi.conf`, `knowledge.conf` and `vocky.conf` (§3). The tree's canonical home is
+  the **edge repo** (`leetusik/edge`, `edge/conf.d/`); it reaches the box through
+  that repo's own loop.
 - **The edge ships its own tooling** — use it, don't improvise:
   - `./deploy.sh` — hard `nginx -t` gate inside the **running** container, then a
     graceful `nginx -s reload`. **Never recreates the container.** A failed test
@@ -52,10 +63,11 @@ placement path only.
   - `./validate.sh` — optional local pre-gate (dummy certs + `compose config` +
     throwaway-container `nginx -t` over the whole `conf.d/` tree).
 - **TLS is already covered.** `/home/opc/edge/certs/hi2vi.crt` is a Cloudflare
-  Origin CA cert whose SANs are `*.hi2vi.com, hi2vi.com` (valid to 2041) — the
-  **wildcard already covers `knowledge.hi2vi.com`**. Nothing to provision.
-- **DNS is already live.** `knowledge.hi2vi.com` resolves to the same Cloudflare
-  proxy IPs as `hi2vi.com` (see §4).
+  Origin CA cert whose SANs are `*.hi2vi.com, hi2vi.com` (valid to 2041) — the apex
+  SAN covers `hi2vi.com` and the **wildcard covers `knowledge.hi2vi.com` and
+  `vocky.hi2vi.com`**. Nothing to provision.
+- **DNS is already live.** `hi2vi.com`, `knowledge.hi2vi.com` and `vocky.hi2vi.com`
+  resolve to the same Cloudflare proxy IPs (see §4).
 - Secrets provisioned per **[`SECRETS.md`](SECRETS.md)**: a strong `KB_API_TOKEN`,
   an SSH **deploy key** registered on `leetusik/platform` **with write access**,
   and (optional) a `GOOGLE_API_KEY`.
@@ -240,20 +252,35 @@ git -C /opt/knowledge rev-list --count origin/main..HEAD
 
 ---
 
-## 3. Edge apply — drop the vhost, reload
+## 3. Edge — the three vhosts and the cutover to the apex
 
-The edge's `conf.d/` is a **read-only host bind mount**, so applying the vhost is
-a file drop on the host plus the edge's own reload script. No `docker cp`, no
-`exec`, no recreate.
+The platform moves from `knowledge.hi2vi.com` to the apex `hi2vi.com`, and Feedback
+moves in from `vocky.hi2vi.com`. Three files in `deploy/` carry the edge side:
+
+| File | Host | What it does |
+|---|---|---|
+| `hi2vi.conf` | `hi2vi.com` | **Serves the platform.** Every location, timeout and relay of the old `knowledge.conf`, plus `/feedback/mcp` → `knowledge-mcp:9000` (SSE-safe, like `/mcp`), the Feedback attachment relay `/api/app/feedback/<id>/attachments/<aid>` → `knowledge-web:3000`, and the reader's beacon `= /api/reader/position` → `knowledge-web:3000`. Replaces the edge's old `hi2vi.conf`, whose `hi2vi_contact` `limit_req_zone` leaves the tree with it. |
+| `knowledge.conf` | `knowledge.hi2vi.com` | **Redirect-only.** Every path → `https://hi2vi.com<same path and query>`, 308, on `:443` and `:80` alike (one hop). |
+| `vocky.conf` | `vocky.hi2vi.com` | **Redirect-only.** `/mcp` → `/feedback/mcp`; `/SKILL.md` and `/install.sh` → `/feedback/SKILL.md`; `/projects/<id>` → `/dashboard`; `/admin/*` → 404; `/` → `/feedback`; everything else → the same path on the apex. 308, query kept, `:80` the same map. |
+
+308 keeps the method and the body, so a `POST` stays a `POST`. None of the three
+declares `default_server`, an IPv6 `listen` or a `limit_req_zone` (the house rules in
+each header); all three use the shared `hi2vi.{crt,key}` origin pair, so the edge's
+cert contract does not change.
+
+### 3a. Who lands them, and how
+
+The edge's `conf.d/` is a **read-only host bind mount** on the box, and the tree's
+canonical home is the **edge repo** (`leetusik/edge`, `edge/conf.d/`). The three files
+land **through that repo, by the operator**, with its own loop; never by an `scp` from
+here, never by editing the box copy:
 
 ```bash
-# 3a. Drop the conf onto the host (from your Mac, in this repo):
-scp deploy/knowledge.conf oracle-cloud:/home/opc/edge/conf.d/knowledge.conf
-
-# 3b. (Optional pre-gate) validate the whole tree locally on the box:
-ssh oracle-cloud 'cd /home/opc/edge && ./validate.sh'
-
-# 3c. Apply: hard `nginx -t` gate inside the RUNNING edge, then graceful reload.
+# in the edge repo, on a clean tree:
+cp <platform>/deploy/hi2vi.conf <platform>/deploy/knowledge.conf <platform>/deploy/vocky.conf edge/conf.d/
+cd edge
+./validate.sh            # local gate: dummy certs + compose config + nginx -t over the WHOLE tree
+bash stage.sh            # rsync the tree to /home/opc/edge (no --delete), stage real certs, validate on the box
 ssh oracle-cloud 'cd /home/opc/edge && ./deploy.sh'
 # expect: "config OK — issuing graceful reload" -> "reload complete. New config is live."
 ```
@@ -261,22 +288,73 @@ ssh oracle-cloud 'cd /home/opc/edge && ./deploy.sh'
 `deploy.sh` **never** recreates `edge-nginx` — recreating drops the container's
 runtime network attachment, the exact failure cascade the dedicated edge was built
 to remove. Never run `docker compose up`/`restart` against the edge to apply a
-config change.
+config change. If `nginx -t` fails, **nothing is reloaded** and the edge keeps
+serving its last good config.
 
-If `nginx -t` fails, **nothing is reloaded** and the edge keeps serving its last
-good config. Fix `deploy/knowledge.conf` in this repo, re-`scp`, re-run
-`./deploy.sh`.
+Things to know before running the loop:
 
-> **No cert step.** The vhost points at `/etc/nginx/certs/hi2vi.crt` + `.key` — the
-> Cloudflare Origin CA cert whose SANs are `*.hi2vi.com, hi2vi.com`, so the
-> wildcard already covers `knowledge.hi2vi.com`. Re-check any time with:
+- **`stage.sh` ships the edge repo's working tree**, uncommitted files included,
+  and overwrites the box's copy of every file in it (rsync, no `--delete`). Run it
+  only from a tree whose every `conf.d/` file you mean to put live, and settle any
+  unrelated work in progress there first (its cert steps also check every cert pair
+  the tree names on the box).
+- **The edge repo's old `knowledge.conf` is older than this repo's** (5m body cap; no
+  versioned-raw, image or Listen relays). Running `stage.sh` with it still in place
+  would downgrade the live Library vhost. Replace all three files in one change.
+
+### 3b. Compare first
+
+Before landing, read the box's **live** `knowledge.conf` and check that every
+`location`, timeout and body-size rule in it is in `deploy/hi2vi.conf` (the live file
+may differ from both repo copies):
+
+```bash
+ssh oracle-cloud 'cat /home/opc/edge/conf.d/knowledge.conf' > /tmp/live-knowledge.conf
+diff <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' /tmp/live-knowledge.conf) \
+     <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' deploy/hi2vi.conf) | grep '^<'
+# expect: only the two `server_name knowledge.hi2vi.com;` lines. Anything else is a
+# route the box has that the apex would lose: carry it into hi2vi.conf first.
+```
+
+### 3c. Order
+
+1. **The app first.** The platform is deployed with its apex configuration and
+   `knowledge-api`, `knowledge-web` and `knowledge-mcp` are healthy on
+   `changple_shared_network`.
+2. **Then `hi2vi.conf` alone** (one loop run). Check the apex (§5) before going on:
+   the old hi2vi-web site stops being served here.
+3. **Then `knowledge.conf` and `vocky.conf`** (a second loop run). The redirect hosts
+   go live **only once the apex serves**: before that they would send every Library
+   and Feedback user to a site that is not there.
+4. Retire the old containers (vocky's, hi2vi-web) only after the redirects are
+   confirmed, so a rollback still has something to serve.
+
+> **The Production Deploy re-applies `knowledge.conf` (§6, step 4).** Until that step
+> is changed, a dispatch from a `main` that holds the redirect-only `knowledge.conf`
+> installs it into the edge on its own — before step 2 above, it would redirect the
+> Library to the apex too early, and it never installs `hi2vi.conf`. Change that step
+> before these files reach `main`, or do not dispatch the deploy until the cutover.
+
+### 3d. Rollback
+
+Restore the three previous files in the edge repo (revert the landing commit, or
+`git checkout <previous-commit> -- edge/conf.d/hi2vi.conf edge/conf.d/knowledge.conf
+edge/conf.d/vocky.conf`), then the same loop (`./validate.sh` → `bash stage.sh` →
+`./deploy.sh`). The restored `hi2vi.conf` brings its `hi2vi_contact` zone back, which
+is safe: none of the new files declares one. The old vhosts proxy to `vocky-api`,
+`vocky-web` and `hi2vi-web`, so a rollback serves only while those containers still
+run (step 4 above).
+
+> **No cert step.** All three vhosts point at `/etc/nginx/certs/hi2vi.crt` + `.key` — the
+> Cloudflare Origin CA cert whose SANs are `*.hi2vi.com, hi2vi.com`, which covers the
+> apex and both redirect hosts. Re-check any time with:
 > `ssh oracle-cloud "openssl x509 -in /home/opc/edge/certs/hi2vi.crt -noout -text | grep -A1 'Subject Alternative Name'"`
 
 ### Durability — no re-apply rule anymore
 
 The edge's conf + certs are **declarative host state on read-only bind mounts**, and
 the edge project has no `depends_on` and no `build`. **A co-tenant (changple5)
-deploy cannot wipe `knowledge.hi2vi.com`**, and a container restart or box reboot
+deploy cannot wipe the platform's vhosts**, and a container restart or box reboot
 re-reads the same files. This is the Option-B dedicated edge (deferred **D2**), now
 live — it replaces the old shared-edge regime in which the vhost was undeclared
 runtime state inside `changple5-nginx-1`, wiped by every changple5 deploy and
@@ -291,11 +369,13 @@ not the operating manual.)
 
 ## 4. Cloudflare DNS — done
 
-`knowledge.hi2vi.com` already resolves to the same Cloudflare proxy IPs as
-`hi2vi.com` (proxied `knowledge` record on the `hi2vi.com` zone). Confirm any time:
+The apex `hi2vi.com` and the proxied `knowledge` and `vocky` records on the
+`hi2vi.com` zone all resolve to the same Cloudflare proxy IPs, and all three stay:
+the two subdomains now answer with redirects (§3). Nothing changes in DNS for the
+cutover. Confirm any time:
 
 ```bash
-dig +short knowledge.hi2vi.com    # expect: Cloudflare proxy IPs, same as hi2vi.com
+dig +short hi2vi.com knowledge.hi2vi.com vocky.hi2vi.com   # expect: the same Cloudflare proxy IPs
 ```
 
 ---
@@ -304,18 +384,26 @@ dig +short knowledge.hi2vi.com    # expect: Cloudflare proxy IPs, same as hi2vi.
 
 ```bash
 # Health (open, no auth):
-curl -s -o /dev/null -w '%{http_code}\n' https://knowledge.hi2vi.com/healthz
+curl -s -o /dev/null -w '%{http_code}\n' https://hi2vi.com/healthz
 # expect: 200
 
 # Authed read/search (KB_REQUIRE_READ_AUTH=true → bearer required):
 curl -s -o /dev/null -w '%{http_code}\n' \
   -H "Authorization: Bearer $KB_API_TOKEN" \
-  'https://knowledge.hi2vi.com/api/search?q=test'
+  'https://hi2vi.com/api/search?q=test'
 # expect: 200
 
 # Un-authed read is REJECTED:
-curl -s -o /dev/null -w '%{http_code}\n' 'https://knowledge.hi2vi.com/api/search?q=test'
+curl -s -o /dev/null -w '%{http_code}\n' 'https://hi2vi.com/api/search?q=test'
 # expect: 401
+
+# The redirect hosts (after §3c step 3): a 308 to the apex, method and query kept.
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' 'https://knowledge.hi2vi.com/api/search?q=test'
+# expect: 308 https://hi2vi.com/api/search?q=test
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' -X POST https://vocky.hi2vi.com/mcp
+# expect: 308 https://hi2vi.com/feedback/mcp
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://vocky.hi2vi.com/
+# expect: 308 https://hi2vi.com/feedback
 ```
 
 Retrieve the token when you need it, without ever pasting it into a transcript:
@@ -362,7 +450,10 @@ it goes live fresh-on-write the instant the api writes it.)
      from the bind mount, so an image flip can't revert `server/` code).
   4. Edge re-apply (in the gate, after a healthy deploy): `install` `knowledge.conf` into
      `/home/opc/edge/conf.d/` → the edge's own `./deploy.sh` (`nginx -t` gate → graceful
-     reload; a failed test fails the deploy loudly, reloads nothing).
+     reload; a failed test fails the deploy loudly, reloads nothing). Since the move to
+     the apex, `knowledge.conf` is the **redirect-only** host and the serving vhost is
+     `hi2vi.conf`, which lands through the edge repo (§3): see the warning in §3c
+     before dispatching from a `main` that holds them.
   5. **External smoke:** the workflow curls `https://knowledge.hi2vi.com/healthz` **and**
      `/` (both must 200) → uploads `production-deploy-artifacts` (14 d).
 - **Watch it:** `gh run watch` or the Actions run page. On failure, download the
