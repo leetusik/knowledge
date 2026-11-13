@@ -62,9 +62,15 @@ class CreateProjectInput(BaseModel):
 
 
 class CreateCredentialInput(BaseModel):
-    """Credential-creation request body. ``name`` is an optional display label."""
+    """Credential-creation request body. ``name`` is an optional display label.
+
+    ``scope`` picks what the key reaches: ``"full"`` (the default, every key surface)
+    or ``"capture"`` (only the Feedback capture surfaces); any other value is a 422
+    from the ``Literal`` (the same set as ``accounts.types.CREDENTIAL_SCOPES``).
+    """
 
     name: str | None = Field(default=None, max_length=200)
+    scope: Literal["full", "capture"] = "full"
 
     @field_validator("name")
     @classmethod
@@ -127,6 +133,7 @@ def serialize_credential(record) -> dict[str, object]:
         "project_id": str(record.project_id) if record.project_id is not None else None,
         "name": record.name,
         "token_prefix": record.token_prefix,
+        "scope": record.scope,
         "created_at": record.created_at.isoformat(),
         "last_used_at": (
             record.last_used_at.isoformat() if record.last_used_at else None
@@ -366,6 +373,7 @@ async def create_credential(
             token_prefix=key[:12],
             token_hash=sha256_hex(key),
             name=body.name,
+            scope=body.scope,
         )
     )
     return {"credential": serialize_credential(record), "key": key}
@@ -433,6 +441,7 @@ async def create_org_credential(
             token_prefix=key[:12],
             token_hash=sha256_hex(key),
             name=body.name,
+            scope=body.scope,
         )
     )
     return {"credential": serialize_credential(record), "key": key}

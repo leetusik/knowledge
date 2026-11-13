@@ -90,6 +90,7 @@ def test_signup_provisions_default_org_and_project(accounts_client):
     client, _sync = accounts_client
     body = _signup(client)
     assert body["tenant"]["name"] == "default"
+    assert body["tenant"]["plan"] == "free"  # 0008: every org starts on the free plan
     assert body["project"]["name"] == "default"
 
     headers = {"Authorization": f"Bearer {body['token']}"}
@@ -114,12 +115,13 @@ def test_minted_credential_carries_tenant_id(accounts_client):
     with sync_engine.connect() as conn:
         row = conn.execute(
             text(
-                "SELECT tenant_id, project_id FROM project_credentials WHERE id = :id"
+                "SELECT tenant_id, project_id, scope FROM project_credentials WHERE id = :id"
             ),
             {"id": credential_id},
         ).one()
     assert str(row.tenant_id) == body["tenant"]["id"]
     assert str(row.project_id) == body["project"]["id"]
+    assert row.scope == "full"  # a key minted without a scope is a full key
 
 
 def test_new_project_defaults_private(accounts_client):

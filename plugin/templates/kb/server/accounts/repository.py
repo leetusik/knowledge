@@ -227,6 +227,7 @@ class AccountsRepository:
             name=payload.name,
             token_prefix=payload.token_prefix,
             token_hash=payload.token_hash,
+            scope=payload.scope,
         )
         self._session.add(model)
         await self._session.flush()
@@ -373,6 +374,7 @@ class AccountsRepository:
             id=model.id,
             name=model.name,
             slug=model.slug,
+            plan=model.plan,
             created_at=model.created_at,
         )
 
@@ -407,6 +409,7 @@ class AccountsRepository:
             project_id=model.project_id,
             name=model.name,
             token_prefix=model.token_prefix,
+            scope=model.scope,
             created_at=model.created_at,
             last_used_at=model.last_used_at,
             revoked_at=model.revoked_at,

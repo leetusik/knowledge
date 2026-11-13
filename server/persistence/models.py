@@ -62,6 +62,10 @@ class TenantModel(Base):
     so slug-less tenants never collide). Charset/reserved-word validation is
     app-layer in ``server.accounts.slugs`` — no DB ``CHECK``, matching the
     ``projects.visibility`` / ``usage_events.event_type`` convention.
+
+    ``plan`` is the org's plan (``'free'`` by default, 0008); its allowed values are
+    ``server.accounts.types.TENANT_PLANS``, validated app-side, and no API route
+    writes it.
     """
 
     __tablename__ = "tenants"
@@ -69,6 +73,12 @@ class TenantModel(Base):
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     slug: Mapped[str | None] = mapped_column(Text, nullable=True, unique=True)
+    plan: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="free",
+        server_default=text("'free'"),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -145,6 +155,10 @@ class ProjectCredentialModel(Base):
     (the key grants the whole tenant/org), while a **project-bound** credential keeps
     ``project_id`` set for attribution. The org-level (NULL) rows are introduced by the
     org-mint path; every row this repo writes today is project-bound.
+
+    ``scope`` (0008) is ``'full'`` (every key surface, the default and every key minted
+    before 0008) or ``'capture'`` (only the Feedback capture surfaces); allowed values
+    are ``server.accounts.types.CREDENTIAL_SCOPES``, validated app-side.
     """
 
     __tablename__ = "project_credentials"
@@ -167,6 +181,12 @@ class ProjectCredentialModel(Base):
     name: Mapped[str | None] = mapped_column(Text, nullable=True)
     token_prefix: Mapped[str] = mapped_column(Text, nullable=False)
     token_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    scope: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="full",
+        server_default=text("'full'"),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -197,13 +197,15 @@ def serialize_tenant(record: TenantRecord) -> dict[str, object]:
 
     The canonical tenant shape — signup, login, ``/auth/me`` and ``/app/tenant`` all
     go through here, so the additive ``slug`` (``None`` until the tenant claims one)
-    appears on every one of them at once.
+    and ``plan`` (``"free"`` by default; read-only over the API) appear on every one
+    of them at once.
     """
 
     return {
         "id": str(record.id),
         "name": record.name,
         "slug": record.slug,
+        "plan": record.plan,
         "created_at": record.created_at.isoformat(),
     }
 
@@ -308,11 +310,17 @@ async def logout(request: Request) -> Response:
 
 @router.get("/auth/me")
 async def me(context: AuthContext = Depends(require_user)) -> dict[str, object]:
-    """Return the authenticated caller and their tenants."""
+    """Return the authenticated caller, their tenants and the one this request acts in.
+
+    ``tenants`` keeps its oldest-first order (the CLI reads ``tenants[0]``);
+    ``active_tenant_id`` is the tenant ``require_user`` picked for this request (the
+    ``X-Hi2vi-Org`` header's org, else the first).
+    """
 
     tenants = await get_accounts_service().list_tenants_for_user(context.user.id)
 
     return {
         "user": serialize_user(context.user),
         "tenants": [serialize_tenant(tenant) for tenant in tenants],
+        "active_tenant_id": str(context.tenant.id),
     }
