@@ -73,7 +73,7 @@ import uuid
 
 import httpx
 
-# Keys the frozen POST /api/documents 201 guarantees (see docs/current/api.md
+# Keys the frozen POST /api/documents 201 guarantees (see archive/workspace/docs/current/api.md
 # §"Frozen consumer contract (P8)"). commit_error is optional. `push_pending`
 # (P24) is the additive field for the after-response publish: it is emitted
 # unconditionally, so its PRESENCE is asserted here (its value is `true` on the

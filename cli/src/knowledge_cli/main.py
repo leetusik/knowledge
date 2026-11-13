@@ -1,7 +1,7 @@
 """`knowledge` — the CLI entry point.
 
-House style, matching every other CLI in this repo (`scripts/workflow.py`,
-`scripts/onboarding_smoke.py`): stdlib **argparse with subparsers and
+House style, matching every other CLI in this repo (`scripts/onboarding_smoke.py`,
+and the retired workspace engine `scripts/workflow.py` before it): stdlib **argparse with subparsers and
 `set_defaults(func=...)`**. There is no typer/click/rich anywhere in the tree and
 this does not introduce one; the only runtime dependency is `httpx`.
 
