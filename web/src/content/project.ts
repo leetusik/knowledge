@@ -128,6 +128,8 @@ export const PROJECT = {
     empty: "No keys yet. Create one to start ingesting documents.",
     /** `name === null` — the key was minted without a label. */
     unnamed: "Unnamed key",
+    /** The Badge beside a `capture`-scope key's name (a `full` key shows none). */
+    captureBadge: "Capture only",
     /** `last_used_at === null` — the key has never been used to ingest. */
     never: "Never",
     /** The three derived states (`credential-status.ts`), keyed for the Badge label. */
@@ -145,6 +147,11 @@ export const PROJECT = {
     /** Optional: knowledge defaults an omitted/blank name to `null`. */
     nameHint: "Optional — a label to tell your keys apart.",
     namePlaceholder: "e.g. Production ingest",
+    /** The scope choice (a radio pair; `full` is checked by default). */
+    scopeLegend: "Access",
+    scopeFull: "Full access",
+    scopeCapture: "Capture only",
+    scopeHint: "A capture-only key can send feedback and nothing else.",
     submitLabel: "Create key",
     submitPendingLabel: "Creating…",
     cancelLabel: "Cancel",

@@ -3,7 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { POST as loginPOST } from "@/app/api/auth/login/route";
 import { POST as logoutPOST } from "@/app/api/auth/logout/route";
 import { POST as signupPOST } from "@/app/api/auth/signup/route";
-import { openSession, SESSION_COOKIE, sealSession } from "@/lib/session";
+import { openSession, ORG_COOKIE, SESSION_COOKIE, sealSession } from "@/lib/session";
 
 // P12.S2 — the BFF route pipeline, driven against a STUBBED knowledge backend
 // (global fetch is replaced, so no backend is needed here; the live round-trip is
@@ -137,6 +137,12 @@ describe("POST /api/auth/login — knowledge outcomes", () => {
     expect(openSession(cookieValue(setCookie!))).toBe(TOKEN);
   });
 
+  it("clears the active-org cookie, so a new session starts in its first org", async () => {
+    stubKb(200, { token: TOKEN, user: USER, tenants: [TENANT] });
+    const res = await loginPOST(makeReq("/api/auth/login", { ip: "10.0.1.5" }));
+    expect(setCookieOf(res)).toMatch(new RegExp(`${ORG_COOKIE}=;[^,]*Max-Age=0`));
+  });
+
   it("calls knowledge with the right URL/method and no bearer, then 401s without leaking detail", async () => {
     stubKb(401, { detail: "invalid email or password" });
     const res = await loginPOST(makeReq("/api/auth/login", { ip: "10.0.1.2" }));
@@ -169,6 +175,7 @@ describe("POST /api/auth/signup", () => {
 
     expect(res.status).toBe(200);
     expect(openSession(cookieValue(setCookieOf(res)!))).toBe(TOKEN);
+    expect(setCookieOf(res)).toMatch(new RegExp(`${ORG_COOKIE}=;[^,]*Max-Age=0`));
   });
 
   it("passes the duplicate-email 409 through with no cookie", async () => {
@@ -211,6 +218,7 @@ describe("POST /api/auth/logout", () => {
     );
     expect(res.status).toBe(200);
     expect(setCookieOf(res)).toContain("Max-Age=0");
+    expect(setCookieOf(res)).toMatch(new RegExp(`${ORG_COOKIE}=;[^,]*Max-Age=0`));
   });
 
   it("still clears the cookie when knowledge is unreachable (never fails open)", async () => {

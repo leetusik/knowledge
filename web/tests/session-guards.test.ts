@@ -191,6 +191,26 @@ describe("return address through the member guard and the gate", () => {
     );
   });
 
+  // Multi-org sessions: a stale or foreign org cookie (the API's 403) ends at the
+  // reset route, which clears it and returns here; never an error page.
+  it("requireIdentity and optionalIdentity send an org 403 to the reset with a safe next", async () => {
+    withCookie(sealSession(TOKEN));
+    withRequestPath("/projects/abc");
+    vi.mocked(fetch).mockImplementation(async () =>
+      json(403, { detail: "not a member of that org" }),
+    );
+    await expect(requireIdentity()).rejects.toThrow(
+      /^REDIRECT:\/api\/auth\/org\?next=%2Fprojects%2Fabc$/,
+    );
+    await expect(optionalIdentity()).rejects.toThrow(
+      /^REDIRECT:\/api\/auth\/org\?next=%2Fprojects%2Fabc$/,
+    );
+    withRequestPath("//evil.example");
+    await expect(requireIdentity()).rejects.toThrow(
+      /^REDIRECT:\/api\/auth\/org\?next=%2Flibrary$/,
+    );
+  });
+
   it("the gate sends a signed-in visitor to a safe next, hash and all", async () => {
     withCookie(sealSession(TOKEN));
     vi.mocked(fetch).mockImplementation(async () => json(200, ME));

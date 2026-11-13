@@ -138,14 +138,25 @@ const orgKeyColumns: DataTableColumn<KbCredential>[] = [
     key: "name",
     priority: 1,
     header: DASHBOARD.orgKeys.columns.name,
-    cell: (credential) =>
-      credential.name === null ? (
-        <span className="text-[var(--kb-hint)] italic">
-          {DASHBOARD.orgKeys.unnamed}
-        </span>
-      ) : (
-        <span className="kb-dtable__name">{credential.name}</span>
-      ),
+    cell: (credential) => (
+      <>
+        {credential.name === null ? (
+          <span className="text-[var(--kb-hint)] italic">
+            {DASHBOARD.orgKeys.unnamed}
+          </span>
+        ) : (
+          <span className="kb-dtable__name">{credential.name}</span>
+        )}
+        {/* A capture-only key says so beside its name (the kit's Badge, idle tone
+            as for Private: the restricted form); a full key shows nothing new. */}
+        {credential.scope === "capture" ? (
+          <>
+            {" "}
+            <Badge status="idle">{DASHBOARD.orgKeys.captureBadge}</Badge>
+          </>
+        ) : null}
+      </>
+    ),
   },
   {
     key: "key",

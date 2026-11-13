@@ -28,6 +28,20 @@ interface RawAuthResponse {
 interface RawMeResponse {
   user: KbUser;
   tenants?: KbTenant[];
+  /** The tenant this request acts in (the `X-Hi2vi-Org` org, else the first). */
+  active_tenant_id?: string;
+}
+
+/**
+ * The tenant `/auth/me` says this request acts in: the one named by
+ * `active_tenant_id`, falling back to `tenants[0]` when the field is absent (an
+ * older API) or names no listed tenant.
+ */
+export function meTenant(raw: RawMeResponse): KbTenant | null {
+  const named = raw.active_tenant_id
+    ? raw.tenants?.find((tenant) => tenant.id === raw.active_tenant_id)
+    : undefined;
+  return named ?? activeTenant(raw);
 }
 
 /**
@@ -98,18 +112,26 @@ export async function logout(token: string): Promise<void> {
 }
 
 /**
- * `GET /auth/me` (bearer) → 200 `{user, tenants[]}`; 401 (missing/unknown/expired,
- * indistinguishable) throws `ApiError(401)`, which the `(app)` layout turns into a
- * redirect to /login.
+ * `GET /auth/me` (bearer) → 200 `{user, tenants[], active_tenant_id}`; 401
+ * (missing/unknown/expired, indistinguishable) throws `ApiError(401)`, which the
+ * `(app)` layout turns into a redirect to /login; 403 (the org cookie names an org the
+ * user is not in) throws `ApiError(403)`, which the guards turn into the org reset.
+ *
+ * `org` overrides the org cookie for this one call (the switch route confirms a
+ * membership with it); omitted, the cookie decides, as for every other call.
  */
 export async function me(
   token: string,
-  signal?: AbortSignal,
+  options: { signal?: AbortSignal; org?: string | null } = {},
 ): Promise<KbIdentity> {
-  const raw = await getJson<RawMeResponse>("/auth/me", { token, signal });
+  const raw = await getJson<RawMeResponse>("/auth/me", {
+    token,
+    signal: options.signal,
+    ...(options.org !== undefined ? { org: options.org } : {}),
+  });
   return {
     user: raw.user,
-    tenant: activeTenant(raw),
+    tenant: meTenant(raw),
     tenants: raw.tenants ?? [],
   };
 }

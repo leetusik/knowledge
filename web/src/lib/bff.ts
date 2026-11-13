@@ -7,6 +7,8 @@ import { clientIp } from "./client-ip";
 import { checkRateLimit } from "./rate-limit";
 import {
   assertSameOrigin,
+  clearedOrgCookieOptions,
+  ORG_COOKIE,
   sealSession,
   SESSION_COOKIE,
   sessionCookieOptions,
@@ -144,5 +146,8 @@ export async function handleCredentialRoute(
   }
   const res = json(200, { ok: true });
   res.cookies.set(SESSION_COOKIE, sealed, sessionCookieOptions());
+  // A new session starts in its first org: the previous session's choice (perhaps
+  // another user's) never follows it.
+  res.cookies.set(ORG_COOKIE, "", clearedOrgCookieOptions());
   return res;
 }

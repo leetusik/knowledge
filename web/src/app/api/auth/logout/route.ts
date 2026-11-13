@@ -1,8 +1,10 @@
 import { json } from "@/lib/bff";
 import {
   assertSameOrigin,
+  clearedOrgCookieOptions,
   clearedSessionCookieOptions,
   openSession,
+  ORG_COOKIE,
   readSessionCookie,
   SESSION_COOKIE,
 } from "@/lib/session";
@@ -35,5 +37,6 @@ export async function POST(req: Request): Promise<Response> {
 
   const res = json(200, { ok: true });
   res.cookies.set(SESSION_COOKIE, "", clearedSessionCookieOptions());
+  res.cookies.set(ORG_COOKIE, "", clearedOrgCookieOptions());
   return res;
 }

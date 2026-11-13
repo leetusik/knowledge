@@ -74,6 +74,7 @@ export function MintOrgKeyForm({ children }: { children: ReactNode }) {
   const nameId = `${baseId}-name`;
   const hintId = `${baseId}-hint`;
   const errorId = `${baseId}-error`;
+  const scopeHintId = `${baseId}-scope-hint`;
   const formId = `${baseId}-form`;
 
   // Dismissal is keyed by the `ok` stamp of the modal that was dismissed, NOT a
@@ -153,6 +154,35 @@ export function MintOrgKeyForm({ children }: { children: ReactNode }) {
           {/* §4.4 — the field's own always-rendered `.kb-field__error` (1.1rem
               reserved), so arriving at an error moves nothing. */}
           <FieldError id={errorId}>{state.error ?? undefined}</FieldError>
+          {/* The key's scope: native radios on the kit's label classes (the kit has
+              no radio of its own), `full` checked by default. */}
+          <fieldset className="kb-field" aria-describedby={scopeHintId}>
+            <legend className="kb-field__label">{copy.scopeLegend}</legend>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              <label className="kb-check">
+                <input
+                  type="radio"
+                  name="scope"
+                  value="full"
+                  defaultChecked
+                  disabled={pending}
+                />
+                <span>{copy.scopeFull}</span>
+              </label>
+              <label className="kb-check">
+                <input
+                  type="radio"
+                  name="scope"
+                  value="capture"
+                  disabled={pending}
+                />
+                <span>{copy.scopeCapture}</span>
+              </label>
+            </div>
+            <p id={scopeHintId} className="kb-field__hint">
+              {copy.scopeHint}
+            </p>
+          </fieldset>
           <div className="kb-form-actions kb-form-actions--end">
             <AppButton variant="ghost" onClick={close}>
               {copy.cancelLabel}

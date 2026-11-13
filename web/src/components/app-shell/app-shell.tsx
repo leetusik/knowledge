@@ -10,6 +10,7 @@ import { isRailCollapsed, RAIL_COOKIE } from "@/lib/rail-cookie";
 
 import { AppFrame } from "./app-frame";
 import { LogoutButton } from "./logout-button";
+import { OrgMenu } from "./org-menu";
 
 /**
  * The authenticated app shell (P12.S2, re-skinned P12.S2R) — the chrome S3–S6
@@ -56,6 +57,9 @@ export async function AppShell({
   // the email's local part, uppercased. An empty local part can't happen for a
   // signed-in identity, but `[0]` on "" is `undefined`, so fall back to the label.
   const initial = (identity.user.email.split("@")[0]?.[0] ?? "?").toUpperCase();
+  // The org menu exists only for a user in more than one org: everyone else gets
+  // exactly the shell they had (rendered on the server, passed down as slots).
+  const multiOrg = identity.tenants.length > 1;
 
   return (
     // A FRAGMENT, not a single root: round 03 §5.5's `.kb-toast-region` has to be
@@ -91,6 +95,24 @@ export async function AppShell({
         <AppFrame
           defaultCollapsed={collapsed}
           due={due}
+          railOrgMenu={
+            multiOrg ? (
+              <OrgMenu
+                tenants={identity.tenants}
+                active={identity.tenant}
+                placement="rail"
+              />
+            ) : undefined
+          }
+          navbarOrgMenu={
+            multiOrg ? (
+              <OrgMenu
+                tenants={identity.tenants}
+                active={identity.tenant}
+                placement="navbar"
+              />
+            ) : undefined
+          }
           topbar={
             <>
               {/* P30.S22 (`06-library` open question 3): the wordmark goes to the library. */}

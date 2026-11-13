@@ -3,7 +3,12 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 
-import { getSession, loginRedirectTarget, requireSession } from "./session";
+import {
+  getSession,
+  loginRedirectTarget,
+  orgResetTarget,
+  requireSession,
+} from "./session";
 import { safeNextPath } from "./next-path";
 import { me } from "./knowledge/auth";
 import { ApiError } from "./knowledge/client";
@@ -49,6 +54,12 @@ export const requireIdentity = cache(
         // P30.S11 (D32) — the same return address as the cookie-less case.
         redirect(await loginRedirectTarget());
       }
+      if (error instanceof ApiError && error.status === 403) {
+        // The org cookie names an org this user is not (or no longer) in. A server
+        // component cannot clear a cookie, so the reset route does it and returns
+        // here; without the cookie `/auth/me` acts in the first org and cannot 403.
+        redirect(await orgResetTarget());
+      }
       throw error;
     }
   },
@@ -56,7 +67,8 @@ export const requireIdentity = cache(
 
 /**
  * The `(public)` optional-identity guard — the anonymous-capable sibling of
- * `requireIdentity`, added for P19's public doc/graph surfaces (the graph retired in P37-1p). It NEVER redirects
+ * `requireIdentity`, added for P19's public doc/graph surfaces (the graph retired in P37-1p). It never redirects
+ * (bar a stale org cookie's 403, sent to the org reset like `requireIdentity`'s)
  * and NEVER throws for the unauthenticated case: it returns the caller's context
  * when a live session resolves, or `null` when the visitor is anonymous.
  *
@@ -84,6 +96,10 @@ export const optionalIdentity = cache(
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         return null;
+      }
+      if (error instanceof ApiError && error.status === 403) {
+        // A stale org cookie: reset it and come back (see `requireIdentity`).
+        redirect(await orgResetTarget());
       }
       throw error;
     }

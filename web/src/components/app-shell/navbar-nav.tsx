@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -25,12 +26,20 @@ import { cn } from "@/lib/utils";
  * wears the due count exactly as the rail does. A client island for exactly the reason the
  * rail is one: the active item comes from `usePathname()`.
  */
-export function NavbarNav({ due }: { due: number }) {
+export function NavbarNav({
+  due,
+  orgMenu,
+}: {
+  due: number;
+  /** The server-rendered org menu (a user in several orgs), the bar's first item. */
+  orgMenu?: ReactNode;
+}) {
   const pathname = usePathname();
   const count = dueText(due);
 
   return (
     <nav className="kb-navbar" aria-label={APP_SHELL.navLabel}>
+      {orgMenu}
       {APP_NAV_GROUPS.flatMap((group, g) =>
         group.items.map((item, i) => {
           const sep = g > 0 && i === 0;

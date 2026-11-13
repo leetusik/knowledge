@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { activeTenant, normalizeAuthResponse } from "@/lib/knowledge/auth";
+import { activeTenant, me, normalizeAuthResponse } from "@/lib/knowledge/auth";
 import type { KbTenant, KbUser } from "@/lib/knowledge/types";
 
 // P12.S2 — knowledge's signup/login TENANT ASYMMETRY is the one shape mismatch the
@@ -19,6 +19,7 @@ const TENANT: KbTenant = {
   // P25 — the org slug rides on every tenant payload; `null` is the pre-claim state
   // (nullable, no backfill), which is what a fresh signup answers.
   slug: null,
+  plan: "free",
   created_at: "2026-07-16T00:00:00+00:00",
 };
 const TOKEN = "0GkQ3vJ8bYd1wZs5RfN7tXcA2eLmPqU9hVjK4oIyB6M";
@@ -46,6 +47,43 @@ describe("normalizeAuthResponse", () => {
       normalizeAuthResponse({ token: TOKEN, user: USER, tenants: [TENANT, second] })
         .tenant,
     ).toEqual(TENANT);
+  });
+});
+
+// Multi-org sessions: `/auth/me` names the tenant this request acts in.
+describe("me", () => {
+  const second: KbTenant = {
+    ...TENANT,
+    id: "2b3c4d5e-2222-4f60-8a1b-3c4d5e6f7a8b",
+    name: "second org",
+  };
+  beforeAll(() => {
+    process.env.KB_API_BASE_URL = "http://kb.test:8766";
+  });
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+  const answer = (body: unknown) =>
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+  it("picks the tenant named by active_tenant_id", async () => {
+    answer({ user: USER, tenants: [TENANT, second], active_tenant_id: second.id });
+    const identity = await me(TOKEN);
+    expect(identity.tenant).toEqual(second);
+    expect(identity.tenants).toEqual([TENANT, second]);
+  });
+
+  it("falls back to tenants[0] when the field is absent (an older API)", async () => {
+    answer({ user: USER, tenants: [TENANT, second] });
+    expect((await me(TOKEN)).tenant).toEqual(TENANT);
   });
 });
 

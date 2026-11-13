@@ -5,7 +5,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { readSessionEnv } from "./env";
-import { loginHref, REQUEST_PATH_HEADER } from "./next-path";
+import { loginHref, REQUEST_PATH_HEADER, safeNextPath } from "./next-path";
 
 // P12.S2 — the sealed-cookie session (D-P12-2). knowledge issues an opaque 30-day
 // bearer token from `/auth/*`; the BFF SEALS that token into an httpOnly cookie
@@ -60,6 +60,71 @@ export function sessionCookieOptions(): SessionCookieOptions {
 /** The Set-Cookie attributes used when clearing the session (logout) — maxAge 0. */
 export function clearedSessionCookieOptions(): SessionCookieOptions {
   return { ...sessionCookieOptions(), maxAge: 0 };
+}
+
+// ── The active org (multi-org sessions) ─────────────────────────────────────
+// A user may belong to several orgs; the API acts in the first one unless a session
+// request names another with `X-Hi2vi-Org`. The web keeps that choice in a second
+// httpOnly cookie beside the session, holding only a tenant id: it is no secret (the
+// API checks membership on every request and 403s a foreign id), so it is not sealed.
+// It is set ONLY by `POST /api/auth/org` after the API confirmed the membership, and
+// cleared by the reset (`GET /api/auth/org`), by sign-in, sign-up and sign-out.
+
+/** Cookie name holding the active org's tenant id. */
+export const ORG_COOKIE = "hi2vi_org";
+
+/** The request header the API reads the active org from (`server/accounts/auth.py`). */
+export const ORG_HEADER = "X-Hi2vi-Org";
+
+/** The switch (POST) and reset (GET) route. Under `/api/auth/` so the edge routes it here. */
+export const ORG_ROUTE = "/api/auth/org";
+
+const UUID_SHAPE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A UUID-shaped tenant id (lowercased), or `null` for anything else. Never throws. */
+export function asOrgId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return UUID_SHAPE.test(trimmed) ? trimmed.toLowerCase() : null;
+}
+
+/** The org cookie's attributes: the session cookie's own (httpOnly, Strict, its lifetime). */
+export function orgCookieOptions(): SessionCookieOptions {
+  return sessionCookieOptions();
+}
+
+/** The org cookie's clearing attributes — maxAge 0. */
+export function clearedOrgCookieOptions(): SessionCookieOptions {
+  return clearedSessionCookieOptions();
+}
+
+/**
+ * The active org chosen in this request's cookie, or `null` (absent, malformed, or
+ * no request scope at all — a call made outside a request never carries an org).
+ */
+export async function getActiveOrg(): Promise<string | null> {
+  try {
+    const store = await cookies();
+    return asOrgId(store.get(ORG_COOKIE)?.value);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Where a page whose org cookie the API refused (403) is sent: the reset route,
+ * which clears the cookie and returns to `next` (laundered by `safeNextPath` here
+ * and again in the route). A server component cannot clear a cookie itself.
+ */
+export function orgResetHref(next?: string | null): string {
+  return `${ORG_ROUTE}?next=${encodeURIComponent(safeNextPath(next))}`;
+}
+
+/** The reset target for the page being rendered (`REQUEST_PATH_HEADER`). */
+export async function orgResetTarget(): Promise<string> {
+  const store = await headers();
+  return orgResetHref(store.get(REQUEST_PATH_HEADER));
 }
 
 /** Derive the 32-byte AES-256 key from SESSION_SECRET (sha256). */

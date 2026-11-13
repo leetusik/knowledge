@@ -34,6 +34,8 @@ export interface KbTenant {
    * here — the backend assembles those once.
    */
   slug: string | null;
+  /** The org's plan (`"free"` by default; read-only over the API). Shown nowhere yet. */
+  plan: string;
   created_at: string;
 }
 
@@ -53,11 +55,14 @@ export interface KbSession {
   tenant: KbTenant | null;
 }
 
-/** `GET /auth/me` — identity without a token, tenant normalized as above. */
+/**
+ * `GET /auth/me` — identity without a token. `tenant` is the org this request acts in
+ * (`active_tenant_id`: the org cookie's org, else the first).
+ */
 export interface KbIdentity {
   user: KbUser;
   tenant: KbTenant | null;
-  /** Every tenant the user belongs to, in knowledge's order (`tenants[0]` = active). */
+  /** Every tenant the user belongs to, in knowledge's order (oldest first). */
   tenants: KbTenant[];
 }
 
@@ -189,7 +194,12 @@ export interface KbCredential {
   last_used_at: string | null;
   /** `null` ⇔ not revoked. */
   revoked_at: string | null;
+  /** What the key may do: `full` (everything) or `capture` (send feedback only). */
+  scope: KbCredentialScope;
 }
+
+/** A key's scope, chosen at mint (`POST …/credentials` `{scope}`). */
+export type KbCredentialScope = "full" | "capture";
 
 /**
  * `POST /app/projects/{id}/credentials` → 201 `{credential, key}` — the one

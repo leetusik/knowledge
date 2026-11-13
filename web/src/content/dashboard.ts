@@ -201,6 +201,8 @@ export const DASHBOARD = {
     empty: "No org keys yet. Create one to start ingesting documents from anywhere.",
     /** `name === null` — the key was minted without a label. */
     unnamed: "Unnamed key",
+    /** The Badge beside a `capture`-scope key's name (a `full` key shows none). */
+    captureBadge: "Capture only",
     /** The three derived states (`credential-status.ts`), keyed for the Badge label. */
     status: {
       active: "Active",
@@ -215,6 +217,11 @@ export const DASHBOARD = {
       /** Optional: knowledge defaults an omitted/blank name to `null`. */
       nameHint: "Optional — a label to tell your keys apart.",
       namePlaceholder: "e.g. CI ingest",
+      /** The scope choice (a radio pair; `full` is checked by default). */
+      scopeLegend: "Access",
+      scopeFull: "Full access",
+      scopeCapture: "Capture only",
+      scopeHint: "A capture-only key can send feedback and nothing else.",
       submitLabel: "Create key",
       submitPendingLabel: "Creating…",
       cancelLabel: "Cancel",
