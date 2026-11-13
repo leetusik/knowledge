@@ -16,7 +16,7 @@ you don't have it, then the CLI:
 Or install it directly with `uv` (the canonical, manual channel — what the
 one-liner wraps):
 
-    uv tool install git+https://github.com/leetusik/knowledge#subdirectory=cli
+    uv tool install git+https://github.com/leetusik/platform#subdirectory=cli
 
 Either way this puts a `knowledge` executable on PATH. Requires Python 3.12+ and
 `uv`. There is no PyPI, npm, or brew package — the git URL is the distribution

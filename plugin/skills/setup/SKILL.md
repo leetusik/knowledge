@@ -180,7 +180,7 @@ A user who would rather stay in the terminal can do this whole onboarding (sign 
 default project → org key → config) without a browser hand-off, via the standalone
 `knowledge` CLI — `knowledge init` mints the same org-level key from the terminal:
 
-    uv tool install git+https://github.com/leetusik/knowledge#subdirectory=cli
+    uv tool install git+https://github.com/leetusik/platform#subdirectory=cli
     knowledge init
 
 `knowledge init` writes the **same** `~/.config/knowledge-kb/config.json` this skill writes,
@@ -342,7 +342,7 @@ mutation) with exactly this shape, filling the **non-secret** params only:
 
     {
       "plugin": "knowledge",
-      "plugin_version": "0.12.0",
+      "plugin_version": "0.12.1",
       "rendered_at": "<YYYY-MM-DD>",
       "params": {
         "KB_SITE_NAME": "<site title>",
@@ -356,7 +356,7 @@ mutation) with exactly this shape, filling the **non-secret** params only:
       }
     }
 
-`plugin_version` is `0.12.0` — the current plugin version; it never contains a
+`plugin_version` is `0.12.1` — the current plugin version; it never contains a
 secret. (On re-render, overwrite the marker with the new params and today's
 `rendered_at`.)
 

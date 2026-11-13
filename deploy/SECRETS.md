@@ -74,17 +74,17 @@ box" step and no local copy to delete — there was never a local copy.
 # From your Mac, with `gh` authenticated. Only the .pub half moves.
 ssh oracle-cloud 'sudo cat /opt/knowledge-secrets/knowledge_deploy_key.pub' > /tmp/knowledge_deploy_key.pub
 gh repo deploy-key add /tmp/knowledge_deploy_key.pub \
-  -R leetusik/knowledge --title 'knowledge-api-box' --allow-write
+  -R leetusik/platform --title 'knowledge-api-box' --allow-write
 rm /tmp/knowledge_deploy_key.pub
-gh repo deploy-key list -R leetusik/knowledge     # confirm it is listed
+gh repo deploy-key list -R leetusik/platform     # confirm it is listed
 ```
 
-Or the web UI: `https://github.com/leetusik/knowledge` → **Settings** → **Deploy
+Or the web UI: `https://github.com/leetusik/platform` → **Settings** → **Deploy
 keys** → **Add deploy key**, paste the `.pub` contents, **check "Allow write
 access"** (the push fails without it).
 
 **2c. Box clone origin must be SSH.** The container pushes to `origin`, so the box
-clone's remote must be `git@github.com:leetusik/knowledge.git`, not the `https://`
+clone's remote must be `git@github.com:leetusik/platform.git`, not the `https://`
 form. `README.md` §1a clones over HTTPS (the repo is public — reading needs no
 credential) and then `git remote set-url origin git@github.com:…`, so the *push*
 path is the deploy key.
@@ -99,7 +99,7 @@ Host-key pinning (`ssh-keyscan` → `/opt/knowledge-secrets/known_hosts`) is
 The automated **Production Deploy** GitHub Action (`.github/workflows/deploy-production.yml`) SSHes
 from the runner into `opc@140.245.64.173` to run the on-box deploy. Its driver,
 [`github-actions-production-deploy.sh`](github-actions-production-deploy.sh), reads **three repo
-secrets** on `leetusik/knowledge`:
+secrets** on `leetusik/platform`:
 
 - **`ORACLE_SSH_PRIVATE_KEY`** — **required**. The full OpenSSH **private** key (the entire
   `BEGIN…END` block). Written to a `umask 077` tempfile and used with `-i … -o IdentitiesOnly=yes`.
@@ -126,7 +126,7 @@ secrets** on `leetusik/knowledge`:
 
 **2b-i. Mint a dedicated, passphrase-less key** (least-privilege; a dedicated key can be
 rotated/revoked without disturbing hi2vi's deploy). Do this **on the operator's machine** — the one
-that already has `gh` authenticated to `leetusik/knowledge` **and** SSH access to the box:
+that already has `gh` authenticated to `leetusik/platform` **and** SSH access to the box:
 
 ```bash
 umask 077
@@ -140,22 +140,22 @@ ssh-keygen -t ed25519 -N '' -C 'knowledge-gha-runner@box' -f "$tmp/knowledge_gha
 private half is already an access-controlled GitHub secret. To use a passphrase instead, replace
 `-N ''` with `-N '<passphrase>'` and also set `ORACLE_SSH_PASSPHRASE` in 2b-ii.
 
-**2b-ii. Set the three secrets on `leetusik/knowledge`**, piping the private half **straight in** — it
+**2b-ii. Set the three secrets on `leetusik/platform`**, piping the private half **straight in** — it
 is never displayed, pasted, or written outside the tempdir:
 
 ```bash
-gh secret set ORACLE_SSH_PRIVATE_KEY -R leetusik/knowledge < "$tmp/knowledge_gha_runner"
+gh secret set ORACLE_SSH_PRIVATE_KEY -R leetusik/platform < "$tmp/knowledge_gha_runner"
 
 # Pin the box's host key. VERIFY it out-of-band before trusting it (2b-iv).
 ssh-keyscan -p 22 140.245.64.173 | tee "$tmp/known_hosts"
-gh secret set ORACLE_SSH_KNOWN_HOSTS -R leetusik/knowledge < "$tmp/known_hosts"
+gh secret set ORACLE_SSH_KNOWN_HOSTS -R leetusik/platform < "$tmp/known_hosts"
 
 # ORACLE_SSH_PASSPHRASE — set ONLY if you minted the key WITH a passphrase; otherwise leave it
 # unset (the driver treats empty/absent as passphrase-less):
-# gh secret set ORACLE_SSH_PASSPHRASE -R leetusik/knowledge     # then type the passphrase at the prompt
+# gh secret set ORACLE_SSH_PASSPHRASE -R leetusik/platform     # then type the passphrase at the prompt
 ```
 
-Or the web UI: `leetusik/knowledge` → **Settings** → **Secrets and variables** → **Actions** → **New
+Or the web UI: `leetusik/platform` → **Settings** → **Secrets and variables** → **Actions** → **New
 repository secret**. The driver `require_env`s the first two, so **both must exist** or the deploy dies
 before it connects; the passphrase secret may be absent.
 
@@ -246,15 +246,15 @@ BM25-only (`mode:"bm25"`), **zero code change** either way.
 
 - [ ] **SSH deploy key** generated **on the box** at
       `/opt/knowledge-secrets/knowledge_deploy_key` (ed25519, no passphrase, chmod
-      600); **public** half registered on `leetusik/knowledge` **with write access**.
+      600); **public** half registered on `leetusik/platform` **with write access**.
 - [ ] **GHA runner key** (§2b) minted (dedicated, ed25519), `.pub` appended to
       `~opc/.ssh/authorized_keys` (hi2vi's key left intact), and the three
-      `ORACLE_SSH_*` secrets set on `leetusik/knowledge` — gates the automated
+      `ORACLE_SSH_*` secrets set on `leetusik/platform` — gates the automated
       **Production Deploy** action (P9), not the initial hand bring-up.
 - [ ] **`KB_API_TOKEN`** — will be generated in place at `README.md` §1c (nothing to
       do in advance); afterwards, hand the value to the hi2vi side as
       `KNOWLEDGE_API_TOKEN`.
-- [ ] **Box clone origin** set to the SSH form `git@github.com:leetusik/knowledge.git`
+- [ ] **Box clone origin** set to the SSH form `git@github.com:leetusik/platform.git`
       (`README.md` §1a).
 - [ ] **Cloudflare `knowledge` record** — ✅ already live, proxied.
 - [ ] **Origin cert coverage** — ✅ already covered by the `*.hi2vi.com` wildcard

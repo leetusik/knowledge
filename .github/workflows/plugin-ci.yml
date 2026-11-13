@@ -2,8 +2,8 @@ name: plugin parity
 
 # Root-only drift gate: proves plugin/templates/kb/ stays byte-in-sync with the
 # live repo (via scripts/plugin_parity.py, which reuses plugin/setup/render.py).
-# This is NOT pages.yml — pages.yml is itself a shipped template and stays
-# portable. No mkdocs build here (pages.yml already gates deploys); no claude CLI.
+# The repo's own MkDocs site build (pages.yml) is retired; the scaffold still ships
+# its own plugin/templates/kb/.github/workflows/pages.yml. No mkdocs build here; no claude CLI.
 
 on:
   push:

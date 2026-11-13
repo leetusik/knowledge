@@ -43,7 +43,7 @@ two skills:
 
 ## Install
 
-    /plugin marketplace add leetusik/knowledge
+    /plugin marketplace add leetusik/platform
     /plugin install knowledge@knowledge
 
 Then run `/knowledge:setup` once to create your KB, and `/knowledge:explain`
@@ -56,7 +56,7 @@ whenever you want something explained and kept.
 **Requirements:** a workflow workspace v96 or later in the repository you run it
 from (without one it refuses and runs nothing; an older one, or one whose
 create-phase research route does not write the `sources` line, is told to run
-`/update-workspace`), and `/knowledge:setup` run once. Plugin 0.12.0 and workspace
+`/update-workspace`), and `/knowledge:setup` run once. Plugin 0.12.0 or later and workspace
 v96 need each other: v96's explain route refuses an older plugin's proposal and
 creates nothing, so update both (the workspace first).
 
@@ -180,7 +180,7 @@ list is for **scaffold** (self-hosted) mode:
   which the plugin does not ship, so in a plugin install the Listen routes
   exist but make no audio.
 
-The live demo of what you get: <https://leetusik.github.io/knowledge/>.
+A live example of what you get: <https://knowledge.hi2vi.com>, the hosted Library this repo runs.
 
 ## Development & releasing
 

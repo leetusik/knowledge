@@ -5,7 +5,8 @@
 # Replaces the retired mkdocs `knowledge-site` as the `/` web UI. Adapted from
 # hi2vi_web/Dockerfile, but the sharp/@img block is DROPPED — this app has no
 # next/image, so no native image codec closure to stage. See compose.prod.yml +
-# deploy/knowledge.conf + works/phases/active/P14/phase.md.
+# deploy/knowledge.conf + archive/workspace/works/phases/archived/
+# 20260721_124533_P14_landing_page_product_webpage_via_claude_design_gate/phase.md.
 #
 # ---------- build ----------
 FROM node:22-slim AS build

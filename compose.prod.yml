@@ -24,7 +24,7 @@ services:
     # Box clone bind-mounts at /repo exactly like local: `.` is the box clone
     # root (/opt/knowledge), so the container commits+pushes into a real clone
     # with an SSH `origin` remote (see runbook: origin must be the SSH form
-    # git@github.com:leetusik/knowledge.git).
+    # git@github.com:leetusik/platform.git).
     volumes:
       - .:/repo
       # Push credential, mounted READ-ONLY from the box (never in the repo).
