@@ -18,6 +18,10 @@ import os
 # hi2vi OpenClaw consumer (P18.S5) pins its `mcp.servers.knowledge` at this.
 SERVER_NAME = "knowledge"
 
+# MCP server name of the write-only Feedback endpoint (`/feedback/mcp`, the one
+# `capture_feedback` tool), served by the same process beside `/mcp`.
+FEEDBACK_SERVER_NAME = "feedback"
+
 # The knowledge MCP **tool contract** version (see mcp-server/CONTRACT.md).
 # DISTINCT from the MCP `serverInfo.version` the SDK advertises (that is the
 # `mcp` SDK release, `1.28.1`). This is the consumer-pinned contract: bumped only
@@ -95,7 +99,7 @@ def mcp_host() -> str:
 
 
 def mcp_port() -> int:
-    """Bind port for uvicorn (the MCP endpoint is at ``/mcp`` on this port)."""
+    """Bind port for uvicorn (both MCP endpoints, ``/mcp`` and ``/feedback/mcp``, are on this port)."""
 
     try:
         return int(_env("MCP_PORT", "9000"))
@@ -124,7 +128,7 @@ def stateless_http() -> bool:
 # WHY THIS EXISTS: FastMCP auto-enables DNS-rebinding protection with a
 # **localhost-only** allowlist whenever its internal `host` is 127.0.0.1/localhost
 # (the default). That default returns **`421 Invalid Host header`** to EVERY
-# non-localhost caller — both the public edge host `knowledge.hi2vi.com` and the
+# non-localhost caller — both the public edge host `hi2vi.com` and the
 # internal `knowledge-mcp:9000` dual-reachability path — before the MCP handler
 # even runs. `server.py` therefore passes an EXPLICIT `TransportSecuritySettings`
 # built from these readers, which keeps the protection ON but widens the allowlist
@@ -133,8 +137,8 @@ def stateless_http() -> bool:
 # MATCHING RULE (mcp==1.28.1, `mcp/server/transport_security.py:_validate_host`):
 # a Host is allowed on an **EXACT** string match OR a `base:*` wildcard matched as
 # `host.startswith(base + ":")`. Consequences that are easy to get wrong:
-#   - a **port-less** host like `knowledge.hi2vi.com` needs an **EXACT** entry — a
-#     `knowledge.hi2vi.com:*` pattern would NOT match it.
+#   - a **port-less** host like `hi2vi.com` needs an **EXACT** entry — a
+#     `hi2vi.com:*` pattern would NOT match it.
 #   - an internal `knowledge-mcp:9000` (has a port) is covered by `knowledge-mcp:*`.
 # Origins: an ABSENT Origin passes (server-side agents send none), so origins are
 # secondary; the public origin is still configured for browser-based MCP clients.
@@ -149,7 +153,7 @@ def allowed_hosts() -> list[str]:
 
     Localhost defaults **plus** ``MCP_ALLOWED_HOSTS`` (comma-separated). Read at
     call time (12-factor). Remember the matching rule above: a port-less public
-    host needs an EXACT entry (e.g. ``knowledge.hi2vi.com``); a host that carries a
+    host needs an EXACT entry (e.g. ``hi2vi.com``); a host that carries a
     port needs a ``base:*`` wildcard (e.g. ``knowledge-mcp:*``).
     """
 

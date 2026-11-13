@@ -11,8 +11,8 @@ path-agnostic verifier (not a unit test; the terse behavioral tests live in
     # local direct path (a legacy-mode api + this mcp server; see CONTRACT.md):
     python mcp-server/scripts/e2e_smoke.py --url http://localhost:9000/mcp --key <bearer>
 
-    # public path, operator post-deploy with a real hi2vi vk_ key:
-    python mcp-server/scripts/e2e_smoke.py --url https://knowledge.hi2vi.com/mcp --key vk_...
+    # public path, operator post-deploy with a real vk_ key:
+    python mcp-server/scripts/e2e_smoke.py --url https://hi2vi.com/mcp --key vk_...
 
 What it checks:
   1. initialize()                 -> handshake OK, serverInfo captured (SDK version).
@@ -20,6 +20,11 @@ What it checks:
   3. call_tool("search", ...)     -> >= 1 grounded hit, each shaped
                                      {title, snippet, url, id, rel_path}.
   4. call_tool("fetch_document")  -> the first hit's `id` returns full `markdown`.
+  5. the Feedback endpoint (`--feedback-url`, default: `--url` with `/mcp` replaced
+     by `/feedback/mcp`): initialize() and list_tools() with no key, the tool list
+     exactly `capture_feedback`. Only with `--capture` (it WRITES one event, marked
+     `source.product = "e2e-smoke"`): call_tool("capture_feedback") with `--key`
+     (or `--capture-key`) -> an accepted receipt. `--feedback-only` skips 1-4.
 
 Auth (the one genuinely uncertain client API — see CONTRACT.md "Auth"): in
 `mcp==1.28.1` the transport's `headers=`/`auth=` params are DEPRECATED and IGNORED
@@ -51,7 +56,7 @@ from mcp.shared._httpx_utils import McpHttpClientFactory, create_mcp_http_client
 SEARCH_HIT_KEYS = {"title", "snippet", "url", "id", "rel_path"}
 
 
-def _bearer_factory(key: str) -> McpHttpClientFactory:
+def _bearer_factory(key: str | None) -> McpHttpClientFactory:
     """A `McpHttpClientFactory` that injects `Authorization: Bearer <key>`.
 
     Merges the bearer into whatever headers the transport passes (rather than a
@@ -65,7 +70,8 @@ def _bearer_factory(key: str) -> McpHttpClientFactory:
         auth: httpx.Auth | None = None,
     ) -> httpx.AsyncClient:
         merged = dict(headers or {})
-        merged["Authorization"] = f"Bearer {key}"
+        if key:
+            merged["Authorization"] = f"Bearer {key}"
         return create_mcp_http_client(headers=merged, timeout=timeout, auth=auth)
 
     return factory
@@ -150,6 +156,47 @@ async def run(url: str, key: str, query: str, failures: list[str]) -> str:
     )
 
 
+async def run_feedback(url: str, capture_key: str | None, failures: list[str]) -> str:
+    """The Feedback endpoint: a keyless handshake and tool list, then (only when a
+    capture key is given, i.e. ``--capture``) one real capture. Returns a summary."""
+
+    async with streamablehttp_client(url, httpx_client_factory=_bearer_factory(None)) as (
+        read_stream,
+        write_stream,
+        _get_session_id,
+    ):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+            tools = sorted(t.name for t in (await session.list_tools()).tools)
+    if tools != ["capture_feedback"]:
+        failures.append(f"feedback list_tools: expected exactly ['capture_feedback'], got {tools}")
+        return "feedback tool discovery failed"
+    if capture_key is None:
+        return f"feedback {url}: initialize + list_tools (no key) ok, capture skipped (no --capture)"
+
+    async with streamablehttp_client(url, httpx_client_factory=_bearer_factory(capture_key)) as (
+        read_stream,
+        write_stream,
+        _get_session_id,
+    ):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+            res = await session.call_tool(
+                "capture_feedback",
+                {
+                    "message": "e2e smoke capture",
+                    "source": {"product": "e2e-smoke", "integration": "mcp"},
+                },
+            )
+    if res.isError:
+        failures.append(f"call_tool capture_feedback: tool error: {_error_text(res)}")
+        return "capture errored"
+    receipt = res.structuredContent or {}
+    if receipt.get("status") != "accepted" or not receipt.get("request_id"):
+        failures.append(f"capture_feedback: unexpected receipt {receipt}")
+    return f"feedback {url}: capture accepted, request_id={receipt.get('request_id')}"
+
+
 def _error_text(result: Any) -> str:
     for block in getattr(result, "content", []) or []:
         text = getattr(block, "text", None)
@@ -160,17 +207,38 @@ def _error_text(result: Any) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--url", default="http://localhost:9000/mcp", help="the MCP endpoint (…/mcp)")
-    parser.add_argument("--key", required=True, help="the bearer forwarded for corpus scoping (vk_… or master)")
+    parser.add_argument("--url", default="http://localhost:9000/mcp", help="the Library MCP endpoint (…/mcp)")
+    parser.add_argument("--key", help="the bearer forwarded for corpus scoping (vk_… or master)")
     parser.add_argument("--query", default="knowledge", help="the search query (default: 'knowledge')")
+    parser.add_argument("--feedback-url", help="the Feedback MCP endpoint (default: --url's /mcp → /feedback/mcp)")
+    parser.add_argument("--capture", action="store_true", help="also call capture_feedback (WRITES one event)")
+    parser.add_argument("--capture-key", help="the key for --capture (a capture or full key; default --key)")
+    parser.add_argument("--feedback-only", action="store_true", help="skip the Library checks (no --key needed)")
     args = parser.parse_args()
 
+    feedback_url = args.feedback_url or (
+        args.url[: -len("/mcp")] + "/feedback/mcp" if args.url.endswith("/mcp") else args.url
+    )
+    capture_key = (args.capture_key or args.key) if args.capture else None
+    if not args.feedback_only and not args.key:
+        parser.error("--key is required unless --feedback-only")
+    if args.capture and not capture_key:
+        parser.error("--capture needs --capture-key or --key")
+
     failures: list[str] = []
+    summaries: list[str] = []
+    if not args.feedback_only:
+        try:
+            summaries.append(asyncio.run(run(args.url, args.key, args.query, failures)))
+        except Exception as exc:  # noqa: BLE001 — a smoke reports any failure as a clean FAIL line
+            failures.append(f"E2E transport/protocol error against {args.url}: {type(exc).__name__}: {exc}")
+            summaries.append("aborted (exception)")
     try:
-        summary = asyncio.run(run(args.url, args.key, args.query, failures))
-    except Exception as exc:  # noqa: BLE001 — a smoke reports any failure as a clean FAIL line
-        failures.append(f"E2E transport/protocol error against {args.url}: {type(exc).__name__}: {exc}")
-        summary = "aborted (exception)"
+        summaries.append(asyncio.run(run_feedback(feedback_url, capture_key, failures)))
+    except Exception as exc:  # noqa: BLE001
+        failures.append(f"E2E transport/protocol error against {feedback_url}: {type(exc).__name__}: {exc}")
+        summaries.append("feedback aborted (exception)")
+    summary = "; ".join(summaries)
 
     if failures:
         print(f"FAIL — {len(failures)} MCP E2E check(s) failed ({args.url}):")

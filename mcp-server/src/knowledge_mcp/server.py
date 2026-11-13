@@ -1,6 +1,7 @@
-"""The FastMCP server: the ``search`` and ``fetch_document`` tools, their result
-mapping, the ``/healthz`` route, and the assembled Streamable-HTTP ASGI ``app``.
-Both tools register before ``app`` is built, so both are served on the one endpoint.
+"""The FastMCP servers: the Library's ``search`` and ``fetch_document`` tools at
+``/mcp``, their result mapping, the ``/healthz`` route, the write-only Feedback
+endpoint at ``/feedback/mcp`` (its one tool lives in ``feedback.py``), and the
+assembled Streamable-HTTP ASGI ``app`` that serves both from one process.
 
 Transport decision (durable): official ``mcp`` SDK (FastMCP) with the
 **Streamable-HTTP** transport — ``mcp.streamable_http_app()`` yields a Starlette
@@ -19,15 +20,18 @@ workaround was needed — the SDK exposes the request directly.
 
 from __future__ import annotations
 
+import contextlib
+from collections.abc import AsyncIterator
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
+from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from . import config, upstream
+from . import config, feedback, upstream
 
 # Pass an EXPLICIT transport_security so FastMCP does NOT fall into its
 # localhost-only auto-branch (which 421s every non-localhost caller — the public
@@ -363,6 +367,49 @@ async def healthz(_request: Request) -> JSONResponse:
     )
 
 
-# The assembled Streamable-HTTP ASGI app: MCP endpoint at /mcp + GET /healthz.
-# `custom_route` and `tool` register before this build, so both are included.
-app = mcp.streamable_http_app()
+# The write-only Feedback endpoint: a second FastMCP with the one `capture_feedback`
+# tool, at `/feedback/mcp`, under the same transport-security allowlists and the
+# same stateless flag as the Library's.
+feedback_mcp = FastMCP(
+    config.FEEDBACK_SERVER_NAME,
+    instructions=feedback.INSTRUCTIONS,
+    streamable_http_path=feedback.FEEDBACK_MCP_PATH,
+    stateless_http=config.stateless_http(),
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=config.allowed_hosts(),
+        allowed_origins=config.allowed_origins(),
+    ),
+)
+feedback.register(feedback_mcp)
+
+
+def build_app() -> Starlette:
+    """Assemble the one ASGI app: the Library at /mcp (+ GET /healthz) and Feedback
+    at /feedback/mcp.
+
+    Each SDK app contributes plain ``Route``s on exact paths (never a ``Mount``, which
+    would redirect the bare path to a trailing slash); their own lifespans are
+    replaced by one that runs both session managers. The SDK creates a session
+    manager lazily and lets it ``run()`` only once, so each build starts from fresh
+    managers and its lifespan runs the ones *this* build's routes hold: a test can
+    start a built app without spending the module-level ``app``'s managers.
+    """
+
+    mcp._session_manager = None
+    feedback_mcp._session_manager = None
+    library_app = mcp.streamable_http_app()
+    feedback_app = feedback_mcp.streamable_http_app()
+    managers = (mcp.session_manager, feedback_mcp.session_manager)
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_app: Starlette) -> AsyncIterator[None]:
+        async with managers[0].run(), managers[1].run():
+            yield
+
+    return Starlette(routes=[*library_app.routes, *feedback_app.routes], lifespan=lifespan)
+
+
+# The assembled Streamable-HTTP ASGI app `main.py` serves. Tools and custom routes
+# register before this build, so all are included.
+app = build_app()
