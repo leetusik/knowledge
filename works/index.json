@@ -310,17 +310,18 @@
       "id": "P41-sr",
       "name": "Listen: a free AI voice reader",
       "objective": "Add a Listen control to the web reader that reads a document, or a whole book chapter after chapter, aloud in English or Korean with a free AI voice (a free API or a free model, chosen by ear from samples), playable on the operator's phone with the screen off; it skips quizzes, code and source lists, and reads a visual's text alternative instead of skipping it when the document has one.",
-      "status": "in_progress",
+      "status": "done",
       "order": 23,
       "path": "works/phases/active/P41-sr",
-      "review_status": "changes_requested",
-      "current_slice": "P41-sr.REVIEW",
+      "review_status": "pass",
+      "current_slice": null,
       "slice_count": 21,
-      "done_slice_count": 20
+      "done_slice_count": 21,
+      "consolidation": "pending"
     }
   ],
-  "deferred_open_count": 88,
+  "deferred_open_count": 89,
   "deferred_promoted_count": 6,
   "deferred_dropped_count": 20,
-  "last_rebuilt_at": "2026-11-12T03:09:42+09:00"
+  "last_rebuilt_at": "2026-11-13T10:33:59+09:00"
 }

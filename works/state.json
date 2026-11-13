@@ -1,8 +1,8 @@
 {
-  "current_phase": "P41-sr",
-  "current_slice": "P41-sr.REVIEW",
+  "current_phase": null,
+  "current_slice": null,
   "next_slice": null,
-  "waiting_on_operator": "P41-sr.REVIEW",
-  "mode": "waiting",
-  "updated_at": "2026-11-12T03:10:06+09:00"
+  "waiting_on_operator": null,
+  "mode": "idle",
+  "updated_at": "2026-11-13T10:33:59+09:00"
 }

@@ -1,0 +1,11 @@
+{
+  "id": "D111-2q",
+  "title": "Listen: a short first part so playback starts in under a minute",
+  "status": "deferred",
+  "source": "P41-sr.REVIEW OQ4",
+  "reason": "Review round 1 found that nothing plays for about 5 minutes after Listen is pressed on a new document, because part 1 is a full ~10-minute part (OQ4). The operator passed the review as is on 2026-11-13, so the fix was not cut",
+  "trigger": "The operator wants Listen to start sooner on a new document",
+  "created_at": "2026-11-13T10:33:45+09:00",
+  "promoted_to": null,
+  "dropped_reason": null
+}

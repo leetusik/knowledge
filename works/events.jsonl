@@ -2006,3 +2006,12 @@
 {"ts": "2026-11-12T03:09:42+09:00", "type": "executor_dispatched", "slice": "P41-sr.F4", "phase": "P41-sr", "kind": "fix", "risk": "high", "attempt": 1, "verdict": "done", "note": null}
 {"ts": "2026-11-12T03:09:42+09:00", "type": "slice_status_changed", "slice": "P41-sr.F4", "old_status": "in_progress", "new_status": "done"}
 {"ts": "2026-11-12T03:10:06+09:00", "type": "slice_status_changed", "slice": "P41-sr.REVIEW", "old_status": "changes_requested", "new_status": "pending", "stop_kind": "decision"}
+{"ts": "2026-11-13T10:33:45+09:00", "type": "slice_status_changed", "slice": "P41-sr.REVIEW", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-11-13T10:33:45+09:00", "type": "deferred_created", "deferred": "D111-2q", "source": "P41-sr.REVIEW OQ4"}
+{"ts": "2026-11-13T10:33:54+09:00", "type": "phase_status_changed", "phase": "P41-sr", "old_status": "in_progress", "new_status": "pending"}
+{"ts": "2026-11-13T10:33:54+09:00", "type": "acceptance_opened", "phase": "P41-sr"}
+{"ts": "2026-11-13T10:33:54+09:00", "type": "phase_status_changed", "phase": "P41-sr", "old_status": "pending", "new_status": "in_progress"}
+{"ts": "2026-11-13T10:33:54+09:00", "type": "acceptance_cleared", "phase": "P41-sr"}
+{"ts": "2026-11-13T10:33:59+09:00", "type": "slice_status_changed", "slice": "P41-sr.REVIEW", "old_status": "in_progress", "new_status": "done"}
+{"ts": "2026-11-13T10:33:59+09:00", "type": "phase_reviewed", "phase": "P41-sr", "verdict": "pass", "reviewer": "operator"}
+{"ts": "2026-11-13T10:33:59+09:00", "type": "phase_consolidation_owed", "phase": "P41-sr", "notes": 31}
