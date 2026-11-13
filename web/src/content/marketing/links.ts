@@ -10,7 +10,7 @@
 // Install section installs the CLI, and the plugin README is the Claude Code
 // connection. The deferred Agent Retrieval API (P15) has no waitlist form yet, so
 // "Join the waitlist" points at the repo home to follow the roadmap.
-const REPO = "https://github.com/leetusik/knowledge";
+const REPO = "https://github.com/leetusik/platform";
 
 export const LINKS = {
   signup: "/signup",

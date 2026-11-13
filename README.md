@@ -26,7 +26,7 @@ install paths; the web app needs no install — just sign up.
 This repo's knowledge feature ships as a Claude Code plugin, so any Claude Code
 user can spin up their own version. From inside Claude Code:
 
-    /plugin marketplace add leetusik/knowledge
+    /plugin marketplace add leetusik/platform
     /plugin install knowledge@knowledge
 
 Then run `/knowledge:setup` once — pick **Connect** to post to the hosted KB
@@ -55,7 +55,7 @@ visiting the website or installing the plugin:
     knowledge save note.md --tag python --tag testing
 
 The installer bootstraps [`uv`](https://docs.astral.sh/uv/) if needed, then runs
-the canonical `uv tool install git+https://github.com/leetusik/knowledge#subdirectory=cli`
+the canonical `uv tool install git+https://github.com/leetusik/platform#subdirectory=cli`
 (also usable directly). `init` prints a `web login:` line — the CLI and the web
 app share one account, so the same email + password log into both. It writes the
 same `~/.config/knowledge-kb/config.json` the plugin reads, so all three (plugin,

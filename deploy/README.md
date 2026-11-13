@@ -57,7 +57,7 @@ placement path only.
 - **DNS is already live.** `knowledge.hi2vi.com` resolves to the same Cloudflare
   proxy IPs as `hi2vi.com` (see §4).
 - Secrets provisioned per **[`SECRETS.md`](SECRETS.md)**: a strong `KB_API_TOKEN`,
-  an SSH **deploy key** registered on `leetusik/knowledge` **with write access**,
+  an SSH **deploy key** registered on `leetusik/platform` **with write access**,
   and (optional) a `GOOGLE_API_KEY`.
 
 ---
@@ -73,14 +73,20 @@ would fail with a missing-env-file error.
 # 1a. Clone into /opt/knowledge, owned by opc.
 sudo mkdir -p /opt/knowledge
 sudo chown opc:opc /opt/knowledge
-git clone https://github.com/leetusik/knowledge.git /opt/knowledge   # public repo — no credential needed to READ
+git clone https://github.com/leetusik/platform.git /opt/knowledge   # public repo — no credential needed to READ
 cd /opt/knowledge
 
 # The PUSH path must be SSH (that is what the deploy key authenticates), so point
 # origin at the SSH form. The container pushes; the host user never needs the key.
-git remote set-url origin git@github.com:leetusik/knowledge.git
-git remote -v        # confirm: origin  git@github.com:leetusik/knowledge.git  (fetch AND push)
+git remote set-url origin git@github.com:leetusik/platform.git
+git remote -v        # confirm: origin  git@github.com:leetusik/platform.git  (fetch AND push)
 ```
+
+> The repository was renamed from `leetusik/knowledge` to `leetusik/platform` on
+> 2026-11-13. The box's existing checkout still has the old SSH address, which
+> GitHub redirects, so pushes and fetches keep working; re-point it with
+> `git remote set-url origin git@github.com:leetusik/platform.git` at the next
+> change to the deploy machinery.
 
 > The api container runs as **root** and commits/pushes into this clone through the
 > `/repo` bind mount (the image bakes `git config --system safe.directory /repo`),
@@ -335,7 +341,7 @@ it goes live fresh-on-write the instant the api writes it.)
 
 ### Usage
 
-- **Trigger:** GitHub → `leetusik/knowledge` → Actions → **Production Deploy** → **Run
+- **Trigger:** GitHub → `leetusik/platform` → Actions → **Production Deploy** → **Run
   workflow** (on `main`). Or: `gh workflow run deploy-production.yml --ref main`.
 - It is **`workflow_dispatch`-only** and **main-guarded** — the agent's constant
   publish-on-write pushes to `main` never trigger it — and serialized by
@@ -362,7 +368,7 @@ it goes live fresh-on-write the instant the api writes it.)
 - **Watch it:** `gh run watch` or the Actions run page. On failure, download the
   artifact (`compose ps` + per-service logs) to diagnose, fix on `main`, and re-dispatch.
 
-### 6.1 The runner secret set (one-time, on `leetusik/knowledge`)
+### 6.1 The runner secret set (one-time, on `leetusik/platform`)
 
 The Action needs a **dedicated** SSH key to reach `opc@box` — provisioned per
 **[`SECRETS.md`](SECRETS.md) §2b** as three repo Actions secrets:

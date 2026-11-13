@@ -13,7 +13,7 @@
 set -euo pipefail
 
 UV_BIN_DIR="$HOME/.local/bin"
-INSTALL_TARGET="git+https://github.com/leetusik/knowledge#subdirectory=cli"
+INSTALL_TARGET="git+https://github.com/leetusik/platform#subdirectory=cli"
 
 say() { printf '==> %s\n' "$1"; }
 die() { printf 'error: %s\n' "$1" >&2; exit 1; }

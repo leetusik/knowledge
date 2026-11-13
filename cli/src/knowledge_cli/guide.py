@@ -34,7 +34,7 @@ import argparse
 # with the local `uv tool install ./cli --reinstall`. Kept as a named constant so
 # the test can assert the exact string ships without hard-coding it twice.
 INSTALL_COMMAND = (
-    "uv tool install git+https://github.com/leetusik/knowledge#subdirectory=cli"
+    "uv tool install git+https://github.com/leetusik/platform#subdirectory=cli"
 )
 
 GUIDE = f"""\
