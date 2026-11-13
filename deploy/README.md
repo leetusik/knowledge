@@ -12,11 +12,13 @@ first-bootstrap steps that run **on the box**; §6 is the repeatable redeploy.
 
 Artifacts this runbook applies:
 
-- **`compose.prod.yml`** (repo root) — the box compose project. As of **P14** it ships
+- **`compose.prod.yml`** (repo root) — the box compose project. It ships
   **`api`** (`knowledge-api`), **`web`** (`knowledge-web`, the Next.js standalone app
-  built from `web/Dockerfile`), and **`postgres`** (`knowledge-postgres`, the P10
-  control-plane store). The mkdocs `site` service was **removed** in P14.S3. All are
-  unpublished-port, edge-only.
+  built from `web/Dockerfile`), **`mcp`** (`knowledge-mcp`, `/mcp` and `/feedback/mcp`)
+  and **`postgres`** (`knowledge-postgres`, the P10 control-plane store), with two named
+  volumes: `pgdata` (Postgres) and `knowledge-feedback-attachments` (Feedback's
+  uploaded attachments, §2). The mkdocs `site` service was **removed** in P14.S3. All
+  are unpublished-port, edge-only.
 - **The three edge vhosts** (§3), landed through the edge repo by the operator:
   - **`deploy/hi2vi.conf`** — the serving vhost, on the apex `hi2vi.com`. Three
     upstreams: the control plane (`/api/*`, `/auth/*`, `/app/*`, `= /healthz` →
@@ -145,11 +147,19 @@ ls -l /opt/knowledge/.env     # expect: -rw------- 1 opc opc
 > `web` service reads **only `SESSION_SECRET`** from `.env` (interpolated, not
 > `env_file:`), so the api's `KB_API_TOKEN` never reaches the web container.
 
+> **Optional: Feedback's owner alert mail.** The api reads five more names from `.env`
+> (through `env_file:`, so `compose.prod.yml` lists them only in a comment):
+> `KB_SMTP_HOST`, `KB_SMTP_PORT`, `KB_SMTP_USER`, `KB_SMTP_PASSWORD` and
+> `KB_SMTP_FROM`. With no host, or no sender (`KB_SMTP_FROM`, else `KB_SMTP_USER`),
+> no alert mail goes out and everything else works. `KB_SMTP_PASSWORD` is the secret (`SECRETS.md` §4b); add the lines on
+> the box with an editor, never through the repo, then recreate the api.
+
 Read the token back only when you actually need it (e.g. to hand it to the hi2vi
 side as `KNOWLEDGE_API_TOKEN`): `sudo grep '^KB_API_TOKEN=' /opt/knowledge/.env`.
 
 The non-secret box config (`KB_GIT_PUSH=true`, `KB_REQUIRE_READ_AUTH=true`,
-`KB_PUBLIC_BASE_URL`, `TZ`, `KB_ROOT`, `KB_STARTUP_REINDEX=true`) is baked into
+`KB_PUBLIC_BASE_URL=https://hi2vi.com`, `TZ`, `KB_ROOT`, `KB_STARTUP_REINDEX=true`,
+`KB_FEEDBACK_ATTACHMENTS_DIR=/data/feedback-attachments`) is baked into
 `compose.prod.yml` — do not duplicate it in `.env`.
 
 One more non-secret knob is **not** set there and defaults safely: **`KB_GIT_TIMEOUT_S`**
@@ -170,8 +180,8 @@ cd /opt/knowledge
 # (documented in archive/workspace/docs/current/operations.md). Carry the flag.
 COMPOSE_BAKE=false docker compose -f compose.prod.yml up -d --build
 
-# P14: this builds + brings up the api and the web app (and postgres). Expect Up (healthy):
-docker compose -f compose.prod.yml ps            # expect: knowledge-api + knowledge-web + knowledge-postgres  Up (healthy)
+# This builds + brings up the api, the web app and the MCP server (and postgres). Expect Up (healthy):
+docker compose -f compose.prod.yml ps            # expect: knowledge-api + knowledge-web + knowledge-mcp + knowledge-postgres  Up (healthy)
 docker compose -f compose.prod.yml logs -f api   # watch the startup reindex line
 # knowledge-web builds the Next standalone image (web/Dockerfile) on first up; its
 # healthcheck has a ~20s start_period for the server's cold boot. The web app depends
@@ -183,11 +193,23 @@ docker compose -f compose.prod.yml rm -sf site   # retire the mkdocs knowledge-s
 ```
 
 > **`KB_PUBLIC_BASE_URL` caveat (P14).** The api's 201 `url` field is
-> `https://knowledge.hi2vi.com/<project>/<date>-<slug>/`, which the retired mkdocs site
-> used to render. The Next app has no such route, so that link no longer resolves to a
-> page — **cosmetic only** (docs are read by id via the api/app, never this link).
-> `KB_PUBLIC_BASE_URL` is left unchanged in `compose.prod.yml`; repointing or degrading
-> it is deferred to a future docs effort / the prod cutover.
+> `https://hi2vi.com/<project>/<date>-<slug>/`, a path the retired mkdocs site used to
+> render. The Next app has no such route, so that link does not resolve to a page —
+> **cosmetic only** (docs are read by id via the api/app, never this link). Only its
+> origin moved to the apex; repointing or degrading the path is left to a future docs
+> effort.
+
+**Feedback attachments live on a named volume.** The api mounts
+`knowledge-feedback-attachments` (Docker names it `knowledge_knowledge-feedback-attachments`,
+after the compose project) at `/data/feedback-attachments`, which
+`KB_FEEDBACK_ATTACHMENTS_DIR` names. The first `up` creates it empty; it survives every
+recreate and stays out of the git clone. It is user data: back it up with `pgdata`.
+Assert it once after the first deploy that carries it:
+
+```bash
+docker compose -f compose.prod.yml exec api sh -c 'echo "$KB_FEEDBACK_ATTACHMENTS_DIR"; ls -ld /data/feedback-attachments'
+# expect: /data/feedback-attachments, then a directory line
+```
 
 The image must contain **`ssh`** — `git` alone cannot push over an SSH remote, so
 publish-on-write depends on it. Assert it once after the build:
@@ -320,7 +342,10 @@ diff <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' /tmp/live-knowledge.conf) \
 
 1. **The app first.** The platform is deployed with its apex configuration and
    `knowledge-api`, `knowledge-web` and `knowledge-mcp` are healthy on
-   `changple_shared_network`.
+   `changple_shared_network`. This one Production Deploy runs before the apex vhost
+   exists, so dispatch it with `smoke_host=knowledge.hi2vi.com` (§6): the old vhost
+   still proxies that host to the same containers, and the MCP server still accepts it
+   (`MCP_ALLOWED_HOSTS` keeps it until the redirect host is live).
 2. **Then `hi2vi.conf` alone** (one loop run). Check the apex (§5) before going on:
    the old hi2vi-web site stops being served here.
 3. **Then `knowledge.conf` and `vocky.conf`** (a second loop run). The redirect hosts
@@ -329,11 +354,11 @@ diff <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' /tmp/live-knowledge.conf) \
 4. Retire the old containers (vocky's, hi2vi-web) only after the redirects are
    confirmed, so a rollback still has something to serve.
 
-> **The Production Deploy re-applies `knowledge.conf` (§6, step 4).** Until that step
-> is changed, a dispatch from a `main` that holds the redirect-only `knowledge.conf`
-> installs it into the edge on its own — before step 2 above, it would redirect the
-> Library to the apex too early, and it never installs `hi2vi.conf`. Change that step
-> before these files reach `main`, or do not dispatch the deploy until the cutover.
+> **The Production Deploy installs no vhost.** It builds, migrates and health-gates
+> the containers and stops there; it never writes under `/home/opc/edge` and never
+> runs the edge's `deploy.sh`. A dispatch from a `main` that holds these three files
+> leaves the live edge exactly as it was: each vhost goes live only when the operator
+> lands it through the edge repo (§3a), in the order above.
 
 ### 3d. Rollback
 
@@ -422,15 +447,21 @@ it there, not as a bring-up smoke step.
 
 ## 6. Automated redeploy — the `Production Deploy` GitHub Action (P9)
 
-After the one-time bring-up (§0–§5), a **code/image/vhost** change reaches production
+After the one-time bring-up (§0–§5), a **code/image/compose** change reaches production
 through a **manually dispatched** GitHub Action — you no longer SSH in and run
-`docker compose … up --build` + the edge apply by hand. (A **doc** does not need this:
-it goes live fresh-on-write the instant the api writes it.)
+`docker compose … up --build` by hand. A **vhost** change does not ride it: the vhosts
+land through the edge repo, by the operator (§3a). (A **doc** does not need this
+either: it goes live fresh-on-write the instant the api writes it.)
 
 ### Usage
 
 - **Trigger:** GitHub → `leetusik/platform` → Actions → **Production Deploy** → **Run
   workflow** (on `main`). Or: `gh workflow run deploy-production.yml --ref main`.
+- **Input `smoke_host`** — the host the external smoke runs against: `hi2vi.com`
+  (the default) or `knowledge.hi2vi.com`, nothing else (the preflight and the smoke
+  step both refuse any other value). Leave it at the default, except for the
+  cutover's first deploy (§3c step 1), which runs before the apex vhost lands:
+  `gh workflow run deploy-production.yml --ref main -f smoke_host=knowledge.hi2vi.com`.
 - It is **`workflow_dispatch`-only** and **main-guarded** — the agent's constant
   publish-on-write pushes to `main` never trigger it — and serialized by
   `concurrency: knowledge-deploy`.
@@ -439,23 +470,23 @@ it goes live fresh-on-write the instant the api writes it.)
      `opc@140.245.64.173` with the `ORACLE_SSH_*` secrets (§6.1) and `scp`s + invokes the
      on-box gate with `TARGET_SHA` / `REPO_PATH=/opt/knowledge`.
   2. **`deploy/oracle-production-deploy-remote.sh`** (on-box gate) asserts inputs, hands to
-     `deploy/deploy.sh`, then re-applies the edge vhost, then collects artifacts. It runs
-     **no authoritative git** (that is in-container — see below).
+     `deploy/deploy.sh`, then collects artifacts and reports. It runs **no authoritative
+     git** (that is in-container — see below) and **never touches the edge** (no vhost
+     install, no edge `deploy.sh`).
   3. **`deploy/deploy.sh`** reconciles the clone **on `main`** (fetch + fail-closed
      ancestor gate + ff/rebase; **never** detach/reset/force) inside a **one-shot root
      container reusing the `api` service** (so git authenticates over SSH against the
-     root-owned `.git`), then `COMPOSE_BAKE=false docker compose -f compose.prod.yml up -d
-     --build` brings up **both** services and **health-gates both**. On failure it captures
-     `compose ps`/`logs` and exits non-zero — **fix-forward, no rollback** (the app runs
-     from the bind mount, so an image flip can't revert `server/` code).
-  4. Edge re-apply (in the gate, after a healthy deploy): `install` `knowledge.conf` into
-     `/home/opc/edge/conf.d/` → the edge's own `./deploy.sh` (`nginx -t` gate → graceful
-     reload; a failed test fails the deploy loudly, reloads nothing). Since the move to
-     the apex, `knowledge.conf` is the **redirect-only** host and the serving vhost is
-     `hi2vi.conf`, which lands through the edge repo (§3): see the warning in §3c
-     before dispatching from a `main` that holds them.
-  5. **External smoke:** the workflow curls `https://knowledge.hi2vi.com/healthz` **and**
-     `/` (both must 200) → uploads `production-deploy-artifacts` (14 d).
+     root-owned `.git`), then builds the images, runs `alembic upgrade head`,
+     force-recreates the api and brings up web + mcp, **health-gating all three**. On
+     failure it captures `compose ps`/`logs` and exits non-zero — **fix-forward, no
+     rollback** (the app runs from the bind mount, so an image flip can't revert
+     `server/` code).
+  4. **External smoke** on `https://<smoke_host>`: `/healthz` and `/` must answer 200,
+     and `/mcp` must answer as a routed MCP server (a bare GET gets the server's own 406
+     with a JSON-RPC body; a 421 means the host is missing from `MCP_ALLOWED_HOSTS`, a
+     502/504 that the edge does not reach `knowledge-mcp`). On `hi2vi.com` it checks
+     `/feedback/mcp` the same way (the old host's vhost does not route it). Then it
+     uploads `production-deploy-artifacts` (14 d).
 - **Watch it:** `gh run watch` or the Actions run page. On failure, download the
   artifact (`compose ps` + per-service logs) to diagnose, fix on `main`, and re-dispatch.
 

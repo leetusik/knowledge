@@ -1,9 +1,10 @@
-# Production deployment for https://knowledge.hi2vi.com (P8.S3).
+# Production deployment for https://hi2vi.com (P8.S3).
 #
 # This is the OCI-box compose project — NOT the local dev stack (compose.yml).
-# It ships `api` (the document API + CLI control plane), `web` (the Next.js
-# standalone app — the public landing at `/`, the authenticated UI, and the
-# `/api/auth/*` BFF, P14.S3), and `postgres` (the control-plane datastore, P10).
+# It ships `api` (the document API + CLI control plane, and Feedback's REST),
+# `web` (the Next.js standalone app — the public landing at `/`, the
+# authenticated UI, and the `/api/auth/*` BFF, P14.S3), `mcp` (MCP over HTTP:
+# `/mcp` and `/feedback/mcp`), and `postgres` (the control-plane datastore, P10).
 # The mkdocs `site` viewer that used to serve `/` was RETIRED in P14 (its content
 # lives on as tenant #1's knowledge in the app + api; nothing is lost).
 # The box runs the API from its
@@ -13,9 +14,11 @@
 # Reached by the box's dedicated edge (compose project `edge` at /home/opc/edge,
 # container `edge-nginx`) over `changple_shared_network`, BY CONTAINER NAME — NO
 # public host-port publish. See deploy/README.md for the bring-up runbook and
-# deploy/knowledge.conf for the vhost it drops onto the edge. NO SECRETS live here:
-# KB_API_TOKEN + GOOGLE_API_KEY come from the box's gitignored `.env`; the deploy
-# key + known_hosts are bind-mounted from the box.
+# deploy/hi2vi.conf for the apex vhost that serves it (landed on the edge through
+# the edge repo, by the operator; the Production Deploy installs no vhost). NO
+# SECRETS live here: KB_API_TOKEN, GOOGLE_API_KEY and the optional KB_SMTP_* come
+# from the box's gitignored `.env`; the deploy key + known_hosts are bind-mounted
+# from the box.
 
 services:
   api:
@@ -31,6 +34,10 @@ services:
       # /opt/knowledge-secrets holds `knowledge_deploy_key` (private half of the
       # GitHub deploy key, chmod 600) + `known_hosts` (pinned github.com host key).
       - /opt/knowledge-secrets:/run/secrets:ro
+      # Feedback attachments (uploaded images): a named volume, so they survive a
+      # recreate and stay out of the git clone. KB_FEEDBACK_ATTACHMENTS_DIR below
+      # points the api at it (server/feedback/storage.py).
+      - knowledge-feedback-attachments:/data/feedback-attachments
     env_file:
       # Box-only, gitignored. Holds the SECRETS by name (no values in the repo):
       #   KB_API_TOKEN=<generated>          # bearer for writes + (with the flag) reads
@@ -38,6 +45,13 @@ services:
       #   POSTGRES_PASSWORD=<generated>     # accounts-plane Postgres password
       #   KB_OPERATOR_EMAIL=<operator email> # pins KB_API_TOKEN -> tenant #1 (P10)
       #   KB_OPERATOR_PASSWORD=<operator pw> # seeds the operator user (P10.S6 seed)
+      # Optional — Feedback's owner alert mail (no host, or no sender = no alert
+      # mail; deploy/SECRETS.md §4b):
+      #   KB_SMTP_HOST=<smtp host>
+      #   KB_SMTP_PORT=<smtp port>           # default 587
+      #   KB_SMTP_USER=<smtp user>
+      #   KB_SMTP_PASSWORD=<smtp password>   # the secret of the five
+      #   KB_SMTP_FROM=<sender address>      # default: KB_SMTP_USER
       # Provisioned in P8.S4's runbook. `docker compose config` needs this file
       # to exist (a dummy one suffices for local validation).
       - .env
@@ -70,13 +84,16 @@ services:
       KB_REQUIRE_READ_AUTH: "true"
       # Origin for the 201 `url` field (server/main.py builds {base}/{project}/
       # {date}-{slug}/). config.py rstrips any trailing slash, so give none here.
-      # ⚠ CAVEAT (P14.S3, left UNCHANGED deliberately): the mkdocs `site` that used
-      # to serve that path at `/` is retired, so this `url` no longer resolves to a
-      # rendered page (the Next app has no such route). COSMETIC ONLY — docs are read
-      # by id via the api/app, never this link. Repointing it (to the public docs/
-      # GitHub-Pages track, or degrading it cleanly) is deferred to the operator's
-      # prod cutover / a future docs effort; S3 does not change it.
-      KB_PUBLIC_BASE_URL: https://knowledge.hi2vi.com
+      # ⚠ CAVEAT (P14.S3): the mkdocs `site` that used to serve that path at `/` is
+      # retired, so this `url` no longer resolves to a rendered page (the Next app
+      # has no such route). COSMETIC ONLY — docs are read by id via the api/app,
+      # never this link. Repointing the path (to the public docs/GitHub-Pages track,
+      # or degrading it cleanly) is left to a future docs effort; only the origin
+      # moved to the apex.
+      KB_PUBLIC_BASE_URL: https://hi2vi.com
+      # Feedback attachments live on the named volume mounted above (default
+      # without it: KB_ROOT/data/feedback-attachments, inside the git clone).
+      KB_FEEDBACK_ATTACHMENTS_DIR: /data/feedback-attachments
       # Fetch + reindex on boot (drift + deleted-doc reconciliation self-heal).
       KB_STARTUP_REINDEX: "true"
       # Async accounts plane (Postgres control plane, P10). Points at the durable
@@ -158,7 +175,7 @@ services:
         # Public app origin, baked into the client bundle at build time
         # (src/content/site.ts → canonical URL / OG / sitemap / robots). A build
         # arg, not a runtime env — changing it needs a rebuild. Safe to commit.
-        NEXT_PUBLIC_APP_URL: "https://knowledge.hi2vi.com"
+        NEXT_PUBLIC_APP_URL: "https://hi2vi.com"
     container_name: knowledge-web  # fixed name — the edge proxies to it by name
     environment:
       # Server-to-server base URL of the api container the BFF calls (the browser
@@ -199,8 +216,9 @@ services:
     restart: unless-stopped
 
   mcp:
-    # The MCP-over-HTTP retrieval server (P15): the `search` + `fetch_document`
-    # tools on ONE Streamable-HTTP ASGI app at /mcp, plus GET /healthz. A THIN
+    # The MCP-over-HTTP server (P15): the Library's `search` + `fetch_document`
+    # tools at /mcp, Feedback's write-only capture tool at /feedback/mcp, plus
+    # GET /healthz. For the Library tools it is a THIN
     # PROXY of the frozen /api/* — it reimplements no retrieval, forwards the
     # caller's `Authorization: Bearer vk_…` upstream, and holds NO secrets (the only
     # credential is that per-request inbound bearer). Built from its own
@@ -208,7 +226,7 @@ services:
     # package + its `knowledge-mcp` console script; NOT bind-mounted like the api).
     # DUAL-REACHABLE: internally by container name (knowledge-mcp:9000, no edge hop —
     # a co-tenant agent like OpenClaw reaches it here) AND publicly at
-    # https://knowledge.hi2vi.com/mcp (deploy/knowledge.conf `location /mcp`, P15.S3).
+    # https://hi2vi.com/mcp and /feedback/mcp (deploy/hi2vi.conf).
     build:
       context: ./mcp-server
     container_name: knowledge-mcp  # fixed name — the edge proxies to it by name
@@ -229,11 +247,16 @@ services:
       # returns `421 Invalid Host header` to every non-localhost caller — the
       # public edge host AND the internal knowledge-mcp:9000 path. These widen it
       # (protection stays on). MATCHING: a port-less host needs an EXACT entry, a
-      # host-with-port needs a `base:*` wildcard — so `knowledge.hi2vi.com` (edge)
-      # is exact, `knowledge-mcp` + `knowledge-mcp:*` cover the internal path;
-      # localhost stays a built-in config.py default (image healthcheck + smoke).
-      MCP_ALLOWED_HOSTS: "knowledge.hi2vi.com,knowledge-mcp,knowledge-mcp:*"
-      MCP_ALLOWED_ORIGINS: "https://knowledge.hi2vi.com"
+      # host-with-port needs a `base:*` wildcard — so `hi2vi.com` (edge) is exact,
+      # `knowledge-mcp` + `knowledge-mcp:*` cover the internal path; localhost
+      # stays a built-in config.py default (image healthcheck + smoke).
+      # CUTOVER: `knowledge.hi2vi.com` stays in both lists so the Library's MCP
+      # keeps answering while the old vhost still proxies that host to this
+      # container (between the first apex deploy and the redirect host going
+      # live). Once deploy/knowledge.conf (redirect-only) is live, the old host
+      # never reaches this container and both entries can go.
+      MCP_ALLOWED_HOSTS: "hi2vi.com,knowledge.hi2vi.com,knowledge-mcp,knowledge-mcp:*"
+      MCP_ALLOWED_ORIGINS: "https://hi2vi.com,https://knowledge.hi2vi.com"
     # Documentary only (no publish) — the edge + co-tenant agents reach it over the
     # shared network by container name (knowledge-mcp:9000), never a host port.
     expose:
@@ -277,9 +300,12 @@ services:
     restart: unless-stopped
 
 volumes:
-  # Durable Postgres data (accounts plane). Only the control plane needs a
-  # persistent volume; the content plane stays files + disposable SQLite.
+  # Durable Postgres data (accounts plane and Feedback's records). The content
+  # plane stays files + disposable SQLite.
   pgdata:
+  # Feedback's uploaded attachments (the api mounts it at /data/feedback-attachments).
+  # Durable user data: back it up with pgdata.
+  knowledge-feedback-attachments:
 
 networks:
   # Pre-existing external network the shared edge + co-tenant apps share.

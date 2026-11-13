@@ -7,8 +7,11 @@ set -Eeuo pipefail
 # deploy/deploy.sh — which owns ALL authoritative git INSIDE its one-shot root container (on-`main`
 # check + dirty-tracked-worktree refusal + .git/index.lock wait + `git fetch --prune origin main` +
 # fail-closed TARGET_SHA ancestor-verify + publish-on-write ff/rebase reconcile, then three-service
-# build + health-gate (api + web + mcp); see phase.md §E/§F) — THEN re-applies the edge vhost (deploy/knowledge.conf ->
-# /home/opc/edge, the edge's own nginx -t gate + graceful reload), and collects artifacts.
+# build + health-gate (api + web + mcp); see phase.md §E/§F) — then collects artifacts and reports.
+#
+# It never touches the edge: no vhost is installed and the edge's deploy.sh is never run. The vhosts
+# in deploy/ (hi2vi.conf, and the redirect-only knowledge.conf and vocky.conf) land on the box only
+# through the edge repo, by the operator (deploy/README.md §3a).
 #
 # Why no git gate here (P9.F1): the authoritative fetch + ancestor-verify CANNOT run as `opc`. `origin`
 # is an SSH remote whose deploy key is root-owned/unreadable by opc, and opc has no GitHub key, so an
@@ -17,10 +20,9 @@ set -Eeuo pipefail
 # safe.directory), so deploy.sh is the SOLE authoritative git path. The only git left in THIS helper is
 # best-effort `git status` artifact capture (git-before/git-after), which never fails the deploy.
 #
-# Mirrors hi2vi_web/deploy/oracle-production-deploy-remote.sh for the knowledge checkout, with two
-# knowledge specifics: the edge re-apply is layered on after a healthy deploy (hi2vi has no edge step
-# here), and — unlike hi2vi, whose opc-side fetch works because its clone is not a root-committing
-# publish-on-write clone — knowledge relocates ALL authoritative git into deploy.sh's root container.
+# Mirrors hi2vi_web/deploy/oracle-production-deploy-remote.sh for the knowledge checkout, with one
+# knowledge specific: unlike hi2vi, whose opc-side fetch works because its clone is not a root-committing
+# publish-on-write clone, knowledge relocates ALL authoritative git into deploy.sh's root container.
 # This helper does NOT itself check out — deploy/deploy.sh reconciles on `main`, never detaching. First
 # real run is P9.S5.
 
@@ -28,8 +30,6 @@ TARGET_SHA="${TARGET_SHA:-}"
 REPO_PATH="${REPO_PATH:-/opt/knowledge}"
 REMOTE_ARTIFACT_DIR="${REMOTE_ARTIFACT_DIR:-/tmp/knowledge-gha-artifacts}"
 COMPOSE_FILE="${DEPLOY_COMPOSE_FILE:-compose.prod.yml}"
-EDGE_DIR="${EDGE_DIR:-/home/opc/edge}"        # the dedicated edge project (conf.d + certs are RO host mounts)
-EDGE_VHOST="${EDGE_VHOST:-knowledge.conf}"    # the vhost filename in deploy/ and in the edge's conf.d/
 
 # The box clone is opc-owned but its .git objects are root-owned (the api container commits as uid 0),
 # so a bare `git` as opc can trip "detected dubious ownership". `-c safe.directory=$REPO_PATH` quiets
@@ -71,25 +71,6 @@ collect_status() {
     > "${REMOTE_ARTIFACT_DIR}/compose-ps.txt" 2>&1 || true
 }
 
-# Re-apply the edge vhost AFTER a healthy deploy (containers up before `/` cuts over to the web app). Drop
-# the just-reconciled conf onto the edge's read-only conf.d/ host mount, then run the edge's OWN deploy.sh
-# — a hard `nginx -t` gate inside the RUNNING edge-nginx followed by a graceful `nginx -s reload`, NEVER a
-# recreate. A failed `nginx -t` reloads nothing (the edge keeps its last-good config) but MUST fail this
-# deploy loudly: healthy containers with stale routing is not a success. Returns the edge deploy.sh status.
-reapply_edge() {
-  log "re-applying edge vhost: install deploy/${EDGE_VHOST} -> ${EDGE_DIR}/conf.d/ then ${EDGE_DIR}/deploy.sh (nginx -t gate -> graceful reload; never recreate edge-nginx)"
-  if ! install -m 0644 "${REPO_PATH}/deploy/${EDGE_VHOST}" "${EDGE_DIR}/conf.d/${EDGE_VHOST}"; then
-    append_summary "- Edge: FAILED to install \`deploy/${EDGE_VHOST}\` into \`${EDGE_DIR}/conf.d/\`."
-    die "failed to install edge vhost: ${REPO_PATH}/deploy/${EDGE_VHOST} -> ${EDGE_DIR}/conf.d/${EDGE_VHOST}"
-  fi
-  set +e
-  ( cd "${EDGE_DIR}" && ./deploy.sh ) > "${REMOTE_ARTIFACT_DIR}/edge-reload.txt" 2>&1
-  local edge_status=$?
-  set -e
-  cat "${REMOTE_ARTIFACT_DIR}/edge-reload.txt" || true
-  return "${edge_status}"
-}
-
 main() {
   [ -n "${TARGET_SHA}" ] || die "TARGET_SHA is required"
   [[ "${TARGET_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || die "TARGET_SHA must be a 40-character git SHA"
@@ -127,23 +108,14 @@ main() {
 
   if [ "${deploy_status}" -ne 0 ]; then
     append_summary "- Finished at: \`$(date -u '+%Y-%m-%dT%H:%M:%SZ')\`"
-    append_summary "- Result: deploy failed with status \`${deploy_status}\` (edge NOT re-applied)."
+    append_summary "- Result: deploy failed with status \`${deploy_status}\`."
     exit "${deploy_status}"
   fi
   append_summary "- Deploy: all three services built + healthy (knowledge-api + knowledge-web + knowledge-mcp)."
 
-  # All three containers are healthy — now cut the edge over to the reconciled vhost.
-  if ! reapply_edge; then
-    run_capture "git-after" "${GIT[@]}" status --short --branch
-    append_summary "- Finished at: \`$(date -u '+%Y-%m-%dT%H:%M:%SZ')\`"
-    append_summary "- Result: deploy succeeded but the EDGE RE-APPLY FAILED (nginx -t rejected the vhost or the reload failed); the edge kept its last-good config, so routing was NOT updated."
-    die "edge vhost re-apply failed (see edge-reload.txt): containers are healthy but the edge routing was NOT updated. Fix deploy/${EDGE_VHOST} and re-dispatch."
-  fi
-  append_summary "- Edge: vhost re-applied (nginx -t passed, graceful reload)."
-
   run_capture "git-after" "${GIT[@]}" status --short --branch
   append_summary "- Finished at: \`$(date -u '+%Y-%m-%dT%H:%M:%SZ')\`"
-  append_summary "- Result: deploy completed successfully (all three services healthy, edge routing live)."
+  append_summary "- Result: deploy completed successfully (all three services healthy)."
   log "Deploy completed successfully."
 }
 

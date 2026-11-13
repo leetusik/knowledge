@@ -3,15 +3,28 @@ name: Production Deploy
 # Manual, main-only production deploy of the full knowledge site (web UI + API) to the shared Oracle box
 # (P9). knowledge runs as a Docker co-tenant behind the standalone `edge` project; the deploy SSHes into
 # the box and runs deploy/oracle-production-deploy-remote.sh, which verifies + reconciles the
-# publish-on-write clone (/opt/knowledge), rebuilds + health-gates BOTH app services (knowledge-api +
-# knowledge-web; the mkdocs knowledge-site was retired in P14.S3), and re-applies the edge vhost.
+# publish-on-write clone (/opt/knowledge) and rebuilds + health-gates the three app services
+# (knowledge-api + knowledge-web + knowledge-mcp); this workflow then smokes the public site (the
+# `smoke_host` input, https://hi2vi.com by default). It installs no edge vhost: those land through the
+# edge repo, by the operator (deploy/README.md §3a).
 # Mirrors hi2vi_web's deploy-production.yml, isolated by
 # a distinct concurrency group (knowledge-deploy) and checkout path (/opt/knowledge). Never touches
-# hi2vi or changple. `workflow_dispatch` ONLY — the agent's constant publish-on-write pushes to `main`
+# another tenant's checkout or project. `workflow_dispatch` ONLY — the agent's constant publish-on-write pushes to `main`
 # must NEVER trigger a redeploy. First real run is P9.S5.
 
 on:
   workflow_dispatch:
+    inputs:
+      smoke_host:
+        description: >-
+          Host the external smoke runs against. hi2vi.com, except the cutover's first deploy,
+          which runs before the apex vhost lands and smokes the old host (deploy/README.md §6).
+        type: choice
+        options:
+          - hi2vi.com
+          - knowledge.hi2vi.com
+        default: hi2vi.com
+        required: true
 
 permissions:
   contents: read
@@ -23,15 +36,23 @@ jobs:
     outputs:
       target_sha: ${{ steps.target.outputs.sha }}
     steps:
-      - name: Guard main branch
+      - name: Guard main branch and the smoke host
         id: target
         shell: bash
+        env:
+          # Through env, never interpolated into the script text (script-injection rule).
+          SMOKE_HOST: ${{ inputs.smoke_host }}
         run: |
           set -euo pipefail
           if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
             echo "Production deploys must be run from main; got ${GITHUB_REF}." >&2
             exit 1
           fi
+          # Refuse a bad smoke host before anything deploys (the smoke step checks again).
+          case "${SMOKE_HOST}" in
+            hi2vi.com|knowledge.hi2vi.com) ;;
+            *) echo "smoke_host must be hi2vi.com or knowledge.hi2vi.com; got '${SMOKE_HOST}'." >&2; exit 1 ;;
+          esac
           echo "sha=${GITHUB_SHA}" >> "${GITHUB_OUTPUT}"
 
   deploy:
@@ -41,7 +62,7 @@ jobs:
     timeout-minutes: 90
     environment:
       name: production
-      url: https://knowledge.hi2vi.com
+      url: https://hi2vi.com
     concurrency:
       group: knowledge-deploy
       cancel-in-progress: false
@@ -53,10 +74,14 @@ jobs:
 
       - name: Validate deploy helpers
         shell: bash
+        # One `bash -n` per file: `bash -n a b c` parses only `a` (the rest are its arguments).
         run: |
-          bash -n deploy/deploy.sh \
-            deploy/github-actions-production-deploy.sh \
-            deploy/oracle-production-deploy-remote.sh
+          set -euo pipefail
+          for f in deploy/deploy.sh \
+                   deploy/github-actions-production-deploy.sh \
+                   deploy/oracle-production-deploy-remote.sh; do
+            bash -n "${f}"
+          done
 
       - name: Deploy through Oracle deploy.sh
         shell: bash
@@ -70,8 +95,17 @@ jobs:
 
       - name: External smoke (public URLs, all surfaces, no secrets)
         shell: bash
+        env:
+          # The dispatch input, through env and never interpolated into the script text.
+          SMOKE_HOST: ${{ inputs.smoke_host }}
         run: |
           set -euo pipefail
+          # Only the two known hosts; anything else fails before a single request.
+          case "${SMOKE_HOST}" in
+            hi2vi.com|knowledge.hi2vi.com) ;;
+            *) echo "smoke_host must be hi2vi.com or knowledge.hi2vi.com; got '${SMOKE_HOST}'." >&2; exit 1 ;;
+          esac
+          base="https://${SMOKE_HOST}"
           smoke_one() {
             local url="$1"
             for i in 1 2 3 4 5; do
@@ -83,13 +117,14 @@ jobs:
             return 1
           }
           # The MCP server's /healthz is INTERNAL only (the api owns the public `= /healthz`),
-          # so prove the edge routes /mcp to a LIVE MCP server via the endpoint itself. A bare
-          # GET (no `Accept: text/event-stream`) makes the Streamable-HTTP server answer
+          # so prove the edge routes an MCP path to a LIVE MCP server via the endpoint itself. A
+          # bare GET (no `Accept: text/event-stream`) makes the Streamable-HTTP server answer
           # 406 "Client must accept text/event-stream" with a JSON-RPC error body — a routed
-          # MCP-server response, NOT a gateway 502/504. NB: NO `curl -f` here — 406 IS the
-          # success signal (a non-2xx), so `-f` (fail on HTTP error) would wrongly discard it.
+          # MCP-server response, NOT a gateway 502/504 (and not the 421 a Host missing from
+          # MCP_ALLOWED_HOSTS gets). NB: NO `curl -f` here — 406 IS the success signal (a
+          # non-2xx), so `-f` (fail on HTTP error) would wrongly discard it.
           smoke_mcp() {
-            local url="https://knowledge.hi2vi.com/mcp" code tmp
+            local url="$1" code tmp
             tmp="$(mktemp)"
             for i in 1 2 3 4 5; do
               code="$(curl -sS -m 15 -o "${tmp}" -w '%{http_code}' "${url}" || true)"
@@ -106,9 +141,14 @@ jobs:
           # All public surfaces: the api health endpoint, `/` (the Next web app), and the
           # MCP retrieval endpoint (routed-liveness, not a full protocol handshake — the
           # authenticated tool-call E2E over both reachability paths is P15.S4's job).
-          smoke_one https://knowledge.hi2vi.com/healthz
-          smoke_one https://knowledge.hi2vi.com/
-          smoke_mcp
+          smoke_one "${base}/healthz"
+          smoke_one "${base}/"
+          smoke_mcp "${base}/mcp"
+          # Feedback's MCP endpoint is routed only by the apex vhost (deploy/hi2vi.conf); the
+          # old host's vhost predates it, so it is smoked on the apex only.
+          if [ "${SMOKE_HOST}" = "hi2vi.com" ]; then
+            smoke_mcp "${base}/feedback/mcp"
+          fi
 
       - name: Upload deploy artifacts
         if: always()

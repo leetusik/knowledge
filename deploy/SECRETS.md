@@ -1,6 +1,6 @@
-# Secrets & DNS provisioning runbook — knowledge.hi2vi.com
+# Secrets & DNS provisioning runbook — hi2vi.com
 
-Operator runbook for the secrets + DNS that `https://knowledge.hi2vi.com` needs.
+Operator runbook for the secrets + DNS that `https://hi2vi.com` needs.
 This is the "**produce the credentials and register them**" half;
 [`README.md`](README.md) is the "**place them and bring the box up**" half.
 
@@ -243,6 +243,27 @@ BM25-only (`mode:"bm25"`), **zero code change** either way.
   with `sudo vi`). Leaving it empty is a supported launch choice — add the key later
   and restart the api with no other change.
 
+### 4b. Optional `KB_SMTP_*` — Feedback's owner alert mail
+
+When a Feedback event is captured, the api mails the project owner after the response,
+best-effort. It reads five names from the box's `.env` (through the api's `env_file:`):
+
+| Name | What |
+|---|---|
+| `KB_SMTP_HOST` | the SMTP server |
+| `KB_SMTP_PORT` | its port (default 587, STARTTLS; 465 means implicit TLS) |
+| `KB_SMTP_USER` | the login (unset: no AUTH) |
+| `KB_SMTP_PASSWORD` | **the secret**: the login's password |
+| `KB_SMTP_FROM` | the sender address (unset: the login) |
+
+- Optional: with no host, or no sender (neither `KB_SMTP_FROM` nor `KB_SMTP_USER`), no
+  alert mail goes out and capture works unchanged.
+- The account is the one vocky's worker already uses. Copy the five values from vocky's
+  `.env` **on the box** into `/opt/knowledge/.env` (an editor on the box, `sudo vi`);
+  never through this repo, a laptop or a transcript. Then recreate the api
+  (`docker compose -f compose.prod.yml up -d --force-recreate --no-deps api`, or the
+  next Production Deploy).
+
 ---
 
 ## 5. Handoff checklist — all boxes ticked = ready for bring-up
@@ -263,6 +284,8 @@ BM25-only (`mode:"bm25"`), **zero code change** either way.
 - [ ] **Origin cert coverage** — ✅ already covered by the `*.hi2vi.com` wildcard
       (`hi2vi.crt`); nothing to issue.
 - [ ] **`GOOGLE_API_KEY`** obtained (recommended) — or a deliberate BM25-only launch.
+- [ ] **`KB_SMTP_*`** (§4b, optional) copied on the box from vocky's `.env` — or a
+      deliberate launch with no Feedback alert mail.
 
 Next: `README.md` §1 (clone, place `known_hosts`, write `.env`) → §2 (bring-up, incl.
 the `ssh`-in-image assertion) → §3 (land the vhosts through the edge repo) → §5 (validation).
