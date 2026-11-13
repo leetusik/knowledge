@@ -85,14 +85,8 @@ skill is also published, copyable and downloadable, at
   live the instant it's saved — *fresh-on-write*, no CI build or CDN lag — and a
   manual-dispatch `Production Deploy` GitHub Action reconciles the box from
   `main`. The box pushes every write to `origin/main` for off-box backup; locally
-  and from the plugin, nothing pushes until you do. Workspace internals
-  (versioned docs history and build artifacts) stay excluded from the built
-  local site. (The old GitHub Pages deploy is retired here; the plugin still
-  ships it for self-hosters.)
-- **Versioned project docs** — the repo's own design docs are kept as durable,
-  versioned truth in 11 tracks (architecture, API, operations, …): latest
-  under `docs/current/`, full history under `docs/versions/` (excluded from the
-  built site, available in git).
+  and from the plugin, nothing pushes until you do. (The old GitHub Pages deploy
+  is retired here; the plugin still ships it for self-hosters.)
 - **Publish-safe metadata** — document frontmatter (`source.repo`) is sanitized
   at write time (local paths become repo basenames; URLs pass through), so no
   filesystem details leak to the public site.
@@ -124,5 +118,8 @@ Two ways to stand this knowledge base back up:
 This repo is developed with
 [bootstrap_agentic_workspace.sh](https://github.com/leetusik/bootstrap_agentic_workspace.sh),
 a portable harness that drives coding agents through phases → slices → phase
-reviews (`scripts/workflow.py`), with operator-approved plans and versioned
-docs as the durable record. Workflow state lives in `works/`.
+reviews, with operator-approved plans and versioned docs as the durable record.
+Its workflow state and docs live outside this repo. The records of the
+workspace that built the repo up to November 2026 (phases, versioned docs,
+design records) are frozen, read-only, under
+[`archive/workspace/`](archive/workspace/README.md).
