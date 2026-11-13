@@ -197,7 +197,14 @@
       "server/listen_mp4.py",
       "server/listen_play.py",
       "tests/test_listen_play.py",
-      "tests/fixtures/listen/part.m4a"
+      "tests/fixtures/listen/part.m4a",
+      "server/feedback/__init__.py",
+      "server/feedback/types.py",
+      "server/feedback/repository.py",
+      "server/feedback/service.py",
+      "server/feedback/storage.py",
+      "tests/test_feedback_model.py",
+      "tests/test_feedback_storage.py"
     ],
     "parameterized": [
       "mkdocs.yml",

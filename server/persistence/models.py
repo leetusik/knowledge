@@ -2,19 +2,23 @@
 
 Ported from vocky's accounts/tenancy tables (the first six here) plus the P11
 ``usage_events`` table (the 7th), the seven P30.S8 reader-state tables (JSONB for
-a reader's anchors, quotes, snapshots and quiz responses), and the five P41-sr.B1
-Listen tables (units, parts, jobs, runners and listening positions).
+a reader's anchors, quotes, snapshots and quiz responses), the five P41-sr.B1
+Listen tables (units, parts, jobs, runners and listening positions), and vocky's
+three Feedback tables (events, comments, attachments; revision ``0009``).
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    DDL,
     BigInteger,
     Boolean,
     CheckConstraint,
+    ColumnElement,
     DateTime,
     Float,
     ForeignKey,
@@ -22,9 +26,11 @@ from sqlalchemy import (
     Integer,
     Text,
     UniqueConstraint,
+    event,
+    literal_column,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -676,3 +682,215 @@ class ListenPositionModel(Base):
     follow: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     kept: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     updated_at: Mapped[datetime] = _ts()
+
+
+# -- Feedback (P56-p9.S4): vocky's three tables, in vocky's final shape ----------
+#
+# Created by ``alembic/versions/0009_feedback.py``, column for column what vocky's
+# twelve revisions left behind (head ``20260805_1200``), so vocky's rows copy in
+# unchanged with only ``project_id`` remapped. An event belongs to an org only
+# through its project (``project_id`` -> ``projects``, CASCADE): ``user_id`` is the
+# end user's own text and ``recorded_by`` is ``agent`` | ``human`` | NULL, neither
+# a foreign key. Comments and attachments cascade from their event. An attachment
+# is uploaded before its event exists, so ``feedback_id`` is NULL until the
+# capture links it (``server.feedback.repository``). No CHECK and no UNIQUE, as in
+# vocky; value checks are app-layer, the repo's convention.
+
+#: The free-text search target: ``coalesce(message, '') || ' ' || coalesce(comment,
+#: '') || ' ' || coalesce(target_text, '') || ' ' || coalesce(trigger_message, '')``,
+#: written the way ``pg_get_indexdef`` prints the index back. It is the **one**
+#: definition the GIN trigram index ``ix_feedback_events_search_trgm`` is declared
+#: from (below) and the repository's ``ILIKE`` filter is built from, so Postgres can
+#: match the query's expression to the index's; it is literal SQL, never bound
+#: parameters, so it renders the same in DDL and in a query. The canonical spelling
+#: is what keeps ``alembic check`` (a text compare) clean; ``0009`` creates the index
+#: from vocky's shorter spelling, which Postgres parses to the same tree. Only
+#: immutable operators (``||``, ``coalesce``): ``concat``/``concat_ws`` are STABLE and
+#: cannot back an index. Unqualified names: use it only where ``feedback_events`` is
+#: the one table with these columns.
+FEEDBACK_SEARCH_SQL = (
+    "((((((COALESCE(message, ''::text) || ' '::text) || COALESCE(comment, ''::text))"
+    " || ' '::text) || COALESCE(target_text, ''::text)) || ' '::text)"
+    " || COALESCE(trigger_message, ''::text))"
+)
+
+
+def feedback_search_expression() -> ColumnElement[str]:
+    """The search target as a ``TEXT`` SQL expression (``FEEDBACK_SEARCH_SQL``)."""
+
+    return literal_column(FEEDBACK_SEARCH_SQL, Text)
+
+
+class FeedbackEventModel(Base):
+    """One captured feedback event."""
+
+    __tablename__ = "feedback_events"
+    __table_args__ = (
+        Index("ix_feedback_events_ingested_at", "ingested_at"),
+        Index("ix_feedback_events_event_at", "event_at"),
+        Index("ix_feedback_events_source_product", "source_product"),
+        Index("ix_feedback_events_feedback_value", "feedback_value"),
+        Index("ix_feedback_events_channel", "channel"),
+        Index("ix_feedback_events_conversation_id", "conversation_id"),
+        Index("ix_feedback_events_session_id", "session_id"),
+        Index("ix_feedback_events_user_id", "user_id"),
+        Index("ix_feedback_events_trigger_type", "trigger_type"),
+        Index("ix_feedback_events_recorded_by", "recorded_by"),
+        Index("ix_feedback_events_target_type", "target_type"),
+        Index("ix_feedback_events_tags_gin", "tags", postgresql_using="gin"),
+        Index("ix_feedback_events_project_id", "project_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    project_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    source_product: Mapped[str] = mapped_column(Text, nullable=False)
+    feedback_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    channel: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_integration: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: Capture-time provenance marker: ``agent`` | ``human`` | NULL (unspecified).
+    recorded_by: Mapped[str | None] = mapped_column(Text, nullable=True)
+    conversation_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    session_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    user_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    trigger_type: Mapped[str | None] = mapped_column(Text, nullable=True)
+    trigger_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    trigger_metadata: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+    target_type: Mapped[str | None] = mapped_column(Text, nullable=True)
+    target_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    target_role: Mapped[str | None] = mapped_column(Text, nullable=True)
+    target_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    event_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ingested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+    tags: Mapped[list[str]] = mapped_column(
+        ARRAY(Text),
+        nullable=False,
+        default=list,
+        server_default=text("'{}'::text[]"),
+    )
+    messages: Mapped[list[Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'::jsonb"),
+    )
+    used_context: Mapped[list[Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'::jsonb"),
+    )
+    source_metadata: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+    attributes: Mapped[dict[str, Any]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+
+
+# The trigram search index, declared on the model (not only in 0009) so
+# ``alembic check`` sees it, and built from the expression the repository filters on.
+# An expression-only index does not find its table by itself, so attach it.
+FeedbackEventModel.__table__.append_constraint(
+    Index(
+        "ix_feedback_events_search_trgm",
+        feedback_search_expression().label("search_target"),
+        postgresql_using="gin",
+        postgresql_ops={"search_target": "gin_trgm_ops"},
+    )
+)
+
+# ``create_all`` (the Postgres-gated tests) needs the opclass before the index;
+# 0009 creates the extension itself. ``pg_trgm`` is a trusted extension, so the
+# database owner may create it.
+event.listen(
+    FeedbackEventModel.__table__,
+    "before_create",
+    DDL("CREATE EXTENSION IF NOT EXISTS pg_trgm").execute_if(dialect="postgresql"),
+)
+
+
+class FeedbackCommentModel(Base):
+    """An operator's comment on a feedback event."""
+
+    __tablename__ = "feedback_comments"
+    __table_args__ = (
+        Index("ix_feedback_comments_feedback_id", "feedback_id"),
+        Index("ix_feedback_comments_feedback_id_created_at", "feedback_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    feedback_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("feedback_events.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    author: Mapped[str | None] = mapped_column(Text, nullable=True)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+
+class FeedbackAttachmentModel(Base):
+    """An image uploaded for a feedback event.
+
+    ``feedback_id`` is NULL from the upload until the capture links it.
+    ``claimed_user_id`` / ``claimed_source_product`` are the scope asserted at
+    upload: the link only joins an event with the same ``(user_id,
+    source_product)``, so one product cannot attach another user's image.
+    """
+
+    __tablename__ = "feedback_attachments"
+    __table_args__ = (
+        Index("ix_feedback_attachments_feedback_id", "feedback_id"),
+        Index(
+            "ix_feedback_attachments_feedback_id_created_at",
+            "feedback_id",
+            "created_at",
+        ),
+        Index("ix_feedback_attachments_created_at", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    feedback_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("feedback_events.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    storage_key: Mapped[str] = mapped_column(Text, nullable=False)
+    content_type: Mapped[str] = mapped_column(Text, nullable=False)
+    byte_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    filename: Mapped[str | None] = mapped_column(Text, nullable=True)
+    claimed_user_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    claimed_source_product: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
