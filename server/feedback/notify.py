@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import smtplib
+import ssl
 from email.message import EmailMessage
 
 from server import config
@@ -52,15 +53,25 @@ def render_message(record: FeedbackEventRecord, to_email: str) -> EmailMessage:
 
 def send_message(message: EmailMessage) -> None:
     """Blocking SMTP send: ``SMTP_SSL`` on port 465, else ``SMTP`` + ``starttls()``.
-    AUTH only when ``KB_SMTP_USER`` is set."""
+    AUTH only when ``KB_SMTP_USER`` is set.
+
+    Both TLS paths use ``ssl.create_default_context()``: the server's certificate
+    must chain to a trusted CA and match ``KB_SMTP_HOST``. One that does not raises
+    ``ssl.SSLCertVerificationError`` before AUTH, so the password never reaches it
+    (the caller logs and drops it like every alert failure)."""
 
     host = config.smtp_host() or ""
     port = config.smtp_port()
     user = (config.smtp_user() or "").strip()
-    smtp_cls = smtplib.SMTP_SSL if port == 465 else smtplib.SMTP
-    with smtp_cls(host, port, timeout=10) as client:
-        if smtp_cls is smtplib.SMTP:
-            client.starttls()
+    context = ssl.create_default_context()
+    implicit_tls = port == 465
+    if implicit_tls:
+        client = smtplib.SMTP_SSL(host, port, timeout=10, context=context)
+    else:
+        client = smtplib.SMTP(host, port, timeout=10)
+    with client:
+        if not implicit_tls:
+            client.starttls(context=context)
         if user:
             client.login(user, config.smtp_password() or "")
         client.send_message(message)

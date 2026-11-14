@@ -66,6 +66,7 @@ def fb(tmp_path, monkeypatch):
     import server.persistence.engine as engine_mod
 
     sent: list = []
+    real_send = notify.send_message
     monkeypatch.setattr(notify, "send_message", lambda message: sent.append(message))
     engine_mod._engine = None
     engine_mod._session_maker = None
@@ -76,6 +77,7 @@ def fb(tmp_path, monkeypatch):
 
     with TestClient(app) as client:
         client.sent = sent  # type: ignore[attr-defined]
+        client.real_send = real_send  # type: ignore[attr-defined]
         yield client
 
     feedback_api._rate_windows.clear()
@@ -528,3 +530,202 @@ def test_usage_counts_the_scope(fb):
     body = res.json()
     assert body["totals"]["total"] == 1 and body["totals"]["liked"] == 1
     assert key["id"] in {c["id"] for c in body["credentials"]}
+
+
+def test_the_usage_window_is_bounded(fb, monkeypatch):
+    """A window wider than a year, reversed, or overflowing is a 400 answered before
+    any per-day list is built; the default window and a full year still answer."""
+
+    from server.feedback.repository import FeedbackRepository
+
+    built: list = []
+    real_days = FeedbackRepository._iter_requested_days
+
+    def counting(self, start_day, end_ingested_at):
+        built.append((start_day, end_ingested_at))
+        return real_days(self, start_day, end_ingested_at)
+
+    monkeypatch.setattr(FeedbackRepository, "_iter_requested_days", counting)
+    owner = _signup(fb)
+    key = _key(fb, owner)
+    _capture(fb, _h(key))
+
+    def usage(**params):
+        return fb.get("/api/project/usage", params=params, headers=_h(key))
+
+    refused = [
+        {"start_ingested_at": "0001-01-01T00:00:00Z", "end_ingested_at": "9999-12-31T00:00:00Z"},
+        {"end_ingested_at": "0001-01-05T00:00:00Z"},
+        {"start_ingested_at": "2026-02-01T00:00:00Z", "end_ingested_at": "2026-01-01T00:00:00Z"},
+        {"start_ingested_at": "0001-01-01T00:00:00+05:00"},
+    ]
+    for params in refused:
+        res = usage(**params)
+        assert res.status_code == 400, (params, res.status_code, res.text[:200])
+        assert isinstance(res.json()["detail"], str) and res.json()["detail"]
+    assert built == []
+
+    assert len(usage().json()["daily_counts"]) == 31
+    year = usage(start_ingested_at="2025-01-01T00:00:00Z", end_ingested_at="2026-01-01T00:00:00Z")
+    assert year.status_code == 200 and len(year.json()["daily_counts"]) == 365
+    top = usage(start_ingested_at="9999-12-01T00:00:00Z", end_ingested_at="9999-12-31T23:59:59Z")
+    assert top.status_code == 200 and top.json()["daily_counts"][-1]["day"] == "9999-12-31"
+
+
+def _self_signed_cert(work) -> tuple[str, str]:
+    import shutil
+    import subprocess
+
+    openssl = shutil.which("openssl")
+    if openssl is None:
+        pytest.skip("openssl is needed to make the stand-in SMTP server's certificate")
+    key, crt = str(work / "k.pem"), str(work / "c.pem")
+    subprocess.run(
+        [openssl, "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", key, "-out", crt,
+         "-days", "1", "-subj", "/CN=not-your-smtp.example"],
+        check=True, capture_output=True,
+    )
+    return key, crt
+
+
+def test_the_alert_never_authenticates_to_an_unverified_smtp_server(fb, monkeypatch, tmp_path, caplog):
+    """A STARTTLS server whose certificate does not verify (self-signed, another
+    name: a man in the middle) never receives AUTH; the capture still answers 202."""
+
+    import socket
+    import ssl
+    import threading
+
+    import server.feedback.notify as notify
+
+    key_pem, crt_pem = _self_signed_cert(tmp_path)
+    listener = socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(1)
+    listener.settimeout(10)
+    port = listener.getsockname()[1]
+    seen: list[str] = []
+
+    def serve() -> None:
+        try:
+            conn, _ = listener.accept()
+        except OSError:
+            return
+        conn.settimeout(10)
+        f = conn.makefile("rwb")
+
+        def send(line: str) -> None:
+            f.write(line.encode() + b"\r\n")
+            f.flush()
+
+        try:
+            send("220 stand-in ESMTP")
+            f.readline()
+            send("250-stand-in")
+            send("250 STARTTLS")
+            f.readline()
+            send("220 go ahead")
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            ctx.load_cert_chain(crt_pem, key_pem)
+            tls = ctx.wrap_socket(conn, server_side=True)
+            f = tls.makefile("rwb")
+            f.readline()
+            send("250-stand-in")
+            send("250 AUTH PLAIN LOGIN")
+            while line := f.readline():
+                seen.append(line.decode(errors="replace"))
+                send("235 ok" if line.startswith(b"AUTH") else "250 ok")
+                if line.upper().startswith(b"QUIT"):
+                    break
+        except (OSError, ssl.SSLError):
+            pass
+        finally:
+            conn.close()
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    monkeypatch.setattr(notify, "send_message", fb.real_send)
+    monkeypatch.setenv("KB_SMTP_HOST", "127.0.0.1")
+    monkeypatch.setenv("KB_SMTP_PORT", str(port))
+    monkeypatch.setenv("KB_SMTP_USER", "alerts@example.com")
+    monkeypatch.setenv("KB_SMTP_PASSWORD", "synthetic-smtp-password")
+    monkeypatch.setenv("KB_SMTP_FROM", "alerts@example.com")
+
+    owner = _signup(fb)
+    key = _key(fb, owner)
+    with caplog.at_level("ERROR", logger="server.feedback.notify"):
+        receipt = _capture(fb, _h(key), message="mail me over a bad TLS")
+    thread.join(10)
+    listener.close()
+    assert _event(fb, receipt["request_id"]) is not None
+    assert not any(line.startswith("AUTH") for line in seen), seen
+    assert any("failed; dropped" in r.getMessage() for r in caplog.records)
+
+
+def test_implicit_tls_verifies_the_server_too(monkeypatch):
+    """Port 465 (``SMTP_SSL``) is given a verifying context as well."""
+
+    import smtplib
+    import ssl
+    from email.message import EmailMessage
+
+    import server.feedback.notify as notify
+
+    contexts: list = []
+
+    class Recorder:
+        def __init__(self, host, port, timeout=None, context=None):
+            contexts.append(context)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def login(self, user, password):
+            pass
+
+        def send_message(self, message):
+            pass
+
+    monkeypatch.setattr(smtplib, "SMTP_SSL", Recorder)
+    monkeypatch.setenv("KB_SMTP_HOST", "smtp.invalid")
+    monkeypatch.setenv("KB_SMTP_PORT", "465")
+    monkeypatch.setenv("KB_SMTP_FROM", "alerts@example.com")
+    notify.send_message(EmailMessage())
+    (ctx,) = contexts
+    assert isinstance(ctx, ssl.SSLContext)
+    assert ctx.verify_mode == ssl.CERT_REQUIRED and ctx.check_hostname
+
+
+def _last_used(credential_id: str):
+    (row,) = _sql("SELECT last_used_at FROM project_credentials WHERE id = :id", id=credential_id)
+    return row[0]
+
+
+def test_a_capture_stamps_its_keys_last_used(fb):
+    owner = _signup(fb)
+    capture = _key(fb, owner, scope="capture")
+    uploader = _key(fb, owner, scope="capture")
+    failed = _key(fb, owner, scope="capture")
+    revoked = _key(fb, owner, scope="capture")
+
+    _capture(fb, _h(capture))
+    assert _last_used(capture["id"]) is not None
+    assert _upload(fb, _h(uploader)).status_code == 201
+    assert _last_used(uploader["id"]) is not None
+
+    # A key that only failed is never stamped: 400, 415, 403, and (revoked) 401.
+    unknown = {"message": "m", "source": {"product": "p"}, "project": f"nope-{uuid4().hex[:8]}"}
+    assert fb.post("/api/feedback", json=unknown, headers=_h(failed)).status_code == 400
+    assert _upload(fb, _h(failed), data=b"not an image").status_code == 415
+    assert fb.get("/api/project/feedback", headers=_h(failed)).status_code == 403
+    assert _last_used(failed["id"]) is None
+    assert fb.delete(f"/app/credentials/{revoked['id']}", headers=owner["session"]).status_code == 204
+    plain = {"message": "m", "source": {"product": "p"}}
+    assert fb.post("/api/feedback", json=plain, headers=_h(revoked)).status_code == 401
+    assert _last_used(revoked["id"]) is None
+
+    # A session capture has no key and stamps nothing (and still answers 202).
+    _capture(fb, owner["session"])

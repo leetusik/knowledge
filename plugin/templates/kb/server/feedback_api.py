@@ -97,6 +97,7 @@ from server.feedback.types import (
     FeedbackQueryFilters,
     ListFeedbackQuery,
 )
+from server.usage.metering import stamp_credential_used
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,9 @@ MAX_LIST_LIMIT = 100
 MAX_CAPTURE_PROJECT_NAME_LENGTH = 200
 #: ``/api/project/usage``'s window when the caller names none.
 DEFAULT_USAGE_WINDOW = timedelta(days=30)
+#: The widest window ``/api/project/usage`` answers: the response holds one entry per
+#: day, so the span is bounded before any per-day list is built.
+MAX_USAGE_WINDOW = timedelta(days=366)
 
 
 class FeedbackValidationError(ValueError):
@@ -166,7 +170,10 @@ def _parse_timestamp(value: str | None, *, field_name: str) -> datetime | None:
         ) from exc
     if parsed.tzinfo is None or parsed.tzinfo.utcoffset(parsed) is None:
         raise FeedbackValidationError(f"{field_name} must include a timezone offset")
-    return parsed.astimezone(UTC)
+    try:
+        return parsed.astimezone(UTC)
+    except OverflowError as exc:  # an offset that pushes it past year 1 or 9999
+        raise FeedbackValidationError(f"{field_name} is out of range") from exc
 
 
 def _normalize_feedback_value(value: int | None) -> int | None:
@@ -801,6 +808,8 @@ async def capture_feedback(request: Request, background_tasks: BackgroundTasks) 
         logger.exception("Failed to persist captured feedback event")
         return _detail("storage write failed", 500)
 
+    # After the response, best-effort: the key's last-used stamp, then the alert.
+    background_tasks.add_task(stamp_credential_used, ctx.credential_id)
     background_tasks.add_task(notify_feedback_captured, record)
     receipt = CaptureFeedbackResponse(
         request_id=str(record.id), accepted_at=serialize_datetime(record.ingested_at)
@@ -873,10 +882,10 @@ async def _reclaim_unlinked_attachments(storage: AttachmentStorage) -> None:
 
 
 @router.post("/api/feedback/attachments")
-async def upload_attachment(request: Request) -> Response:
+async def upload_attachment(request: Request, background_tasks: BackgroundTasks) -> Response:
     """Store one uploaded image (unlinked) and return its id; 201."""
 
-    await _capture_caller(request)
+    ctx = await _capture_caller(request)
 
     max_bytes = config.feedback_attachments_max_bytes()
     allowed_types = config.feedback_attachments_allowed_mime_types()
@@ -955,6 +964,7 @@ async def upload_attachment(request: Request) -> Response:
         logger.exception("attachment row insert failed; deleted orphaned object")
         return _detail("attachment storage unavailable", 503)
 
+    background_tasks.add_task(stamp_credential_used, ctx.credential_id)
     return JSONResponse(
         {
             "attachment_id": str(record.id),
@@ -1303,8 +1313,15 @@ async def get_api_project_usage(request: Request) -> Response:
         if end is None:
             end = datetime.now(UTC)
         if start is None:
-            start = end - DEFAULT_USAGE_WINDOW
+            try:
+                start = end - DEFAULT_USAGE_WINDOW
+            except OverflowError as exc:
+                raise FeedbackValidationError("end_ingested_at is out of range") from exc
         _validate_time_window(start, end)
+        if end - start > MAX_USAGE_WINDOW:
+            raise FeedbackValidationError(
+                f"the window must not exceed {MAX_USAGE_WINDOW.days} days"
+            )
     except FeedbackValidationError as exc:
         return _detail(str(exc), 400)
 

@@ -64,9 +64,10 @@ class ApiAuthContext:
 
     ``credential_id`` is the resolved ``vk_`` credential's id (org-level or
     project-bound), set only for a ``vk_`` caller — it is ``None`` for the master
-    bearer (no DB row) and session tokens. P11's metering middleware stamps
-    ``last_used_at`` on this credential when a metered event is recorded (never in
-    the resolver, so plain reads do not write); see ``server/usage/metering.py``.
+    bearer (no DB row) and session tokens. ``last_used_at`` is stamped on this
+    credential when a metered event is recorded (P11's metering middleware) or a
+    Feedback capture succeeds, never in the resolver, so plain reads do not write;
+    see ``stamp_credential_used`` in ``server/usage/metering.py``.
 
     ``scope`` is ``"full"`` for legacy mode, the master bearer and sessions, and the
     credential's own scope (``"full"`` or ``"capture"``) for a ``vk_`` key.

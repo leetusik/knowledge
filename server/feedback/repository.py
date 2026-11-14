@@ -742,11 +742,9 @@ class FeedbackRepository:
         """Return the UTC day series covered by an exclusive end timestamp."""
 
         last_day = (end_ingested_at - timedelta(microseconds=1)).date()
-        current = start_day
-        days: list[date] = []
-
-        while current <= last_day:
-            days.append(current)
-            current += timedelta(days=1)
-
-        return tuple(days)
+        # Count the days rather than step past the last one, so a window ending on
+        # 9999-12-31 never computes the date after it (an OverflowError).
+        return tuple(
+            start_day + timedelta(days=offset)
+            for offset in range((last_day - start_day).days + 1)
+        )
