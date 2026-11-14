@@ -1,16 +1,18 @@
 # CLAUDE.md — the hi2vi platform
 
-The Library at <https://knowledge.hi2vi.com>: a document API, a web app, a CLI, an MCP retrieval server, a Claude Code plugin, and a Mac voice runner for Listen. This file holds only what the code does not say.
+The Library and Feedback at <https://hi2vi.com>: a document API, a web app, a CLI, an MCP server, a Claude Code plugin, and a Mac voice runner for Listen. This file holds only what the code does not say.
 
 ## Layout
 
 - `server/`: the FastAPI document and accounts API (`server.main:app`). `alembic/`: its accounts-plane migrations. `tests/`: its pytest suite.
+- `server/feedback_api.py` serves the Feedback REST surfaces over `server/feedback/` (domain, storage, the owner alert); dormant without `DATABASE_URL`.
 - `web/`: the Next.js web app (pnpm). `web/public/SKILL.md` is the explain skill served at `/SKILL.md`.
-- `cli/` (the `knowledge` CLI), `mcp-server/` (MCP over HTTP at `/mcp`), `tools/listen-runner/` (the Mac Listen runner, a LaunchAgent): each its own uv project with its own tests.
+- `cli/` (the `knowledge` CLI), `mcp-server/` (MCP over HTTP: `/mcp` for Library retrieval, `/feedback/mcp` for write-only Feedback capture), `tools/listen-runner/` (the Mac Listen runner, a LaunchAgent): each its own uv project with its own tests.
 - `plugin/`: the Claude Code plugin (`skills/explain`, `skills/setup`, `agents/explain-critic.md`) and `templates/kb/`, the self-host scaffold. `.claude-plugin/marketplace.json` is its marketplace; `.agents/skills/explain/SKILL.md` is the portable explain copy.
-- `deploy/`: the box's deploy scripts and nginx vhost. `compose.prod.yml` is production; `compose.yml` is local.
+- `deploy/`: the box's deploy scripts and nginx vhosts (the apex `hi2vi.conf`; `knowledge.conf` and `vocky.conf` redirect only). `compose.prod.yml` is production; `compose.yml` is local.
 - `docs/`: the library's content root (the box writes tenant #1's projects under `docs/<project>/`), plus the MkDocs site sources the scaffold ships (`index.md`, `tags.md`, `graph.md`, `assets/`, `javascripts/`, `stylesheets/`, `mkdocs.yml`).
 - `scripts/`: the parity guards, the smokes and the book migration.
+- `skills/vocky-feedback/SKILL.md`: the Feedback capture skill, served at `/feedback/SKILL.md`.
 - `archive/workspace/`: the frozen records of the workspace that built this repo up to 2026-11-13.
 
 ## Commands
@@ -22,6 +24,7 @@ The Library at <https://knowledge.hi2vi.com>: a document API, a web app, a CLI, 
 ## Rules
 
 - The explain skill has three copies: `plugin/skills/explain/SKILL.md` (canonical), `.agents/skills/explain/SKILL.md` (same body, its own frontmatter) and `web/public/SKILL.md` (byte-identical). Edit all three; `skills_parity.py` fails on drift. The critic's body in `plugin/agents/explain-critic.md` is generated from the canonical file: `python3 scripts/skills_parity.py --write-agents`.
+- The Feedback capture skill has two copies: `skills/vocky-feedback/SKILL.md` (canonical) and `web/public/feedback/SKILL.md` (served, byte-identical). Edit the canonical one and copy it over; `skills_parity.py` fails on drift.
 - Files listed in `plugin/templates/manifest.json` are held byte-equal (or render-equal) to their repo-root twins by `plugin_parity.py`, among them `.dockerignore`, `mkdocs.yml`, `scripts/site_smoke.py` and most of `server/` and `tests/`. Change both sides together.
 - Never commit library content by hand. Projects are private by default; the box's write path commits and pushes a public project's documents itself, and a private project never enters git (`server/publish_gate.py`, `server/gitops.py`). `tenants/`, `data/` and `.assets/` are gitignored.
 - The accounts schema changes only through a new `alembic/versions/` revision; Production Deploy applies it (`alembic upgrade head`). Never alter the database by hand.

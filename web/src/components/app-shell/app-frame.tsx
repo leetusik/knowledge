@@ -73,12 +73,20 @@ export function AppFrame({
   defaultCollapsed,
   topbar,
   due,
+  railOrgMenu,
+  navbarOrgMenu,
   children,
 }: {
   defaultCollapsed: boolean;
   topbar: ReactNode;
   /** The Review pill's count (`counts.due`, P30.S22). */
   due: number;
+  /**
+   * The org menu, already rendered on the server (`org-menu.tsx`), for the top of the
+   * rail and the navbar's first item; absent for a user in one org.
+   */
+  railOrgMenu?: ReactNode;
+  navbarOrgMenu?: ReactNode;
   children: ReactNode;
 }) {
   // No stored preference means the visitor has never toggled — then the server's value
@@ -128,7 +136,7 @@ export function AppFrame({
 
       {/* Always immediately after the topbar in the DOM, at every width (§4.1) —
           the phone placement is a CSS `order`, never a re-mount. */}
-      <NavbarNav due={due} />
+      <NavbarNav due={due} orgMenu={navbarOrgMenu} />
 
       {/* NO inline `minHeight` any more: `.kb-app` is now a 100dvh flex column and
           `.kb-app-layout` is its `flex: 1 1 auto` child (§3), so the old inline
@@ -140,7 +148,7 @@ export function AppFrame({
       >
         {/* The rail stays MOUNTED when folded — `app-frame.css` hides it — so the no-JS
             floor is the rail in its default expanded state, links and all. */}
-        <RailNav due={due} />
+        <RailNav due={due} orgMenu={railOrgMenu} />
         <main id="main-content" className="kb-app-main">
           {children}
         </main>

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# deploy.sh — on-box container-deploy core for https://knowledge.hi2vi.com (P9.S2).
+# deploy.sh — on-box container-deploy core for https://hi2vi.com (P9.S2).
 #
 # Runs ON the shared OCI box from the publish-on-write clone (default /opt/knowledge).
 # Reconciles that clone with origin/main and rebuilds the app images
@@ -392,4 +392,4 @@ else
     die "health-gate FAILED for knowledge-web and/or knowledge-mcp (the api is healthy — it gated in step 3). NO rollback performed (§F v1): server/ runs from the bind mount, so an image flip cannot revert code, and the publish-on-write checkout is never moved backwards under the running container. RECOVER BY FIX-FORWARD: merge a corrected commit to origin/main and re-dispatch the deploy (the reconcile applies it). Inspect: docker compose -f $COMPOSE_FILE logs web mcp${REMOTE_ARTIFACT_DIR:+ (artifacts in $REMOTE_ARTIFACT_DIR)}."
 fi
 
-log "DONE — origin/main tip is live on the box (api at knowledge-api:8000, web at knowledge-web:3000, mcp at knowledge-mcp:9000; edge re-apply is S3)."
+log "DONE — origin/main tip is live on the box (api at knowledge-api:8000, web at knowledge-web:3000, mcp at knowledge-mcp:9000; the edge's vhosts are the operator's, deploy/README.md §3a)."

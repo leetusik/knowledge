@@ -29,7 +29,7 @@ export const HERO_TERMINAL: Terminal = {
     [
       { text: "$ ", tone: "prompt" },
       { text: "curl " },
-      { text: "-fsSL https://knowledge.hi2vi.com/install.sh", tone: "arg" },
+      { text: "-fsSL https://hi2vi.com/install.sh", tone: "arg" },
       { text: " | bash" },
     ],
     [
@@ -56,7 +56,7 @@ export const HERO_TERMINAL: Terminal = {
     [{ text: "saved: explainer", tone: "ok" }],
     [
       { text: "url: ", tone: "ok" },
-      { text: "https://knowledge.hi2vi.com/documents/a1b2c3", tone: "arg" },
+      { text: "https://hi2vi.com/documents/a1b2c3", tone: "arg" },
     ],
   ],
 };

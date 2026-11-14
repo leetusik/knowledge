@@ -25,6 +25,7 @@ from server.accounts.types import (
     TenantMemberRecord,
     TenantRecord,
     UserRecord,
+    validate_credential_scope,
 )
 from server.persistence.engine import get_session_maker
 
@@ -140,6 +141,37 @@ class AccountsService:
 
         return tenant, member
 
+    async def add_tenant_member(
+        self,
+        tenant_id: UUID,
+        user_id: UUID,
+        role: str = "member",
+    ) -> TenantMemberRecord:
+        """Add an existing user to an existing tenant with ``role``.
+
+        The membership primitive for a user who belongs to more than one org (the
+        accounts merge, and tests); no HTTP route calls it. A user already in the
+        tenant violates ``UNIQUE(tenant_id, user_id)`` and raises
+        ``AccountsPersistenceError`` like any other failed write.
+        """
+
+        async with self._session_maker() as session:
+            repository = AccountsRepository(session)
+            try:
+                member = await repository.add_tenant_member(
+                    tenant_id=tenant_id,
+                    user_id=user_id,
+                    role=role,
+                )
+                await session.commit()
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise AccountsPersistenceError(
+                    "failed to add tenant member"
+                ) from exc
+
+        return member
+
     async def provision_signup(
         self,
         user_id: UUID,
@@ -241,7 +273,7 @@ class AccountsService:
         return record
 
     async def list_tenants_for_user(self, user_id: UUID) -> tuple[TenantRecord, ...]:
-        """Return the tenants a user is a member of, oldest-first."""
+        """Return the tenants a user is a member of, in the order the user joined them."""
 
         async with self._session_maker() as session:
             repository = AccountsRepository(session)
@@ -347,6 +379,17 @@ class AccountsService:
                     "failed to get or create project"
                 ) from exc
 
+    async def get_owner_email_for_project(self, project_id: UUID) -> str | None:
+        """Return the email of the owner of the project's org, or None."""
+
+        async with self._session_maker() as session:
+            repository = AccountsRepository(session)
+            try:
+                return await repository.get_owner_email_for_project(project_id)
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise AccountsReadError("failed to read project owner") from exc
+
     async def set_project_visibility(
         self,
         project_id: UUID,
@@ -375,7 +418,13 @@ class AccountsService:
         self,
         payload: CreateProjectCredential,
     ) -> ProjectCredentialRecord:
-        """Persist a project credential and return its metadata record."""
+        """Persist a project credential and return its metadata record.
+
+        Raises ``ValueError`` before any DB work when ``payload.scope`` is not one of
+        ``CREDENTIAL_SCOPES`` (the column has no DB ``CHECK``; this is the guard).
+        """
+
+        validate_credential_scope(payload.scope)
 
         async with self._session_maker() as session:
             repository = AccountsRepository(session)

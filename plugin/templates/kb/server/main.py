@@ -35,6 +35,7 @@ from server import books_api
 from server import config, db
 from server import dashboard_api
 from server import documents_api
+from server import feedback_api
 from server import listen_api
 from server import listen_play
 from server import reader_api
@@ -181,6 +182,12 @@ app.include_router(listen_api.runner_router)
 # HEAD only: one HLS playlist per Listen, its parts with Range, and their timeline.
 # The Next BFF relays it at /api/listen/play/… (the edge routes that path to web).
 app.include_router(listen_play.router)
+
+# Feedback (P56-p9): vocky's capture, project-feedback and end-user read surfaces on
+# their own paths (/api/feedback*, /api/project/feedback*, /api/project/usage,
+# /app/feedback*). Capture persists in the request; the owner alert runs after the
+# response. Postgres-only: with no DATABASE_URL every Feedback route answers 404.
+app.include_router(feedback_api.router)
 
 # One process-wide lock serializes the whole write critical section (file → index
 # → DB → git). Load-bearing invariant: the API runs a SINGLE uvicorn worker, so an

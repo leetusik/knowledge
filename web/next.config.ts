@@ -15,6 +15,10 @@ import { APP_CSP } from "./src/lib/csp";
  */
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Next 16.3+ writes `AGENTS.md` and `CLAUDE.md` into web/ when `next dev` runs
+  // under an AI coding agent. The repo's agent rules live in the root CLAUDE.md;
+  // keep the dev server from adding untracked instruction files beside it.
+  agentRules: false,
   async headers() {
     return [
       {

@@ -40,6 +40,25 @@
   display: none;
 }
 
+/*
+ * The org menu (`org-menu.tsx`, a user in several orgs) — PLACEMENT ONLY. Its look is
+ * entirely borrowed: the summary wears `.kb-rail__link` / `.kb-navbar__link`, the panel
+ * is the account disclosure's `.kb-account__menu`, the rows are ghost `.kb-appbtn`s.
+ * These rules only say where the panel sits and which way it opens: down from the
+ * rail's top and from the tablet strip, UP from the phone's bottom bar (which sits at
+ * the foot of the screen). The marker is hidden exactly as the account summary's is.
+ */
+.kb-orgmenu { position: relative; }
+.kb-orgmenu > summary { list-style: none; cursor: pointer; }
+.kb-orgmenu > summary::-webkit-details-marker { display: none; }
+.kb-orgmenu > .kb-account__menu { left: 0; right: auto; }
+
+@container kbapp (width < 40rem) {
+  /* One column of the bottom bar, like each link beside it. */
+  .kb-orgmenu--navbar { flex: 1 1 0; min-width: min-content; }
+  .kb-orgmenu--navbar > .kb-account__menu { top: auto; bottom: calc(100% + 0.55rem); }
+}
+
 /* The topbar fold control — the ghost console button trimmed to an icon square. */
 .kb-appbtn.kb-railtoggle {
   padding: 0.34rem;

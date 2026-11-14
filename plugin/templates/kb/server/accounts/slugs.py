@@ -73,6 +73,7 @@ RESERVED_ORG_SLUGS: frozenset[str] = frozenset(
         "status",
         "about",
         "blog",
+        "feedback",
     }
 )
 

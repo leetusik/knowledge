@@ -124,13 +124,21 @@ class AccountsRepository:
         return self._to_tenant_record(model)
 
     async def list_tenants_for_user(self, user_id: UUID) -> tuple[TenantRecord, ...]:
-        """Return the tenants a user is a member of, oldest-first."""
+        """Return the tenants a user is a member of, in the order the user joined them.
+
+        Ordered by the **membership's** ``created_at`` (then the tenant's, then id), not
+        the tenant's age: the first entry is the user's own first org (for the
+        operator, tenant #1, made at signup), and joining an org later never moves
+        it, however old that org is. Tenant #1 (``server.api_auth.get_tenant_one_id``)
+        and a header-less session's org (``server.accounts.auth.active_tenant``) both
+        read the first entry.
+        """
 
         statement = (
             select(TenantModel)
             .join(TenantMemberModel, TenantMemberModel.tenant_id == TenantModel.id)
             .where(TenantMemberModel.user_id == user_id)
-            .order_by(TenantModel.created_at, TenantModel.id)
+            .order_by(TenantMemberModel.created_at, TenantModel.created_at, TenantModel.id)
         )
         models = (await self._session.execute(statement)).scalars().all()
         return tuple(self._to_tenant_record(model) for model in models)
@@ -194,6 +202,28 @@ class AccountsRepository:
         model = (await self._session.execute(statement)).scalars().first()
         return self._to_project_record(model) if model is not None else None
 
+    async def get_owner_email_for_project(self, project_id: UUID) -> str | None:
+        """Return the email of the owner of the project's org, or None.
+
+        One query anchored on ``project_id`` (project -> its tenant's ``owner``
+        membership -> the user), so a project never resolves to another org's owner.
+        Oldest owner wins by ``(created_at, id)``. None when the project is missing
+        or its org has no owner. Ported from vocky (the Feedback owner alert).
+        """
+
+        statement = (
+            select(UserModel.email)
+            .join(TenantMemberModel, TenantMemberModel.user_id == UserModel.id)
+            .join(ProjectModel, ProjectModel.tenant_id == TenantMemberModel.tenant_id)
+            .where(
+                ProjectModel.id == project_id,
+                TenantMemberModel.role == "owner",
+            )
+            .order_by(TenantMemberModel.created_at, TenantMemberModel.id)
+            .limit(1)
+        )
+        return (await self._session.execute(statement)).scalars().first()
+
     async def set_project_visibility(
         self,
         project_id: UUID,
@@ -227,6 +257,7 @@ class AccountsRepository:
             name=payload.name,
             token_prefix=payload.token_prefix,
             token_hash=payload.token_hash,
+            scope=payload.scope,
         )
         self._session.add(model)
         await self._session.flush()
@@ -373,6 +404,7 @@ class AccountsRepository:
             id=model.id,
             name=model.name,
             slug=model.slug,
+            plan=model.plan,
             created_at=model.created_at,
         )
 
@@ -407,6 +439,7 @@ class AccountsRepository:
             project_id=model.project_id,
             name=model.name,
             token_prefix=model.token_prefix,
+            scope=model.scope,
             created_at=model.created_at,
             last_used_at=model.last_used_at,
             revoked_at=model.revoked_at,

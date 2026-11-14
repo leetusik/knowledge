@@ -176,6 +176,141 @@ def auth_rate_window_s() -> int:
     return value if value > 0 else 900
 
 
+def _env_int(name: str, default: int) -> int:
+    """An integer from the env, else ``default`` (unparseable too); may be <= 0."""
+    raw = _env(name)
+    if raw is None:
+        return default
+    try:
+        return int(str(raw))
+    except (TypeError, ValueError):
+        return default
+
+
+# --- Feedback (P56-p9): capture limits, the capture limiter, the owner alert ----
+
+
+def feedback_rate_limit() -> int:
+    """Max ``POST /api/feedback`` requests per bucket per window
+    (``KB_FEEDBACK_RATE_LIMIT``, 600): the client address for a request through the
+    edge, the caller's org for one from inside the network (the Feedback MCP hop).
+    ``<= 0`` turns the limiter off. Uploads have a limit of their own
+    (:func:`feedback_upload_rate_limit`), counted apart."""
+    return _env_int("KB_FEEDBACK_RATE_LIMIT", 600)
+
+
+def feedback_upload_rate_limit() -> int:
+    """Max ``POST /api/feedback/attachments`` requests per bucket per window
+    (``KB_FEEDBACK_UPLOAD_RATE_LIMIT``, 60), in the same kind of bucket as captures
+    (the client address through the edge, the org in-network) but counted apart
+    from them. An event carries at most ten files, so an attachment-heavy client
+    still fits. ``<= 0`` turns this limiter off."""
+    return _env_int("KB_FEEDBACK_UPLOAD_RATE_LIMIT", 60)
+
+
+def feedback_rate_window_s() -> int:
+    """The Feedback limiters' fixed window in seconds (``KB_FEEDBACK_RATE_WINDOW_S``,
+    60); a non-positive or unparseable value falls back to 60."""
+    value = _env_int("KB_FEEDBACK_RATE_WINDOW_S", 60)
+    return value if value > 0 else 60
+
+
+def feedback_max_body_bytes() -> int:
+    """The largest ``POST /api/feedback`` body (``KB_FEEDBACK_MAX_BODY_BYTES``, 262144 =
+    256 KiB), refused with a 413 before it is parsed. Vocky had no cap of its own
+    (only the edge's ``client_max_body_size``). A non-positive or unparseable value
+    falls back to the default, never to "no cap"."""
+    value = _env_int("KB_FEEDBACK_MAX_BODY_BYTES", 262144)
+    return value if value > 0 else 262144
+
+
+def feedback_attachments_max_bytes() -> int:
+    """The largest attachment upload (``KB_FEEDBACK_ATTACHMENTS_MAX_BYTES``, 5 MiB)."""
+    value = _env_int("KB_FEEDBACK_ATTACHMENTS_MAX_BYTES", 5 * 1024 * 1024)
+    return value if value > 0 else 5 * 1024 * 1024
+
+
+def feedback_attachments_max_count() -> int:
+    """At most this many attachment ids per capture (``KB_FEEDBACK_ATTACHMENTS_MAX_COUNT``, 10)."""
+    value = _env_int("KB_FEEDBACK_ATTACHMENTS_MAX_COUNT", 10)
+    return value if value > 0 else 10
+
+
+def feedback_attachments_unlinked_ttl_s() -> int:
+    """How long an uploaded attachment may wait for a capture to link it
+    (``KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S``, 86400 = one day). Each upload first
+    reclaims unlinked attachments older than this, row and file, within a small
+    budget. A non-positive or unparseable value falls back to the default, never to
+    "reclaim at once"."""
+    value = _env_int("KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S", 86400)
+    return value if value > 0 else 86400
+
+
+def feedback_attachments_unlinked_max_bytes() -> int:
+    """The ceiling on the total size of unlinked attachments, all orgs together
+    (``KB_FEEDBACK_ATTACHMENTS_UNLINKED_MAX_BYTES``, 1073741824 = 1 GiB). An upload
+    that would take the total above it is refused with a 503 after the sweep has
+    run: the hard bound on the disk unlinked uploads can take. A non-positive or
+    unparseable value falls back to the default, never to "no ceiling"."""
+    value = _env_int("KB_FEEDBACK_ATTACHMENTS_UNLINKED_MAX_BYTES", 1073741824)
+    return value if value > 0 else 1073741824
+
+
+def feedback_attachments_total_max_bytes() -> int:
+    """The ceiling on the total size of every stored attachment, linked or not, all
+    orgs together (``KB_FEEDBACK_ATTACHMENTS_TOTAL_MAX_BYTES``, 10737418240 = 10 GiB).
+    An upload that would take the total above it is refused with a 507; a capture is
+    never refused for storage. It protects the disk the box shares, and is not a
+    quota. A non-positive or unparseable value falls back to the default, never to
+    "no ceiling"."""
+    value = _env_int("KB_FEEDBACK_ATTACHMENTS_TOTAL_MAX_BYTES", 10737418240)
+    return value if value > 0 else 10737418240
+
+
+_FEEDBACK_DEFAULT_MIME_TYPES = "image/jpeg,image/png,image/gif,image/webp"
+
+
+def feedback_attachments_allowed_mime_types() -> frozenset[str]:
+    """The image types an upload may be, by its magic bytes
+    (``KB_FEEDBACK_ATTACHMENTS_ALLOWED_MIME_TYPES``, comma-separated; default the four
+    of jpeg, png, gif and webp). The sniffer knows only those four, so a type outside
+    them can never be accepted whatever this says."""
+    raw = _env("KB_FEEDBACK_ATTACHMENTS_ALLOWED_MIME_TYPES", _FEEDBACK_DEFAULT_MIME_TYPES)
+    values = frozenset(v.strip().lower() for v in str(raw).split(",") if v.strip())
+    return values or frozenset(_FEEDBACK_DEFAULT_MIME_TYPES.split(","))
+
+
+def smtp_host() -> str | None:
+    """The owner alert's SMTP host (``KB_SMTP_HOST``). Unset -> alerts off."""
+    return _env("KB_SMTP_HOST")
+
+
+def smtp_port() -> int:
+    """The SMTP port (``KB_SMTP_PORT``, 587). 465 means implicit TLS, else STARTTLS."""
+    value = _env_int("KB_SMTP_PORT", 587)
+    return value if value > 0 else 587
+
+
+def smtp_user() -> str | None:
+    """The SMTP login (``KB_SMTP_USER``); unset -> no AUTH."""
+    return _env("KB_SMTP_USER")
+
+
+def smtp_password() -> str | None:
+    """The SMTP password (``KB_SMTP_PASSWORD``)."""
+    return _env("KB_SMTP_PASSWORD")
+
+
+def smtp_from() -> str | None:
+    """The alert's From address (``KB_SMTP_FROM``), else the SMTP user."""
+    return _env("KB_SMTP_FROM") or smtp_user()
+
+
+def smtp_configured() -> bool:
+    """True when the owner alert can be sent: a host and a From address are set."""
+    return bool((smtp_host() or "").strip()) and bool((smtp_from() or "").strip())
+
+
 def gemini_api_key() -> str | None:
     """Gemini credential: GOOGLE_API_KEY preferred, GEMINI_API_KEY fallback.
 

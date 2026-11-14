@@ -121,6 +121,12 @@ export async function createProjectAction(
  */
 const orgKeyNameSchema = z.string().max(200).optional();
 
+/**
+ * The key's scope: `full` (the default, also when the field is absent) or `capture`
+ * (send feedback only). Anything else is refused before the API sees it.
+ */
+const orgKeyScopeSchema = z.enum(["full", "capture"]).default("full");
+
 export interface MintOrgCredentialState {
   /** Display copy for a failure, or `null` on success / first render. */
   error: string | null;
@@ -162,6 +168,10 @@ export async function mintOrgCredentialAction(
   if (!name.success) {
     return { error: MINT_ORG_CREDENTIAL_ERRORS.invalidName };
   }
+  const scope = orgKeyScopeSchema.safeParse(formData.get("scope") ?? undefined);
+  if (!scope.success) {
+    return { error: MINT_ORG_CREDENTIAL_ERRORS.invalidName };
+  }
 
   // OUTSIDE the try on purpose: `requireIdentity()` signals "no session" by calling
   // `redirect()`, which works by THROWING a control-flow error Next must see.
@@ -171,7 +181,7 @@ export async function mintOrgCredentialAction(
 
   let minted;
   try {
-    minted = await createOrgCredential(token, name.data);
+    minted = await createOrgCredential(token, name.data, scope.data);
   } catch (error) {
     if (error instanceof ApiError) {
       if (error.status === 400 || error.status === 422) {

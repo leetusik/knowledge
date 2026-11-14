@@ -4,7 +4,7 @@
  */
 import { SITE } from "@/content/site";
 
-/** The site's host with no scheme, as an address reads on paper ("knowledge.hi2vi.com"). */
+/** The site's host with no scheme, as an address reads on paper ("hi2vi.com"). */
 export function printHost(): string {
   return SITE.url.replace(/^https?:\/\//, "").replace(/\/+$/, "");
 }

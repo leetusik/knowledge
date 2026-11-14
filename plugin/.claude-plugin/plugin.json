@@ -1,11 +1,11 @@
 {
   "name": "knowledge",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "description": "Explain what code in your repo does, a code change in it, or a subject a research phase covered, as a native chapter — Markdown with typed blocks for diagrams, figures, callouts and a quiz — in your own knowledge base, written only from the code and what your workspace's phases recorded, a research phase's findings included, with no research of its own. Whenever the records lack what the reader needs (a subject no phase covers, code or not, or a covered subject that rests on outside basics no record states), it offers a research phase first, your own \"research first\" is always honoured, and the explain's confirmation comes back by itself when that research passes. It runs as an explain phase in a workflow workspace (v96 or later): one confirmation, then one writer, one critic and a private publish; a book's chapters are written at once. One setup skill connects the hosted KB or scaffolds your own.",
   "author": {
     "name": "leetusik"
   },
-  "homepage": "https://knowledge.hi2vi.com",
+  "homepage": "https://hi2vi.com",
   "repository": "https://github.com/leetusik/platform",
   "license": "MIT",
   "keywords": [

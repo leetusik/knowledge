@@ -62,6 +62,7 @@
       "tests/test_embeddings.py",
       "tests/test_html_documents.py",
       "tests/test_org_credentials.py",
+      "tests/test_org_switch.py",
       "tests/test_public_read.py",
       "tests/test_private_publish.py",
       "tests/test_reconcile.py",
@@ -196,7 +197,17 @@
       "server/listen_mp4.py",
       "server/listen_play.py",
       "tests/test_listen_play.py",
-      "tests/fixtures/listen/part.m4a"
+      "tests/fixtures/listen/part.m4a",
+      "server/feedback/__init__.py",
+      "server/feedback/types.py",
+      "server/feedback/repository.py",
+      "server/feedback/service.py",
+      "server/feedback/storage.py",
+      "tests/test_feedback_model.py",
+      "tests/test_feedback_storage.py",
+      "server/feedback/notify.py",
+      "server/feedback_api.py",
+      "tests/test_feedback_api.py"
     ],
     "parameterized": [
       "mkdocs.yml",
@@ -219,6 +230,7 @@
   ],
   "root_only": [
     "tests/test_migrate_books.py",
+    "tests/test_merge_vocky.py",
     "tests/test_explain_resolver.py",
     "tests/fixtures/book"
   ]

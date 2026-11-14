@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -25,7 +26,14 @@ export const RAIL_ID = "kb-rail";
  * Items flagged `soon` (a route announced before it exists) render as muted
  * `.kb-rail__soon` text with a `.kb-rail__pill` "Soon" tag rather than links that would 404.
  */
-export function RailNav({ due }: { due: number }) {
+export function RailNav({
+  due,
+  orgMenu,
+}: {
+  due: number;
+  /** The server-rendered org menu (a user in several orgs), above the first group. */
+  orgMenu?: ReactNode;
+}) {
   const pathname = usePathname();
   const count = dueText(due);
 
@@ -35,6 +43,7 @@ export function RailNav({ due }: { due: number }) {
           gives the navbar the "Primary" name and the rail its own, because both
           landmarks are in the DOM at every width even though only one shows. */}
       <nav aria-label={APP_SHELL.railNavLabel}>
+        {orgMenu}
         {APP_NAV_GROUPS.map((group) => (
           <div key={group.heading} className="kb-rail__sec">
             <div className="kb-rail__head kb-app-eyebrow">{group.heading}</div>

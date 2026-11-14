@@ -82,17 +82,37 @@ async def record_usage(hint: UsageHint) -> None:
             )
         )
 
-        # last_used_at is stamped ONLY here — on a metered event, never on a plain
-        # read (stamping in the resolver would write on every read). A vk_ key used
-        # only for reads therefore reflects its last write/search.
-        if hint.credential_id is not None:
-            await get_accounts_service().touch_credential_last_used(
-                hint.credential_id
-            )
     except Exception:  # noqa: BLE001 — best-effort; metering never fails a request
         _log.warning(
             "usage metering failed (event_type=%s, tenant_id=%s)",
             hint.event_type,
             hint.tenant_id,
+            exc_info=True,
+        )
+        return
+
+    # last_used_at is stamped on a metered event (here) or a capture (the Feedback
+    # capture routes), never on a plain read (stamping in the resolver would write
+    # on every read). A vk_ key used only for reads therefore reflects its last
+    # write/search/capture.
+    await stamp_credential_used(hint.credential_id)
+
+
+async def stamp_credential_used(credential_id: UUID | None) -> None:
+    """Stamp a ``vk_`` credential's ``last_used_at``, best-effort; never raises.
+
+    Called after the response (the metering middleware, or a capture route's
+    background task), so a failed stamp is logged and never changes the request.
+    ``None`` (a master-bearer or session caller) stamps nothing.
+    """
+
+    if credential_id is None:
+        return
+    try:
+        await get_accounts_service().touch_credential_last_used(credential_id)
+    except Exception:  # noqa: BLE001 — best-effort; a stamp never fails a request
+        _log.warning(
+            "credential last-used stamp failed (credential_id=%s)",
+            credential_id,
             exc_info=True,
         )

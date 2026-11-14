@@ -1,5 +1,6 @@
 """Thin async httpx proxy over the frozen read endpoints (``GET /api/search`` and
-the single-document reads ``GET /api/documents/{id}`` / ``.../by-path/{rel_path}``).
+the single-document reads ``GET /api/documents/{id}`` / ``.../by-path/{rel_path}``),
+plus the one write the Feedback endpoint proxies, ``POST /api/feedback``.
 
 This is the whole "proxy-and-forward-bearer" architecture in a couple of functions: the
 caller's inbound ``Authorization`` header is forwarded **verbatim** upstream, so
@@ -152,6 +153,50 @@ async def fetch_document(
         transport=transport,
     ) as client:
         response = await client.get(path)
+
+    if response.status_code >= 400:
+        raise UpstreamError(response.status_code, _detail(response))
+    try:
+        return response.json()
+    except ValueError:
+        raise UpstreamError(response.status_code, "upstream response was not JSON") from None
+
+
+async def capture_feedback(
+    *,
+    base_url: str,
+    authorization: str | None,
+    body: dict[str, Any],
+    timeout: float = 15.0,
+    transport: httpx.BaseTransport | None = None,
+) -> dict[str, Any]:
+    """``POST {base_url}/api/feedback`` with the inbound bearer forwarded verbatim.
+
+    ``body`` is sent as JSON exactly as given (the caller drops the unset fields).
+    Returns the parsed 202 receipt (``{request_id, accepted_at, status}``). Same
+    proxy conventions as :func:`search`; non-2xx → :class:`UpstreamError` (400 with
+    the API's ``detail``, 401 with no valid bearer, 403 for a key that may not
+    capture, 413 for a body over the API's cap, 429 past the limit). Transport
+    errors and timeouts propagate as ``httpx`` exceptions, as for the read calls.
+
+    No client-address header is sent, deliberately: the API counts a request that
+    reaches it without the edge's ``X-Real-IP`` in the bucket of the bearer's org,
+    so each org's callers of this hop share one limit of their own and never share
+    the container's one address with every other org.
+    """
+
+    headers = {"User-Agent": USER_AGENT}
+    if authorization:
+        headers["Authorization"] = authorization
+
+    async with httpx.AsyncClient(
+        base_url=base_url.rstrip("/"),
+        timeout=timeout,
+        follow_redirects=False,
+        headers=headers,
+        transport=transport,
+    ) as client:
+        response = await client.post("/api/feedback", json=body)
 
     if response.status_code >= 400:
         raise UpstreamError(response.status_code, _detail(response))

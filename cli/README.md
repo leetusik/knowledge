@@ -1,7 +1,7 @@
 # knowledge-cli
 
 A standalone command-line client for a personal knowledge base on the hosted
-service at <https://knowledge.hi2vi.com> — sign up, configure credentials, and
+service at <https://hi2vi.com> — sign up, configure credentials, and
 save and search knowledge from a terminal, without ever visiting the website. It
 is a separate install from the `/knowledge:explain` Claude Code plugin, but writes
 the same config the plugin reads, so the two share one hosted knowledge base.
@@ -11,7 +11,7 @@ the same config the plugin reads, so the two share one hosted knowledge base.
 The quick path — one command that installs [`uv`](https://docs.astral.sh/uv/) if
 you don't have it, then the CLI:
 
-    curl -fsSL https://knowledge.hi2vi.com/install.sh | bash
+    curl -fsSL https://hi2vi.com/install.sh | bash
 
 Or install it directly with `uv` (the canonical, manual channel — what the
 one-liner wraps):

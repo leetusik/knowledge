@@ -1,6 +1,7 @@
 import "server-only";
 
 import { readKbApiEnv } from "@/lib/env";
+import { getActiveOrg, ORG_HEADER } from "@/lib/session";
 
 // P12.S2 — the server-side knowledge API client: the ONE place the Next.js server
 // talks to knowledge-api (D-P12-2, the BFF boundary). Ported from vocky's P4.S2
@@ -53,11 +54,31 @@ function kbUrl(path: string): string {
 export interface KbRequestOptions {
   /** The knowledge session token to present as `Authorization: Bearer <token>`. */
   token?: string;
+  /**
+   * The active org to name in `X-Hi2vi-Org`, overriding the org cookie: a tenant id,
+   * or `null` for "send none" (the API then acts in the first org). Omitted, the
+   * cookie decides. Ignored without a `token`: a call with no session never names an
+   * org.
+   */
+  org?: string | null;
   signal?: AbortSignal;
 }
 
-function authHeaders(token: string | undefined): Record<string, string> {
-  return token ? { Authorization: `Bearer ${token}` } : {};
+/**
+ * The bearer, plus the active org when the call carries a session token: the ONE
+ * place every server-to-server call learns the org (multi-org sessions), so no call
+ * site knows about it. The org comes from the explicit override when given, else
+ * from the `hi2vi_org` cookie of the request being served.
+ */
+async function authHeaders(
+  options: KbRequestOptions,
+): Promise<Record<string, string>> {
+  if (!options.token) return {};
+  const org = options.org !== undefined ? options.org : await getActiveOrg();
+  return {
+    Authorization: `Bearer ${options.token}`,
+    ...(org ? { [ORG_HEADER]: org } : {}),
+  };
 }
 
 /** Parse a JSON body, tolerating 204/empty (returns `undefined`). */
@@ -75,7 +96,7 @@ export async function getJson<T>(
 ): Promise<T> {
   const res = await fetch(kbUrl(path), {
     method: "GET",
-    headers: { Accept: "application/json", ...authHeaders(options.token) },
+    headers: { Accept: "application/json", ...(await authHeaders(options)) },
     cache: "no-store",
     signal: options.signal,
   });
@@ -115,7 +136,7 @@ export async function getRaw(
 ): Promise<Response> {
   const res = await fetch(kbUrl(path), {
     method: options.method ?? "GET",
-    headers: { ...options.headers, ...authHeaders(options.token) },
+    headers: { ...options.headers, ...(await authHeaders(options)) },
     cache: "no-store",
     signal: options.signal,
   });
@@ -141,7 +162,7 @@ export async function sendJson<T>(
     headers: {
       Accept: "application/json",
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
-      ...authHeaders(options.token),
+      ...(await authHeaders(options)),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store",

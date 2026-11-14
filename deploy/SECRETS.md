@@ -1,6 +1,6 @@
-# Secrets & DNS provisioning runbook — knowledge.hi2vi.com
+# Secrets & DNS provisioning runbook — hi2vi.com
 
-Operator runbook for the secrets + DNS that `https://knowledge.hi2vi.com` needs.
+Operator runbook for the secrets + DNS that `https://hi2vi.com` needs.
 This is the "**produce the credentials and register them**" half;
 [`README.md`](README.md) is the "**place them and bring the box up**" half.
 
@@ -198,32 +198,35 @@ rm -rf "$tmp"
 
 ## 3. Cloudflare DNS + origin TLS — **both already done, nothing to provision**
 
-**3a. DNS — done.** The proxied `knowledge` record exists on the `hi2vi.com` zone;
-`knowledge.hi2vi.com` resolves to the same Cloudflare proxy IPs as `hi2vi.com`.
-Confirm any time:
+**3a. DNS — done.** The platform serves the apex `hi2vi.com`; the proxied
+`knowledge` and `vocky` records on the `hi2vi.com` zone stay, because those two hosts
+now answer with redirects to the apex (`README.md` §3). All three resolve to the same
+Cloudflare proxy IPs. Confirm any time:
 
 ```bash
-dig +short knowledge.hi2vi.com     # Cloudflare proxy IPs, same as hi2vi.com
+dig +short hi2vi.com knowledge.hi2vi.com vocky.hi2vi.com   # Cloudflare proxy IPs, all the same
 ```
 
-**3b. Origin cert — already covered by the wildcard.** The edge's Cloudflare Origin
-CA cert at `/home/opc/edge/certs/hi2vi.crt` carries SANs
-**`DNS:*.hi2vi.com, DNS:hi2vi.com`** (valid to 2041), so it **already covers
-`knowledge.hi2vi.com`**. `deploy/knowledge.conf` points straight at it. **No cert to
+**3b. Origin cert — already covered.** The edge's Cloudflare Origin CA cert at
+`/home/opc/edge/certs/hi2vi.crt` carries SANs **`DNS:*.hi2vi.com, DNS:hi2vi.com`**
+(valid to 2041): the apex SAN covers `hi2vi.com` and the wildcard covers
+`knowledge.hi2vi.com` and `vocky.hi2vi.com`. All three vhosts (`deploy/hi2vi.conf`,
+`deploy/knowledge.conf`, `deploy/vocky.conf`) point straight at it. **No cert to
 issue, no per-host variant, no edge cert step.** Verified with:
 
 ```bash
 ssh oracle-cloud "openssl x509 -in /home/opc/edge/certs/hi2vi.crt -noout -text \
   | grep -A1 'Subject Alternative Name'"
-# confirmed: DNS:*.hi2vi.com, DNS:hi2vi.com   -> knowledge.hi2vi.com is covered
+# confirmed: DNS:*.hi2vi.com, DNS:hi2vi.com   -> the apex and both redirect hosts are covered
 ```
 
 > If that cert is ever replaced by a per-host (non-wildcard) one, this assumption
-> breaks: issue a `knowledge.hi2vi.com` Origin CA cert, drop it at
-> `/home/opc/edge/certs/knowledge.crt` + `.key`, and repoint the two
-> `ssl_certificate*` lines in `deploy/knowledge.conf`. (Cloudflare's public-facing
-> TLS is handled by the proxied record either way; this is only the **origin** cert
-> nginx serves to Cloudflare.)
+> breaks for the two redirect hosts: issue Origin CA certs for them, drop them under
+> `/home/opc/edge/certs/`, and repoint the `ssl_certificate*` lines in
+> `deploy/knowledge.conf` and `deploy/vocky.conf` (and add the new basenames to the
+> edge repo's `validate.sh` and `stage.sh`). (Cloudflare's public-facing TLS is
+> handled by the proxied records either way; this is only the **origin** cert nginx
+> serves to Cloudflare.)
 
 ---
 
@@ -239,6 +242,27 @@ BM25-only (`mode:"bm25"`), **zero code change** either way.
   (`README.md` §1c leaves the line empty for you to fill in-place on the box, e.g.
   with `sudo vi`). Leaving it empty is a supported launch choice — add the key later
   and restart the api with no other change.
+
+### 4b. Optional `KB_SMTP_*` — Feedback's owner alert mail
+
+When a Feedback event is captured, the api mails the project owner after the response,
+best-effort. It reads five names from the box's `.env` (through the api's `env_file:`):
+
+| Name | What |
+|---|---|
+| `KB_SMTP_HOST` | the SMTP server |
+| `KB_SMTP_PORT` | its port (default 587, STARTTLS; 465 means implicit TLS) |
+| `KB_SMTP_USER` | the login (unset: no AUTH) |
+| `KB_SMTP_PASSWORD` | **the secret**: the login's password |
+| `KB_SMTP_FROM` | the sender address (unset: the login) |
+
+- Optional: with no host, or no sender (neither `KB_SMTP_FROM` nor `KB_SMTP_USER`), no
+  alert mail goes out and capture works unchanged.
+- The account is the one vocky's worker already uses. Copy the five values from vocky's
+  `.env` **on the box** into `/opt/knowledge/.env` (an editor on the box, `sudo vi`);
+  never through this repo, a laptop or a transcript. Then recreate the api
+  (`docker compose -f compose.prod.yml up -d --force-recreate --no-deps api`, or the
+  next Production Deploy).
 
 ---
 
@@ -256,10 +280,12 @@ BM25-only (`mode:"bm25"`), **zero code change** either way.
       `KNOWLEDGE_API_TOKEN`.
 - [ ] **Box clone origin** set to the SSH form `git@github.com:leetusik/platform.git`
       (`README.md` §1a).
-- [ ] **Cloudflare `knowledge` record** — ✅ already live, proxied.
+- [ ] **Cloudflare apex, `knowledge` and `vocky` records** — ✅ already live, proxied.
 - [ ] **Origin cert coverage** — ✅ already covered by the `*.hi2vi.com` wildcard
       (`hi2vi.crt`); nothing to issue.
 - [ ] **`GOOGLE_API_KEY`** obtained (recommended) — or a deliberate BM25-only launch.
+- [ ] **`KB_SMTP_*`** (§4b, optional) copied on the box from vocky's `.env` — or a
+      deliberate launch with no Feedback alert mail.
 
 Next: `README.md` §1 (clone, place `known_hosts`, write `.env`) → §2 (bring-up, incl.
-the `ssh`-in-image assertion) → §3 (drop the vhost + `./deploy.sh`) → §5 (validation).
+the `ssh`-in-image assertion) → §3 (land the vhosts through the edge repo) → §5 (validation).

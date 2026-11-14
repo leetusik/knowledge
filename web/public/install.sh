@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# knowledge-cli installer — served live at https://knowledge.hi2vi.com/install.sh
+# knowledge-cli installer — served live at https://hi2vi.com/install.sh
 #
-#   curl -fsSL https://knowledge.hi2vi.com/install.sh | bash
+#   curl -fsSL https://hi2vi.com/install.sh | bash
 #
 # Installs the `knowledge` CLI with uv (bootstrapping uv first if it is missing)
 # from the canonical git-subdirectory channel — there is no PyPI package by

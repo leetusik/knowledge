@@ -23,6 +23,7 @@ export interface AppNavItem {
 export const APP_NAV: AppNavItem[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Documents", href: "/documents" },
+  { label: "Feedback", href: "/feedback" },
 ];
 
 /**
@@ -64,6 +65,11 @@ export const APP_SHELL = {
   railNavLabel: "Sections",
   /** Accessible name for the phone topbar's account disclosure (round 03 §4.2). */
   accountMenuLabel: "Account menu",
+  /**
+   * Accessible name for the org menu (a user in more than one org): the rail's and
+   * the navbar's disclosure, whose summary shows the active org's name.
+   */
+  orgMenuLabel: "Switch org",
   /** Mono-uppercase eyebrow heading over the rail's nav section. */
   railHeading: "Org",
   /** The rail's second eyebrow (P30.S22): the first group, above `railHeading`. */

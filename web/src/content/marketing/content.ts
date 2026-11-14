@@ -126,7 +126,7 @@ export const HOW = {
   steps: [
     { n: "1", title: "Save", token: "knowledge save" },
     { n: "2", title: "Connect", token: "knowledge init" },
-    { n: "3", title: "Browse", token: "knowledge.hi2vi.com" },
+    { n: "3", title: "Browse", token: "hi2vi.com" },
     {
       n: "4",
       title: "Retrieve",
@@ -206,12 +206,12 @@ export const FEATURE_CONNECT = {
 export const ZSHENV_COMMENT =
   "# org-level key: Dashboard → Org API keys → New key";
 export const ZSHENV_EXPORT_BASE =
-  'export KB_API_BASE_URL="https://knowledge.hi2vi.com"';
+  'export KB_API_BASE_URL="https://hi2vi.com"';
 export const ZSHENV_TOKEN_VALUE = '"vk_..."';
 /** The clipboard payload for the ~/.zshenv block: the two locked export lines,
  *  including the trailing comment and its exact 8-space gap. */
 export const ZSHENV_COPY =
-  'export KB_API_BASE_URL="https://knowledge.hi2vi.com"\n' +
+  'export KB_API_BASE_URL="https://hi2vi.com"\n' +
   'export KB_API_TOKEN="vk_..."        # org-level key: Dashboard → Org API keys → New key';
 /** The health-check curl line — the whole line is both the display and the copy. */
 export const HEALTH_CHECK_CURL =
@@ -351,5 +351,5 @@ export const FOOTER = {
       ],
     },
   ],
-  meta: "knowledge · knowledge.hi2vi.com · 창플 / 미라클 · Built on the calm editorial library",
+  meta: "knowledge · hi2vi.com · 창플 / 미라클 · Built on the calm editorial library",
 };

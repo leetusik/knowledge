@@ -1,0 +1,13 @@
+/* The Feedback pages' own stylesheet: LAYOUT ONLY. Every colour, font, radius and
+   shadow on these pages is the console kit's (`.kb-panel`, `.kb-dtable`,
+   `.kb-docmeta`, `.kb-chip`, `.kb-appbtn`, ...); these rules only shape text flow
+   and grid placement. */
+
+/* Caller-written text keeps its line breaks, and a long unbroken token wraps. */
+.fb-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* The list's message link: at most two lines in a row, the rest on the detail. */
+.fb-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+
+/* A long-form field spans the whole `.kb-docmeta` grid row. */
+.fb-wide { grid-column: 1 / -1; }

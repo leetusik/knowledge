@@ -3,6 +3,7 @@ import "server-only";
 import { getJson, getRaw, sendJson } from "./client";
 import type {
   KbCredential,
+  KbCredentialScope,
   KbDashboard,
   KbBook,
   KbDocument,
@@ -215,11 +216,12 @@ export async function createCredential(
   token: string,
   projectId: string,
   name?: string,
+  scope: KbCredentialScope = "full",
 ): Promise<KbMintedCredential> {
   return sendJson<KbMintedCredential>(
     `/app/projects/${encodeURIComponent(projectId)}/credentials`,
     "POST",
-    name === undefined ? {} : { name },
+    name === undefined ? { scope } : { name, scope },
     { token },
   );
 }
@@ -315,11 +317,12 @@ export async function listOrgCredentials(
 export async function createOrgCredential(
   token: string,
   name?: string,
+  scope: KbCredentialScope = "full",
 ): Promise<KbMintedCredential> {
   return sendJson<KbMintedCredential>(
     "/app/credentials",
     "POST",
-    name === undefined ? {} : { name },
+    name === undefined ? { scope } : { name, scope },
     { token },
   );
 }

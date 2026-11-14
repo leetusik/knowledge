@@ -98,6 +98,7 @@ def test_org_key_mints_authorizes_write_and_get_or_creates_project(org_client):
     mint = org_client.post("/app/credentials", headers=session)
     assert mint.status_code == 201, mint.text
     assert mint.json()["credential"]["project_id"] is None
+    assert mint.json()["credential"]["scope"] == "full"  # no scope asked -> full
     org_key = mint.json()["key"]
 
     # "alpha" does not exist yet — the write must get-or-create it.

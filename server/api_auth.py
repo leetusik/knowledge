@@ -15,8 +15,16 @@ Two modes, switched per-call on ``config.database_url()``:
     2. a ``vk_`` credential -> its own ``tenant_id`` (org-scoped authorization); an
        org-level key (``project_id NULL``) carries no bound project, a project-bound
        key additionally carries its ``project_id`` for attribution;
-    3. a session token -> the user's first tenant (own-corpus reads/writes).
+    3. a session token -> the tenant the request names in ``X-Hi2vi-Org`` (403 when
+       the user is not a member, or the id is malformed), else the user's first
+       tenant (``server.accounts.auth.active_tenant``). Steps 1 and 2 never read
+       the header: a key or the master bearer always acts in its own tenant.
   An unresolvable bearer (or none) -> a generic 401.
+
+Key scope (C3): every context carries ``scope``. The master bearer and sessions are
+``"full"``; a ``vk_`` key carries its credential's own. ``resolve_api_read`` and
+``resolve_api_write`` refuse a ``capture`` key with a 403, so every Library key route is
+``full``-only; ``resolve_api_capture`` (the Feedback capture surfaces) accepts both.
 
 S4 only *resolves* the credential to an ``ApiAuthContext``; it does not scope
 storage/queries to the tenant yet — the ``/api/*`` handlers accept ``ctx`` but
@@ -32,7 +40,7 @@ from uuid import UUID
 from fastapi import HTTPException, Request
 
 from server import config
-from server.accounts.auth import extract_bearer_token
+from server.accounts.auth import active_tenant, extract_bearer_token
 from server.accounts.security import sha256_hex
 from server.accounts.service import get_accounts_service
 
@@ -56,15 +64,20 @@ class ApiAuthContext:
 
     ``credential_id`` is the resolved ``vk_`` credential's id (org-level or
     project-bound), set only for a ``vk_`` caller — it is ``None`` for the master
-    bearer (no DB row) and session tokens. P11's metering middleware stamps
-    ``last_used_at`` on this credential when a metered event is recorded (never in
-    the resolver, so plain reads do not write); see ``server/usage/metering.py``.
+    bearer (no DB row) and session tokens. ``last_used_at`` is stamped on this
+    credential when a metered event is recorded (P11's metering middleware) or a
+    Feedback capture succeeds, never in the resolver, so plain reads do not write;
+    see ``stamp_credential_used`` in ``server/usage/metering.py``.
+
+    ``scope`` is ``"full"`` for legacy mode, the master bearer and sessions, and the
+    credential's own scope (``"full"`` or ``"capture"``) for a ``vk_`` key.
     """
 
     tenant_id: UUID | None = None
     project_id: UUID | None = None
     credential_id: UUID | None = None
     is_public: bool = True
+    scope: str = "full"
 
 
 # Shared, immutable-in-practice legacy context (tenant_id=None, project_id=None,
@@ -86,10 +99,12 @@ def _tenant_mode() -> bool:
 
 
 async def get_tenant_one_id() -> UUID | None:
-    """Resolve tenant #1's id (the operator's first tenant), or ``None``.
+    """Resolve tenant #1's id (the operator's first tenant, by membership), or ``None``.
 
     Tenant mode: ``KB_OPERATOR_EMAIL`` -> ``get_user_by_email`` ->
-    ``list_tenants_for_user()[0].id``. Legacy mode / no operator email / operator
+    ``list_tenants_for_user()[0].id``, the org the operator joined first (their
+    signup org): an org joined later never takes its place, however old it is.
+    Legacy mode / no operator email / operator
     not yet seeded -> ``None``. The result is memoized on first success (see
     ``_tenant_one_cache``). Used both by the pinned-master bearer path (to map
     ``KB_API_TOKEN`` -> tenant #1) and by ``is_public`` (to tell tenant #1 apart
@@ -130,12 +145,15 @@ def _unauth() -> HTTPException:
     )
 
 
-async def _resolve_tenant_bearer(token: str) -> ApiAuthContext | None:
+async def _resolve_tenant_bearer(
+    token: str, request: Request | None = None
+) -> ApiAuthContext | None:
     """Tenant mode: map a raw bearer token to an ``ApiAuthContext``, or None.
 
     Returns None when the token resolves to nothing (bad key, revoked credential,
     expired session, or a misconfigured master bearer) — the caller turns None
-    into a generic 401.
+    into a generic 401. ``request`` is read only by the session step, for its
+    ``X-Hi2vi-Org`` header (a non-member org raises a 403 from there).
     """
     service = get_accounts_service()
 
@@ -163,6 +181,7 @@ async def _resolve_tenant_bearer(token: str) -> ApiAuthContext | None:
             return ApiAuthContext(
                 tenant_id=cred.tenant_id,
                 credential_id=cred.id,
+                scope=cred.scope,
             )
         # Project-bound key: keep the existence guard — a credential pointing at a
         # vanished project stays unresolvable (only where a project_id is set).
@@ -172,19 +191,50 @@ async def _resolve_tenant_bearer(token: str) -> ApiAuthContext | None:
                 tenant_id=cred.tenant_id,
                 project_id=cred.project_id,
                 credential_id=cred.id,
+                scope=cred.scope,
             )
         return None
 
-    # 3. Session token -> the user's first tenant (own-corpus reads/writes).
+    # 3. Session token -> the active tenant: the X-Hi2vi-Org header's org (403 for a
+    #    non-member), else the user's first (own-corpus reads/writes).
     auth_token = await service.get_active_auth_token_by_hash(token_hash)
     if auth_token is not None:
         user = await service.get_user_by_id(auth_token.user_id)
         if user is not None:
             tenants = await service.list_tenants_for_user(user.id)
             if tenants:
-                return ApiAuthContext(tenant_id=tenants[0].id)
+                return ApiAuthContext(tenant_id=active_tenant(request, tenants).id)
 
     return None
+
+
+def _capture_only() -> HTTPException:
+    """The 403 a ``capture``-scoped key gets on every Library key route."""
+    return HTTPException(
+        status_code=403, detail="this key's scope is capture: Library routes need a full key"
+    )
+
+
+async def _resolve_tenant_request(request: Request) -> ApiAuthContext:
+    """Tenant mode: the request's bearer -> a context with ``is_public`` set, or 401."""
+    token = extract_bearer_token(request)
+    if token is None:
+        raise _unauth()
+    ctx = await _resolve_tenant_bearer(token, request)
+    if ctx is None:
+        raise _unauth()
+    ctx.is_public = (ctx.tenant_id is None) or (ctx.tenant_id == await get_tenant_one_id())
+    return ctx
+
+
+def _legacy_write(request: Request) -> ApiAuthContext:
+    """Legacy mode's write guard: byte-for-byte ``require_bearer``."""
+    token = config.api_token()
+    if token is None:
+        return _LEGACY
+    if request.headers.get("Authorization") != f"Bearer {token}":
+        raise _unauth()
+    return _LEGACY
 
 
 async def resolve_api_write(request: Request) -> ApiAuthContext:
@@ -192,25 +242,17 @@ async def resolve_api_write(request: Request) -> ApiAuthContext:
 
     Legacy mode: byte-for-byte ``require_bearer`` (no-op when ``KB_API_TOKEN`` is
     unset; else exact-match the bearer, 401 otherwise). Tenant mode: require a
-    resolvable credential; the returned tenant scopes storage in S5.
+    resolvable credential; the returned tenant scopes storage in S5. A ``capture``
+    key is refused with a 403 (Library routes are ``full``-only).
     """
     if not _tenant_mode():
         # LEGACY: identical semantics to require_bearer.
-        token = config.api_token()
-        if token is None:
-            return _LEGACY
-        if request.headers.get("Authorization") != f"Bearer {token}":
-            raise _unauth()
-        return _LEGACY
+        return _legacy_write(request)
 
-    # TENANT: any resolvable credential (master / vk_ / session) authorizes a write.
-    token = extract_bearer_token(request)
-    if token is None:
-        raise _unauth()
-    ctx = await _resolve_tenant_bearer(token)
-    if ctx is None:
-        raise _unauth()
-    ctx.is_public = (ctx.tenant_id is None) or (ctx.tenant_id == await get_tenant_one_id())
+    # TENANT: any resolvable full-scope credential (master / vk_ / session) writes.
+    ctx = await _resolve_tenant_request(request)
+    if ctx.scope != "full":
+        raise _capture_only()
     return ctx
 
 
@@ -220,25 +262,30 @@ async def resolve_api_read(request: Request) -> ApiAuthContext:
     Legacy mode: byte-for-byte ``require_read_bearer`` — open unless
     ``KB_REQUIRE_READ_AUTH`` is on AND ``KB_API_TOKEN`` is set, then it delegates
     to the same exact-match bearer check. Tenant mode: reads require a resolvable
-    credential (a tenant is needed to scope reads in S5).
+    credential (a tenant is needed to scope reads in S5); a ``capture`` key is
+    refused with a 403.
     """
     if not _tenant_mode():
         # LEGACY: identical semantics to require_read_bearer.
         if not config.require_read_auth_enabled():
             return _LEGACY
-        token = config.api_token()
-        if token is None:
-            return _LEGACY
-        if request.headers.get("Authorization") != f"Bearer {token}":
-            raise _unauth()
-        return _LEGACY
+        return _legacy_write(request)
 
-    # TENANT: reads need a resolvable credential to know which tenant to scope to.
-    token = extract_bearer_token(request)
-    if token is None:
-        raise _unauth()
-    ctx = await _resolve_tenant_bearer(token)
-    if ctx is None:
-        raise _unauth()
-    ctx.is_public = (ctx.tenant_id is None) or (ctx.tenant_id == await get_tenant_one_id())
+    # TENANT: reads need a resolvable full-scope credential to know the tenant.
+    ctx = await _resolve_tenant_request(request)
+    if ctx.scope != "full":
+        raise _capture_only()
     return ctx
+
+
+async def resolve_api_capture(request: Request) -> ApiAuthContext:
+    """Guard/resolver for the Feedback capture surfaces (``POST /api/feedback``, its
+    attachments, the Feedback MCP tool).
+
+    Accepts everything ``resolve_api_write`` accepts (master bearer, sessions, full
+    keys) **plus** a ``capture``-scoped key; ``ctx.scope`` tells the two key kinds
+    apart. Legacy mode is ``resolve_api_write``'s legacy branch, unchanged.
+    """
+    if not _tenant_mode():
+        return _legacy_write(request)
+    return await _resolve_tenant_request(request)

@@ -41,7 +41,7 @@ GUIDE = f"""\
 # knowledge — the agent-readable contract
 
 `knowledge` is a standalone CLI for a personal knowledge base on the hosted service
-at https://knowledge.hi2vi.com. It signs up, configures credentials, and saves and
+at https://hi2vi.com. It signs up, configures credentials, and saves and
 searches knowledge from a terminal — the website is never required. This is the full
 machine-readable contract: if you are a coding agent driving this on a user's behalf,
 everything you need to run the whole lifecycle unattended is below.
@@ -58,7 +58,7 @@ This puts a `knowledge` executable on PATH. Requires Python 3.12+ and `uv`. The 
 runtime dependency is `httpx`; there is no PyPI, npm, or brew package — the git URL is
 the distribution channel. Re-run the same command with `--reinstall` to upgrade
 (`--force` reuses the cached wheel and does not rebuild). A human can instead run the
-one-liner `curl -fsSL https://knowledge.hi2vi.com/install.sh | bash`, which bootstraps
+one-liner `curl -fsSL https://hi2vi.com/install.sh | bash`, which bootstraps
 `uv` and then runs exactly this command.
 
 ## 2. Onboard — one command

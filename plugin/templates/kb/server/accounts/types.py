@@ -11,6 +11,24 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+# The allowed values of the two app-validated value columns (no DB ``CHECK``, the
+# ``projects.visibility`` convention). One place each: every write path checks here.
+#: ``tenants.plan``: an org's plan. Only the migration default writes it today.
+TENANT_PLANS: frozenset[str] = frozenset({"free"})
+#: ``project_credentials.scope``: ``full`` reaches every key surface; ``capture``
+#: only the Feedback capture surfaces (``server.api_auth.resolve_api_capture``).
+CREDENTIAL_SCOPES: frozenset[str] = frozenset({"full", "capture"})
+
+
+def validate_credential_scope(scope: str) -> str:
+    """Return ``scope`` when it is a known credential scope, else raise ``ValueError``."""
+
+    if scope not in CREDENTIAL_SCOPES:
+        raise ValueError(
+            f"unknown credential scope {scope!r}; expected one of {sorted(CREDENTIAL_SCOPES)}"
+        )
+    return scope
+
 
 @dataclass(slots=True, kw_only=True)
 class CreateUser:
@@ -36,12 +54,14 @@ class TenantRecord:
 
     ``slug`` is the tenant's public URL identity, or ``None`` when it has never
     claimed one (in which case it simply has no pretty URL and keeps today's
-    id/uuid links). Always lowercase — see ``server.accounts.slugs``.
+    id/uuid links). Always lowercase — see ``server.accounts.slugs``. ``plan`` is
+    one of ``TENANT_PLANS`` (``"free"`` by default; no API route writes it).
     """
 
     id: UUID
     name: str
     slug: str | None
+    plan: str
     created_at: datetime
 
 
@@ -88,7 +108,8 @@ class CreateProjectCredential:
     ``project_id`` binds the credential to a project for attribution; an org-level
     credential (introduced by the org-mint path) leaves it ``None``. The caller
     computes ``token_prefix`` (short display prefix) and ``token_hash`` (sha256 hex
-    of the plaintext key); the raw key is never stored.
+    of the plaintext key); the raw key is never stored. ``scope`` is one of
+    ``CREDENTIAL_SCOPES`` (``"full"`` unless the minter asks for ``"capture"``).
     """
 
     tenant_id: UUID
@@ -96,6 +117,7 @@ class CreateProjectCredential:
     token_hash: str
     project_id: UUID | None = None
     name: str | None = None
+    scope: str = "full"
 
 
 @dataclass(slots=True, kw_only=True)
@@ -103,7 +125,7 @@ class ProjectCredentialRecord:
     """Stored credential metadata. Never exposes ``token_hash``.
 
     ``project_id`` is ``None`` for an org-level credential (project-bound rows keep
-    it set for attribution).
+    it set for attribution). ``scope`` is ``"full"`` or ``"capture"``.
     """
 
     id: UUID
@@ -111,6 +133,7 @@ class ProjectCredentialRecord:
     project_id: UUID | None
     name: str | None
     token_prefix: str
+    scope: str
     created_at: datetime
     last_used_at: datetime | None
     revoked_at: datetime | None

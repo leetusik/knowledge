@@ -5,7 +5,7 @@
 // current paths — no /app rebase; see phase.md "Resolution"): "Sign in" → /login,
 // "Get started" → /signup. The guide / CLI / Claude-Code CTAs point at the live
 // GitHub repo surfaces that actually document each path (the mkdocs docs site at
-// knowledge.hi2vi.com/ is being displaced by this landing in P14.S3, so the repo
+// hi2vi.com/ is being displaced by this landing in P14.S3, so the repo
 // is the stable, non-dead destination): the CLI README is the human "guide", its
 // Install section installs the CLI, and the plugin README is the Claude Code
 // connection. The deferred Agent Retrieval API (P15) has no waitlist form yet, so

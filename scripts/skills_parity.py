@@ -35,6 +35,9 @@ Checks:
     exist. The markers must be well formed (unique, closed, not nested, every ``with=``
     name defined), and the ``pagetext`` extract (the publish payload builder the skill
     writes out at run time) must compile as Python.
+  * FEEDBACK (FAIL) — the Feedback capture skill ``skills/vocky-feedback/SKILL.md``
+    (canonical) and its served copy ``web/public/feedback/SKILL.md`` (published at
+    ``/feedback/SKILL.md``) must both exist and be byte-identical.
 
 ``--write-agents`` regenerates the agent body from the canonical Part B, keeping each
 file's frontmatter, then runs the checks. Edit the brief in SKILL.md (all three copies),
@@ -51,6 +54,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CANONICAL = REPO_ROOT / "plugin" / "skills" / "explain" / "SKILL.md"
 PORTABLE = REPO_ROOT / ".agents" / "skills" / "explain" / "SKILL.md"
 WEB = REPO_ROOT / "web" / "public" / "SKILL.md"
+FEEDBACK_CANONICAL = REPO_ROOT / "skills" / "vocky-feedback" / "SKILL.md"
+FEEDBACK_WEB = REPO_ROOT / "web" / "public" / "feedback" / "SKILL.md"
 AGENTS_DIR = REPO_ROOT / "plugin" / "agents"
 AGENT_ROLES = ("explain-critic",)
 FORBIDDEN_FIELDS = ("permissionMode", "hooks", "mcpServers")
@@ -186,6 +191,20 @@ def check_agents(canonical_text: str, write: bool) -> list[str]:
     return failures
 
 
+def check_feedback() -> list[str]:
+    """The FEEDBACK check; returns failures (empty = pass)."""
+    fix = "cp skills/vocky-feedback/SKILL.md web/public/feedback/SKILL.md"
+    for path in (FEEDBACK_CANONICAL, FEEDBACK_WEB):
+        if not path.is_file():
+            return [f"Feedback skill copy missing: {path.relative_to(REPO_ROOT)} (fix: {fix})"]
+    if FEEDBACK_CANONICAL.read_bytes() != FEEDBACK_WEB.read_bytes():
+        return [
+            "Feedback skill drifted: web/public/feedback/SKILL.md is not a byte-for-byte "
+            f"copy of skills/vocky-feedback/SKILL.md (fix: {fix})"
+        ]
+    return []
+
+
 def main() -> int:
     write_agents = "--write-agents" in sys.argv[1:]
     for path in (CANONICAL, PORTABLE, WEB):
@@ -229,9 +248,15 @@ def main() -> int:
             print(f"  - {failure}")
         return 1
 
+    feedback_failures = check_feedback()
+    if feedback_failures:
+        for failure in feedback_failures:
+            print(f"FAIL — {failure}.")
+        return 1
+
     print(
         "PASS — explain skill copies are in body parity (web copy byte-identical); "
-        "the plugin agent matches Part B."
+        "the plugin agent matches Part B; the Feedback skill's served copy is byte-identical."
     )
     return 0
 

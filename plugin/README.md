@@ -32,7 +32,7 @@ two skills:
   [`skills/explain/SKILL.md`](skills/explain/SKILL.md).
 - `/knowledge:setup` — wires `/knowledge:explain` to a knowledge base, two ways.
   **Connect** (the zero-infra default): sign up at the hosted KB
-  (<https://knowledge.hi2vi.com>), mint one ingest key, paste it, and your chapters
+  (<https://hi2vi.com>), mint one ingest key, paste it, and your chapters
   post to your own tenant — no server to run, one key serves every repo. **Scaffold**
   (full control): stand up your own self-hosted KB from scratch — a MkDocs Material site,
   a FastAPI + SQLite document API, an interactive knowledge graph, and a GitHub Pages
@@ -180,7 +180,7 @@ list is for **scaffold** (self-hosted) mode:
   which the plugin does not ship, so in a plugin install the Listen routes
   exist but make no audio.
 
-A live example of what you get: <https://knowledge.hi2vi.com>, the hosted Library this repo runs.
+A live example of what you get: <https://hi2vi.com>, the hosted Library this repo runs.
 
 ## Development & releasing
 

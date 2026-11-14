@@ -1,13 +1,13 @@
 # Knowledge Base
 
-### 🗺️ [**Explore my library → knowledge.hi2vi.com/@leetusik**](https://knowledge.hi2vi.com/@leetusik)
+### 🗺️ [**Explore my library → hi2vi.com/@leetusik**](https://hi2vi.com/@leetusik)
 
 *Start there — every explainer in this library, in one place. No sign-up
 needed; open any one to read it.*
 
-**Live site → <https://knowledge.hi2vi.com>** — the hosted product; sign in to
+**Live site → <https://hi2vi.com>** — the hosted product; sign in to
 browse your own library, or jump straight to the public
-[library](https://knowledge.hi2vi.com/@leetusik) above.
+[library](https://hi2vi.com/@leetusik) above.
 
 Technical explainers written from real project work. When I solve something
 non-trivial, a coding agent (Claude Code / Codex) reads the actual code and
@@ -50,7 +50,7 @@ There is also a standalone `knowledge` CLI for the **hosted** service — sign u
 configure credentials, and save and search knowledge from a terminal, without
 visiting the website or installing the plugin:
 
-    curl -fsSL https://knowledge.hi2vi.com/install.sh | bash
+    curl -fsSL https://hi2vi.com/install.sh | bash
     printf %s "$PASSWORD" | knowledge init --email you@example.com --password-stdin
     knowledge save note.md --tag python --tag testing
 
@@ -63,12 +63,17 @@ CLI, web app) share one hosted knowledge base. Full quickstart in
 [`cli/README.md`](cli/README.md).
 
 Driving this from a coding agent? Export
-`KB_API_BASE_URL=https://knowledge.hi2vi.com` and `KB_API_TOKEN=<an org key>` to
+`KB_API_BASE_URL=https://hi2vi.com` and `KB_API_TOKEN=<an org key>` to
 save over plain REST with no CLI install at all, or run `knowledge guide` for the
 full machine-readable contract (auth, the save rules, the `--json`/exit-code
 protocol) as one bundled, offline document. The canonical `/knowledge:explain`
 skill is also published, copyable and downloadable, at
-[`/SKILL.md`](https://knowledge.hi2vi.com/SKILL.md).
+[`/SKILL.md`](https://hi2vi.com/SKILL.md).
+
+Capturing user feedback from an agent? The Feedback capture skill for agents,
+`vocky-feedback`, is published at
+[`/feedback/SKILL.md`](https://hi2vi.com/feedback/SKILL.md): it captures over REST
+or the `/feedback/mcp` endpoint with a key minted in the web app.
 
 ## How it's built
 
@@ -78,7 +83,7 @@ skill is also published, copyable and downloadable, at
   Documents are self-contained interactive HTML explainers (Background,
   Intuition, Code, a quiz) — this page you're reading was written the same way,
   into this same repo.
-- **Publish path** — the API is hosted at <https://knowledge.hi2vi.com> behind
+- **Publish path** — the API is hosted at <https://hi2vi.com> behind
   one nginx edge that also fronts a Next.js web app (`/` — the primary human
   surface: sign up, browse/search/read, sharing) and an MCP
   retrieval service (`/mcp`) any AI agent can call. A doc written on the box is

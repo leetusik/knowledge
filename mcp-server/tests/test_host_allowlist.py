@@ -18,7 +18,7 @@ from knowledge_mcp import config
 
 
 def test_allowed_hosts_accepts_served_hosts_and_rejects_others(monkeypatch):
-    monkeypatch.setenv("MCP_ALLOWED_HOSTS", "knowledge.hi2vi.com,knowledge-mcp,knowledge-mcp:*")
+    monkeypatch.setenv("MCP_ALLOWED_HOSTS", "hi2vi.com,knowledge-mcp,knowledge-mcp:*")
     mw = TransportSecurityMiddleware(
         TransportSecuritySettings(
             enable_dns_rebinding_protection=True,
@@ -26,7 +26,7 @@ def test_allowed_hosts_accepts_served_hosts_and_rejects_others(monkeypatch):
         )
     )
 
-    assert mw._validate_host("knowledge.hi2vi.com") is True   # public edge, exact match
+    assert mw._validate_host("hi2vi.com") is True   # public edge, exact match
     assert mw._validate_host("knowledge-mcp:9000") is True     # internal, `:*` wildcard
     assert mw._validate_host("localhost:9000") is True         # localhost default preserved
     assert mw._validate_host("evil.attacker.com") is False     # everything else rejected

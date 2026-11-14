@@ -54,6 +54,11 @@ export type { PublicShellCopy, ShareCopy } from "./share";
 export { DELETE_DOCUMENT_ERRORS, DOCUMENTS } from "./documents";
 export type { DocumentsCopy } from "./documents";
 
+// Feedback — the org's captured feedback: the list, one record's detail and
+// the two not-found pages. Read + search only.
+export { FEEDBACK } from "./feedback";
+export type { FeedbackCopy } from "./feedback";
+
 // System states (P28.S3 — round 03 §5) — the cross-surface editorial 500 block,
 // the `Not found · 404` eyebrow the six not-found pages share, and the loading
 // region's accessible name. Cross-surface by nature: `app/error.tsx` catches

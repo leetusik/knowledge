@@ -42,6 +42,7 @@ import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlsplit
 
 # Defaults, straight from the resolver (explain/SKILL.md:67,69).
 DEFAULT_API_BASE_URL = "http://localhost:8766"
@@ -56,6 +57,20 @@ LEGACY_ROOT_PARTS = ("projects", "personal", "knowledge")
 ENV_KB_ROOT = "KB_ROOT"
 ENV_API_BASE_URL = "KB_API_BASE_URL"
 ENV_API_TOKEN = "KB_API_TOKEN"
+
+# The hosted service moved to the apex. The old host only answers a 308 to it,
+# and the client never follows a redirect (a bearer must not cross hosts), so a
+# config or env var still naming it is read as the apex. The file is not rewritten.
+OLD_HOSTED_HOST = "knowledge.hi2vi.com"
+HOSTED_BASE_URL = "https://hi2vi.com"
+
+
+def apex_base_url(url: str) -> str:
+    """`url`, unless its host is exactly the old hosted one: then the apex."""
+
+    if url and urlsplit(url).hostname == OLD_HOSTED_HOST:
+        return HOSTED_BASE_URL
+    return url
 
 
 class ConfigError(Exception):
@@ -182,7 +197,9 @@ def resolve() -> ResolvedConfig:
         base_root = base_api = base_token = base_site = None
 
     kb_root = env_root or base_root or ""
-    api_base = env_api or base_api or DEFAULT_API_BASE_URL
+    # One deliberate departure from the skill's resolver: the old hosted host
+    # reads as the apex (see `apex_base_url`).
+    api_base = apex_base_url(env_api or base_api or DEFAULT_API_BASE_URL)
     token = env_token or base_token or ""
     site_base = base_site or DEFAULT_SITE_BASE_URL  # no env override, deliberately
     kb_root = os.path.expanduser(kb_root) if kb_root else ""
@@ -263,7 +280,7 @@ def save(updates: Mapping[str, Any], path: str | None = None) -> str:
 
     `updates` uses the nested schema — a flat shape will not be read::
 
-        save({"api": {"base_url": "https://knowledge.hi2vi.com", "token": "vk_..."}})
+        save({"api": {"base_url": "https://hi2vi.com", "token": "vk_..."}})
 
     Raises `ConfigError` rather than overwrite a config file that exists but
     cannot be parsed: refusing to destroy an unreadable file the user may want to
