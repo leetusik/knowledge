@@ -5,7 +5,9 @@ with ``HOME`` and the XDG folders in a tmp dir, so it reads only a fake config:
 
 * with a token, stdout never carries it, and ``KB_AUTH_HEADER`` names a ``0600``
   file holding the bearer line;
-* with no token, ``KB_AUTH_HEADER=`` is empty and a stale header file is removed.
+* with no token, ``KB_AUTH_HEADER=`` is empty and a stale header file is removed;
+* a base URL on the old host ``knowledge.hi2vi.com`` resolves to the apex, and every
+  other base URL is left exactly as given.
 
 No network, no server.
 """
@@ -17,6 +19,8 @@ import stat
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 SKILL = Path(__file__).resolve().parents[1] / "plugin" / "skills" / "explain" / "SKILL.md"
 TOKEN = "vk_test_not_a_secret"
@@ -31,11 +35,16 @@ def _resolver_source() -> str:
     return "\n".join(l[4:] for l in lines[start + 1 : end]) + "\n"
 
 
-def _run(tmp_path: Path, token: str | None) -> dict[str, str]:
+def _run(
+    tmp_path: Path,
+    token: str | None,
+    base_url: str = "http://localhost:8766",
+    env_base_url: str | None = None,
+) -> dict[str, str]:
     home = tmp_path / "home"
     cfg_dir = tmp_path / "config" / "knowledge-kb"
     cfg_dir.mkdir(parents=True)
-    api = {"base_url": "http://localhost:8766"}
+    api = {"base_url": base_url}
     if token:
         api["token"] = token
     (cfg_dir / "config.json").write_text(json.dumps({"api": api}))
@@ -48,6 +57,8 @@ def _run(tmp_path: Path, token: str | None) -> dict[str, str]:
         XDG_CONFIG_HOME=str(tmp_path / "config"),
         XDG_STATE_HOME=str(tmp_path / "state"),
     )
+    if env_base_url is not None:
+        env["KB_API_BASE_URL"] = env_base_url
     out = subprocess.run(
         [sys.executable, "-c", _resolver_source()],
         env=env, capture_output=True, text=True, check=True,
@@ -75,3 +86,27 @@ def test_no_token_leaves_no_header_file(tmp_path):
     assert vals["KB_API_TOKEN_SET"] == "no"
     assert vals["KB_AUTH_HEADER"] == ""
     assert not stale.exists()
+
+
+def test_old_host_in_config_resolves_to_the_apex(tmp_path):
+    vals = _run(tmp_path, None, base_url="https://knowledge.hi2vi.com")
+    assert vals["KB_API_BASE_URL"] == "https://hi2vi.com"
+
+
+def test_old_host_in_env_resolves_to_the_apex(tmp_path):
+    vals = _run(tmp_path, None, env_base_url="https://knowledge.hi2vi.com/")
+    assert vals["KB_API_BASE_URL"] == "https://hi2vi.com"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://hi2vi.com",
+        "https://kb.example.org/api",
+        "http://localhost:8766",
+        "https://knowledge.hi2vi.com.example.org",
+        "https://example.org/knowledge.hi2vi.com",
+    ],
+)
+def test_other_base_urls_are_left_exactly_as_given(tmp_path, url):
+    assert _run(tmp_path, None, base_url=url)["KB_API_BASE_URL"] == url
