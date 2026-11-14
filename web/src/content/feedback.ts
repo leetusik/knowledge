@@ -73,6 +73,8 @@ export const FEEDBACK = {
     /** `comment === null`. */
     commentNone: "No comment.",
     detailsHeading: "Details",
+    /** The strip's caption: one record has no order, only its UTC times. */
+    timeNote: "Times are shown in UTC.",
     fields: {
       project: "Project",
       value: "Rating",

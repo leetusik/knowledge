@@ -257,7 +257,7 @@ export default async function FeedbackDetailPage({
           <h2 id="feedback-details" className="kb-app-h2">
             {FEEDBACK.detail.detailsHeading}
           </h2>
-          <span className="kb-panel__caption">{FEEDBACK.list.timeNote}</span>
+          <span className="kb-panel__caption">{FEEDBACK.detail.timeNote}</span>
         </div>
         <div className="kb-docmeta">
           <Field label={FEEDBACK.detail.fields.project}>{projectName}</Field>
