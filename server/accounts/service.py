@@ -273,7 +273,7 @@ class AccountsService:
         return record
 
     async def list_tenants_for_user(self, user_id: UUID) -> tuple[TenantRecord, ...]:
-        """Return the tenants a user is a member of, oldest-first."""
+        """Return the tenants a user is a member of, in the order the user joined them."""
 
         async with self._session_maker() as session:
             repository = AccountsRepository(session)

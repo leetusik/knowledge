@@ -47,6 +47,7 @@ def test_body_carries_given_fields_and_bearer_and_omits_the_rest():
         seen["method"] = request.method
         seen["path"] = request.url.path
         seen["authorization"] = request.headers.get("authorization")
+        seen["address_headers"] = {"x-real-ip", "x-forwarded-for"} & set(request.headers)
         seen["body"] = json.loads(request.content)
         return httpx.Response(202, json=_RECEIPT)
 
@@ -55,6 +56,8 @@ def test_body_carries_given_fields_and_bearer_and_omits_the_rest():
     assert seen["method"] == "POST"
     assert seen["path"] == "/api/feedback"
     assert seen["authorization"] == "Bearer kb_capture_123"
+    # No address header: the API buckets an in-network capture by its bearer.
+    assert seen["address_headers"] == set()
     assert seen["body"] == {
         "message": "the answer was wrong",
         "source": {"product": "hi2vi", "integration": "cs-bot"},
@@ -88,6 +91,11 @@ def test_202_becomes_vockys_result():
     ("status", "body", "expected"),
     [
         (400, {"detail": "message must not be blank"}, "message must not be blank"),
+        (
+            400,
+            {"detail": "project does not exist in this org, and a capture-only key cannot create one"},
+            "project does not exist in this org, and a capture-only key cannot create one",
+        ),
         (401, {"detail": "invalid credential"}, "unauthorized: missing/invalid bearer"),
         (403, {"detail": "forbidden"}, "may not capture"),
         (429, {"detail": "too many"}, "rate limited"),

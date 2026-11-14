@@ -18,7 +18,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, and_, bindparam, func, or_, select, update
+from sqlalchemy import Select, and_, bindparam, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.feedback.types import (
@@ -236,6 +236,46 @@ class FeedbackRepository:
         await self._session.flush()
         await self._session.refresh(model)
         return self._to_attachment_record(model)
+
+    async def delete_stale_unlinked_attachments(
+        self,
+        *,
+        older_than: datetime,
+        limit: int,
+    ) -> tuple[str, ...]:
+        """Delete up to ``limit`` unlinked attachments created before ``older_than``.
+
+        Returns the deleted rows' storage keys, so the caller can remove the files
+        after the commit. Oldest first, on ``ix_feedback_attachments_created_at``.
+        A linked row (``feedback_id`` set) is never matched. ``FOR UPDATE SKIP
+        LOCKED`` keeps two concurrent sweeps off each other's rows, and a capture
+        linking the same row concurrently either commits first (the delete then no
+        longer matches it) or finds it gone (the link skips it, as for an unknown
+        id): a linked attachment never loses its row or its file.
+        """
+
+        if limit <= 0:
+            return ()
+        candidates = (
+            select(FeedbackAttachmentModel.id)
+            .where(
+                FeedbackAttachmentModel.feedback_id.is_(None),
+                FeedbackAttachmentModel.created_at < older_than,
+            )
+            .order_by(FeedbackAttachmentModel.created_at)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        statement = (
+            delete(FeedbackAttachmentModel)
+            .where(
+                FeedbackAttachmentModel.id.in_(candidates.scalar_subquery()),
+                FeedbackAttachmentModel.feedback_id.is_(None),
+            )
+            .returning(FeedbackAttachmentModel.storage_key)
+            .execution_options(synchronize_session=False)
+        )
+        return tuple((await self._session.execute(statement)).scalars().all())
 
     async def get_feedback_attachment(
         self,

@@ -176,8 +176,13 @@ async def capture_feedback(
     Returns the parsed 202 receipt (``{request_id, accepted_at, status}``). Same
     proxy conventions as :func:`search`; non-2xx → :class:`UpstreamError` (400 with
     the API's ``detail``, 401 with no valid bearer, 403 for a key that may not
-    capture, 429 past the per-IP limit). Transport errors and timeouts propagate
-    as ``httpx`` exceptions, as for the read calls.
+    capture, 429 past the limit). Transport errors and timeouts propagate as
+    ``httpx`` exceptions, as for the read calls.
+
+    No client-address header is sent, deliberately: the API counts a request that
+    reaches it without the edge's ``X-Real-IP`` in the bearer's own bucket, so each
+    caller of this hop is limited on its own and never shares the container's one
+    address with every other org.
     """
 
     headers = {"User-Agent": USER_AGENT}

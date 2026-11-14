@@ -81,9 +81,10 @@ def active_tenant(
 ) -> TenantRecord:
     """Return the tenant a resolved session acts in for this request.
 
-    ``tenants`` is the user's memberships, oldest-first (never empty). With no
-    ``X-Hi2vi-Org`` header (or a blank one) the session acts in its first tenant,
-    exactly as before multi-org sessions. A header naming one of ``tenants`` picks
+    ``tenants`` is the user's memberships in the order the user joined them (never
+    empty), so joining an older org never moves the first. With no ``X-Hi2vi-Org``
+    header (or a blank one) the session acts in its first tenant, exactly as before
+    multi-org sessions. A header naming one of ``tenants`` picks
     it; any other value — another org's id, an unknown id or a malformed one — is a
     **403**, never a 404 and never a fallback to another tenant.
     """

@@ -193,9 +193,11 @@ sent.
 - `recorded_by` — who recorded the event. **Defaults to `"agent"`** when the caller gives
   none (or a blank value): MCP is the agent-runtime surface. Pass `"human"` when relaying
   a human-recorded event. (`POST /api/feedback` itself leaves it null when absent.)
-- `project` — the destination project, honoured only for an org-level key
-  (get-or-created in its org, `"default"` when absent); a project-bound key always lands
-  in its own project.
+- `project` — the destination project, honoured only for an org-level key (`"default"`
+  when absent). A full-access key get-or-creates it in its org; a capture-only key may
+  name only a project that already exists in its org (or `"default"`), and any other
+  name is a 400 (`project does not exist in this org, and a capture-only key cannot
+  create one`). A project-bound key always lands in its own project.
 
 **Output** — a tool result with the text `Accepted feedback capture <request_id>` and the
 structured content:
@@ -216,7 +218,7 @@ accepts for capture: a `capture` key (write-only, the intended one) or a `full` 
 | 400 | the API's `detail` (e.g. `message must not be blank`) |
 | 401 | `unauthorized: missing/invalid bearer` |
 | 403 | `forbidden: this key may not capture feedback` |
-| 429 | `rate limited: too many captures, retry later` |
+| 429 | `rate limited: too many captures, retry later` (the API counts this hop's captures per bearer, so one caller's limit is its own) |
 | any other status ≥ 400 | `capture failed: upstream returned HTTP <status>` |
 | unreachable / timeout | `capture failed: upstream unreachable (<error type>)` |
 

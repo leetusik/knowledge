@@ -98,10 +98,12 @@ def _tenant_mode() -> bool:
 
 
 async def get_tenant_one_id() -> UUID | None:
-    """Resolve tenant #1's id (the operator's first tenant), or ``None``.
+    """Resolve tenant #1's id (the operator's first tenant, by membership), or ``None``.
 
     Tenant mode: ``KB_OPERATOR_EMAIL`` -> ``get_user_by_email`` ->
-    ``list_tenants_for_user()[0].id``. Legacy mode / no operator email / operator
+    ``list_tenants_for_user()[0].id``, the org the operator joined first (their
+    signup org): an org joined later never takes its place, however old it is.
+    Legacy mode / no operator email / operator
     not yet seeded -> ``None``. The result is memoized on first success (see
     ``_tenant_one_cache``). Used both by the pinned-master bearer path (to map
     ``KB_API_TOKEN`` -> tenant #1) and by ``is_public`` (to tell tenant #1 apart

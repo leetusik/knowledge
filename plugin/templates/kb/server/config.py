@@ -191,9 +191,11 @@ def _env_int(name: str, default: int) -> int:
 
 
 def feedback_rate_limit() -> int:
-    """Max ``POST /api/feedback`` and ``/api/feedback/attachments`` requests per client
-    IP per window (``KB_FEEDBACK_RATE_LIMIT``, 600). ``<= 0`` turns the limiter off.
-    The two routes are counted separately, in buckets of their own."""
+    """Max ``POST /api/feedback`` and ``/api/feedback/attachments`` requests per bucket
+    per window (``KB_FEEDBACK_RATE_LIMIT``, 600): the client address for a request
+    through the edge, the caller's credential for one from inside the network (the
+    Feedback MCP hop). ``<= 0`` turns the limiter off. The two routes are counted
+    separately, in buckets of their own."""
     return _env_int("KB_FEEDBACK_RATE_LIMIT", 600)
 
 
@@ -214,6 +216,16 @@ def feedback_attachments_max_count() -> int:
     """At most this many attachment ids per capture (``KB_FEEDBACK_ATTACHMENTS_MAX_COUNT``, 10)."""
     value = _env_int("KB_FEEDBACK_ATTACHMENTS_MAX_COUNT", 10)
     return value if value > 0 else 10
+
+
+def feedback_attachments_unlinked_ttl_s() -> int:
+    """How long an uploaded attachment may wait for a capture to link it
+    (``KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S``, 86400 = one day). Each upload reclaims
+    a small batch of unlinked attachments older than this, row and file. A
+    non-positive or unparseable value falls back to the default, never to "reclaim
+    at once"."""
+    value = _env_int("KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S", 86400)
+    return value if value > 0 else 86400
 
 
 _FEEDBACK_DEFAULT_MIME_TYPES = "image/jpeg,image/png,image/gif,image/webp"

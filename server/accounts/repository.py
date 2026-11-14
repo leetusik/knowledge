@@ -124,13 +124,21 @@ class AccountsRepository:
         return self._to_tenant_record(model)
 
     async def list_tenants_for_user(self, user_id: UUID) -> tuple[TenantRecord, ...]:
-        """Return the tenants a user is a member of, oldest-first."""
+        """Return the tenants a user is a member of, in the order the user joined them.
+
+        Ordered by the **membership's** ``created_at`` (then the tenant's, then id), not
+        the tenant's age: the first entry is the user's own first org (for the
+        operator, tenant #1, made at signup), and joining an org later never moves
+        it, however old that org is. Tenant #1 (``server.api_auth.get_tenant_one_id``)
+        and a header-less session's org (``server.accounts.auth.active_tenant``) both
+        read the first entry.
+        """
 
         statement = (
             select(TenantModel)
             .join(TenantMemberModel, TenantMemberModel.tenant_id == TenantModel.id)
             .where(TenantMemberModel.user_id == user_id)
-            .order_by(TenantModel.created_at, TenantModel.id)
+            .order_by(TenantMemberModel.created_at, TenantModel.created_at, TenantModel.id)
         )
         models = (await self._session.execute(statement)).scalars().all()
         return tuple(self._to_tenant_record(model) for model in models)

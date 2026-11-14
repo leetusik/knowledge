@@ -346,6 +346,173 @@ def test_the_capture_limiter(fb, monkeypatch):
         _capture(fb, _h(key))
 
 
+def test_the_limiter_buckets_the_edge_by_address_and_the_mcp_hop_by_credential(fb, monkeypatch):
+    """The edge sets ``X-Real-IP``: one client address is one bucket, whatever key it
+    sends. The MCP hop (and any in-network caller) reaches the API without it: each
+    credential is its own bucket, and no header the caller sends can pick one."""
+
+    a, b = _signup(fb), _signup(fb)
+    key_a, key_b = _key(fb, a, scope="capture"), _key(fb, b, scope="capture")
+    key_a2 = _key(fb, a)
+    body = {"message": "m", "source": {"product": "p"}}
+    monkeypatch.setenv("KB_FEEDBACK_RATE_LIMIT", "2")
+
+    # The MCP hop: no X-Real-IP. Key A spends its own bucket only.
+    _capture(fb, _h(key_a))
+    _capture(fb, _h(key_a))
+    assert fb.post("/api/feedback", json=body, headers=_h(key_a)).status_code == 429
+    _capture(fb, _h(key_b))  # another org's key is never counted with key A
+    _capture(fb, _h(key_a2))  # nor another key of the same org
+    for spoof in ({"X-Forwarded-For": "198.51.100.7"}, {"X-Forwarded-For": "10.0.0.1, 10.0.0.2"}):
+        assert fb.post("/api/feedback", json=body, headers={**_h(key_a), **spoof}).status_code == 429
+
+    # The edge: one client address is one bucket across keys and orgs.
+    edge = {"X-Real-IP": "203.0.113.9"}
+    _capture(fb, {**_h(key_b), **edge})
+    _capture(fb, {**_h(key_a2), **edge})
+    assert fb.post("/api/feedback", json=body, headers={**_h(key_b), **edge}).status_code == 429
+    _capture(fb, {**_h(key_b), "X-Real-IP": "203.0.113.10"})
+
+    # Uploads follow the same rule in buckets of their own.
+    assert _upload(fb, _h(key_a)).status_code == 201
+    assert _upload(fb, _h(key_a)).status_code == 201
+    assert _upload(fb, _h(key_a)).status_code == 429
+    assert _upload(fb, _h(key_b)).status_code == 201
+
+    # An unauthenticated in-network request is still a 401, never a bucket.
+    assert fb.post("/api/feedback", json=body).status_code == 401
+
+
+def _sql(statement: str, **params) -> list:
+    """Run one statement on the test database (the fixture's DSN) and return its rows."""
+
+    url = make_url(_RAW_DSN).set(drivername="postgresql+psycopg")
+    engine = create_engine(url)
+    try:
+        with engine.begin() as conn:
+            result = conn.execute(text(statement), params)
+            return list(result) if result.returns_rows else []
+    finally:
+        engine.dispose()
+
+
+def _age(attachment_id: str, interval: str) -> None:
+    _sql(
+        f"UPDATE feedback_attachments SET created_at = now() - interval '{interval}' WHERE id = :id",
+        id=attachment_id,
+    )
+
+
+def _attachment_row(attachment_id: str) -> list:
+    return _sql(
+        "SELECT storage_key, feedback_id FROM feedback_attachments WHERE id = :id", id=attachment_id
+    )
+
+
+def test_unlinked_uploads_are_reclaimed_after_the_ttl(fb):
+    from server.feedback.storage import attachments_dir
+
+    owner = _signup(fb)
+    key = _key(fb, owner, scope="capture")
+
+    def upload() -> str:
+        res = _upload(fb, _h(key))
+        assert res.status_code == 201, res.text
+        return res.json()["attachment_id"]
+
+    stale, fresh, linked, gone_file = upload(), upload(), upload(), upload()
+    eid = _capture(fb, _h(key), attachment_ids=[linked])["request_id"]
+    stale_file = attachments_dir() / _attachment_row(stale)[0].storage_key
+    linked_file = attachments_dir() / _attachment_row(linked)[0].storage_key
+    fresh_file = attachments_dir() / _attachment_row(fresh)[0].storage_key
+    (attachments_dir() / _attachment_row(gone_file)[0].storage_key).unlink()
+    for aid in (stale, linked, gone_file):
+        _age(aid, "2 days")
+    assert stale_file.exists()
+
+    upload()  # the next upload sweeps
+
+    assert _attachment_row(stale) == [] and not stale_file.exists()
+    assert _attachment_row(gone_file) == []  # a file already missing is not an error
+    assert _attachment_row(fresh) != [] and fresh_file.exists()
+    assert str(_attachment_row(linked)[0].feedback_id) == eid and linked_file.exists()
+    record = fb.get(f"/app/feedback/{eid}", headers=owner["session"]).json()["record"]
+    assert [a["id"] for a in record["attachments"]] == [linked]
+
+    # A capture naming a reclaimed id is treated as an unknown id: the event is
+    # stored without it (never a 500).
+    receipt = _capture(fb, _h(key), attachment_ids=[stale, fresh])
+    record = fb.get(f"/app/feedback/{receipt['request_id']}", headers=owner["session"]).json()["record"]
+    assert [a["id"] for a in record["attachments"]] == [fresh]
+
+
+def test_the_reclaim_ttl_is_a_knob_and_each_sweep_is_bounded(fb, monkeypatch):
+    import server.feedback_api as feedback_api
+
+    owner = _signup(fb)
+    key = _key(fb, owner)
+    monkeypatch.setenv("KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S", "3600")
+    monkeypatch.setattr(feedback_api, "UNLINKED_SWEEP_BATCH", 2, raising=False)
+    old = [_upload(fb, _h(key)).json()["attachment_id"] for _ in range(3)]
+    young = _upload(fb, _h(key)).json()["attachment_id"]
+    for aid in old:
+        _age(aid, "2 hours")
+    _age(young, "30 minutes")
+
+    _upload(fb, _h(key))
+    assert sum(1 for aid in old if _attachment_row(aid)) >= 1  # at most a batch per upload
+    for _ in range(10):
+        if not any(_attachment_row(aid) for aid in old):
+            break
+        _upload(fb, _h(key))
+    assert not any(_attachment_row(aid) for aid in old)
+    assert _attachment_row(young) != []
+
+
+def test_a_capture_only_org_key_never_creates_a_project(fb):
+    owner = _signup(fb)
+    capture = _key(fb, owner, scope="capture")
+    full = _key(fb, owner)
+
+    def names() -> set[str]:
+        res = fb.get("/app/projects", headers=owner["session"])
+        return {p["name"] for p in res.json()["projects"]}
+
+    before = names()
+    unknown = f"made-up-{uuid4().hex[:8]}"
+    res = fb.post(
+        "/api/feedback",
+        json={"message": "m", "source": {"product": "p"}, "project": unknown},
+        headers=_h(capture),
+    )
+    assert res.status_code == 400
+    assert res.json()["detail"] == (
+        "project does not exist in this org, and a capture-only key cannot create one"
+    )
+    assert names() == before
+
+    # "default" (absent or named) and an existing project answer 202.
+    defaulted = _capture(fb, _h(capture))
+    named_default = _capture(fb, _h(capture), project="default")
+    made = fb.post("/app/projects", json={"name": "existing-app"}, headers=owner["session"])
+    assert made.status_code == 201, made.text
+    existing = _capture(fb, _h(capture), project="existing-app")
+    projects = {p["name"]: p["id"] for p in fb.get("/app/projects", headers=owner["session"]).json()["projects"]}
+    assert str(_event(fb, defaulted["request_id"]).project_id) == projects["default"]
+    assert str(_event(fb, named_default["request_id"]).project_id) == projects["default"]
+    assert str(_event(fb, existing["request_id"]).project_id) == projects["existing-app"]
+    assert unknown not in projects
+
+    # A full key, a session and a project-bound capture key are unchanged.
+    _capture(fb, _h(full), project=unknown)
+    _capture(fb, owner["session"], project=f"{unknown}-s")
+    bound = _key(fb, owner, scope="capture", project=True)
+    landed = _capture(fb, _h(bound), project=f"{unknown}-b")
+    assert str(_event(fb, landed["request_id"]).project_id) == owner["project"]["id"]
+    after = names()
+    assert unknown in after and f"{unknown}-s" in after and f"{unknown}-b" not in after
+
+
 def test_feedback_is_a_reserved_org_slug(fb):
     owner = _signup(fb)
     res = fb.patch("/app/tenant", json={"slug": "feedback"}, headers=owner["session"])

@@ -10,6 +10,7 @@ the route answers 5xx. Org-facing reads go through the ``get_scoped_*`` methods 
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -322,6 +323,33 @@ class FeedbackService:
                 ) from exc
 
         return record
+
+    async def reclaim_unlinked_attachments(
+        self,
+        *,
+        older_than: datetime,
+        limit: int,
+    ) -> tuple[str, ...]:
+        """Delete up to ``limit`` unlinked attachment rows older than ``older_than``.
+
+        Returns their storage keys once the delete is committed, so the caller removes
+        the files only for rows that are really gone. Linked rows are never touched.
+        """
+
+        async with self._session_maker() as session:
+            repository = FeedbackRepository(session)
+            try:
+                keys = await repository.delete_stale_unlinked_attachments(
+                    older_than=older_than, limit=limit
+                )
+                await session.commit()
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise FeedbackPersistenceError(
+                    "failed to reclaim unlinked attachments"
+                ) from exc
+
+        return keys
 
     async def get_feedback_attachment(
         self,

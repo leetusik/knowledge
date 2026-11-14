@@ -162,9 +162,11 @@ async def capture_feedback(
     destination project onto the event.
 
     ``project`` names the destination project and is honored **only** for an
-    org-level key (get-or-created under its org, defaulting to ``"default"``); a
-    project-bound key always lands in its bound project and ignores the argument
-    entirely.
+    org-level key, defaulting to ``"default"``. A full-access key get-or-creates it
+    under its org; a capture-only key may name only a project that already exists in
+    its org (or ``"default"``), and any other name is refused with the API's
+    message. A project-bound key always lands in its bound project and ignores the
+    argument entirely.
 
     ``recorded_by`` marks who recorded the event (``"agent"`` | ``"human"``). It
     defaults to ``"agent"`` on this transport — MCP is the agent-runtime surface —

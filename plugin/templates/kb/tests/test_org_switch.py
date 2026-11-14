@@ -283,6 +283,63 @@ def test_service_validates_scope_and_adds_members(switch_client):
     assert res.status_code == 200 and res.json()["tenant"]["id"] == owner["tenant"]["id"]
 
 
+def test_joining_an_older_org_moves_neither_tenant_one_nor_the_default_org(switch_client, monkeypatch):
+    """The operator owns tenant #1 (made at signup), then joins an org whose
+    ``created_at`` is older (the accounts merge's shape). The master bearer, the
+    public corpus and a header-less session all stay on tenant #1."""
+
+    import server.api_auth as api_auth
+    from server.accounts.service import get_accounts_service
+
+    operator = _signup(switch_client)
+    tenant_one = operator["tenant"]["id"]
+    elder = _signup(switch_client)
+    older_org = elder["tenant"]["id"]
+    url = make_url(_RAW_DSN).set(drivername="postgresql+psycopg")
+    engine = create_engine(url)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "UPDATE tenants SET created_at = "
+                    "(SELECT created_at FROM tenants WHERE id = :one) - interval '1 day' "
+                    "WHERE id = :old"
+                ),
+                {"one": tenant_one, "old": older_org},
+            )
+    finally:
+        engine.dispose()
+    # Joined as an owner, the strongest case: an "earliest owned" rule alone would move.
+    switch_client.portal.call(
+        get_accounts_service().add_tenant_member, UUID(older_org), UUID(operator["user"]["id"]), "owner"
+    )
+
+    monkeypatch.setenv("KB_API_TOKEN", "p56s14-master")
+    monkeypatch.setenv("KB_OPERATOR_EMAIL", operator["user"]["email"])
+    api_auth._tenant_one_cache = None  # an API restart
+    master = switch_client.portal.call(
+        api_auth.resolve_api_read, _request({"Authorization": "Bearer p56s14-master"})
+    )
+    assert str(master.tenant_id) == tenant_one and master.is_public
+
+    session = {"Authorization": f"Bearer {operator['token']}"}
+    elder_key = switch_client.post(
+        "/app/credentials", headers={"Authorization": f"Bearer {elder['token']}"}
+    ).json()["key"]
+    in_older = switch_client.portal.call(
+        api_auth.resolve_api_read, _request({"Authorization": f"Bearer {elder_key}"})
+    )
+    assert str(in_older.tenant_id) == older_org and not in_older.is_public
+
+    assert switch_client.get("/app/tenant", headers=session).json()["tenant"]["id"] == tenant_one
+    me = switch_client.get("/auth/me", headers=session).json()
+    assert me["active_tenant_id"] == tenant_one
+    assert [t["id"] for t in me["tenants"]] == [tenant_one, older_org]
+    # The older org's own founder still defaults to it.
+    founder = {"Authorization": f"Bearer {elder['token']}"}
+    assert switch_client.get("/app/tenant", headers=founder).json()["tenant"]["id"] == older_org
+
+
 def test_missing_session_with_header_is_still_401(switch_client):
     org = _signup(switch_client)["tenant"]["id"]
     assert switch_client.get("/app/tenant", headers={"X-Hi2vi-Org": org}).status_code == 401

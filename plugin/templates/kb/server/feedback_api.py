@@ -7,9 +7,14 @@ Three families, each with its own gate:
   else. Capture persists **in the request** (no queue, no worker): when the 202 goes
   out the row is committed, and a failed insert is a 5xx the caller sees. The owner
   alert is a FastAPI background task that runs after the response, best-effort
-  (``server.feedback.notify``). Both routes sit behind an in-process per-IP limiter
+  (``server.feedback.notify``). Both routes sit behind an in-process limiter
   (``KB_FEEDBACK_RATE_LIMIT`` per ``KB_FEEDBACK_RATE_WINDOW_S``), checked before the
-  body is read.
+  body is read: through the edge the bucket is the client address, from inside the
+  network (the Feedback MCP hop) it is the caller's credential (``_capture_caller``).
+  A ``capture`` org-level key captures only into an existing project or
+  ``"default"``; it never creates one (``resolve_capture_project``). Each upload
+  first reclaims a small batch of unlinked attachments older than
+  ``KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S`` (rows and files).
 - **Key reads and management** (``GET /api/feedback``, its attachment download, and
   ``/api/project/feedback*`` + ``/api/project/usage``): ``resolve_api_read`` for
   reads, ``resolve_api_write`` for ``PATCH``/``DELETE``/comment ``POST``; both answer
@@ -51,7 +56,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.formparsers import MultiPartException
 
 from server import config
-from server.accounts.auth import AuthContext, require_user
+from server.accounts.auth import AuthContext, extract_bearer_token, require_user
+from server.accounts.security import sha256_hex
 from server.accounts.service import (
     DEFAULT_PROJECT_NAME,
     AccountsPersistenceError,
@@ -72,6 +78,7 @@ from server.feedback.service import (
     get_feedback_service,
 )
 from server.feedback.storage import (
+    AttachmentStorage,
     StorageError,
     StorageObjectNotFoundError,
     get_attachment_storage,
@@ -329,12 +336,22 @@ def normalize_rest_payload(raw: RestCaptureFeedbackInput) -> CreateFeedbackEvent
     )
 
 
+#: The 400 a ``capture`` org-level key gets for a project name its org does not have.
+CAPTURE_KEY_UNKNOWN_PROJECT = (
+    "project does not exist in this org, and a capture-only key cannot create one"
+)
+
+
 async def resolve_capture_project(ctx: ApiAuthContext, project_name: str | None) -> UUID:
     """The project a capture lands in, always one of the caller's own tenant.
 
-    A project-bound key lands in its project and ``project_name`` is ignored; any
-    other caller get-or-creates the named project (else ``"default"``) in
-    ``ctx.tenant_id``. Never ``None``.
+    A project-bound key lands in its project and ``project_name`` is ignored. A
+    ``capture``-scope org-level key lands only in a project that already exists in
+    its org, or in ``"default"`` (absent or named, get-or-created); any other name is
+    a 400 (``CAPTURE_KEY_UNKNOWN_PROJECT``): a write-only key placed on a machine the
+    operator does not control must never grow the org's project list, which no route
+    can shrink. A ``full`` key, a session and the master bearer get-or-create the
+    named project (else ``"default"``) in ``ctx.tenant_id``. Never ``None``.
     """
 
     if ctx.project_id is not None:
@@ -346,7 +363,13 @@ async def resolve_capture_project(ctx: ApiAuthContext, project_name: str | None)
         raise FeedbackValidationError(
             f"project must not exceed {MAX_CAPTURE_PROJECT_NAME_LENGTH} characters"
         )
-    project = await get_accounts_service().get_or_create_project(ctx.tenant_id, name)
+    accounts = get_accounts_service()
+    if ctx.scope != "full" and name != DEFAULT_PROJECT_NAME:
+        existing = await accounts.get_project_by_name(ctx.tenant_id, name)
+        if existing is None:
+            raise FeedbackValidationError(CAPTURE_KEY_UNKNOWN_PROJECT)
+        return existing.id
+    project = await accounts.get_or_create_project(ctx.tenant_id, name)
     return project.id
 
 
@@ -607,29 +630,69 @@ def _require_accounts_plane() -> None:
         raise HTTPException(status_code=404, detail="Not Found")
 
 
-# key ("<ip>:<path>") -> (window_start_monotonic, count_in_window); its own buckets,
-# apart from the /auth/* limiter's. One uvicorn worker, so in-process is coherent.
+# key ("<bucket>:<path>") -> (window_start_monotonic, count_in_window); its own
+# buckets, apart from the /auth/* limiter's. One uvicorn worker, so in-process is
+# coherent.
 _rate_windows: dict[str, tuple[float, int]] = {}
 _RATE_MAX_KEYS = 20_000
 
 
-def _client_ip(request: Request) -> str:
-    """The client IP behind the edge (``server.auth_api``'s trust model)."""
+def _edge_client_ip(request: Request) -> str | None:
+    """The client address the edge recorded, or ``None`` for an in-network caller.
+
+    The edge (``deploy/hi2vi.conf``) **sets** ``X-Real-IP`` to the connecting address
+    on every proxied request, overwriting whatever a client sent, and the API has no
+    public port. So a request carrying it came through the edge, and one without it
+    came from inside the network: the Feedback MCP hop, which calls the API directly
+    with only the caller's bearer. ``X-Forwarded-For`` is never read here: a client
+    can append to it, so it could pick a bucket.
+    """
 
     real_ip = request.headers.get("X-Real-IP")
-    if real_ip:
+    if real_ip and real_ip.strip():
         return real_ip.strip()
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        first = forwarded.split(",")[0].strip()
-        if first:
-            return first
-    client = request.client
-    return client.host if client else "unknown"
+    return None
 
 
-def _enforce_capture_rate_limit(request: Request) -> None:
-    """Fixed-window per-IP limit on the two capture routes; 429 past it."""
+def _credential_bucket(ctx: ApiAuthContext, request: Request) -> str:
+    """The bucket of an authenticated in-network caller: its own credential.
+
+    A ``vk_`` key is its credential id. The master bearer and a session carry no
+    credential row, so they are their bearer's hash (one bucket per session token,
+    one for the master bearer). Never an address or a header the caller chose.
+    """
+
+    if ctx.credential_id is not None:
+        return f"key:{ctx.credential_id}"
+    token = extract_bearer_token(request)
+    return f"bearer:{sha256_hex(token)}" if token else "anonymous"
+
+
+async def _capture_caller(request: Request) -> ApiAuthContext:
+    """Rate-limit and authenticate a capture request, before its body is read.
+
+    Through the edge the bucket is the client address and it is checked **first**,
+    so a flood of bad bearers from one address stays cheap (429, then 401 without a
+    lookup). An in-network request (no ``X-Real-IP``: the MCP hop) is authenticated
+    first, then counted in its credential's own bucket, so the MCP container's one
+    address never makes every org's agents share one limit. Either way an
+    unauthenticated request is a 401 before any body is read.
+    """
+
+    _require_accounts_plane()
+    edge_ip = _edge_client_ip(request)
+    if edge_ip is not None:
+        _enforce_capture_rate_limit(request, f"ip:{edge_ip}")
+        return await resolve_api_capture(request)
+    ctx = await resolve_api_capture(request)
+    _enforce_capture_rate_limit(request, _credential_bucket(ctx, request))
+    return ctx
+
+
+def _enforce_capture_rate_limit(request: Request, bucket: str) -> None:
+    """Fixed-window limit per ``bucket`` on the two capture routes; 429 past it.
+
+    Each route counts in a bucket of its own (the key carries the path)."""
 
     limit = config.feedback_rate_limit()
     if limit <= 0:
@@ -644,7 +707,7 @@ def _enforce_capture_rate_limit(request: Request) -> None:
             for key in oldest[: _RATE_MAX_KEYS // 2]:
                 del _rate_windows[key]
 
-    key = f"{_client_ip(request)}:{request.url.path}"
+    key = f"{bucket}:{request.url.path}"
     start, count = _rate_windows.get(key, (now, 0))
     if now - start >= window:
         start, count = now, 0
@@ -711,9 +774,7 @@ async def _load_scoped(feedback_id: UUID, project_ids: tuple[UUID, ...]) -> Feed
 async def capture_feedback(request: Request, background_tasks: BackgroundTasks) -> Response:
     """Capture one feedback event; 202 once the row is committed."""
 
-    _require_accounts_plane()
-    _enforce_capture_rate_limit(request)
-    ctx = await resolve_api_capture(request)
+    ctx = await _capture_caller(request)
 
     try:
         try:
@@ -775,13 +836,47 @@ def _clean_filename(filename: str | None) -> str | None:
     return cleaned or None
 
 
+#: Unlinked attachments one upload reclaims at most, so no single upload pays for a
+#: large backlog; a steady stream of uploads drains one quickly.
+UNLINKED_SWEEP_BATCH = 20
+
+
+async def _reclaim_unlinked_attachments(storage: AttachmentStorage) -> None:
+    """Delete a batch of unlinked attachments older than the TTL, rows then files.
+
+    The opportunistic sweep (no scheduler): an upload nobody linked within
+    ``KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S`` is reclaimed by a later upload. Files
+    are removed only for rows the committed delete returned; a file already missing
+    is not an error. The sweep never fails the upload that runs it. A capture that
+    later names a reclaimed id is treated like any unknown id (stored without it).
+    """
+
+    older_than = datetime.now(UTC) - timedelta(
+        seconds=config.feedback_attachments_unlinked_ttl_s()
+    )
+    try:
+        keys = await get_feedback_service().reclaim_unlinked_attachments(
+            older_than=older_than, limit=UNLINKED_SWEEP_BATCH
+        )
+    except FeedbackPersistenceError:
+        logger.exception("unlinked attachment sweep failed; the upload goes on")
+        return
+    for key in keys:
+        try:
+            storage.delete(key)
+        except StorageObjectNotFoundError:
+            continue
+        except StorageError:
+            logger.warning("could not delete a reclaimed attachment's file", exc_info=True)
+    if keys:
+        logger.info("reclaimed %d unlinked attachment(s)", len(keys))
+
+
 @router.post("/api/feedback/attachments")
 async def upload_attachment(request: Request) -> Response:
     """Store one uploaded image (unlinked) and return its id; 201."""
 
-    _require_accounts_plane()
-    _enforce_capture_rate_limit(request)
-    await resolve_api_capture(request)
+    await _capture_caller(request)
 
     max_bytes = config.feedback_attachments_max_bytes()
     allowed_types = config.feedback_attachments_allowed_mime_types()
@@ -835,6 +930,7 @@ async def upload_attachment(request: Request) -> Response:
         return _detail("unsupported image type", 415)
 
     storage = get_attachment_storage()
+    await _reclaim_unlinked_attachments(storage)
     storage_key = str(uuid4())
     try:
         storage.save(storage_key, data)
