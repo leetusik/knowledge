@@ -43,6 +43,10 @@ class FeedbackReadError(RuntimeError):
     """Raised when feedback cannot be read from storage."""
 
 
+class FeedbackCapacityError(RuntimeError):
+    """Raised when an upload would take unlinked attachments above their ceiling."""
+
+
 class FeedbackService:
     """Application service for feedback persistence and reads."""
 
@@ -308,12 +312,29 @@ class FeedbackService:
     async def create_unlinked_attachment(
         self,
         payload: CreateFeedbackAttachment,
+        *,
+        unlinked_ceiling: int | None = None,
     ) -> FeedbackAttachmentRecord:
-        """Persist an uploaded, not-yet-linked attachment and return it."""
+        """Persist an uploaded, not-yet-linked attachment and return it.
+
+        With ``unlinked_ceiling``, the insert happens only if the total size of the
+        unlinked attachments, this one included, stays at or under it; otherwise
+        nothing is written and :class:`FeedbackCapacityError` is raised. The check
+        and the insert share one transaction under an advisory lock, so concurrent
+        uploads never overshoot the ceiling together.
+        """
 
         async with self._session_maker() as session:
             repository = FeedbackRepository(session)
             try:
+                if unlinked_ceiling is not None:
+                    await repository.lock_unlinked_ceiling()
+                    total = await repository.unlinked_attachment_bytes()
+                    if total + payload.byte_size > unlinked_ceiling:
+                        await session.rollback()
+                        raise FeedbackCapacityError(
+                            "unlinked attachments are at their ceiling"
+                        )
                 record = await repository.create_feedback_attachment(payload)
                 await session.commit()
             except SQLAlchemyError as exc:
@@ -323,6 +344,17 @@ class FeedbackService:
                 ) from exc
 
         return record
+
+    async def unlinked_attachment_bytes(self) -> int:
+        """The total size of every unlinked attachment (all orgs together)."""
+
+        async with self._session_maker() as session:
+            repository = FeedbackRepository(session)
+            try:
+                return await repository.unlinked_attachment_bytes()
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise FeedbackReadError("failed to measure unlinked attachments") from exc
 
     async def reclaim_unlinked_attachments(
         self,

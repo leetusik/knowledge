@@ -348,25 +348,48 @@ def test_the_capture_limiter(fb, monkeypatch):
         _capture(fb, _h(key))
 
 
-def test_the_limiter_buckets_the_edge_by_address_and_the_mcp_hop_by_credential(fb, monkeypatch):
+def test_the_limiter_buckets_the_edge_by_address_and_the_mcp_hop_by_org(fb, monkeypatch):
     """The edge sets ``X-Real-IP``: one client address is one bucket, whatever key it
-    sends. The MCP hop (and any in-network caller) reaches the API without it: each
-    credential is its own bucket, and no header the caller sends can pick one."""
+    sends. The MCP hop (and any in-network caller) reaches the API without it: the
+    bucket is the caller's org (the key's org, the session's active org, tenant #1
+    for the master bearer), so minting keys buys no budget, one org never spends
+    another's, and no header the caller sends can pick a bucket."""
+
+    import server.api_auth as api_auth
 
     a, b = _signup(fb), _signup(fb)
     key_a, key_b = _key(fb, a, scope="capture"), _key(fb, b, scope="capture")
     key_a2 = _key(fb, a)
     body = {"message": "m", "source": {"product": "p"}}
     monkeypatch.setenv("KB_FEEDBACK_RATE_LIMIT", "2")
+    monkeypatch.setenv("KB_FEEDBACK_UPLOAD_RATE_LIMIT", "2")
 
-    # The MCP hop: no X-Real-IP. Key A spends its own bucket only.
+    # The MCP hop: no X-Real-IP. Two keys of org A share one budget.
     _capture(fb, _h(key_a))
-    _capture(fb, _h(key_a))
-    assert fb.post("/api/feedback", json=body, headers=_h(key_a)).status_code == 429
-    _capture(fb, _h(key_b))  # another org's key is never counted with key A
-    _capture(fb, _h(key_a2))  # nor another key of the same org
-    for spoof in ({"X-Forwarded-For": "198.51.100.7"}, {"X-Forwarded-For": "10.0.0.1, 10.0.0.2"}):
+    _capture(fb, _h(key_a2))
+    for caller in (_h(key_a), _h(key_a2), a["session"]):
+        assert fb.post("/api/feedback", json=body, headers=caller).status_code == 429
+    key_a3 = _key(fb, a, scope="capture")  # a freshly minted key buys nothing
+    assert fb.post("/api/feedback", json=body, headers=_h(key_a3)).status_code == 429
+    # The master bearer is tenant #1's: here org A.
+    monkeypatch.setenv("KB_API_TOKEN", "synthetic-master-bearer-p56")
+    monkeypatch.setenv("KB_OPERATOR_EMAIL", a["user"]["email"])
+    api_auth._tenant_one_cache = None
+    master = {"Authorization": "Bearer synthetic-master-bearer-p56"}
+    assert fb.post("/api/feedback", json=body, headers=master).status_code == 429
+
+    # Another org's key is never counted with org A, and no header moves a bucket.
+    org_a = a["tenant"]["id"]
+    _capture(fb, {**_h(key_b), "X-Hi2vi-Org": org_a, "X-Forwarded-For": "198.51.100.7"})
+    _capture(fb, _h(key_b))
+    assert fb.post("/api/feedback", json=body, headers=_h(key_b)).status_code == 429
+    for spoof in (
+        {"X-Forwarded-For": "198.51.100.7"},
+        {"X-Forwarded-For": "10.0.0.1, 10.0.0.2"},
+        {"X-Hi2vi-Org": b["tenant"]["id"]},
+    ):
         assert fb.post("/api/feedback", json=body, headers={**_h(key_a), **spoof}).status_code == 429
+    api_auth._tenant_one_cache = None
 
     # The edge: one client address is one bucket across keys and orgs.
     edge = {"X-Real-IP": "203.0.113.9"}
@@ -377,8 +400,9 @@ def test_the_limiter_buckets_the_edge_by_address_and_the_mcp_hop_by_credential(f
 
     # Uploads follow the same rule in buckets of their own.
     assert _upload(fb, _h(key_a)).status_code == 201
-    assert _upload(fb, _h(key_a)).status_code == 201
+    assert _upload(fb, _h(key_a2)).status_code == 201
     assert _upload(fb, _h(key_a)).status_code == 429
+    assert _upload(fb, _h(key_a3)).status_code == 429
     assert _upload(fb, _h(key_b)).status_code == 201
 
     # An unauthenticated in-network request is still a 401, never a bucket.
@@ -454,7 +478,8 @@ def test_the_reclaim_ttl_is_a_knob_and_each_sweep_is_bounded(fb, monkeypatch):
     owner = _signup(fb)
     key = _key(fb, owner)
     monkeypatch.setenv("KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S", "3600")
-    monkeypatch.setattr(feedback_api, "UNLINKED_SWEEP_BATCH", 2, raising=False)
+    monkeypatch.setattr(feedback_api, "UNLINKED_SWEEP_BATCH", 1, raising=False)
+    monkeypatch.setattr(feedback_api, "UNLINKED_SWEEP_MAX_ROWS", 2, raising=False)
     old = [_upload(fb, _h(key)).json()["attachment_id"] for _ in range(3)]
     young = _upload(fb, _h(key)).json()["attachment_id"]
     for aid in old:
@@ -469,6 +494,231 @@ def test_the_reclaim_ttl_is_a_knob_and_each_sweep_is_bounded(fb, monkeypatch):
         _upload(fb, _h(key))
     assert not any(_attachment_row(aid) for aid in old)
     assert _attachment_row(young) != []
+
+
+def _stale_backlog(tag: str, count: int) -> None:
+    """``count`` unlinked rows a year old, storage keys ``<tag>-<n>`` (no files)."""
+
+    _sql(
+        "INSERT INTO feedback_attachments (id, storage_key, content_type, byte_size,"
+        " claimed_user_id, claimed_source_product, created_at)"
+        " SELECT gen_random_uuid(), :tag || '-' || g, 'image/png', 72, 'u-1', 'app-x',"
+        " now() - interval '400 days' FROM generate_series(1, :n) AS g",
+        tag=tag, n=count,
+    )
+
+
+def _backlog_left(tag: str) -> int:
+    (row,) = _sql(
+        "SELECT count(*) FROM feedback_attachments WHERE storage_key LIKE :p", p=f"{tag}-%"
+    )
+    return row[0]
+
+
+def test_a_single_upload_drains_a_backlog_up_to_the_budget(fb, monkeypatch):
+    """One later upload reclaims stale unlinked rows batch after batch, up to a row
+    budget and a time budget; a linked or fresh attachment is never reclaimed."""
+
+    import server.feedback_api as feedback_api
+    from server.feedback.storage import attachments_dir
+
+    owner = _signup(fb)
+    key = _key(fb, owner)
+    linked = _upload(fb, _h(key)).json()["attachment_id"]
+    eid = _capture(fb, _h(key), attachment_ids=[linked])["request_id"]
+    _age(linked, "500 days")
+    fresh = _upload(fb, _h(key)).json()["attachment_id"]
+    linked_file = attachments_dir() / _attachment_row(linked)[0].storage_key
+    fresh_file = attachments_dir() / _attachment_row(fresh)[0].storage_key
+
+    tag = f"drain-{uuid4().hex[:8]}"
+    _stale_backlog(tag, 250)  # more than one batch, within the default budget
+    assert _upload(fb, _h(key)).status_code == 201
+    assert _backlog_left(tag) == 0
+    assert str(_attachment_row(linked)[0].feedback_id) == eid and linked_file.exists()
+    assert _attachment_row(fresh) != [] and fresh_file.exists()
+
+    # The row budget caps one sweep; the backlog goes oldest first.
+    monkeypatch.setattr(feedback_api, "UNLINKED_SWEEP_BATCH", 100, raising=False)
+    monkeypatch.setattr(feedback_api, "UNLINKED_SWEEP_MAX_ROWS", 150, raising=False)
+    _stale_backlog(tag, 250)
+    assert _upload(fb, _h(key)).status_code == 201
+    assert _backlog_left(tag) == 100
+    # The time budget caps it too: spent at once, one batch only.
+    monkeypatch.setattr(feedback_api, "UNLINKED_SWEEP_BATCH", 30, raising=False)
+    monkeypatch.setattr(feedback_api, "UNLINKED_SWEEP_MAX_SECONDS", 0.0, raising=False)
+    assert _upload(fb, _h(key)).status_code == 201
+    assert _backlog_left(tag) == 70
+    assert str(_attachment_row(linked)[0].feedback_id) == eid and linked_file.exists()
+    assert _attachment_row(fresh) != []
+
+
+def _unlinked_bytes() -> int:
+    (row,) = _sql(
+        "SELECT COALESCE(SUM(byte_size), 0) FROM feedback_attachments WHERE feedback_id IS NULL"
+    )
+    return int(row[0])
+
+
+def _stored_files() -> set:
+    from server.feedback.storage import attachments_dir
+
+    root = attachments_dir()
+    return {p for p in root.rglob("*") if p.is_file()} if root.exists() else set()
+
+
+UPLOADS_PAUSED = "uploads are paused while unlinked files are reclaimed — please retry later"
+
+
+def test_the_unlinked_ceiling_refuses_the_upload_that_would_cross_it(fb, monkeypatch):
+    """The total size of unlinked attachments never exceeds the ceiling: the upload
+    that would cross it is a 503 that writes neither a row nor a file; linking frees
+    room, and once stale files are reclaimed the same upload succeeds."""
+
+    owner = _signup(fb)
+    key = _key(fb, owner)
+    assert _upload(fb, _h(key)).status_code == 201  # sweeps any earlier stale rows
+    base = _unlinked_bytes()
+    monkeypatch.setenv("KB_FEEDBACK_ATTACHMENTS_UNLINKED_MAX_BYTES", str(base + 2 * len(PNG)))
+
+    first = _upload(fb, _h(key))
+    second = _upload(fb, _h(key))
+    assert first.status_code == 201 and second.status_code == 201
+    rows, files = _unlinked_bytes(), _stored_files()
+    refused = _upload(fb, _h(key))
+    assert refused.status_code == 503, refused.text
+    assert refused.json()["detail"] == UPLOADS_PAUSED
+    assert _unlinked_bytes() == rows and _stored_files() == files
+
+    # A linked attachment no longer counts: linking one frees its room.
+    _capture(fb, _h(key), attachment_ids=[first.json()["attachment_id"]])
+    third = _upload(fb, _h(key))
+    assert third.status_code == 201
+    assert _upload(fb, _h(key)).status_code == 503
+    assert _unlinked_bytes() <= base + 2 * len(PNG)
+
+    # A race past the first check (it saw room that is gone) is caught by the locked
+    # check with the insert: still a 503, and the file just written is removed.
+    from server.feedback.service import FeedbackService
+
+    async def no_room_seen(self) -> int:
+        return 0
+
+    with monkeypatch.context() as patch:
+        patch.setattr(FeedbackService, "unlinked_attachment_bytes", no_room_seen)
+        rows, files = _unlinked_bytes(), _stored_files()
+        raced = _upload(fb, _h(key))
+        assert raced.status_code == 503 and raced.json()["detail"] == UPLOADS_PAUSED
+        assert _unlinked_bytes() == rows and _stored_files() == files
+
+    # Stale unlinked files are reclaimed by the sweep first, so the upload goes on.
+    for aid in (second.json()["attachment_id"], third.json()["attachment_id"]):
+        _age(aid, "2 days")
+    assert _upload(fb, _h(key)).status_code == 201
+    assert _attachment_row(second.json()["attachment_id"]) == []
+
+
+def test_uploads_are_limited_apart_from_captures(fb, monkeypatch):
+    """Uploads have their own, tighter limit: a client that spent its upload budget
+    still captures, and one that spent its capture budget still uploads."""
+
+    owner = _signup(fb)
+    key = _key(fb, owner)
+    monkeypatch.setenv("KB_FEEDBACK_RATE_LIMIT", "3")
+    monkeypatch.setenv("KB_FEEDBACK_UPLOAD_RATE_LIMIT", "2")
+    edge = {**_h(key), "X-Real-IP": "203.0.113.20"}
+    for headers in (_h(key), edge):  # in-network (the org) and through the edge
+        assert _upload(fb, headers).status_code == 201
+        assert _upload(fb, headers).status_code == 201
+        over = _upload(fb, headers)
+        assert over.status_code == 429 and "Retry-After" in over.headers
+        for _ in range(3):
+            _capture(fb, headers)
+        assert fb.post("/api/feedback", json={"message": "m", "source": {"product": "p"}},
+                       headers=headers).status_code == 429
+    other = {**_h(key), "X-Real-IP": "203.0.113.21"}
+    for _ in range(3):
+        _capture(fb, other)
+    assert fb.post("/api/feedback", json={"message": "m", "source": {"product": "p"}},
+                   headers=other).status_code == 429
+    assert _upload(fb, other).status_code == 201  # the capture budget is not the upload's
+
+    from server import config
+
+    monkeypatch.delenv("KB_FEEDBACK_UPLOAD_RATE_LIMIT")
+    assert config.feedback_upload_rate_limit() == 60
+
+
+def _sized_capture(size: int) -> bytes:
+    """A valid capture body of exactly ``size`` bytes."""
+
+    import json
+
+    base = json.dumps({"message": "", "source": {"product": "p"}}).encode()
+    body = json.dumps({"message": "x" * (size - len(base)), "source": {"product": "p"}}).encode()
+    assert len(body) == size
+    return body
+
+
+def test_a_capture_body_over_the_cap_is_413_before_it_is_parsed(fb, monkeypatch):
+    """By ``Content-Length`` when present, by counting while reading when not; the
+    body is never parsed. At the cap it is accepted."""
+
+    import server.feedback_api as feedback_api
+
+    owner = _signup(fb)
+    key = _key(fb, owner)
+    parsed: list = []
+    real_validate = feedback_api.RestCaptureFeedbackInput.model_validate
+
+    def spy(value, *args, **kwargs):
+        parsed.append(1)
+        return real_validate(value, *args, **kwargs)
+
+    monkeypatch.setattr(feedback_api.RestCaptureFeedbackInput, "model_validate", spy)
+    from starlette.requests import Request as StarletteRequest
+
+    streamed: list = []
+    real_stream = StarletteRequest.stream
+
+    def stream_spy(self):
+        # Recorded when the handler starts reading, not when a middleware merely
+        # creates the generator.
+        if type(self).__name__ == "_CachedRequest" or self.url.path != "/api/feedback":
+            return real_stream(self)
+
+        async def reading():
+            streamed.append(self.headers.get("content-length"))
+            async for chunk in real_stream(self):
+                yield chunk
+
+        return reading()
+
+    monkeypatch.setattr(StarletteRequest, "stream", stream_spy)
+    headers = {**_h(key), "Content-Type": "application/json"}
+
+    def post(data: bytes, *, stream: bool):
+        content = iter([data]) if stream else data
+        return fb.post("/api/feedback", content=content, headers=headers)
+
+    default_cap = 262144
+    over = post(_sized_capture(default_cap + 1), stream=False)
+    assert over.status_code == 413
+    assert over.json()["detail"] == f"request body must not exceed {default_cap} bytes"
+    assert parsed == [] and streamed == []  # refused by Content-Length, unread
+
+    monkeypatch.setenv("KB_FEEDBACK_MAX_BODY_BYTES", "4096")
+    for stream in (False, True):
+        res = post(_sized_capture(4097), stream=stream)
+        assert res.status_code == 413, (stream, res.status_code)
+        assert res.json()["detail"] == "request body must not exceed 4096 bytes"
+        assert parsed == []
+    assert streamed == [None]  # only the chunked body was read, and refused mid-way
+    for stream in (False, True):
+        assert post(_sized_capture(4096), stream=stream).status_code == 202, stream
+    assert len(parsed) == 2
+    # The cap is checked after the caller: a stranger still gets the 401.
+    assert fb.post("/api/feedback", content=_sized_capture(4097)).status_code == 401
 
 
 def test_a_capture_only_org_key_never_creates_a_project(fb):

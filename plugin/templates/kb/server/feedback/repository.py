@@ -49,6 +49,10 @@ from server.persistence.models import (
 
 logger = logging.getLogger(__name__)
 
+#: The advisory-lock key the unlinked-bytes ceiling check holds (any fixed bigint;
+#: this one spells "kbfbunlk").
+UNLINKED_CEILING_LOCK_KEY = 0x6B62_6662_756E_6C6B
+
 
 class FeedbackRepository:
     """Repository for feedback event persistence and reads."""
@@ -236,6 +240,22 @@ class FeedbackRepository:
         await self._session.flush()
         await self._session.refresh(model)
         return self._to_attachment_record(model)
+
+    async def unlinked_attachment_bytes(self) -> int:
+        """The total ``byte_size`` of every unlinked attachment, all orgs together."""
+
+        statement = select(func.coalesce(func.sum(FeedbackAttachmentModel.byte_size), 0)).where(
+            FeedbackAttachmentModel.feedback_id.is_(None)
+        )
+        return int((await self._session.execute(statement)).scalar_one())
+
+    async def lock_unlinked_ceiling(self) -> None:
+        """Serialize ceiling checks: a transaction-scoped advisory lock, released at
+        the commit or rollback, so two uploads never both fit in the last room."""
+
+        await self._session.execute(
+            select(func.pg_advisory_xact_lock(bindparam("key", UNLINKED_CEILING_LOCK_KEY)))
+        )
 
     async def delete_stale_unlinked_attachments(
         self,

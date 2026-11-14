@@ -118,7 +118,10 @@ Every REST failure body is the server's `{"detail": "..."}` verbatim. React like
 |---|---|---|
 | `401` | `missing or invalid bearer token` | The key is wrong or revoked. Say so, name `VOCKY_API_TOKEN`, **stop** — never retry, never fall back to another path. |
 | `403` | `this key's scope is capture: Library routes need a full key` | A **Capture only** key on a route that reads, edits or deletes. Capturing still works with it; anything else needs a **Full access** key. |
-| `429` | `too many requests — please retry later` | The capture limiter. Wait for the `Retry-After` seconds and retry once; if it fails again, tell the user the feedback was **not** captured. |
+| `429` | `too many requests — please retry later` | The capture limiter (uploads have a tighter limit of their own). Wait for the `Retry-After` seconds and retry once; if it fails again, tell the user the feedback was **not** captured. |
+| `413` | `request body must not exceed 262144 bytes` (the number is the server's cap) | The capture body is too big. Nothing was captured. Trim what you can drop (long `messages` or `used_context` first, never the user's words in `message`) and retry once; never retry the same body. On MCP the same string arrives as a tool error. |
+| `413` | `attachment too large` | The image is over the upload size limit. Send the feedback without it, or a smaller image. |
+| `503` | `uploads are paused while unlinked files are reclaimed — please retry later` | Attachment uploads only: too many uploaded images were never linked to a capture. Capture the feedback **without** the image (it still lands), tell the user the screenshot was not attached, and do not loop on the upload. |
 | `400` | `request body must be valid JSON` / `request body must be a JSON object` | The payload you built is malformed. Fix it once and retry once. |
 | `400` | `<dotted.loc>: <message>` (e.g. `source.product: Field required`) | A schema violation. **Only the first error is reported** — fixing one may reveal another underneath it. |
 | `400` | `message must not be blank` / `source.product must not be blank` | Both are required and non-blank. |

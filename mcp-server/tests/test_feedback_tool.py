@@ -56,7 +56,7 @@ def test_body_carries_given_fields_and_bearer_and_omits_the_rest():
     assert seen["method"] == "POST"
     assert seen["path"] == "/api/feedback"
     assert seen["authorization"] == "Bearer kb_capture_123"
-    # No address header: the API buckets an in-network capture by its bearer.
+    # No address header: the API buckets an in-network capture by its bearer's org.
     assert seen["address_headers"] == set()
     assert seen["body"] == {
         "message": "the answer was wrong",
@@ -98,8 +98,15 @@ def test_202_becomes_vockys_result():
         ),
         (401, {"detail": "invalid credential"}, "unauthorized: missing/invalid bearer"),
         (403, {"detail": "forbidden"}, "may not capture"),
+        (
+            413,
+            {"detail": "request body must not exceed 262144 bytes"},
+            "request body must not exceed 262144 bytes",
+        ),
+        (413, {}, "capture rejected: request body too large"),
         (429, {"detail": "too many"}, "rate limited"),
         (500, {"detail": "storage write failed"}, "capture failed: upstream returned HTTP 500"),
+        (503, {"detail": "busy"}, "capture failed: upstream returned HTTP 503"),
     ],
 )
 def test_upstream_failures_become_tool_errors(status, body, expected):

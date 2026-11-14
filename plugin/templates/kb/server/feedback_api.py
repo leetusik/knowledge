@@ -7,14 +7,19 @@ Three families, each with its own gate:
   else. Capture persists **in the request** (no queue, no worker): when the 202 goes
   out the row is committed, and a failed insert is a 5xx the caller sees. The owner
   alert is a FastAPI background task that runs after the response, best-effort
-  (``server.feedback.notify``). Both routes sit behind an in-process limiter
-  (``KB_FEEDBACK_RATE_LIMIT`` per ``KB_FEEDBACK_RATE_WINDOW_S``), checked before the
-  body is read: through the edge the bucket is the client address, from inside the
-  network (the Feedback MCP hop) it is the caller's credential (``_capture_caller``).
-  A ``capture`` org-level key captures only into an existing project or
-  ``"default"``; it never creates one (``resolve_capture_project``). Each upload
-  first reclaims a small batch of unlinked attachments older than
-  ``KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S`` (rows and files).
+  (``server.feedback.notify``). Both routes sit behind an in-process limiter, per
+  ``KB_FEEDBACK_RATE_WINDOW_S``, checked before the body is read: captures get
+  ``KB_FEEDBACK_RATE_LIMIT``, uploads their own ``KB_FEEDBACK_UPLOAD_RATE_LIMIT``,
+  counted apart. Through the edge the bucket is the client address; from inside the
+  network (the Feedback MCP hop) it is the caller's org (``_capture_caller``), so
+  minting keys buys no budget. A capture body larger than
+  ``KB_FEEDBACK_MAX_BODY_BYTES`` is a 413 before it is parsed. A ``capture``
+  org-level key captures only into an existing project or ``"default"``; it never
+  creates one (``resolve_capture_project``). Each upload first reclaims unlinked
+  attachments older than ``KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S`` (rows and files,
+  batch after batch within a small budget), then is refused with a 503 if it would
+  take the total size of unlinked attachments above
+  ``KB_FEEDBACK_ATTACHMENTS_UNLINKED_MAX_BYTES``.
 - **Key reads and management** (``GET /api/feedback``, its attachment download, and
   ``/api/project/feedback*`` + ``/api/project/usage``): ``resolve_api_read`` for
   reads, ``resolve_api_write`` for ``PATCH``/``DELETE``/comment ``POST``; both answer
@@ -73,6 +78,7 @@ from server.api_auth import (
 from server.app_api import serialize_credential
 from server.feedback.notify import notify_feedback_captured
 from server.feedback.service import (
+    FeedbackCapacityError,
     FeedbackPersistenceError,
     FeedbackReadError,
     get_feedback_service,
@@ -661,47 +667,51 @@ def _edge_client_ip(request: Request) -> str | None:
     return None
 
 
-def _credential_bucket(ctx: ApiAuthContext, request: Request) -> str:
-    """The bucket of an authenticated in-network caller: its own credential.
+def _org_bucket(ctx: ApiAuthContext, request: Request) -> str:
+    """The bucket of an authenticated in-network caller: its org.
 
-    A ``vk_`` key is its credential id. The master bearer and a session carry no
-    credential row, so they are their bearer's hash (one bucket per session token,
-    one for the master bearer). Never an address or a header the caller chose.
+    The resolved tenant: a ``vk_`` key's org (project-bound or not), a session's
+    active org, tenant #1 for the master bearer. Every key and session of one org
+    shares it, so minting more keys buys no more budget, and one org never spends
+    another's. Never an address or a header the caller chose (a session's
+    ``X-Hi2vi-Org`` names only an org it is a member of). A context without a
+    tenant is legacy mode, which 404s before this; it falls back to the bearer.
     """
 
-    if ctx.credential_id is not None:
-        return f"key:{ctx.credential_id}"
-    token = extract_bearer_token(request)
+    if ctx.tenant_id is not None:
+        return f"org:{ctx.tenant_id}"
+    token = extract_bearer_token(request)  # never reached: legacy mode 404s first
     return f"bearer:{sha256_hex(token)}" if token else "anonymous"
 
 
-async def _capture_caller(request: Request) -> ApiAuthContext:
+async def _capture_caller(request: Request, *, limit: int) -> ApiAuthContext:
     """Rate-limit and authenticate a capture request, before its body is read.
 
     Through the edge the bucket is the client address and it is checked **first**,
     so a flood of bad bearers from one address stays cheap (429, then 401 without a
     lookup). An in-network request (no ``X-Real-IP``: the MCP hop) is authenticated
-    first, then counted in its credential's own bucket, so the MCP container's one
-    address never makes every org's agents share one limit. Either way an
-    unauthenticated request is a 401 before any body is read.
+    first, then counted in its org's bucket, so the MCP container's one address
+    never makes every org's agents share one limit, and no org's budget grows with
+    the keys it holds. Either way an unauthenticated request is a 401 before any
+    body is read. ``limit`` is the route's own (captures and uploads differ).
     """
 
     _require_accounts_plane()
     edge_ip = _edge_client_ip(request)
     if edge_ip is not None:
-        _enforce_capture_rate_limit(request, f"ip:{edge_ip}")
+        _enforce_capture_rate_limit(request, f"ip:{edge_ip}", limit)
         return await resolve_api_capture(request)
     ctx = await resolve_api_capture(request)
-    _enforce_capture_rate_limit(request, _credential_bucket(ctx, request))
+    _enforce_capture_rate_limit(request, _org_bucket(ctx, request), limit)
     return ctx
 
 
-def _enforce_capture_rate_limit(request: Request, bucket: str) -> None:
-    """Fixed-window limit per ``bucket`` on the two capture routes; 429 past it.
+def _enforce_capture_rate_limit(request: Request, bucket: str, limit: int) -> None:
+    """Fixed-window limit of ``limit`` per ``bucket`` on a capture route; 429 past it.
 
-    Each route counts in a bucket of its own (the key carries the path)."""
+    Each route counts in a bucket of its own (the key carries the path), so a
+    client's uploads never spend its captures, nor the other way round."""
 
-    limit = config.feedback_rate_limit()
     if limit <= 0:
         return
     window = float(config.feedback_rate_window_s())
@@ -777,15 +787,48 @@ async def _load_scoped(feedback_id: UUID, project_ids: tuple[UUID, ...]) -> Feed
 # --- capture ----------------------------------------------------------------------
 
 
+def _body_too_large(max_bytes: int) -> JSONResponse:
+    return _detail(f"request body must not exceed {max_bytes} bytes", 413)
+
+
+async def _read_capped_body(request: Request, max_bytes: int) -> bytes | JSONResponse:
+    """The request body, or a 413 once it is known to exceed ``max_bytes``.
+
+    A declared ``Content-Length`` over the cap is refused before a byte is read; a
+    body without one (chunked) is counted while it streams and refused as soon as
+    it passes the cap, so an oversized body is never buffered whole nor parsed.
+    """
+
+    declared_raw = request.headers.get("content-length")
+    if declared_raw is not None:
+        try:
+            declared = int(declared_raw)
+        except ValueError:
+            return _detail("invalid Content-Length", 400)
+        if declared > max_bytes:
+            return _body_too_large(max_bytes)
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in request.stream():
+        total += len(chunk)
+        if total > max_bytes:
+            return _body_too_large(max_bytes)
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 @router.post("/api/feedback")
 async def capture_feedback(request: Request, background_tasks: BackgroundTasks) -> Response:
     """Capture one feedback event; 202 once the row is committed."""
 
-    ctx = await _capture_caller(request)
+    ctx = await _capture_caller(request, limit=config.feedback_rate_limit())
+    body_or_refusal = await _read_capped_body(request, config.feedback_max_body_bytes())
+    if isinstance(body_or_refusal, Response):
+        return body_or_refusal
 
     try:
         try:
-            raw_body = await request.json()
+            raw_body = json.loads(body_or_refusal)
         except ValueError as exc:
             raise FeedbackValidationError("request body must be valid JSON") from exc
         if not isinstance(raw_body, dict):
@@ -845,47 +888,67 @@ def _clean_filename(filename: str | None) -> str | None:
     return cleaned or None
 
 
-#: Unlinked attachments one upload reclaims at most, so no single upload pays for a
-#: large backlog; a steady stream of uploads drains one quickly.
-UNLINKED_SWEEP_BATCH = 20
+#: Unlinked attachments one sweep batch reclaims (one committed delete).
+UNLINKED_SWEEP_BATCH = 100
+#: One upload's sweep budget: it repeats batches until nothing stale is left, this
+#: many rows are reclaimed, or this many seconds are spent, whichever comes first.
+#: A backlog drains at hundreds of rows per upload, and no upload waits long.
+UNLINKED_SWEEP_MAX_ROWS = 500
+UNLINKED_SWEEP_MAX_SECONDS = 1.0
 
 
 async def _reclaim_unlinked_attachments(storage: AttachmentStorage) -> None:
-    """Delete a batch of unlinked attachments older than the TTL, rows then files.
+    """Delete unlinked attachments older than the TTL, rows then files, in batches.
 
     The opportunistic sweep (no scheduler): an upload nobody linked within
-    ``KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S`` is reclaimed by a later upload. Files
-    are removed only for rows the committed delete returned; a file already missing
-    is not an error. The sweep never fails the upload that runs it. A capture that
-    later names a reclaimed id is treated like any unknown id (stored without it).
+    ``KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S`` is reclaimed by a later upload. Each
+    batch's files are removed only for rows its committed delete returned; a file
+    already missing is not an error. Batches repeat until one comes back short (no
+    stale row left) or the budget (``UNLINKED_SWEEP_MAX_ROWS`` rows,
+    ``UNLINKED_SWEEP_MAX_SECONDS``) is spent. The sweep never fails the upload that
+    runs it. A capture that later names a reclaimed id is treated like any unknown
+    id (stored without it).
     """
 
     older_than = datetime.now(UTC) - timedelta(
         seconds=config.feedback_attachments_unlinked_ttl_s()
     )
-    try:
-        keys = await get_feedback_service().reclaim_unlinked_attachments(
-            older_than=older_than, limit=UNLINKED_SWEEP_BATCH
-        )
-    except FeedbackPersistenceError:
-        logger.exception("unlinked attachment sweep failed; the upload goes on")
-        return
-    for key in keys:
+    started = time.monotonic()
+    reclaimed = 0
+    while reclaimed < UNLINKED_SWEEP_MAX_ROWS:
+        limit = min(UNLINKED_SWEEP_BATCH, UNLINKED_SWEEP_MAX_ROWS - reclaimed)
+        if limit <= 0:
+            break
         try:
-            storage.delete(key)
-        except StorageObjectNotFoundError:
-            continue
-        except StorageError:
-            logger.warning("could not delete a reclaimed attachment's file", exc_info=True)
-    if keys:
-        logger.info("reclaimed %d unlinked attachment(s)", len(keys))
+            keys = await get_feedback_service().reclaim_unlinked_attachments(
+                older_than=older_than, limit=limit
+            )
+        except FeedbackPersistenceError:
+            logger.exception("unlinked attachment sweep failed; the upload goes on")
+            break
+        for key in keys:
+            try:
+                storage.delete(key)
+            except StorageObjectNotFoundError:
+                continue
+            except StorageError:
+                logger.warning("could not delete a reclaimed attachment's file", exc_info=True)
+        reclaimed += len(keys)
+        if len(keys) < limit or time.monotonic() - started >= UNLINKED_SWEEP_MAX_SECONDS:
+            break
+    if reclaimed:
+        logger.info("reclaimed %d unlinked attachment(s)", reclaimed)
+
+
+#: The 503 an upload gets when it would take unlinked attachments above the ceiling.
+UPLOADS_PAUSED = "uploads are paused while unlinked files are reclaimed — please retry later"
 
 
 @router.post("/api/feedback/attachments")
 async def upload_attachment(request: Request, background_tasks: BackgroundTasks) -> Response:
     """Store one uploaded image (unlinked) and return its id; 201."""
 
-    ctx = await _capture_caller(request)
+    ctx = await _capture_caller(request, limit=config.feedback_upload_rate_limit())
 
     max_bytes = config.feedback_attachments_max_bytes()
     allowed_types = config.feedback_attachments_allowed_mime_types()
@@ -940,6 +1003,16 @@ async def upload_attachment(request: Request, background_tasks: BackgroundTasks)
 
     storage = get_attachment_storage()
     await _reclaim_unlinked_attachments(storage)
+    # The ceiling, after the sweep: checked first so a refused upload writes no
+    # file, then again under a lock with the insert so no race can overshoot it.
+    ceiling = config.feedback_attachments_unlinked_max_bytes()
+    try:
+        if await get_feedback_service().unlinked_attachment_bytes() + total > ceiling:
+            logger.warning("unlinked attachments are at their ceiling; upload refused")
+            return _detail(UPLOADS_PAUSED, 503)
+    except FeedbackReadError:
+        logger.exception("could not measure unlinked attachments")
+        return _detail("attachment storage unavailable", 503)
     storage_key = str(uuid4())
     try:
         storage.save(storage_key, data)
@@ -956,8 +1029,14 @@ async def upload_attachment(request: Request, background_tasks: BackgroundTasks)
                 filename=filename,
                 claimed_user_id=user_id,
                 claimed_source_product=source_product,
-            )
+            ),
+            unlinked_ceiling=ceiling,
         )
+    except FeedbackCapacityError:
+        with contextlib.suppress(StorageError):
+            storage.delete(storage_key)
+        logger.warning("unlinked attachments reached their ceiling; upload refused")
+        return _detail(UPLOADS_PAUSED, 503)
     except FeedbackPersistenceError:
         with contextlib.suppress(StorageError):
             storage.delete(storage_key)

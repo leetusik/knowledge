@@ -191,19 +191,37 @@ def _env_int(name: str, default: int) -> int:
 
 
 def feedback_rate_limit() -> int:
-    """Max ``POST /api/feedback`` and ``/api/feedback/attachments`` requests per bucket
-    per window (``KB_FEEDBACK_RATE_LIMIT``, 600): the client address for a request
-    through the edge, the caller's credential for one from inside the network (the
-    Feedback MCP hop). ``<= 0`` turns the limiter off. The two routes are counted
-    separately, in buckets of their own."""
+    """Max ``POST /api/feedback`` requests per bucket per window
+    (``KB_FEEDBACK_RATE_LIMIT``, 600): the client address for a request through the
+    edge, the caller's org for one from inside the network (the Feedback MCP hop).
+    ``<= 0`` turns the limiter off. Uploads have a limit of their own
+    (:func:`feedback_upload_rate_limit`), counted apart."""
     return _env_int("KB_FEEDBACK_RATE_LIMIT", 600)
 
 
+def feedback_upload_rate_limit() -> int:
+    """Max ``POST /api/feedback/attachments`` requests per bucket per window
+    (``KB_FEEDBACK_UPLOAD_RATE_LIMIT``, 60), in the same kind of bucket as captures
+    (the client address through the edge, the org in-network) but counted apart
+    from them. An event carries at most ten files, so an attachment-heavy client
+    still fits. ``<= 0`` turns this limiter off."""
+    return _env_int("KB_FEEDBACK_UPLOAD_RATE_LIMIT", 60)
+
+
 def feedback_rate_window_s() -> int:
-    """The capture limiter's fixed window in seconds (``KB_FEEDBACK_RATE_WINDOW_S``, 60);
-    a non-positive or unparseable value falls back to 60."""
+    """The Feedback limiters' fixed window in seconds (``KB_FEEDBACK_RATE_WINDOW_S``,
+    60); a non-positive or unparseable value falls back to 60."""
     value = _env_int("KB_FEEDBACK_RATE_WINDOW_S", 60)
     return value if value > 0 else 60
+
+
+def feedback_max_body_bytes() -> int:
+    """The largest ``POST /api/feedback`` body (``KB_FEEDBACK_MAX_BODY_BYTES``, 262144 =
+    256 KiB), refused with a 413 before it is parsed. Vocky had no cap of its own
+    (only the edge's ``client_max_body_size``). A non-positive or unparseable value
+    falls back to the default, never to "no cap"."""
+    value = _env_int("KB_FEEDBACK_MAX_BODY_BYTES", 262144)
+    return value if value > 0 else 262144
 
 
 def feedback_attachments_max_bytes() -> int:
@@ -220,12 +238,22 @@ def feedback_attachments_max_count() -> int:
 
 def feedback_attachments_unlinked_ttl_s() -> int:
     """How long an uploaded attachment may wait for a capture to link it
-    (``KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S``, 86400 = one day). Each upload reclaims
-    a small batch of unlinked attachments older than this, row and file. A
-    non-positive or unparseable value falls back to the default, never to "reclaim
-    at once"."""
+    (``KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S``, 86400 = one day). Each upload first
+    reclaims unlinked attachments older than this, row and file, within a small
+    budget. A non-positive or unparseable value falls back to the default, never to
+    "reclaim at once"."""
     value = _env_int("KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S", 86400)
     return value if value > 0 else 86400
+
+
+def feedback_attachments_unlinked_max_bytes() -> int:
+    """The ceiling on the total size of unlinked attachments, all orgs together
+    (``KB_FEEDBACK_ATTACHMENTS_UNLINKED_MAX_BYTES``, 1073741824 = 1 GiB). An upload
+    that would take the total above it is refused with a 503 after the sweep has
+    run: the hard bound on the disk unlinked uploads can take. A non-positive or
+    unparseable value falls back to the default, never to "no ceiling"."""
+    value = _env_int("KB_FEEDBACK_ATTACHMENTS_UNLINKED_MAX_BYTES", 1073741824)
+    return value if value > 0 else 1073741824
 
 
 _FEEDBACK_DEFAULT_MIME_TYPES = "image/jpeg,image/png,image/gif,image/webp"

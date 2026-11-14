@@ -4,7 +4,7 @@ Ported from vocky's ``capture_feedback`` (name, parameters, description and resu
 shape kept) as a thin proxy to ``POST /api/feedback`` with the caller's bearer
 forwarded verbatim, the same proxy-and-forward pattern as the Library's tools. The
 API is the authority: this module validates nothing beyond the tool schema and
-relays the API's 400 ``detail``. The one thing it adds is vocky's MCP default,
+relays the API's 400 and 413 ``detail``. The one thing it adds is vocky's MCP default,
 ``recorded_by = "agent"`` when the caller gives none (REST leaves it null).
 
 Every outcome is a tool result, never an exception: a 202 becomes vocky's
@@ -49,6 +49,9 @@ def error_result(message: str) -> CallToolResult:
 def _error_for(exc: upstream.UpstreamError) -> CallToolResult:
     if exc.status == 400:
         return error_result(exc.detail or "capture rejected: bad request")
+    if exc.status == 413:
+        # The API's body cap (KB_FEEDBACK_MAX_BODY_BYTES); its detail names the cap.
+        return error_result(exc.detail or "capture rejected: request body too large")
     if exc.status == 401:
         # The same wording as the Library's tools (server._tool_error).
         return error_result("unauthorized: missing/invalid bearer")
