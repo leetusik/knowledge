@@ -10,7 +10,13 @@ one to rename, a Feedback project with events, a comment and an attachment), the
   ``project_id`` remapped (a NULL ``event_at`` stays NULL), the attachment file copied;
 * keeps every moved document's id through the next reindex;
 * changes nothing on a second ``--apply`` and copies exactly the events added since;
-* finishes on a re-run a run interrupted after the Postgres commit.
+* finishes on a re-run a run interrupted after the Postgres commit;
+* on a git checkout, refuses a project whose files are tracked and leaves ``git status``
+  clean, the private-projects block naming the renamed project;
+* resolves a ``feedback`` target by its post-run name, the same in the dry run and the
+  apply, and refuses a pre-run or ambiguous name;
+* journals every moved document's id before writing, so a renumbering fails verify;
+* lists references to a renamed project's old name and never rewrites a document.
 
 Postgres-gated like every accounts test (``KB_TEST_DATABASE_URL``). Vocky's tables live in
 a throwaway schema of the same database, in vocky's own physical column order.
@@ -22,6 +28,7 @@ import importlib.util
 import json
 import os
 import sqlite3
+import subprocess
 import sys
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -351,3 +358,163 @@ def test_a_run_interrupted_after_the_commit_finishes_on_the_next(world, monkeypa
     monkeypatch.setattr(merge_vocky, "apply_disk", real)
     assert _run(world, "--apply") == 0
     assert _run(world, "--verify") == 0
+
+
+# --- git checkouts, feedback target names, the id journal, old-name references ---------
+
+JOURNAL = Path("data") / "merge_vocky_journal.json"
+
+
+def _git(root, *args) -> str:
+    return subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True,
+                          text=True).stdout
+
+
+def _git_checkout(w, *, track: tuple[str, ...] = (), private: tuple[str, ...] = ()) -> Path:
+    """Make the content root a checkout like the box's: the repo's ignore lines, the given
+    projects in the private-projects block, the given paths committed; status clean."""
+    from server import gitops
+
+    root = w["root"]
+    _git(root, "init", "-q")
+    _git(root, "config", "user.email", "fixture@example.test")
+    _git(root, "config", "user.name", "fixture")
+    (root / ".gitignore").write_text("/data/\n/tenants/\n.assets/\n")
+    for name in private:
+        gitops.mark_private(name, root=root)
+    _git(root, "add", ".gitignore", *track)
+    _git(root, "commit", "-q", "-m", "fixture")
+    assert _git(root, "status", "--porcelain", "--untracked-files=all") == ""
+    return root
+
+
+def test_a_project_with_tracked_files_is_refused_and_nothing_changes(world, capsys):
+    w = world
+    _git_checkout(w, track=("docs/oldname", "docs/.books/oldname"), private=("alpha",))
+    before = _state(w)
+    assert _run(w, "--apply") == merge_vocky.EXIT_REFUSED
+    assert _state(w) == before
+    out = capsys.readouterr().out
+    assert "rename oldname" in out and "tracked by git" in out and "private in the app" in out
+
+
+def test_after_a_run_on_a_checkout_git_status_is_clean_and_the_block_names_the_new_name(world):
+    from server import gitops
+
+    w = world
+    root = _git_checkout(w, private=("alpha", "oldname"))  # both private: nothing tracked
+    assert _run(w, "--apply") == 0
+    assert _git(root, "status", "--porcelain", "--untracked-files=all") == ""
+    assert "newname" in gitops.private_projects(root)
+    assert _run(w, "--verify") == 0
+
+
+def _feedback_to(w, target: str) -> None:
+    m = json.loads(w["mapping"].read_text())
+    m["feedback"] = {"src": target}
+    w["mapping"].write_text(json.dumps(m))
+
+
+@pytest.mark.parametrize("target, project", [("newname", "oldname"), ("alpha", "alpha")])
+def test_a_feedback_target_by_its_post_run_name_resolves_once(world, capsys, target, project):
+    w, ids = world, world["ids"]
+    _feedback_to(w, target)
+    assert _run(w, "--dry-run") == 0
+    line = next(x for x in capsys.readouterr().out.splitlines() if x.strip().startswith("src ->"))
+    assert str(ids[project]) in line  # the dry run shows the project the apply will use
+    assert _run(w, "--apply") == 0
+    with w["engine"].connect() as c:
+        got = c.execute(text("SELECT DISTINCT project_id FROM public.feedback_events "
+                             "WHERE id = ANY(:e)"), {"e": w["events"]}).scalars().all()
+        stray = c.execute(text("SELECT count(*) FROM projects WHERE tenant_id = :t AND name IN "
+                               "('oldname', 'alpha')"), {"t": ids["t1"]}).scalar_one()
+    assert got == [ids[project]] and stray == 0
+
+
+def _org_with_fbtarget(w) -> None:
+    now = datetime.now(UTC)
+    with w["engine"].begin() as c:
+        org = uuid.uuid4()
+        c.execute(text("INSERT INTO tenants (id, name, created_at) VALUES (:i, :n, :t)"),
+                  {"i": org, "n": f"Org {w['tag']}", "t": now})
+        c.execute(text("INSERT INTO tenant_members (id, tenant_id, user_id, role, created_at) "
+                       "VALUES (:i, :t, :u, 'owner', :c)"),
+                  {"i": uuid.uuid4(), "t": org, "u": w["ids"]["op"], "c": now})
+        c.execute(text("INSERT INTO projects (id, tenant_id, name) VALUES (:i, :t, 'fbtarget')"),
+                  {"i": uuid.uuid4(), "t": org})
+
+
+@pytest.mark.parametrize("target, hint, arrange", [
+    ("oldname", "'newname'", None),  # renamed by this run: its post-run name is newname
+    ("Home/alpha", "/alpha'", None),  # moved by this run: it is no longer in Home
+    ("fbtarget", "Home/fbtarget", _org_with_fbtarget),  # in both orgs after the run
+])
+def test_a_feedback_target_by_a_pre_run_or_ambiguous_name_is_refused(world, capsys, target,
+                                                                     hint, arrange):
+    w = world
+    _feedback_to(w, target)
+    if arrange:
+        arrange(w)
+    before = _state(w)
+    assert _run(w, "--apply") == merge_vocky.EXIT_REFUSED
+    assert _state(w) == before
+    assert hint in capsys.readouterr().out
+
+
+def _interrupt(w, monkeypatch) -> None:
+    def boom(ctx, plan):
+        raise RuntimeError("interrupted before the folders moved")
+
+    real = merge_vocky.apply_disk
+    monkeypatch.setattr(merge_vocky, "apply_disk", boom)
+    with pytest.raises(RuntimeError):
+        _run(w, "--apply")
+    monkeypatch.setattr(merge_vocky, "apply_disk", real)
+
+
+def test_a_reindex_mid_run_renumbers_and_verify_fails_naming_the_documents(world, monkeypatch,
+                                                                           capsys):
+    w = world
+    _interrupt(w, monkeypatch)
+    _reindex(w["ids"]["t1"])  # the API restarted between the SQLite re-key and the folders
+    capsys.readouterr()
+    assert _run(w, "--apply") == merge_vocky.EXIT_FAILED
+    out = capsys.readouterr().out
+    assert "VERIFY OK" not in out and "renumbered" in out
+    assert "oldname/2026-10-01-o.md" in out and "alpha/2026-10-01-a.md" in out
+    assert _run(w, "--verify") == merge_vocky.EXIT_FAILED
+
+
+def test_an_interrupted_run_finishes_from_the_journal_with_every_id_kept(world, monkeypatch):
+    w = world
+    old_ids = _doc_ids(w)
+    _interrupt(w, monkeypatch)
+    journal = json.loads((w["root"] / JOURNAL).read_text())
+    journalled = {e["pre"][1]: e["id"] for e in journal["documents"]}
+    assert journalled == {r: old_ids[r][0] for r in ("alpha/2026-10-01-a.md",
+                                                     "oldname/2026-10-01-o.md")}
+    assert _run(w, "--apply") == 0
+    new_ids = _doc_ids(w)
+    assert new_ids["alpha/2026-10-01-a.md"][0] == journalled["alpha/2026-10-01-a.md"]
+    assert new_ids["newname/2026-10-01-o.md"][0] == journalled["oldname/2026-10-01-o.md"]
+    assert _run(w, "--verify") == 0
+
+
+def test_references_to_a_renamed_projects_old_name_are_listed_never_rewritten(world, capsys):
+    w = world
+    docs = w["root"] / "docs"
+    (docs / "oldname" / "2026-10-02-p.md").write_text(
+        '---\ntitle: "P"\ndate: 2026-10-02\nrelated:\n  - oldname/2026-10-01-o.md\n---\n\n'
+        "# P\n\nsee [o](doc:oldname/2026-10-01-o) and [c](chapter:oldname/bk/c1)\n")
+    (docs / "alpha" / "2026-10-02-q.md").write_text(
+        '---\ntitle: "Q"\ndate: 2026-10-02\nrelated:\n  - alpha/2026-10-01-a.md\n---\n\n'
+        "# Q\n\n[x](doc:other/slug) [y](chapter:oldname/c1)\n")  # no old-name reference
+    body = (docs / "oldname" / "2026-10-02-p.md").read_bytes()
+    assert _run(w, "--dry-run") == 0
+    out = capsys.readouterr().out
+    assert "docs/oldname/2026-10-02-p.md: related 1, doc/chapter refs 2" in out
+    assert "2026-10-02-q.md" not in out
+    assert _run(w, "--apply") == 0
+    out = capsys.readouterr().out
+    assert "docs/newname/2026-10-02-p.md: related 1, doc/chapter refs 2" in out  # verify too
+    assert (docs / "newname" / "2026-10-02-p.md").read_bytes() == body

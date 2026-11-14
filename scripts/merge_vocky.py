@@ -25,7 +25,24 @@ from a database restored from a vocky dump, and changes the platform in four pla
 4. **Attachment files**: copied from a source folder into
    ``KB_FEEDBACK_ATTACHMENTS_DIR`` when attachment rows are copied.
 
-Steps 2-4 come after the Postgres commit; each step reads the state it finds, so a run
+5. **The private-projects block**: when the content root is a git checkout, each
+   renamed private project is marked under its new name in the checkout's
+   ``info/exclude`` block (``server.gitops.mark_private``, the call a private write
+   makes), so ``git status`` stays clean and the staging guard covers its new folders.
+   The old name's lines stay, as they do when the server's reconcile sees a name leave
+   the registry (it only ever adds names; it removes one only when that project turns
+   public). Moved projects land under the gitignored ``tenants/`` tree.
+
+**Run it with the API stopped.** No write and no reindex may run between its steps (a
+reindex between the SQLite re-key and the folder moves gives every moved document a new
+id); the code offers no reliable way to see that from here, so this is the operator's
+precondition. ``--apply`` first writes a journal, ``<KB_ROOT>/data/merge_vocky_journal.json``
+(gitignored, beside the SQLite file): every moved or renamed document's id, keyed by its
+pre-run tenant and path, with its post-run place. A re-run continues from it (it never
+re-journals a path already in it), and the verify compares the live ids against it, so a
+renumbered document fails the verify by name. Keep the file with the run's backup.
+
+Steps 2-5 come after the Postgres commit; each step reads the state it finds, so a run
 interrupted between them is finished by running again. A built-in verify runs at the
 end of ``--apply`` and alone with ``--verify``.
 
@@ -41,9 +58,15 @@ flags (flags win). Example, with invented names::
       "feedback": {"vocky-project": "target-project", "other": "Acme/target"}
     }
 
-``renames`` apply inside tenant #1. A ``feedback`` target is a project of tenant #1,
-or ``<org name>/<project>`` naming tenant #1 or the new org; a missing target project
-is created. Flags: ``--operator-email``, ``--tenant-one-name``, ``--tenant-one-id``,
+``renames`` apply inside tenant #1. A ``feedback`` target names a project **as it is
+called after the run**: ``<project>`` (tenant #1's, or the new org's when only it has
+that name after the run, e.g. a moved project) or ``<org name>/<project>`` naming
+tenant #1 or the new org. A target that names a project this run renames or moves by
+its old place (``old-name``, ``<tenant #1>/alpha`` above), or a bare name both orgs
+will have, is refused, saying which name to use. A target nobody has after the run is
+created in its org. The dry run, the apply and the verify resolve targets through one
+function, and the dry run prints the org and project id the apply will use.
+Flags: ``--operator-email``, ``--tenant-one-name``, ``--tenant-one-id``,
 ``--new-org``, ``--move NAME`` (repeat), ``--rename OLD=NEW`` (repeat),
 ``--feedback SRC=DST`` (repeat).
 
@@ -68,9 +91,17 @@ attachment files (required only when attachment rows are to be copied).
 It refuses, changing nothing (exit 2), when: the operator's email is missing on either
 side; a target project name is already taken (Postgres, reader rows, SQLite rows or
 the folder on disk); attachment rows are to be copied and no source folder was given;
-tenant #1 would not stay the oldest; and on any other state it cannot map safely
-(listed in its output). Exit 1 is a failed write or verify; 0 is success. It never
-selects or prints a password hash, token or key, and masks passwords in DSNs.
+tenant #1 would not stay the oldest; a ``feedback`` target is a pre-run or ambiguous
+name; on a git checkout, any file under a project's folders that it would move or
+rename is tracked by git, or a public project would be renamed (make the project
+private in the app first: only the app's publish path may change tracked library
+content), or the content root is not the checkout's top level, or the journal's path is
+not ignored; the journal belongs to another run; and on any other state it cannot map
+safely (listed in its output). The dry run shows the git check for every project and
+lists every ``related:``, ``doc:`` and ``chapter:`` reference that names a renamed
+project's old name (the verify lists them again; the tool never edits a document's
+text). Exit 1 is a failed write or verify; 0 is success. It never selects or prints a
+password hash, token or key, and masks passwords in DSNs.
 """
 from __future__ import annotations
 
@@ -80,8 +111,10 @@ import errno
 import hashlib
 import json
 import os
+import re
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass, field
@@ -100,6 +133,8 @@ from sqlalchemy import make_url, text  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine  # noqa: E402
 
 from server import books as books_mod  # noqa: E402
+from server import documents as documents_mod  # noqa: E402
+from server import gitops  # noqa: E402
 from server.accounts.repository import AccountsRepository  # noqa: E402
 from server.accounts.types import CreateProject  # noqa: E402
 from server.documents import ConventionError, validate_project  # noqa: E402
@@ -108,6 +143,9 @@ EXIT_OK, EXIT_FAILED, EXIT_REFUSED = 0, 1, 2
 FEEDBACK_TABLES = ("feedback_events", "feedback_comments", "feedback_attachments")
 SUBTREES = ("", ".versions", ".books", ".assets")  # "" = the project folder itself
 SQLITE_TABLES = ("documents", "document_versions", "books", "chapters", "chapter_variants")
+JOURNAL_NAME = "merge_vocky_journal.json"  # under <KB_ROOT>/data/, gitignored
+PRECONDITION = ("precondition for --apply: the API is stopped (no write and no reindex may "
+                "run between the steps)")
 
 
 class Refused(Exception):
@@ -136,7 +174,8 @@ class Mapping:
     tenant_one_id: Optional[UUID] = None
     moves: list[str] = field(default_factory=list)
     renames: dict[str, str] = field(default_factory=dict)
-    # vocky project name -> (org name or None for tenant #1, target project name)
+    # vocky project name -> (the org named in the target, or None for a bare name, target
+    # project name by its post-run name)
     feedback: dict[str, tuple[Optional[str], str]] = field(default_factory=dict)
 
 
@@ -183,7 +222,7 @@ def load_mapping(args: argparse.Namespace) -> Mapping:
         org, _, proj = dst.rpartition("/")
         if org and org not in (t1_name, org_name):
             raise Refused(f"feedback target {dst!r}: the org must be {t1_name!r} or {org_name!r}")
-        feedback[src] = (org if org and org != t1_name else None, proj)
+        feedback[src] = (org or None, proj)
     names = [*moves, *renames.keys(), *renames.values(), *(p for _, p in feedback.values())]
     for name in names:
         try:
@@ -194,6 +233,18 @@ def load_mapping(args: argparse.Namespace) -> Mapping:
         raise Refused("a project may be moved or renamed, not both")
     if len(set(renames.values())) != len(renames):
         raise Refused("two renames share a target name")
+    # Targets use post-run names: a name this run takes away is never a target.
+    for src, (org, proj) in feedback.items():
+        shown = f"{org}/{proj}" if org else proj
+        if proj in renames:
+            new = f"{org}/{renames[proj]}" if org == t1_name else renames[proj]
+            raise Refused(f"feedback target {shown!r} for {src!r}: this run renames {proj!r} "
+                          f"to {renames[proj]!r}; name the target {new!r} (targets use the "
+                          "names projects have after the run)")
+        if proj in moves and org == t1_name:
+            raise Refused(f"feedback target {shown!r} for {src!r}: this run moves {proj!r} to "
+                          f"{org_name!r}; name the target {org_name + '/' + proj!r} (targets "
+                          "use the names projects have after the run)")
     return Mapping(email, t1_name, org_name, t1_id, moves, renames, feedback)
 
 
@@ -228,6 +279,18 @@ class ProjectOp:
     sqlite_dst: dict[str, int] = field(default_factory=dict)
     disk: list[DiskMove] = field(default_factory=list)
     manifests_to_fix: list[Path] = field(default_factory=list)
+    tracked: Optional[list[str]] = None  # git-tracked files under its folders; None = no git
+
+    @property
+    def pending(self) -> bool:
+        """Whether any step is still to do for this project."""
+        return (self.pg_state == "todo" or any(self.sqlite_src.values())
+                or any(d.state in ("todo", "conflict") for d in self.disk))
+
+    @property
+    def marks_private(self) -> bool:
+        """Whether its new name belongs in the private-projects block (a private rename)."""
+        return self.kind == "rename" and self.visibility != "public"
 
 
 @dataclass
@@ -235,9 +298,10 @@ class FeedbackTarget:
     vocky_name: str
     vocky_project_id: str
     dst_org: str
-    dst_tid: Optional[UUID]
+    dst_tid: Optional[UUID]  # None while the new org does not exist yet
     dst_name: str
-    dst_project_id: Optional[UUID]
+    dst_project_id: Optional[UUID]  # None = created by the apply
+    in_new_org: bool = False
     events: int = 0
     events_null_event_at: int = 0
     to_copy: dict[str, int] = field(default_factory=dict)
@@ -264,6 +328,8 @@ class Plan:
     unlinked_attachments: int
     warnings: list[str]
     refusals: list[str]
+    git_top: Optional[Path] = None  # the content root, when it is a git checkout
+    journal: Optional[dict] = None  # the journal of an earlier --apply, when there is one
 
 
 @dataclass
@@ -280,6 +346,10 @@ class Context:
         if tid == t1:
             return self.kb_root / "docs"
         return self.kb_root / "tenants" / (str(tid) if tid else "<new org id>")
+
+    @property
+    def journal_path(self) -> Path:
+        return self.kb_root / "data" / JOURNAL_NAME
 
 
 def _subtree(root: Path, sub: str, project: str) -> Path:
@@ -375,6 +445,295 @@ def _open_sqlite(path: Path) -> Optional[sqlite3.Connection]:
     return conn
 
 
+# --- git: tracked files and the private-projects block ---------------------------
+
+
+def git_checkout(root: Path) -> Optional[Path]:
+    """``root`` when it is a git checkout's top level; ``None`` when it is in no checkout.
+
+    Refused when it is inside a checkout but not its top level (the block's
+    ``/docs/<project>/`` lines are anchored at the top level, as the server writes them),
+    or when git cannot read it."""
+    try:
+        proc = subprocess.run(["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+                              capture_output=True, text=True, timeout=60)
+    except FileNotFoundError:
+        if (root / ".git").exists():
+            raise Refused(f"{root} is a git checkout but git is not installed")
+        return None
+    if proc.returncode != 0:
+        if (root / ".git").exists() or "dubious ownership" in proc.stderr:
+            raise Refused(f"git cannot read the checkout at {root}: {proc.stderr.strip()[:300]}")
+        return None  # not a git checkout
+    top = Path(proc.stdout.strip()).resolve()
+    if top != root.resolve():
+        raise Refused(f"the content root {root} is inside the git checkout {top} but is not "
+                      "its top level: the private-projects block could not cover it")
+    return top
+
+
+def _git_ignored(root: Path, rel: str) -> bool:
+    """Whether git ignores ``rel`` (a tracked path never counts as ignored)."""
+    proc = subprocess.run(["git", "-C", str(root), "check-ignore", "-q", "--", rel],
+                          capture_output=True, text=True, timeout=60)
+    if proc.returncode not in (0, 1):
+        raise Refused(f"git check-ignore failed: {proc.stderr.strip()[:300]}")
+    return proc.returncode == 0
+
+
+def _op_paths(ctx: Context, op: "ProjectOp") -> list[str]:
+    """Every folder the op reads or writes, relative to the content root."""
+    paths = [_rel(d.src, ctx.kb_root) for d in op.disk]
+    if op.dst_tid is not None:
+        paths += [_rel(d.dst, ctx.kb_root) for d in op.disk]
+    return paths
+
+
+def apply_git(ctx: Context, plan: "Plan") -> list[str]:
+    """Mark each renamed private project under its new name (idempotent); the marked."""
+    if plan.git_top is None:
+        return []
+    return [op.dst_name for op in plan.ops
+            if op.marks_private and gitops.mark_private(op.dst_name, root=ctx.kb_root)]
+
+
+def _git_status(root: Path, paths: list[str]) -> list[str]:
+    if not paths:
+        return []
+    proc = subprocess.run(
+        ["git", "--no-optional-locks", "-C", str(root), "--literal-pathspecs", "status",
+         "--porcelain", "--untracked-files=all", "--", *paths],
+        capture_output=True, text=True, timeout=120)
+    if proc.returncode != 0:
+        return [f"(git status failed: {proc.stderr.strip()[:200]})"]
+    return [line for line in proc.stdout.splitlines() if line.strip()]
+
+
+# --- feedback targets: one resolution, by post-run names -------------------------
+
+
+def resolve_targets(m: Mapping, ops: list["ProjectOp"], t1_names: dict[str, UUID],
+                    org_names: dict[str, UUID]
+                    ) -> tuple[dict[str, tuple[bool, Optional[UUID]]], list[str]]:
+    """Each ``feedback`` target by the name it has after the run.
+
+    ``t1_names`` / ``org_names`` are the projects of tenant #1 and the new org as they
+    are now; the run's pending project steps are applied to them, so the answer is the
+    same before, during and after the run. Returns ``{vocky name: (in the new org?,
+    project id or None = to create)}`` and the refusals. The dry run, the apply and the
+    verify all resolve through this one function."""
+    post_t1, post_org = dict(t1_names), dict(org_names)
+    for op in ops:
+        if op.pg_state == "todo" and op.project_id is not None:
+            post_t1.pop(op.src_name, None)
+            (post_org if op.kind == "move" else post_t1)[op.dst_name] = op.project_id
+    resolved: dict[str, tuple[bool, Optional[UUID]]] = {}
+    refusals: list[str] = []
+    for vname, (org, name) in m.feedback.items():
+        if org == m.new_org:
+            resolved[vname] = (True, post_org.get(name))
+        elif org == m.tenant_one_name:
+            resolved[vname] = (False, post_t1.get(name))
+        elif name in post_t1 and name in post_org:
+            refusals.append(f"feedback {vname} -> {name}: after the run both "
+                            f"{m.tenant_one_name!r} and {m.new_org!r} have a project {name!r}; "
+                            f"name the target {m.tenant_one_name + '/' + name!r} or "
+                            f"{m.new_org + '/' + name!r}")
+        elif name in post_org:
+            resolved[vname] = (True, post_org[name])
+        else:
+            resolved[vname] = (False, post_t1.get(name))
+    return resolved, refusals
+
+
+# --- the id journal ----------------------------------------------------------------
+
+
+def load_journal(path: Path) -> Optional[dict]:
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict) or not isinstance(data.get("documents"), list):
+            raise ValueError("no documents list")
+        for e in data["documents"]:
+            int(e["id"]), str(e["pre"][0]), str(e["pre"][1]), str(e["post"])
+            if e["post_org"] not in ("tenant_one", "new_org"):
+                raise ValueError(f"post_org {e['post_org']!r}")
+    except (OSError, ValueError, KeyError, IndexError, TypeError) as exc:
+        raise Refused(f"the journal {path} is unreadable: {exc}; move it aside only if it "
+                      "belongs to no run")
+    return data
+
+
+def _journal_rows(ctx: Context, plan: "Plan") -> list[dict]:
+    """Each document still at a pending op's pre-run place, as a journal entry."""
+    conn = _open_sqlite(ctx.sqlite_path)
+    entries: list[dict] = []
+    if conn is None:
+        return entries
+    try:
+        for op in plan.ops:
+            pfx = op.src_name + "/"
+            rows = conn.execute("SELECT id, rel_path FROM documents WHERE tenant_id = ? "
+                                "AND substr(rel_path, 1, ?) = ? ORDER BY id",
+                                (str(op.src_tid), len(pfx), pfx)).fetchall()
+            for doc_id, rel in rows:
+                entries.append({
+                    "id": int(doc_id), "pre": [str(op.src_tid), rel],
+                    "post_org": "new_org" if op.kind == "move" else "tenant_one",
+                    "post": op.dst_name + rel[len(op.src_name):]})
+    finally:
+        conn.close()
+    return entries
+
+
+def write_journal(ctx: Context, plan: "Plan") -> tuple[int, int]:
+    """Write (or extend) the journal before any other write: ``(entries, added)``.
+
+    An entry already journalled (by its pre-run place or its id) is never replaced, so
+    a re-run keeps the first run's ids as the truth."""
+    path = ctx.journal_path
+    journal = load_journal(path) or {
+        "tool": "merge_vocky", "version": 1, "created_at": datetime.now(UTC).isoformat(),
+        "tenant_one": str(plan.t1_id), "new_org": ctx.mapping.new_org, "documents": []}
+    have_keys = {tuple(e["pre"]) for e in journal["documents"]}
+    have_ids = {int(e["id"]) for e in journal["documents"]}
+    added = [e for e in _journal_rows(ctx, plan)
+             if tuple(e["pre"]) not in have_keys and e["id"] not in have_ids]
+    if added or not path.is_file():
+        journal["documents"] += added
+        journal["updated_at"] = datetime.now(UTC).isoformat()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".tmp-journal-")
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(journal, fh, indent=1)
+            fh.write("\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+    plan.journal = journal
+    return len(journal["documents"]), len(added)
+
+
+def check_journal(ctx: Context, plan: "Plan") -> tuple[list[str], list[str], int]:
+    """The live ids against the journal: ``(failures, notes, kept)``.
+
+    A failure: a journalled document whose post-run place holds another id (renumbered),
+    or that is not at its post-run place (the run is unfinished, or the index lost it
+    while its file is on disk). A note: a journalled document whose row and files are all
+    gone (deleted since the run)."""
+    bad: list[str] = []
+    notes: list[str] = []
+    kept = 0
+    journal = plan.journal
+    if journal is None:
+        return bad, notes, kept
+    conn = _open_sqlite(ctx.sqlite_path)
+    if conn is None:
+        return [f"the journal lists {len(journal['documents'])} documents but there is no "
+                f"SQLite content plane at {ctx.sqlite_path}"], notes, kept
+    try:
+        for e in journal["documents"]:
+            doc_id, (pre_t, pre_rel), post = int(e["id"]), e["pre"], e["post"]
+            post_tid = plan.t1_id if e["post_org"] == "tenant_one" else plan.org_id
+            label = f"document {doc_id} ({pre_rel})"
+            at_post = None
+            if post_tid is not None:
+                row = conn.execute("SELECT id FROM documents WHERE tenant_id = ? AND "
+                                   "rel_path = ?", (str(post_tid), post)).fetchone()
+                at_post = int(row[0]) if row else None
+            if at_post == doc_id:
+                kept += 1
+                continue
+            if at_post is not None:
+                bad.append(f"{label} was renumbered: {post} now has id {at_post}")
+                continue
+            row = conn.execute("SELECT tenant_id, rel_path FROM documents WHERE id = ?",
+                               (doc_id,)).fetchone()
+            if row is not None:
+                bad.append(f"{label} is at {row[1]} (tenant {row[0]}), not yet at {post}")
+                continue
+            pre_file = ctx.root_of(UUID(pre_t), plan.t1_id) / pre_rel \
+                if pre_t == str(plan.t1_id) else None
+            post_file = ctx.root_of(post_tid, plan.t1_id) / post if post_tid else None
+            if any(p is not None and p.is_file() for p in (pre_file, post_file)):
+                bad.append(f"{label} is missing from the index while its file is on disk: "
+                           "a reindex will give it a new id")
+            else:
+                notes.append(f"{label}: no row and no file (deleted since the run)")
+    finally:
+        conn.close()
+    return bad, notes, kept
+
+
+# --- references to a renamed project's old name (listed, never rewritten) -----------
+
+_REF_RE = re.compile(r"(?<![A-Za-z0-9_])(doc|chapter):([^\s\"'()<>\[\]{}`|]+)")
+
+
+def old_name_refs(ctx: Context, plan: "Plan") -> list[tuple[str, int, int]]:
+    """``[(file, related entries, doc:/chapter: refs)]`` naming a renamed project's old name.
+
+    Scans tenant #1's content (and the new org's, where moved projects land) for
+    ``related:`` front-matter entries (``<project>/<file>``) and ``doc:<project>/<slug>``
+    / ``chapter:<project>/<book>/<key>`` refs whose project is an old name. Reads only."""
+    old = {op.src_name for op in plan.ops if op.kind == "rename"}
+    if not old:
+        return []
+    roots = [ctx.root_of(plan.t1_id, plan.t1_id)]
+    if plan.org_id is not None:
+        roots.append(ctx.root_of(plan.org_id, plan.t1_id))
+    hits: list[tuple[str, int, int]] = []
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for p in sorted(root.rglob("*")):
+            if p.suffix not in (".md", ".html") or not p.is_file():
+                continue
+            if any(part in (".assets", ".audio") for part in p.relative_to(root).parts):
+                continue
+            try:
+                body = p.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            related = 0
+            try:
+                parse = (documents_mod.parse_html_frontmatter if p.suffix == ".html"
+                         else documents_mod.parse_frontmatter)
+                meta, _ = parse(body)
+                raw = meta.get("related") if isinstance(meta, dict) else None
+                if isinstance(raw, list):
+                    related = sum(1 for r in raw if str(r).split("/", 1)[0] in old)
+            except Exception:  # noqa: BLE001 - no front matter, or not one we can read
+                pass
+            refs = 0
+            for match in _REF_RE.finditer(body):
+                parts = re.split(r"[?#]", match.group(2), maxsplit=1)[0].split("/")
+                if parts[0] in old and len(parts) == (2 if match.group(1) == "doc" else 3):
+                    refs += 1
+            if related or refs:
+                hits.append((_rel(p, ctx.kb_root), related, refs))
+    return hits
+
+
+def _print_refs(ctx: Context, plan: "Plan", prefix: str) -> None:
+    hits = old_name_refs(ctx, plan)
+    total = sum(r + d for _, r, d in hits)
+    out(f"{prefix}references to a renamed project's old name (listed, never rewritten): "
+        f"{total} in {len(hits)} file(s)")
+    for rel, related, refs in hits[:200]:
+        out(f"    {rel}: related {related}, doc/chapter refs {refs}")
+
+
+async def _project_names(session: AsyncSession, tid: Optional[UUID]) -> dict[str, UUID]:
+    if tid is None:
+        return {}
+    rows = await session.execute(text("SELECT name, id FROM projects WHERE tenant_id = :t"),
+                                 {"t": tid})
+    return {r[0]: r[1] for r in rows}
+
+
 async def build_plan(ctx: Context, session: AsyncSession, vconn: psycopg.Connection,
                      snapshot: Optional[dict[str, list[dict[str, Optional[str]]]]] = None
                      ) -> Plan:
@@ -422,6 +781,15 @@ async def build_plan(ctx: Context, session: AsyncSession, vconn: psycopg.Connect
                         "clock is behind its created_at")
 
     reader_tables = await _reader_tables(session)
+    git_top = git_checkout(ctx.kb_root)
+    journal = load_journal(ctx.journal_path)
+    if journal is not None and (journal.get("tenant_one") != str(t1.id)
+                                or journal.get("new_org") != m.new_org):
+        refusals.append(f"the journal {ctx.journal_path} belongs to another run (tenant #1 "
+                        f"{journal.get('tenant_one')}, new org {journal.get('new_org')!r})")
+    if git_top is not None and not _git_ignored(git_top, _rel(ctx.journal_path, git_top)):
+        refusals.append(f"the journal's path {ctx.journal_path} is not ignored by git: it must "
+                        "never be tracked")
     sconn = _open_sqlite(ctx.sqlite_path)
     if sconn is None:
         warnings.append(f"no SQLite content plane at {ctx.sqlite_path}: nothing to re-key")
@@ -496,6 +864,21 @@ async def build_plan(ctx: Context, session: AsyncSession, vconn: psycopg.Connect
                 op.disk.append(DiskMove(sub or "folder", s, d, state, files, nbytes))
                 if state == "conflict":
                     refusals.append(f"{kind} {src}: both {s} and {d} exist on disk")
+            if git_top is not None:
+                try:
+                    op.tracked = gitops.tracked_paths(_op_paths(ctx, op), root=ctx.kb_root)
+                except gitops.GitError as exc:
+                    raise Refused(f"git cannot list tracked files: {exc}")
+                if op.tracked and op.pending:
+                    refusals.append(
+                        f"{kind} {src}: {len(op.tracked)} file(s) under its folders are tracked "
+                        f"by git (e.g. {op.tracked[0]}); make the project private in the app "
+                        "first (its publish path untracks them), then run again")
+                elif kind == "rename" and op.visibility == "public" and op.pending:
+                    refusals.append(
+                        f"rename {src}: the project is public, and only the app's publish "
+                        "path may change tracked library content; make the project private "
+                        "in the app first, then run again")
             if kind == "rename":
                 for root, name in ((src_root, src), (dst_root, dst)):
                     for p in sorted((root / ".books" / name).glob("*.json")):
@@ -525,21 +908,21 @@ async def build_plan(ctx: Context, session: AsyncSession, vconn: psycopg.Connect
         "WHERE m.user_id = %s::uuid ORDER BY p.name", (vrow["id"],)).fetchall()
     feedback: list[FeedbackTarget] = []
     mapped_ids: dict[str, FeedbackTarget] = {}
-    for vname, (org, dst_name) in m.feedback.items():
+    resolved, target_refusals = resolve_targets(
+        m, ops, await _project_names(session, t1.id), await _project_names(session, org_id))
+    refusals += target_refusals
+    for vname, (_, dst_name) in m.feedback.items():
         hits = [p for p in vprojects if p["name"] == vname]
         if len(hits) != 1:
             refusals.append(f"feedback {vname}: {len(hits)} vocky projects of the operator "
                             "carry that name (need exactly 1)")
             continue
-        dst_tid = org_id if org == m.new_org else t1.id
-        dst_pid = None
-        if dst_tid is not None:
-            dst_pid = (await session.execute(text(
-                "SELECT id FROM projects WHERE tenant_id = :t AND name = :n"),
-                {"t": dst_tid, "n": dst_name})).scalar_one_or_none()
-        # A target renamed or moved by this run is looked up again after the projects step.
-        target = FeedbackTarget(vname, hits[0]["id"], org or m.tenant_one_name, dst_tid,
-                                dst_name, dst_pid)
+        if vname not in resolved:
+            continue  # refused above (an ambiguous name)
+        in_new_org, dst_pid = resolved[vname]
+        target = FeedbackTarget(vname, hits[0]["id"], m.new_org if in_new_org
+                                else m.tenant_one_name, org_id if in_new_org else t1.id,
+                                dst_name, dst_pid, in_new_org)
         feedback.append(target)
         mapped_ids[target.vocky_project_id] = target
 
@@ -618,7 +1001,7 @@ async def build_plan(ctx: Context, session: AsyncSession, vconn: psycopg.Connect
     return Plan(kb_user.id, vrow["id"], t1.id, t1.name, t1.slug, t1_created, org_id,
                 org_created, ops, feedback, reader_tables, vocky_rows, kb_types,
                 {t: set(v) for t, v in present.items()}, attachments_to_copy, unlinked,
-                warnings, refusals)
+                warnings, refusals, git_top, journal)
 
 
 def _safe_join(root: Optional[Path], key: str) -> Optional[Path]:
@@ -646,6 +1029,18 @@ def print_plan(ctx: Context, plan: Plan, mode: str = "dry-run") -> None:
     out(f"sqlite:            {ctx.sqlite_path}")
     out(f"attachments:       {ctx.attachments_dir}"
         f" (source: {ctx.attachments_source or 'none given'})")
+    out(f"git:               " + (
+        f"{plan.git_top} is a checkout: tracked files are checked, renamed private projects "
+        "are marked in its private-projects block (old names' lines stay)"
+        if plan.git_top is not None else
+        "the content root is not a git checkout: no tracked-file check, no private block"))
+    if plan.journal is None:
+        out(f"journal:           {ctx.journal_path} (none yet; --apply writes it first)")
+    else:
+        bad, notes, kept = check_journal(ctx, plan)
+        out(f"journal:           {ctx.journal_path}: {len(plan.journal['documents'])} "
+            f"documents, {kept} at their post-run place, {len(bad)} not, {len(notes)} gone")
+    out(PRECONDITION)
     out()
     out(f"operator: {m.operator_email} (platform user {plan.operator_kb_id}, "
         f"vocky user {plan.operator_vocky_id})")
@@ -678,16 +1073,30 @@ def print_plan(ctx: Context, plan: Plan, mode: str = "dry-run") -> None:
                 f"{_rel(d.src, ctx.kb_root)} -> {_rel(d.dst, ctx.kb_root)}")
         if op.manifests_to_fix:
             out(f"    book manifests to rewrite: {len(op.manifests_to_fix)}")
+        if op.tracked is None:
+            out("    git: not a checkout (no check)")
+        else:
+            out(f"    git: {len(op.tracked)} tracked file(s) under its folders"
+                + (f", e.g. {op.tracked[0]}" if op.tracked else ""))
+            if op.marks_private:
+                listed = op.dst_name in gitops.private_projects(ctx.kb_root)
+                out(f"    private block: {'already names' if listed else 'mark'} "
+                    f"{op.dst_name!r}")
+            elif op.kind == "move":
+                out("    private block: none needed (it lands under the gitignored tenants/)")
     out()
-    out("feedback:")
+    out("feedback (targets by their post-run names):")
     for t in plan.feedback:
-        target = (str(t.dst_project_id) if t.dst_project_id else "create")
-        out(f"  {t.vocky_name} -> {t.dst_org}/{t.dst_name} ({target}): events {t.events} "
-            f"(event_at NULL {t.events_null_event_at})")
+        org_id = str(t.dst_tid) if t.dst_tid else "to create"
+        target = str(t.dst_project_id) if t.dst_project_id else "create"
+        out(f"  {t.vocky_name} -> {t.dst_org}/{t.dst_name} (org {org_id}; project {target}): "
+            f"events {t.events} (event_at NULL {t.events_null_event_at})")
         for table in FEEDBACK_TABLES:
             out(f"    {table}: copy {t.to_copy.get(table, 0)}, "
                 f"already present {t.present.get(table, 0)}")
     out(f"  attachment files to copy: {len(plan.attachments_to_copy)}")
+    out()
+    _print_refs(ctx, plan, "")
     if plan.warnings:
         out()
         out("warnings:")
@@ -744,14 +1153,26 @@ async def apply_postgres(ctx: Context, session: AsyncSession, plan: Plan) -> dic
             done["usage_events"] = done.get("usage_events", 0) + (res.rowcount or 0)
         done[f"projects {op.kind}d"] = done.get(f"projects {op.kind}d", 0) + 1
 
-    # Feedback targets, looked up after the project step (a target may be a renamed one).
+    # Feedback targets, as ``resolve_targets`` resolved them for the dry run: by post-run
+    # name, so a resolved project is checked to be there now, and only a target nobody
+    # has after the run is created.
     target_pid: dict[str, UUID] = {}
     for t in plan.feedback:
-        tid = org_id if t.dst_org == m.new_org else plan.t1_id
-        proj = await repo.get_project_by_name(tid, t.dst_name)
-        if proj is None:
-            proj = await repo.create_project(CreateProject(tenant_id=tid, name=t.dst_name))
-            done["feedback projects created"] = done.get("feedback projects created", 0) + 1
+        tid = org_id if t.in_new_org else plan.t1_id
+        if t.dst_project_id is not None:
+            row = (await session.execute(text(
+                "SELECT tenant_id, name FROM projects WHERE id = :p"),
+                {"p": t.dst_project_id})).first()
+            if row is None or row[0] != tid or row[1] != t.dst_name:
+                raise RuntimeError(f"feedback {t.vocky_name}: project {t.dst_project_id} is not "
+                                   f"{t.dst_org}/{t.dst_name} after the project step")
+            target_pid[t.vocky_project_id] = t.dst_project_id
+            continue
+        if await repo.get_project_by_name(tid, t.dst_name) is not None:
+            raise RuntimeError(f"feedback {t.vocky_name}: {t.dst_org}/{t.dst_name} exists, but "
+                               "the plan resolved it as new")
+        proj = await repo.create_project(CreateProject(tenant_id=tid, name=t.dst_name))
+        done["feedback projects created"] = done.get("feedback projects created", 0) + 1
         target_pid[t.vocky_project_id] = proj.id
     for table in FEEDBACK_TABLES:
         types = plan.kb_types[table]
@@ -972,15 +1393,40 @@ async def verify(ctx: Context, session: AsyncSession, vconn: psycopg.Connection,
         if sconn is not None:
             sconn.close()
 
-    # Feedback, column by column against vocky.
+    # Ids: the live index against the journal written before the first write.
+    if plan.journal is None:
+        out("verify: ids: no journal (no --apply has run here): ids not checked")
+    else:
+        jbad, notes, kept = check_journal(ctx, plan)
+        bad += jbad
+        out(f"verify: ids kept: {kept} of {len(plan.journal['documents'])} journalled documents "
+            f"at their post-run place; {len(jbad)} not; {len(notes)} gone since the run")
+        for note in notes[:50]:
+            out(f"    {note}")
+
+    # Git: nothing under the touched folders shows, and the block names the new names.
+    if plan.git_top is None:
+        out("verify: git: the content root is not a git checkout: nothing to check")
+    else:
+        paths = sorted({p for op in plan.ops for p in _op_paths(ctx, op)})
+        entries = _git_status(ctx.kb_root, paths)
+        if entries:
+            bad.append(f"git status is not clean under the touched folders: {entries[:20]}")
+        block = set(gitops.private_projects(ctx.kb_root))
+        want = sorted(op.dst_name for op in plan.ops if op.marks_private)
+        unmarked = [n for n in want if n not in block]
+        if unmarked:
+            bad.append(f"the private-projects block does not name {unmarked}")
+        out(f"verify: git: {len(entries)} status entr(y/ies) under {len(paths)} touched "
+            f"folder(s); the private-projects block names {len(want) - len(unmarked)} of "
+            f"{len(want)} renamed private project(s)")
+
+    _print_refs(ctx, plan, "verify: ")
+
+    # Feedback, column by column against vocky; targets as ``resolve_targets`` has them.
     target_pid: dict[str, Optional[UUID]] = {}
     for t in plan.feedback:
-        tid = plan.org_id if t.dst_org == m.new_org else plan.t1_id
-        pid = None
-        if tid is not None:
-            pid = (await session.execute(text(
-                "SELECT id FROM projects WHERE tenant_id = :t AND name = :n"),
-                {"t": tid, "n": t.dst_name})).scalar_one_or_none()
+        pid = t.dst_project_id
         target_pid[t.vocky_project_id] = pid
         if pid is None:
             bad.append(f"feedback {t.vocky_name}: no project {t.dst_org}/{t.dst_name}")
@@ -1038,47 +1484,12 @@ async def verify(ctx: Context, session: AsyncSession, vconn: psycopg.Connection,
 # --- the run ---------------------------------------------------------------------
 
 
-def _snapshot_ids(ctx: Context, plan: Plan) -> dict[str, dict[int, str]]:
-    """``{op key: {document id: rel_path}}`` of each pending op, before any write."""
-    conn = _open_sqlite(ctx.sqlite_path)
-    result: dict[str, dict[int, str]] = {}
-    if conn is None:
-        return result
-    try:
-        for op in plan.ops:
-            pfx = op.src_name + "/"
-            rows = conn.execute("SELECT id, rel_path FROM documents WHERE tenant_id = ? "
-                                "AND substr(rel_path, 1, ?) = ?",
-                                (str(op.src_tid), len(pfx), pfx)).fetchall()
-            result[op.src_name] = {int(i): r for i, r in rows}
-    finally:
-        conn.close()
-    return result
-
-
-def _check_ids(ctx: Context, plan: Plan, before: dict[str, dict[int, str]]) -> list[str]:
-    conn = _open_sqlite(ctx.sqlite_path)
-    bad: list[str] = []
-    if conn is None:
-        return bad
-    try:
-        for op in plan.ops:
-            for doc_id, rel in before.get(op.src_name, {}).items():
-                want = op.dst_name + rel[len(op.src_name):]
-                row = conn.execute("SELECT tenant_id, rel_path FROM documents WHERE id = ?",
-                                   (doc_id,)).fetchone()
-                if row is None or row[0] != str(op.dst_tid) or row[1] != want:
-                    bad.append(f"document {doc_id} ({rel}) did not keep its id at {want}")
-    finally:
-        conn.close()
-    return bad
-
-
 async def run(ctx: Context, mode: str) -> int:
     url = make_url(ctx.kb_url)
     if url.drivername in ("postgresql", "postgres"):
         url = url.set(drivername="postgresql+psycopg")
     engine = create_async_engine(url)
+    writing = False
     try:
         with psycopg.connect(ctx.vocky_dsn, row_factory=dict_row, autocommit=True) as vconn:
             vconn.execute("SET TIME ZONE 'UTC'")
@@ -1098,15 +1509,17 @@ async def run(ctx: Context, mode: str) -> int:
             if mode == "dry-run":
                 return EXIT_OK
 
-            # apply: hashes and ids first, then Postgres in one transaction.
+            # apply: hashes and the id journal first, then Postgres in one transaction.
             snapshot = plan.vocky_rows
             hashes = {(op.src_name, d.label): _tree_hashes(d.src)
                       for op in plan.ops for d in op.disk if d.state == "todo"}
             reader_before = {op.src_name: sum(op.reader.values()) for op in plan.ops
                              if op.pg_state == "todo"}
-            ids_before = _snapshot_ids(ctx, plan)
             out()
             out("apply:")
+            writing = True
+            n, added = write_journal(ctx, plan)
+            out(f"  journal: {ctx.journal_path}: {n} documents ({added} added by this run)")
             async with AsyncSession(engine, expire_on_commit=False) as session:
                 async with session.begin():
                     await session.execute(text("SET LOCAL TIME ZONE 'UTC'"))
@@ -1120,6 +1533,9 @@ async def run(ctx: Context, mode: str) -> int:
             out(f"  sqlite re-keyed: {done or 'nothing to do'}")
             done = apply_disk(ctx, plan)
             out(f"  disk moved: {done or 'nothing to do'}")
+            if plan.git_top is not None:
+                marked = apply_git(ctx, plan)
+                out(f"  private-projects block: marked {marked or 'nothing new'}")
             out(f"  attachment files copied: {apply_attachment_files(ctx, plan)}")
 
             bad: list[str] = []
@@ -1134,7 +1550,6 @@ async def run(ctx: Context, mode: str) -> int:
                            f"{', '.join(moved[:10])}")
             out(f"  first memberships unchanged: {len(firsts_before) - len(moved)} of "
                 f"{len(firsts_before)} users")
-            bad += _check_ids(ctx, plan, ids_before)
             for op in plan.ops:
                 for d in op.disk:
                     key = (op.src_name, d.label)
@@ -1150,10 +1565,12 @@ async def run(ctx: Context, mode: str) -> int:
                         sum(op.reader_dst.values()) != reader_before[op.src_name]:
                     bad.append(f"{op.src_name}: {reader_before[op.src_name]} reader rows "
                                f"before, {sum(op.reader_dst.values())} at the target")
-            out(f"  ids kept: {sum(len(v) for v in ids_before.values())} documents checked")
             out()
             return await _verify_report(ctx, engine, vconn, extra=bad, snapshot=snapshot)
     except Refused as exc:
+        if writing:
+            out(f"FAILED after the run began writing (run again to finish): {exc}")
+            return EXIT_FAILED
         out(f"REFUSED (nothing changed): {exc}")
         return EXIT_REFUSED
     finally:
@@ -1177,7 +1594,13 @@ async def _verify_report(ctx: Context, engine, vconn, extra: Optional[list[str]]
 
 
 def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+    p = argparse.ArgumentParser(
+        description=__doc__.split("\n", 1)[0],
+        epilog=(f"{PRECONDITION}. On a git checkout, every project it moves or renames must "
+                "have no tracked file (make a public project private in the app first). "
+                f"--apply first writes the id journal <KB_ROOT>/data/{JOURNAL_NAME}; keep it "
+                "with the run's backup. feedback targets use the names projects have after "
+                "the run. The module docstring has the whole contract."))
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="print the plan (default)")
     mode.add_argument("--apply", action="store_true", help="make the changes, then verify")
