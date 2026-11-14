@@ -104,6 +104,12 @@ def test_202_becomes_vockys_result():
             "request body must not exceed 262144 bytes",
         ),
         (413, {}, "capture rejected: request body too large"),
+        (
+            507,
+            {"detail": "attachment storage is full — capture without the file"},
+            "attachment storage is full — capture without the file",
+        ),
+        (507, {}, "capture rejected: attachment storage is full"),
         (429, {"detail": "too many"}, "rate limited"),
         (500, {"detail": "storage write failed"}, "capture failed: upstream returned HTTP 500"),
         (503, {"detail": "busy"}, "capture failed: upstream returned HTTP 503"),

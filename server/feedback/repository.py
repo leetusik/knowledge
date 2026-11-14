@@ -249,9 +249,16 @@ class FeedbackRepository:
         )
         return int((await self._session.execute(statement)).scalar_one())
 
+    async def attachment_bytes(self) -> int:
+        """The total ``byte_size`` of every stored attachment, linked or not, all orgs."""
+
+        statement = select(func.coalesce(func.sum(FeedbackAttachmentModel.byte_size), 0))
+        return int((await self._session.execute(statement)).scalar_one())
+
     async def lock_unlinked_ceiling(self) -> None:
-        """Serialize ceiling checks: a transaction-scoped advisory lock, released at
-        the commit or rollback, so two uploads never both fit in the last room."""
+        """Serialize ceiling checks (the unlinked and the total ceiling alike): a
+        transaction-scoped advisory lock, released at the commit or rollback, so two
+        uploads never both fit in the last room."""
 
         await self._session.execute(
             select(func.pg_advisory_xact_lock(bindparam("key", UNLINKED_CEILING_LOCK_KEY)))

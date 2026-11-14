@@ -445,7 +445,8 @@ def _org_with_fbtarget(w) -> None:
 
 
 @pytest.mark.parametrize("target, hint, arrange", [
-    ("oldname", "'newname'", None),  # renamed by this run: its post-run name is newname
+    ("oldname", "'Home/newname'", None),  # renamed by this run: its post-run name is newname
+    ("Home/oldname", "'Home/newname'", None),  # the same, with tenant #1 named
     ("Home/alpha", "/alpha'", None),  # moved by this run: it is no longer in Home
     ("fbtarget", "Home/fbtarget", _org_with_fbtarget),  # in both orgs after the run
 ])
@@ -459,6 +460,127 @@ def test_a_feedback_target_by_a_pre_run_or_ambiguous_name_is_refused(world, caps
     assert _run(w, "--apply") == merge_vocky.EXIT_REFUSED
     assert _state(w) == before
     assert hint in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_a_new_org_target_named_like_a_tenant_one_rename_source_resolves_there(world, capsys,
+                                                                               existing):
+    """``<new org>/oldname`` is the new org's project, never tenant #1's renamed one."""
+    w, ids = world, world["ids"]
+    org_name = f"Org {w['tag']}"
+    _feedback_to(w, f"{org_name}/oldname")
+    pid = None
+    if existing:
+        now = datetime.now(UTC)
+        org, pid = uuid.uuid4(), uuid.uuid4()
+        with w["engine"].begin() as c:
+            c.execute(text("INSERT INTO tenants (id, name, created_at) VALUES (:i, :n, :t)"),
+                      {"i": org, "n": org_name, "t": now})
+            c.execute(text("INSERT INTO tenant_members (id, tenant_id, user_id, role, created_at)"
+                           " VALUES (:i, :t, :u, 'owner', :c)"),
+                      {"i": uuid.uuid4(), "t": org, "u": ids["op"], "c": now})
+            c.execute(text("INSERT INTO projects (id, tenant_id, name) VALUES (:i, :t, 'oldname')"),
+                      {"i": pid, "t": org})
+    assert _run(w, "--dry-run") == 0
+    line = next(x for x in capsys.readouterr().out.splitlines() if x.strip().startswith("src ->"))
+    assert f"{org_name}/oldname" in line
+    assert (str(pid) in line) if existing else ("project create" in line)
+    assert _run(w, "--apply") == 0
+    with w["engine"].connect() as c:
+        got = c.execute(text(
+            "SELECT DISTINCT t.name, p.name, p.id FROM public.feedback_events e JOIN projects p "
+            "ON p.id = e.project_id JOIN tenants t ON t.id = p.tenant_id WHERE e.id = ANY(:e)"),
+            {"e": w["events"]}).all()
+        renamed = c.execute(text("SELECT tenant_id, name FROM projects WHERE id = :p"),
+                            {"p": ids["oldname"]}).one()
+    assert [(t, p) for t, p, _ in got] == [(org_name, "oldname")]
+    assert got[0][2] != ids["oldname"] and (not existing or got[0][2] == pid)
+    assert tuple(renamed) == (ids["t1"], "newname")
+
+
+def _fail_postgres_once(w, monkeypatch) -> None:
+    """An --apply whose Postgres transaction rolls back (a lost connection): only the
+    journal is left behind."""
+    def lost(ctx, session, plan):
+        raise RuntimeError("connection lost before the commit")
+
+    real = merge_vocky.apply_postgres
+    monkeypatch.setattr(merge_vocky, "apply_postgres", lost)
+    with pytest.raises(RuntimeError):
+        _run(w, "--apply")
+    monkeypatch.setattr(merge_vocky, "apply_postgres", real)
+    assert (w["root"] / JOURNAL).is_file()
+
+
+def _remap(w, change) -> None:
+    m = json.loads(w["mapping"].read_text())
+    change(m)
+    w["mapping"].write_text(json.dumps(m))
+
+
+@pytest.mark.parametrize("change, project", [
+    (lambda m: m["renames"].update(oldname="othername"), "oldname"),  # another new name
+    (lambda m: m.pop("renames"), "oldname"),  # the rename dropped
+    (lambda m: m["new_org"].update(projects=[]), "alpha"),  # the move dropped
+    (lambda m: (m["new_org"].update(projects=[]),
+                m["renames"].update(alpha="alpha2")), "alpha"),  # a move turned rename
+])
+def test_a_mapping_that_differs_from_the_journals_changes_nothing(world, monkeypatch, capsys,
+                                                                  change, project):
+    w = world
+    _fail_postgres_once(w, monkeypatch)
+    _remap(w, change)
+    before = _state(w)
+    capsys.readouterr()
+    for mode in ("--dry-run", "--apply", "--verify"):
+        assert _run(w, mode) == merge_vocky.EXIT_REFUSED, mode
+        out = capsys.readouterr().out
+        assert "another mapping" in out and f"  {project}: " in out, mode
+        assert "--discard-journal" in out and "the journal's mapping" in out, mode
+    assert _state(w) == before
+
+
+def test_discard_journal_after_a_failed_apply_that_changed_nothing(world, monkeypatch, capsys):
+    w = world
+    old_ids = _doc_ids(w)
+    _fail_postgres_once(w, monkeypatch)
+    _remap(w, lambda m: m["renames"].update(oldname="othername"))
+    capsys.readouterr()
+    assert _run(w, "--dry-run") == merge_vocky.EXIT_REFUSED
+    assert "the run that wrote it changed nothing" in capsys.readouterr().out
+    before = _state(w)
+    assert _run(w, "--dry-run", "--discard-journal") == 0  # reports; writes nothing
+    assert _state(w) == before
+    assert _run(w, "--apply", "--discard-journal") == 0
+    out = capsys.readouterr().out
+    assert "VERIFY OK" in out and "discarded" in out
+    new_ids = _doc_ids(w)
+    assert new_ids["othername/2026-10-01-o.md"][0] == old_ids["oldname/2026-10-01-o.md"][0]
+    assert new_ids["alpha/2026-10-01-a.md"][0] == old_ids["alpha/2026-10-01-a.md"][0]
+    journal = json.loads((w["root"] / JOURNAL).read_text())
+    assert journal["projects"]["oldname"] == {"kind": "rename", "dst": "othername"}
+    assert {e["post"] for e in journal["documents"]} == {"othername/2026-10-01-o.md",
+                                                         "alpha/2026-10-01-a.md"}
+    assert _run(w, "--verify") == 0
+    assert _run(w, "--apply") == 0  # the same mapping goes on from the new journal
+
+
+def test_discard_journal_is_refused_once_content_has_moved(world, monkeypatch, capsys):
+    w = world
+    _interrupt(w, monkeypatch)  # Postgres committed and SQLite re-keyed under the journal
+    _remap(w, lambda m: m.pop("renames"))  # still appliable: only the move is left
+    before = _state(w)
+    capsys.readouterr()
+    assert _run(w, "--dry-run") == merge_vocky.EXIT_REFUSED
+    assert "content has already moved under its mapping" in capsys.readouterr().out
+    assert _run(w, "--apply", "--discard-journal") == merge_vocky.EXIT_REFUSED
+    out = capsys.readouterr().out
+    assert "--discard-journal refused" in out and "restore the backup" in out
+    assert _run(w, "--apply") == merge_vocky.EXIT_REFUSED
+    assert _state(w) == before
+    _remap(w, lambda m: m.update(renames={"oldname": "newname"}))  # the journal's mapping
+    assert _run(w, "--apply") == 0
+    assert _run(w, "--verify") == 0
 
 
 def _interrupt(w, monkeypatch) -> None:

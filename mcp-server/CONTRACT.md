@@ -219,15 +219,18 @@ accepts for capture: a `capture` key (write-only, the intended one) or a `full` 
 | 401 | `unauthorized: missing/invalid bearer` |
 | 403 | `forbidden: this key may not capture feedback` |
 | 413 | the API's `detail`: `request body must not exceed <N> bytes` (the API's body cap, `KB_FEEDBACK_MAX_BODY_BYTES`, default 262144); nothing was captured, and the same call will fail again until it is smaller |
+| 507 | the API's `detail` (fallback `capture rejected: attachment storage is full`); only the attachment upload answers 507, so this tool, which uploads nothing, should never see it |
 | 429 | `rate limited: too many captures, retry later` (the API counts this hop's captures per org: every key and session of one org shares one limit, and another org's callers never spend it) |
 | any other status ≥ 400 | `capture failed: upstream returned HTTP <status>` |
 | unreachable / timeout | `capture failed: upstream unreachable (<error type>)` |
 
 No attachment upload over MCP: attachments go through `POST /api/feedback/attachments`
 and the REST capture. So the uploads' `503` (`uploads are paused while unlinked files
-are reclaimed — please retry later`, the ceiling on unlinked attachment bytes) never
-comes from this tool; a `503` from the capture route itself would surface as
-`capture failed: upstream returned HTTP 503`.
+are reclaimed — please retry later`, the ceiling on unlinked attachment bytes) and
+`507` (`attachment storage is full — capture without the file`, the ceiling on every
+stored attachment's bytes, `KB_FEEDBACK_ATTACHMENTS_TOTAL_MAX_BYTES`, default 10 GiB)
+never come from this tool, and a capture is never refused for storage; a `503` from
+the capture route itself would surface as `capture failed: upstream returned HTTP 503`.
 
 ## Corpus scoping
 

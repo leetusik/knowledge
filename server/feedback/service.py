@@ -47,6 +47,10 @@ class FeedbackCapacityError(RuntimeError):
     """Raised when an upload would take unlinked attachments above their ceiling."""
 
 
+class FeedbackStorageFullError(RuntimeError):
+    """Raised when an upload would take every stored attachment above the total ceiling."""
+
+
 class FeedbackService:
     """Application service for feedback persistence and reads."""
 
@@ -314,26 +318,37 @@ class FeedbackService:
         payload: CreateFeedbackAttachment,
         *,
         unlinked_ceiling: int | None = None,
+        total_ceiling: int | None = None,
     ) -> FeedbackAttachmentRecord:
         """Persist an uploaded, not-yet-linked attachment and return it.
 
         With ``unlinked_ceiling``, the insert happens only if the total size of the
         unlinked attachments, this one included, stays at or under it; otherwise
-        nothing is written and :class:`FeedbackCapacityError` is raised. The check
-        and the insert share one transaction under an advisory lock, so concurrent
-        uploads never overshoot the ceiling together.
+        nothing is written and :class:`FeedbackCapacityError` is raised. With
+        ``total_ceiling``, checked second, the same holds for every stored
+        attachment, linked or not, and :class:`FeedbackStorageFullError` is raised.
+        The checks and the insert share one transaction under an advisory lock, so
+        concurrent uploads never overshoot a ceiling together.
         """
 
         async with self._session_maker() as session:
             repository = FeedbackRepository(session)
             try:
-                if unlinked_ceiling is not None:
+                if unlinked_ceiling is not None or total_ceiling is not None:
                     await repository.lock_unlinked_ceiling()
+                if unlinked_ceiling is not None:
                     total = await repository.unlinked_attachment_bytes()
                     if total + payload.byte_size > unlinked_ceiling:
                         await session.rollback()
                         raise FeedbackCapacityError(
                             "unlinked attachments are at their ceiling"
+                        )
+                if total_ceiling is not None:
+                    stored = await repository.attachment_bytes()
+                    if stored + payload.byte_size > total_ceiling:
+                        await session.rollback()
+                        raise FeedbackStorageFullError(
+                            "stored attachments are at their ceiling"
                         )
                 record = await repository.create_feedback_attachment(payload)
                 await session.commit()
@@ -344,6 +359,17 @@ class FeedbackService:
                 ) from exc
 
         return record
+
+    async def attachment_bytes(self) -> int:
+        """The total size of every stored attachment, linked or not (all orgs together)."""
+
+        async with self._session_maker() as session:
+            repository = FeedbackRepository(session)
+            try:
+                return await repository.attachment_bytes()
+            except SQLAlchemyError as exc:
+                await session.rollback()
+                raise FeedbackReadError("failed to measure stored attachments") from exc
 
     async def unlinked_attachment_bytes(self) -> int:
         """The total size of every unlinked attachment (all orgs together)."""

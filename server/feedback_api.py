@@ -19,7 +19,10 @@ Three families, each with its own gate:
   attachments older than ``KB_FEEDBACK_ATTACHMENTS_UNLINKED_TTL_S`` (rows and files,
   batch after batch within a small budget), then is refused with a 503 if it would
   take the total size of unlinked attachments above
-  ``KB_FEEDBACK_ATTACHMENTS_UNLINKED_MAX_BYTES``.
+  ``KB_FEEDBACK_ATTACHMENTS_UNLINKED_MAX_BYTES``, and with a 507 if it would take
+  every stored attachment, linked or not, above
+  ``KB_FEEDBACK_ATTACHMENTS_TOTAL_MAX_BYTES`` (a capture is never refused for
+  storage).
 - **Key reads and management** (``GET /api/feedback``, its attachment download, and
   ``/api/project/feedback*`` + ``/api/project/usage``): ``resolve_api_read`` for
   reads, ``resolve_api_write`` for ``PATCH``/``DELETE``/comment ``POST``; both answer
@@ -81,6 +84,7 @@ from server.feedback.service import (
     FeedbackCapacityError,
     FeedbackPersistenceError,
     FeedbackReadError,
+    FeedbackStorageFullError,
     get_feedback_service,
 )
 from server.feedback.storage import (
@@ -942,6 +946,9 @@ async def _reclaim_unlinked_attachments(storage: AttachmentStorage) -> None:
 
 #: The 503 an upload gets when it would take unlinked attachments above the ceiling.
 UPLOADS_PAUSED = "uploads are paused while unlinked files are reclaimed — please retry later"
+#: The 507 an upload gets when it would take every stored attachment above the total
+#: ceiling. The capture itself still lands without the file.
+STORAGE_FULL = "attachment storage is full — capture without the file"
 
 
 @router.post("/api/feedback/attachments")
@@ -1003,15 +1010,23 @@ async def upload_attachment(request: Request, background_tasks: BackgroundTasks)
 
     storage = get_attachment_storage()
     await _reclaim_unlinked_attachments(storage)
-    # The ceiling, after the sweep: checked first so a refused upload writes no
-    # file, then again under a lock with the insert so no race can overshoot it.
+    # The ceilings, after the sweep: checked first so a refused upload writes no
+    # file, then again under a lock with the insert so no race can overshoot them.
+    # The unlinked ceiling comes first. The total ceiling counts every stored
+    # attachment, linked or not: a client that links each upload at once never
+    # trips the unlinked one. Both are global, all orgs together (the attachment row
+    # records no org): they protect the disk the box shares and are not a quota.
     ceiling = config.feedback_attachments_unlinked_max_bytes()
+    total_ceiling = config.feedback_attachments_total_max_bytes()
     try:
         if await get_feedback_service().unlinked_attachment_bytes() + total > ceiling:
             logger.warning("unlinked attachments are at their ceiling; upload refused")
             return _detail(UPLOADS_PAUSED, 503)
+        if await get_feedback_service().attachment_bytes() + total > total_ceiling:
+            logger.warning("stored attachments are at their ceiling; upload refused")
+            return _detail(STORAGE_FULL, 507)
     except FeedbackReadError:
-        logger.exception("could not measure unlinked attachments")
+        logger.exception("could not measure stored attachments")
         return _detail("attachment storage unavailable", 503)
     storage_key = str(uuid4())
     try:
@@ -1031,12 +1046,18 @@ async def upload_attachment(request: Request, background_tasks: BackgroundTasks)
                 claimed_source_product=source_product,
             ),
             unlinked_ceiling=ceiling,
+            total_ceiling=total_ceiling,
         )
     except FeedbackCapacityError:
         with contextlib.suppress(StorageError):
             storage.delete(storage_key)
         logger.warning("unlinked attachments reached their ceiling; upload refused")
         return _detail(UPLOADS_PAUSED, 503)
+    except FeedbackStorageFullError:
+        with contextlib.suppress(StorageError):
+            storage.delete(storage_key)
+        logger.warning("stored attachments reached their ceiling; upload refused")
+        return _detail(STORAGE_FULL, 507)
     except FeedbackPersistenceError:
         with contextlib.suppress(StorageError):
             storage.delete(storage_key)

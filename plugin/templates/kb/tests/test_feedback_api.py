@@ -618,6 +618,68 @@ def test_the_unlinked_ceiling_refuses_the_upload_that_would_cross_it(fb, monkeyp
     assert _attachment_row(second.json()["attachment_id"]) == []
 
 
+STORAGE_FULL = "attachment storage is full — capture without the file"
+
+
+def _attachment_bytes() -> int:
+    (row,) = _sql("SELECT COALESCE(SUM(byte_size), 0) FROM feedback_attachments")
+    return int(row[0])
+
+
+def test_the_total_ceiling_bounds_stored_attachments_linked_or_not(fb, monkeypatch):
+    """The total size of every stored attachment, linked or not, never exceeds the
+    ceiling: a client that links each upload at once (so the unlinked ceiling never
+    trips) gets a 507 that writes neither a row nor a file; a capture without files
+    still lands; a race past the first check is caught by the locked check."""
+
+    from server import config
+    from server.feedback.service import FeedbackService
+
+    owner = _signup(fb)
+    key = _key(fb, owner)
+    for _ in range(20):  # sweep earlier runs' stale rows so the total only grows here
+        assert _upload(fb, _h(key)).status_code == 201
+        (stale,) = _sql(
+            "SELECT count(*) FROM feedback_attachments WHERE feedback_id IS NULL"
+            " AND created_at < now() - interval '1 day'"
+        )
+        if stale[0] == 0:
+            break
+    base = _attachment_bytes()
+    ceiling = base + 3 * len(PNG)
+    monkeypatch.setenv("KB_FEEDBACK_ATTACHMENTS_TOTAL_MAX_BYTES", str(ceiling))
+
+    for _ in range(3):
+        res = _upload(fb, _h(key))
+        assert res.status_code == 201, res.text
+        _capture(fb, _h(key), attachment_ids=[res.json()["attachment_id"]])
+    rows, files = _attachment_bytes(), _stored_files()
+    assert rows == ceiling
+    refused = _upload(fb, _h(key))
+    assert refused.status_code == 507, refused.text
+    assert refused.json()["detail"] == STORAGE_FULL
+    assert _attachment_bytes() == rows and _stored_files() == files
+
+    _capture(fb, _h(key))  # a capture without files is never refused for storage
+
+    async def no_room_seen(self) -> int:
+        return 0
+
+    with monkeypatch.context() as patch:
+        patch.setattr(FeedbackService, "attachment_bytes", no_room_seen, raising=False)
+        raced = _upload(fb, _h(key))
+        assert raced.status_code == 507 and raced.json()["detail"] == STORAGE_FULL
+        assert _attachment_bytes() == rows and _stored_files() == files
+
+    # The unlinked ceiling is checked first: when both would refuse, it is a 503.
+    monkeypatch.setenv("KB_FEEDBACK_ATTACHMENTS_UNLINKED_MAX_BYTES", str(_unlinked_bytes() + 1))
+    paused = _upload(fb, _h(key))
+    assert paused.status_code == 503 and paused.json()["detail"] == UPLOADS_PAUSED
+
+    monkeypatch.delenv("KB_FEEDBACK_ATTACHMENTS_TOTAL_MAX_BYTES")
+    assert config.feedback_attachments_total_max_bytes() == 10737418240
+
+
 def test_uploads_are_limited_apart_from_captures(fb, monkeypatch):
     """Uploads have their own, tighter limit: a client that spent its upload budget
     still captures, and one that spent its capture budget still uploads."""

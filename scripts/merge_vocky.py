@@ -41,6 +41,14 @@ precondition. ``--apply`` first writes a journal, ``<KB_ROOT>/data/merge_vocky_j
 pre-run tenant and path, with its post-run place. A re-run continues from it (it never
 re-journals a path already in it), and the verify compares the live ids against it, so a
 renumbered document fails the verify by name. Keep the file with the run's backup.
+The journal also records the mapping it was written for (the new org's name and, for
+each project, its move or rename), and every run compares it with the current mapping
+before anything is written: a difference is a refusal naming each project. Run with
+the journal's mapping, or with ``--discard-journal``, which replaces the journal only
+when the run that wrote it verifiably changed nothing (every journalled document still
+at its pre-run place with its id, and Postgres showing none of that run's changes);
+otherwise the content has already moved under the journal's mapping: finish with that
+mapping or restore the backup. The dry run says which of the two the journal is in.
 
 Steps 2-5 come after the Postgres commit; each step reads the state it finds, so a run
 interrupted between them is finished by running again. A built-in verify runs at the
@@ -61,11 +69,13 @@ flags (flags win). Example, with invented names::
 ``renames`` apply inside tenant #1. A ``feedback`` target names a project **as it is
 called after the run**: ``<project>`` (tenant #1's, or the new org's when only it has
 that name after the run, e.g. a moved project) or ``<org name>/<project>`` naming
-tenant #1 or the new org. A target that names a project this run renames or moves by
-its old place (``old-name``, ``<tenant #1>/alpha`` above), or a bare name both orgs
-will have, is refused, saying which name to use. A target nobody has after the run is
-created in its org. The dry run, the apply and the verify resolve targets through one
-function, and the dry run prints the org and project id the apply will use.
+tenant #1 or the new org. A target that names a tenant #1 project this run renames or
+moves by its old place (``old-name`` or ``Home/old-name``, ``Home/alpha`` above), or a
+bare name both orgs will have, is refused, saying which org and name to use;
+``Acme/old-name`` is the new org's own project, not tenant #1's renamed one. A target
+nobody has after the run is created in its org. The dry run, the apply and the verify
+resolve targets through one function, and the dry run prints the org and project id the
+apply will use.
 Flags: ``--operator-email``, ``--tenant-one-name``, ``--tenant-one-id``,
 ``--new-org``, ``--move NAME`` (repeat), ``--rename OLD=NEW`` (repeat),
 ``--feedback SRC=DST`` (repeat).
@@ -80,6 +90,9 @@ Modes::
 
     # verify only
     python scripts/merge_vocky.py --mapping map.json --vocky-db vocky_src --verify
+
+    # replace the journal of an earlier run that changed nothing (dry run or apply)
+    python scripts/merge_vocky.py --mapping map.json --vocky-db vocky_src --discard-journal
 
 Connections: the platform's ``DATABASE_URL`` (or ``--database-url``); vocky's database
 by ``--vocky-dsn`` or, on the same server as ``DATABASE_URL``, by name
@@ -96,10 +109,10 @@ name; on a git checkout, any file under a project's folders that it would move o
 rename is tracked by git, or a public project would be renamed (make the project
 private in the app first: only the app's publish path may change tracked library
 content), or the content root is not the checkout's top level, or the journal's path is
-not ignored; the journal belongs to another run; and on any other state it cannot map
-safely (listed in its output). The dry run shows the git check for every project and
-lists every ``related:``, ``doc:`` and ``chapter:`` reference that names a renamed
-project's old name (the verify lists them again; the tool never edits a document's
+not ignored; the journal belongs to another tenant #1, or was written for another
+mapping (see above); and on any other state it cannot map safely (listed in its
+output). The dry run shows the git check for every project and lists every
+``related:``, ``doc:`` and ``chapter:`` reference that names a renamed project's old name (the verify lists them again; the tool never edits a document's
 text). Exit 1 is a failed write or verify; 0 is success. It never selects or prints a
 password hash, token or key, and masks passwords in DSNs.
 """
@@ -233,14 +246,17 @@ def load_mapping(args: argparse.Namespace) -> Mapping:
         raise Refused("a project may be moved or renamed, not both")
     if len(set(renames.values())) != len(renames):
         raise Refused("two renames share a target name")
-    # Targets use post-run names: a name this run takes away is never a target.
+    # Targets use post-run names: a name this run takes away from tenant #1 is never a
+    # tenant #1 target. Renames and moves only take names away from tenant #1, so a
+    # target naming the new org (``<new org>/<name>``) is that org's own project.
     for src, (org, proj) in feedback.items():
         shown = f"{org}/{proj}" if org else proj
-        if proj in renames:
-            new = f"{org}/{renames[proj]}" if org == t1_name else renames[proj]
-            raise Refused(f"feedback target {shown!r} for {src!r}: this run renames {proj!r} "
-                          f"to {renames[proj]!r}; name the target {new!r} (targets use the "
-                          "names projects have after the run)")
+        if proj in renames and org != org_name:
+            raise Refused(f"feedback target {shown!r} for {src!r}: this run renames "
+                          f"{t1_name!r}'s {proj!r} to {renames[proj]!r}; name the target "
+                          f"{t1_name + '/' + renames[proj]!r} ({org_name + '/' + proj!r} "
+                          f"would name {org_name!r}'s own project; targets use the names "
+                          "projects have after the run)")
         if proj in moves and org == t1_name:
             raise Refused(f"feedback target {shown!r} for {src!r}: this run moves {proj!r} to "
                           f"{org_name!r}; name the target {org_name + '/' + proj!r} (targets "
@@ -330,6 +346,12 @@ class Plan:
     refusals: list[str]
     git_top: Optional[Path] = None  # the content root, when it is a git checkout
     journal: Optional[dict] = None  # the journal of an earlier --apply, when there is one
+    journal_diff: list[str] = field(default_factory=list)  # its mapping against this one
+    # Why the run that wrote the journal did change something (empty = it changed
+    # nothing, so --discard-journal may replace it); None without a journal.
+    journal_changes: Optional[list[str]] = None
+    journal_discarded: bool = False  # --discard-journal honoured: replaced on --apply
+    vocky_events_present: int = 0  # vocky's events already on the platform, by id
 
 
 @dataclass
@@ -341,6 +363,7 @@ class Context:
     sqlite_path: Path
     attachments_dir: Path
     attachments_source: Optional[Path]
+    discard_journal: bool = False  # --discard-journal, until the replacement is written
 
     def root_of(self, tid: Optional[UUID], t1: UUID) -> Path:
         if tid == t1:
@@ -549,6 +572,44 @@ def resolve_targets(m: Mapping, ops: list["ProjectOp"], t1_names: dict[str, UUID
 # --- the id journal ----------------------------------------------------------------
 
 
+def mapping_projects(m: Mapping) -> dict[str, dict[str, str]]:
+    """The moves and renames a mapping implies, per tenant #1 project (what the journal
+    records: no email, no id, no secret)."""
+    projects = {name: {"kind": "move", "dst": name} for name in m.moves}
+    projects.update({old: {"kind": "rename", "dst": new} for old, new in m.renames.items()})
+    return projects
+
+
+def _describe(entry: Optional[dict], org: str) -> str:
+    if entry is None:
+        return "leaves it alone"
+    if entry["kind"] == "move":
+        return f"moves it to {org!r}"
+    return f"renames it to {entry['dst']!r}"
+
+
+def journal_mapping_diff(journal: dict, m: Mapping) -> list[str]:
+    """Where the mapping the journal was written for differs from ``m``, one line each.
+
+    Every project the journal records must keep its move or rename (a project the
+    journal does not know may be added; the journal records it on the next write)."""
+    lines: list[str] = []
+    if journal.get("new_org") != m.new_org:
+        lines.append(f"new org: the journal's mapping names {journal.get('new_org')!r}, this "
+                     f"mapping {m.new_org!r}")
+    recorded = journal.get("projects")
+    if recorded is None:
+        return lines + ["the journal records no mapping (an earlier version of this tool "
+                        "wrote it)"]
+    current = mapping_projects(m)
+    for name in sorted(recorded):
+        if current.get(name) != recorded[name]:
+            lines.append(f"{name}: the journal's mapping "
+                         f"{_describe(recorded[name], str(journal.get('new_org')))}, this "
+                         f"mapping {_describe(current.get(name), m.new_org)}")
+    return lines
+
+
 def load_journal(path: Path) -> Optional[dict]:
     if not path.is_file():
         return None
@@ -560,6 +621,17 @@ def load_journal(path: Path) -> Optional[dict]:
             int(e["id"]), str(e["pre"][0]), str(e["pre"][1]), str(e["post"])
             if e["post_org"] not in ("tenant_one", "new_org"):
                 raise ValueError(f"post_org {e['post_org']!r}")
+        projects = data.get("projects")
+        if projects is not None:
+            if not isinstance(projects, dict):
+                raise ValueError("projects is not an object")
+            for name, e in projects.items():
+                if set(e) != {"kind", "dst"} or e["kind"] not in ("move", "rename") \
+                        or not isinstance(e["dst"], str):
+                    raise ValueError(f"project {name!r}: {e!r}")
+        before = data.get("before")
+        if before is not None and not isinstance(before, dict):
+            raise ValueError("before is not an object")
     except (OSError, ValueError, KeyError, IndexError, TypeError) as exc:
         raise Refused(f"the journal {path} is unreadable: {exc}; move it aside only if it "
                       "belongs to no run")
@@ -588,20 +660,39 @@ def _journal_rows(ctx: Context, plan: "Plan") -> list[dict]:
     return entries
 
 
-def write_journal(ctx: Context, plan: "Plan") -> tuple[int, int]:
+def write_journal(ctx: Context, plan: "Plan", *, fresh: bool = False) -> tuple[int, int]:
     """Write (or extend) the journal before any other write: ``(entries, added)``.
 
     An entry already journalled (by its pre-run place or its id) is never replaced, so
-    a re-run keeps the first run's ids as the truth."""
+    a re-run keeps the first run's ids as the truth. A new journal records the mapping
+    it is written for and the pre-run state ``--discard-journal`` checks; ``fresh``
+    (the discard, honoured) replaces the one on disk."""
     path = ctx.journal_path
-    journal = load_journal(path) or {
-        "tool": "merge_vocky", "version": 1, "created_at": datetime.now(UTC).isoformat(),
-        "tenant_one": str(plan.t1_id), "new_org": ctx.mapping.new_org, "documents": []}
+    journal = None if fresh else load_journal(path)
+    new = journal is None
+    if journal is None:
+        journal = {
+            "tool": "merge_vocky", "version": 2, "created_at": datetime.now(UTC).isoformat(),
+            "tenant_one": str(plan.t1_id), "new_org": ctx.mapping.new_org, "projects": {},
+            "before": {"tenant_one_name": plan.t1_name,
+                       "new_org_id": str(plan.org_id) if plan.org_id else None,
+                       "feedback_events_present": plan.vocky_events_present,
+                       "projects": {}},
+            "documents": []}
+    # Projects the journal does not know yet (all of them, for a new journal): their
+    # move or rename, and where each project row was before this run.
+    known = journal.setdefault("projects", {})
+    before = journal.setdefault("before", {}).setdefault("projects", {})
+    unknown = [op for op in plan.ops if op.src_name not in known]
+    for op in unknown:
+        known[op.src_name] = mapping_projects(ctx.mapping)[op.src_name]
+        before[op.src_name] = (str(op.project_id) if op.pg_state == "todo"
+                               and op.project_id is not None else None)
     have_keys = {tuple(e["pre"]) for e in journal["documents"]}
     have_ids = {int(e["id"]) for e in journal["documents"]}
     added = [e for e in _journal_rows(ctx, plan)
              if tuple(e["pre"]) not in have_keys and e["id"] not in have_ids]
-    if added or not path.is_file():
+    if added or unknown or new or not path.is_file():
         journal["documents"] += added
         journal["updated_at"] = datetime.now(UTC).isoformat()
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -665,6 +756,65 @@ def check_journal(ctx: Context, plan: "Plan") -> tuple[list[str], list[str], int
     finally:
         conn.close()
     return bad, notes, kept
+
+
+async def journal_changes(ctx: Context, session: AsyncSession, journal: dict, t1_id: UUID,
+                          t1_name: str, operator_id: UUID, vocky_events_present: int
+                          ) -> list[str]:
+    """Why the run that wrote ``journal`` changed something; empty = it changed nothing.
+
+    It changed nothing when every journalled document is still at its pre-run place
+    with its journalled id (index row and file), and Postgres shows none of its writes:
+    tenant #1 keeps its pre-run name, the new org exists only if it did before (the
+    same one), every journalled project row is still in tenant #1 under its old name,
+    and no more of vocky's events are on the platform than before."""
+    before = journal.get("before")
+    projects = journal.get("projects")
+    if not isinstance(before, dict) or not isinstance(projects, dict):
+        return ["the journal records no pre-run state (an earlier version of this tool "
+                "wrote it)"]
+    why: list[str] = []
+    if t1_name != before.get("tenant_one_name"):
+        why.append(f"tenant #1 is named {t1_name!r}, {before.get('tenant_one_name')!r} "
+                   "before the run")
+    orgs = [str(r[0]) for r in (await session.execute(text(
+        "SELECT t.id FROM tenants t JOIN tenant_members m ON m.tenant_id = t.id "
+        "WHERE m.user_id = :u AND m.role = 'owner' AND t.name = :n AND t.id <> :t1"),
+        {"u": operator_id, "n": journal.get("new_org"), "t1": t1_id})).all()]
+    want = [before["new_org_id"]] if before.get("new_org_id") else []
+    if orgs != want:
+        why.append(f"the org {journal.get('new_org')!r} is {orgs or 'absent'}, "
+                   f"{want or 'absent'} before the run")
+    for name in sorted(projects):
+        pid = (before.get("projects") or {}).get(name)
+        row = (await session.execute(text(
+            "SELECT id FROM projects WHERE tenant_id = :t AND name = :n"),
+            {"t": t1_id, "n": name})).first()
+        if pid is None:
+            why.append(f"project {name}: not in tenant #1 when the journal was written")
+        elif row is None or str(row[0]) != pid:
+            why.append(f"project {name}: no longer in tenant #1 under that name")
+    if vocky_events_present != before.get("feedback_events_present"):
+        why.append(f"vocky events on the platform: {vocky_events_present}, "
+                   f"{before.get('feedback_events_present')} before the run")
+    docs = journal["documents"]
+    conn = _open_sqlite(ctx.sqlite_path)
+    if docs and conn is None:
+        why.append(f"no SQLite content plane at {ctx.sqlite_path} to check "
+                   f"{len(docs)} journalled documents against")
+    elif conn is not None:
+        try:
+            for e in docs:
+                pre_t, pre_rel = e["pre"]
+                row = conn.execute("SELECT id FROM documents WHERE tenant_id = ? AND "
+                                   "rel_path = ?", (pre_t, pre_rel)).fetchone()
+                on_disk = pre_t == str(t1_id) and (ctx.root_of(t1_id, t1_id) / pre_rel).is_file()
+                if row is None or int(row[0]) != int(e["id"]) or not on_disk:
+                    why.append(f"document {e['id']} ({pre_rel}) is no longer at its pre-run "
+                               "place with that id")
+        finally:
+            conn.close()
+    return why
 
 
 # --- references to a renamed project's old name (listed, never rewritten) -----------
@@ -783,10 +933,36 @@ async def build_plan(ctx: Context, session: AsyncSession, vconn: psycopg.Connect
     reader_tables = await _reader_tables(session)
     git_top = git_checkout(ctx.kb_root)
     journal = load_journal(ctx.journal_path)
-    if journal is not None and (journal.get("tenant_one") != str(t1.id)
-                                or journal.get("new_org") != m.new_org):
+    vocky_ids = [r["id"] for r in vconn.execute(
+        "SELECT id::text AS id FROM feedback_events").fetchall()]
+    vocky_present = await _count(session, "SELECT count(*) FROM feedback_events WHERE "
+                                 "id = ANY(CAST(:ids AS uuid[]))", {"ids": vocky_ids})
+    journal_diff: list[str] = []
+    changes: Optional[list[str]] = None
+    discarded = False
+    if journal is not None and journal.get("tenant_one") != str(t1.id):
         refusals.append(f"the journal {ctx.journal_path} belongs to another run (tenant #1 "
                         f"{journal.get('tenant_one')}, new org {journal.get('new_org')!r})")
+    elif journal is not None:
+        # Before anything is written: the mapping the journal was written for, and
+        # whether the run that wrote it changed anything.
+        journal_diff = journal_mapping_diff(journal, m)
+        changes = await journal_changes(ctx, session, journal, t1.id, t1.name, kb_user.id,
+                                        vocky_present)
+        if ctx.discard_journal and changes:
+            refusals.append(
+                f"--discard-journal refused: the content has already moved under the "
+                f"journal's mapping ({'; '.join(changes[:5])}"
+                f"{f'; and {len(changes) - 5} more' if len(changes) > 5 else ''}); finish "
+                "with that mapping or restore the backup")
+        elif ctx.discard_journal:
+            journal, journal_diff, discarded = None, [], True
+        elif journal_diff:
+            refusals.append(
+                f"the journal {ctx.journal_path} was written for another mapping; run with "
+                "the journal's mapping, or with --discard-journal if the run that wrote it "
+                "changed nothing (the journal lines above say which):\n"
+                + "\n".join(f"      {line}" for line in journal_diff))
     if git_top is not None and not _git_ignored(git_top, _rel(ctx.journal_path, git_top)):
         refusals.append(f"the journal's path {ctx.journal_path} is not ignored by git: it must "
                         "never be tracked")
@@ -1001,7 +1177,8 @@ async def build_plan(ctx: Context, session: AsyncSession, vconn: psycopg.Connect
     return Plan(kb_user.id, vrow["id"], t1.id, t1.name, t1.slug, t1_created, org_id,
                 org_created, ops, feedback, reader_tables, vocky_rows, kb_types,
                 {t: set(v) for t, v in present.items()}, attachments_to_copy, unlinked,
-                warnings, refusals, git_top, journal)
+                warnings, refusals, git_top, journal, journal_diff, changes, discarded,
+                vocky_present)
 
 
 def _safe_join(root: Optional[Path], key: str) -> Optional[Path]:
@@ -1034,12 +1211,24 @@ def print_plan(ctx: Context, plan: Plan, mode: str = "dry-run") -> None:
         "are marked in its private-projects block (old names' lines stay)"
         if plan.git_top is not None else
         "the content root is not a git checkout: no tracked-file check, no private block"))
-    if plan.journal is None:
+    if plan.journal_discarded:
+        out(f"journal:           {ctx.journal_path}: the run that wrote it changed nothing; "
+            "--discard-journal replaces it with one for this mapping"
+            + (" (on --apply)" if mode != "apply" else ""))
+    elif plan.journal is None:
         out(f"journal:           {ctx.journal_path} (none yet; --apply writes it first)")
     else:
         bad, notes, kept = check_journal(ctx, plan)
         out(f"journal:           {ctx.journal_path}: {len(plan.journal['documents'])} "
             f"documents, {kept} at their post-run place, {len(bad)} not, {len(notes)} gone")
+        out("journal mapping:   " + ("the same as this run's" if not plan.journal_diff else
+                                     f"another, for {len(plan.journal_diff)} item(s) (below)"))
+        if plan.journal_changes is not None:
+            out("journal state:     " + (
+                "the run that wrote it changed nothing (--discard-journal may replace it)"
+                if not plan.journal_changes else
+                "content has already moved under its mapping (a run with that mapping "
+                "continues from it; --discard-journal is refused)"))
     out(PRECONDITION)
     out()
     out(f"operator: {m.operator_email} (platform user {plan.operator_kb_id}, "
@@ -1503,6 +1692,11 @@ async def run(ctx: Context, mode: str) -> int:
                                                     else ""))
             print_plan(ctx, plan, mode)
             if mode == "verify":
+                if plan.journal_diff:
+                    out()
+                    out("REFUSED (nothing changed): the journal was written for another "
+                        "mapping; verify with the journal's mapping")
+                    return EXIT_REFUSED
                 return await _verify_report(ctx, engine, vconn)
             if plan.refusals:
                 return EXIT_REFUSED
@@ -1518,7 +1712,11 @@ async def run(ctx: Context, mode: str) -> int:
             out()
             out("apply:")
             writing = True
-            n, added = write_journal(ctx, plan)
+            n, added = write_journal(ctx, plan, fresh=plan.journal_discarded)
+            if plan.journal_discarded:
+                out("  journal: the earlier run's journal is discarded (that run changed "
+                    "nothing) and replaced by one for this mapping")
+            ctx.discard_journal = False  # the replacement is the journal from here on
             out(f"  journal: {ctx.journal_path}: {n} documents ({added} added by this run)")
             async with AsyncSession(engine, expire_on_commit=False) as session:
                 async with session.begin():
@@ -1599,12 +1797,17 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         epilog=(f"{PRECONDITION}. On a git checkout, every project it moves or renames must "
                 "have no tracked file (make a public project private in the app first). "
                 f"--apply first writes the id journal <KB_ROOT>/data/{JOURNAL_NAME}; keep it "
-                "with the run's backup. feedback targets use the names projects have after "
-                "the run. The module docstring has the whole contract."))
+                "with the run's backup; it records its mapping, and a run with another "
+                "mapping is refused (--discard-journal replaces it only when the run that "
+                "wrote it changed nothing). feedback targets use the names projects have "
+                "after the run. The module docstring has the whole contract."))
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="print the plan (default)")
     mode.add_argument("--apply", action="store_true", help="make the changes, then verify")
     mode.add_argument("--verify", action="store_true", help="only run the verify")
+    p.add_argument("--discard-journal", action="store_true",
+                   help="replace the journal of an earlier --apply that changed nothing "
+                        "(with --dry-run or --apply; refused once content has moved)")
     p.add_argument("--mapping", help="the mapping as a JSON file, or - for stdin")
     p.add_argument("--operator-email")
     p.add_argument("--tenant-one-name", help="tenant #1's new name")
@@ -1643,7 +1846,10 @@ def make_context(args: argparse.Namespace) -> Context:
     att = Path(args.attachments_dir or os.environ.get("KB_FEEDBACK_ATTACHMENTS_DIR")
                or kb_root / "data" / "feedback-attachments")
     source = Path(args.attachments_source) if args.attachments_source else None
-    return Context(load_mapping(args), kb_url, vocky, kb_root, sqlite_path, att, source)
+    if args.discard_journal and args.verify:
+        raise Refused("--discard-journal goes with --dry-run or --apply, not --verify")
+    return Context(load_mapping(args), kb_url, vocky, kb_root, sqlite_path, att, source,
+                   args.discard_journal)
 
 
 def main(argv: Optional[list[str]] = None) -> int:

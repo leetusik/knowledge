@@ -256,6 +256,17 @@ def feedback_attachments_unlinked_max_bytes() -> int:
     return value if value > 0 else 1073741824
 
 
+def feedback_attachments_total_max_bytes() -> int:
+    """The ceiling on the total size of every stored attachment, linked or not, all
+    orgs together (``KB_FEEDBACK_ATTACHMENTS_TOTAL_MAX_BYTES``, 10737418240 = 10 GiB).
+    An upload that would take the total above it is refused with a 507; a capture is
+    never refused for storage. It protects the disk the box shares, and is not a
+    quota. A non-positive or unparseable value falls back to the default, never to
+    "no ceiling"."""
+    value = _env_int("KB_FEEDBACK_ATTACHMENTS_TOTAL_MAX_BYTES", 10737418240)
+    return value if value > 0 else 10737418240
+
+
 _FEEDBACK_DEFAULT_MIME_TYPES = "image/jpeg,image/png,image/gif,image/webp"
 
 
