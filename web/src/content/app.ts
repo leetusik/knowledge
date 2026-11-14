@@ -23,6 +23,7 @@ export interface AppNavItem {
 export const APP_NAV: AppNavItem[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Documents", href: "/documents" },
+  { label: "Feedback", href: "/feedback" },
 ];
 
 /**

@@ -365,6 +365,14 @@ export default async function ProjectPage({
               ? PROJECT.visibility.hint.public
               : PROJECT.visibility.hint.private}
           </p>
+          {/* The way to this project's feedback: a plain link to the Feedback
+              list, filtered to this project, in the Documents link's pattern. */}
+          <Link
+            href={`/feedback?project=${project.id}`}
+            className={appButtonClass("ghost", "sm")}
+          >
+            {PROJECT.feedbackLink}
+          </Link>
         </div>
       </div>
 

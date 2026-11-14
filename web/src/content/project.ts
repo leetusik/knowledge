@@ -185,6 +185,9 @@ export const PROJECT = {
     ariaLabelPrefix: "Revoke key",
   },
 
+  /** The page frame's link to this project's feedback (`/feedback?project=<id>`). */
+  feedbackLink: "Feedback",
+
   /** The branded not-found (`not-found.tsx`), on the `.kb-empty` empty-state classes. */
   notFound: {
     title: "Project not found",
