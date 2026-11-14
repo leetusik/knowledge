@@ -12,6 +12,7 @@ The Library and Feedback at <https://hi2vi.com>: a document API, a web app, a CL
 - `deploy/`: the box's deploy scripts and nginx vhosts (the apex `hi2vi.conf`; `knowledge.conf` and `vocky.conf` redirect only). `compose.prod.yml` is production; `compose.yml` is local.
 - `docs/`: the library's content root (the box writes tenant #1's projects under `docs/<project>/`), plus the MkDocs site sources the scaffold ships (`index.md`, `tags.md`, `graph.md`, `assets/`, `javascripts/`, `stylesheets/`, `mkdocs.yml`).
 - `scripts/`: the parity guards, the smokes and the book migration.
+- `skills/vocky-feedback/SKILL.md`: the Feedback capture skill, served at `/feedback/SKILL.md`.
 - `archive/workspace/`: the frozen records of the workspace that built this repo up to 2026-11-13.
 
 ## Commands
@@ -23,6 +24,7 @@ The Library and Feedback at <https://hi2vi.com>: a document API, a web app, a CL
 ## Rules
 
 - The explain skill has three copies: `plugin/skills/explain/SKILL.md` (canonical), `.agents/skills/explain/SKILL.md` (same body, its own frontmatter) and `web/public/SKILL.md` (byte-identical). Edit all three; `skills_parity.py` fails on drift. The critic's body in `plugin/agents/explain-critic.md` is generated from the canonical file: `python3 scripts/skills_parity.py --write-agents`.
+- The Feedback capture skill has two copies: `skills/vocky-feedback/SKILL.md` (canonical) and `web/public/feedback/SKILL.md` (served, byte-identical). Edit the canonical one and copy it over; `skills_parity.py` fails on drift.
 - Files listed in `plugin/templates/manifest.json` are held byte-equal (or render-equal) to their repo-root twins by `plugin_parity.py`, among them `.dockerignore`, `mkdocs.yml`, `scripts/site_smoke.py` and most of `server/` and `tests/`. Change both sides together.
 - Never commit library content by hand. Projects are private by default; the box's write path commits and pushes a public project's documents itself, and a private project never enters git (`server/publish_gate.py`, `server/gitops.py`). `tenants/`, `data/` and `.assets/` are gitignored.
 - The accounts schema changes only through a new `alembic/versions/` revision; Production Deploy applies it (`alembic upgrade head`). Never alter the database by hand.

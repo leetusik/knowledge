@@ -70,6 +70,11 @@ protocol) as one bundled, offline document. The canonical `/knowledge:explain`
 skill is also published, copyable and downloadable, at
 [`/SKILL.md`](https://hi2vi.com/SKILL.md).
 
+Capturing user feedback from an agent? The Feedback capture skill for agents,
+`vocky-feedback`, is published at
+[`/feedback/SKILL.md`](https://hi2vi.com/feedback/SKILL.md): it captures over REST
+or the `/feedback/mcp` endpoint with a key minted in the web app.
+
 ## How it's built
 
 - **Write path** — a custom `explain` skill posts to a FastAPI document API that
