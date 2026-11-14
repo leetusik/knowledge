@@ -18,6 +18,8 @@ Public URLs: `https://hi2vi.com/mcp` and `https://hi2vi.com/feedback/mcp`.
 - **Transport:** Streamable-HTTP (official `mcp` SDK / FastMCP), served by uvicorn.
   Two MCP endpoints, `/mcp` and `/feedback/mcp`, each answering a `POST` on its exact
   path (no redirect); unauthenticated liveness at **`GET /healthz`**.
+  Both forms are served: `/mcp/` and `/feedback/mcp/` reach the same endpoints, also
+  with no redirect; the exact form is canonical.
 - **Auth:** `initialize` and `tools/list` need no key on either endpoint. Each tool
   call forwards the bearer and the API decides: a missing/invalid key → the tool
   error `unauthorized: missing/invalid bearer`.
