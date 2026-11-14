@@ -230,6 +230,7 @@
   ],
   "root_only": [
     "tests/test_migrate_books.py",
+    "tests/test_merge_vocky.py",
     "tests/test_explain_resolver.py",
     "tests/fixtures/book"
   ]
