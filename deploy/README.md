@@ -30,7 +30,8 @@ Artifacts this runbook applies:
   - **`deploy/knowledge.conf`** — `knowledge.hi2vi.com`, now **redirect-only**: every
     path → the same path and query on `https://hi2vi.com`, 308.
   - **`deploy/vocky.conf`** — `vocky.hi2vi.com`, **redirect-only**: Feedback's old
-    host, mapped onto the apex (its header carries the map), 308; `/admin/*` 404.
+    host, mapped onto the apex (its header carries the map), 308; `/admin/*` 404;
+    the retired `/install.sh` answers a script that says so and exits 1.
 - **`deploy/deploy.sh`** + **`deploy/oracle-production-deploy-remote.sh`** +
   **`deploy/github-actions-production-deploy.sh`** — the P9 three-script deploy chain the
   `Production Deploy` Action runs (§6).
@@ -283,7 +284,7 @@ moves in from `vocky.hi2vi.com`. Three files in `deploy/` carry the edge side:
 |---|---|---|
 | `hi2vi.conf` | `hi2vi.com` | **Serves the platform.** Every location, timeout and relay of the old `knowledge.conf`, plus `/feedback/mcp` → `knowledge-mcp:9000` (SSE-safe, like `/mcp`), the Feedback attachment relay `/api/app/feedback/<id>/attachments/<aid>` → `knowledge-web:3000`, and the reader's beacon `= /api/reader/position` → `knowledge-web:3000`. Replaces the edge's old `hi2vi.conf`, whose `hi2vi_contact` `limit_req_zone` leaves the tree with it. |
 | `knowledge.conf` | `knowledge.hi2vi.com` | **Redirect-only.** Every path → `https://hi2vi.com<same path and query>`, 308, on `:443` and `:80` alike (one hop). |
-| `vocky.conf` | `vocky.hi2vi.com` | **Redirect-only.** `/mcp` → `/feedback/mcp`; `/SKILL.md` and `/install.sh` → `/feedback/SKILL.md`; `/projects/<id>` → `/dashboard`; `/admin/*` → 404; `/` → `/feedback`; everything else → the same path on the apex. 308, query kept, `:80` the same map. |
+| `vocky.conf` | `vocky.hi2vi.com` | **Redirect-only.** `/mcp` → `/feedback/mcp`; `/SKILL.md` → `/feedback/SKILL.md`; `/projects/<id>` → `/dashboard`; `/admin/*` → 404; `/` → `/feedback`; everything else → the same path on the apex. 308, query kept, `:80` the same map. One exception: the retired installer `/install.sh` answers `200 text/plain` with a tiny `sh` script that prints a retirement notice naming the skill on stderr and exits 1, never a redirect, since the documented `curl -fsSL … \| bash` would follow one into Markdown. |
 
 308 keeps the method and the body, so a `POST` stays a `POST`. None of the three
 declares `default_server`, an IPv6 `listen` or a `limit_req_zone` (the house rules in
@@ -429,6 +430,11 @@ curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' -X POST https://vocky.h
 # expect: 308 https://hi2vi.com/feedback/mcp
 curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://vocky.hi2vi.com/
 # expect: 308 https://hi2vi.com/feedback
+# The retired installer: read it, never pipe it to a shell here.
+curl -s -D - https://vocky.hi2vi.com/install.sh
+# expect: 200, content-type: text/plain, no location header, and a body that starts
+# with #!/bin/sh, echoes the retirement notice naming
+# https://hi2vi.com/feedback/SKILL.md to stderr, and ends with exit 1.
 ```
 
 Retrieve the token when you need it, without ever pasting it into a transcript:
