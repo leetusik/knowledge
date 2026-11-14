@@ -35,6 +35,8 @@ Changes are **additive-only** within v1 (see [Versioning & stability](#versionin
   port, `/healthz`, the statelessness flag and the `Host`/`Origin` allowlists
   (`MCP_ALLOWED_HOSTS`, `MCP_ALLOWED_ORIGINS`); a `Host` outside the allowlist is
   refused with `421` on either.
+- **Trailing slash:** `/mcp/` and `/feedback/mcp/` are served too, by the same endpoints,
+  with no redirect; the exact form is canonical.
 - **Statefulness:** the **deployed** server runs **stateless** (`MCP_STATELESS_HTTP=1`).
   Both tools are pure per-call proxies, so no session affinity is needed: a client
   `initialize`s, calls a tool, and the stream closes per call. (Stateless was chosen

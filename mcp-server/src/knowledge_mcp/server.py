@@ -30,6 +30,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+from starlette.routing import BaseRoute, Route
 
 from . import config, feedback, upstream
 
@@ -384,12 +385,39 @@ feedback_mcp = FastMCP(
 feedback.register(feedback_mcp)
 
 
+def _with_slash_form(server_: FastMCP, sdk_app: Starlette) -> list[BaseRoute]:
+    """The SDK app's routes, plus its MCP endpoint again at the path + ``/``.
+
+    The extra ``Route`` holds the **same** endpoint object as the exact one (the
+    same session manager, host/origin checks and bearer pass-through), so ``/mcp/``
+    and ``/feedback/mcp/`` are answered directly. Without it Starlette's
+    ``redirect_slashes`` answers the slash form with a 307 whose ``Location`` is
+    ``http://`` behind the TLS edge; a client following it drops its bearer (the
+    scheme changed) and the edge's ``http``→``https`` 301 turns its POST into a GET.
+    The exact path stays the canonical one.
+    """
+
+    path = server_.settings.streamable_http_path
+    routes = list(sdk_app.routes)
+    endpoint = [r for r in routes if isinstance(r, Route) and r.path == path]
+    if len(endpoint) != 1:
+        raise RuntimeError(f"expected one SDK route at {path!r}, found {len(endpoint)}")
+    exact = endpoint[0]
+    routes.insert(
+        routes.index(exact) + 1,
+        Route(f"{path}/", endpoint=exact.endpoint, methods=exact.methods, include_in_schema=False),
+    )
+    return routes
+
+
 def build_app() -> Starlette:
     """Assemble the one ASGI app: the Library at /mcp (+ GET /healthz) and Feedback
-    at /feedback/mcp.
+    at /feedback/mcp, each MCP endpoint also at its trailing-slash form.
 
     Each SDK app contributes plain ``Route``s on exact paths (never a ``Mount``, which
-    would redirect the bare path to a trailing slash); their own lifespans are
+    would redirect the bare path to a trailing slash), and each MCP endpoint gets a
+    second ``Route`` at ``<path>/`` holding the same endpoint object
+    (:func:`_with_slash_form`), so neither form is redirected. Their own lifespans are
     replaced by one that runs both session managers. The SDK creates a session
     manager lazily and lets it ``run()`` only once, so each build starts from fresh
     managers and its lifespan runs the ones *this* build's routes hold: a test can
@@ -407,7 +435,8 @@ def build_app() -> Starlette:
         async with managers[0].run(), managers[1].run():
             yield
 
-    return Starlette(routes=[*library_app.routes, *feedback_app.routes], lifespan=lifespan)
+    routes = [*_with_slash_form(mcp, library_app), *_with_slash_form(feedback_mcp, feedback_app)]
+    return Starlette(routes=routes, lifespan=lifespan)
 
 
 # The assembled Streamable-HTTP ASGI app `main.py` serves. Tools and custom routes
